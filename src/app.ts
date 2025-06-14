@@ -4,12 +4,20 @@ import helmet from 'helmet';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from '@/config/swagger';
 import routes from '@/routes';
+import { debugMiddleware } from '@/middlewares/debug.middleware';
+import { globalErrorHandler } from '@/middlewares/error.middleware';
+import Logger from '@/utils/logger';
 
 const app = express();
 
 // Security middleware
 app.use(helmet());
 app.use(cors());
+
+// Debug middleware (only in development)
+if (process.env.NODE_ENV === 'development') {
+  app.use(debugMiddleware);
+}
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -24,6 +32,7 @@ app.get('/health', (req, res) => {
     success: true,
     message: 'Server is running',
     timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV,
   });
 });
 
@@ -32,6 +41,7 @@ app.use('/api', routes);
 
 // 404 handler
 app.use('*', (req, res) => {
+  Logger.warn(`404 - Route not found: ${req.method} ${req.originalUrl}`);
   res.status(404).json({
     success: false,
     message: 'Route not found',
@@ -39,14 +49,6 @@ app.use('*', (req, res) => {
 });
 
 // Global error handler
-app.use((error: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Error:', error);
-
-  res.status(500).json({
-    success: false,
-    message: 'Internal server error',
-    ...(process.env.NODE_ENV === 'development' && { error: error.message }),
-  });
-});
+app.use(globalErrorHandler);
 
 export default app;
