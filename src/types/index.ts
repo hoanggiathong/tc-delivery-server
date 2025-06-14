@@ -1,7 +1,8 @@
-export interface User {
+import { Request } from 'express';
+
+export interface IUserResponse {
   id: string;
   username: string;
-  password: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -13,4 +14,11 @@ export interface JWTPayload {
 
 export interface AuthRequest extends Request {
   user?: JWTPayload;
+}
+
+export interface ApiResponse<T = any> {
+  success: boolean;
+  message: string;
+  data?: T;
+  errors?: any[];
 }
