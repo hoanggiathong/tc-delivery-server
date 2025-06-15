@@ -1,4 +1,5 @@
 import { Request } from 'express';
+import { UserRole } from './user.type';
 
 // Export user-related types and utilities from user.type.ts
 export * from './user.type';
@@ -10,21 +11,10 @@ export interface BaseEntity {
   updatedAt: Date;
 }
 
-// User response interface extending base
-export interface IUserResponse extends BaseEntity {
-  username: string;
-}
-
-// Extended user response with additional fields (for future use)
-export interface IUserDetailResponse extends IUserResponse {
-  lastLoginAt?: Date;
-  isActive?: boolean;
-  roles?: string[];
-}
-
 export interface JWTPayload {
   userId: string;
   username: string;
+  role: UserRole;
 }
 
 export interface AuthRequest extends Request {

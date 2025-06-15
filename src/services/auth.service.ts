@@ -1,7 +1,13 @@
 import jwt from 'jsonwebtoken';
 import { User, IUser } from '@/models/user.model';
-import { JWTPayload, IUserResponse, transformUserToResponse, transformUsersToResponse } from '@/types';
-import { LoginRequest, RegisterRequest } from '@/schemas/auth.schema';
+import {
+  JWTPayload,
+  IUserResponse,
+  transformUserToResponse,
+  transformUsersToResponse,
+  UserRole
+} from '@/types';
+import { LoginRequest, RegisterRequest, CreateUserRequest } from '@/schemas/auth.schema';
 
 export class AuthService {
   async register(data: RegisterRequest): Promise<{ user: IUserResponse }> {
@@ -15,7 +21,8 @@ export class AuthService {
       // Create new user
       const newUser = new User({
         username: data.username,
-        password: data.password
+        password: data.password,
+        role: data.role || UserRole.USER
       });
 
       await newUser.save();
@@ -26,6 +33,32 @@ export class AuthService {
         throw error;
       }
       throw new Error('Registration failed');
+    }
+  }
+
+  async createUser(data: CreateUserRequest): Promise<{ user: IUserResponse }> {
+    try {
+      // Check if username already exists
+      const existingUser = await User.findOne({ username: data.username });
+      if (existingUser) {
+        throw new Error('Username already exists');
+      }
+
+      // Create new user with specified role
+      const newUser = new User({
+        username: data.username,
+        password: data.password,
+        role: data.role
+      });
+
+      await newUser.save();
+
+      return { user: transformUserToResponse(newUser) };
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('User creation failed');
     }
   }
 
@@ -43,10 +76,11 @@ export class AuthService {
         throw new Error('Invalid credentials');
       }
 
-      // Create JWT token
+      // Create JWT token with role
       const payload: JWTPayload = {
         userId: user._id.toString(),
         username: user.username,
+        role: user.role,
       };
 
       const token = jwt.sign(payload, process.env.JWT_SECRET!, {
@@ -80,6 +114,16 @@ export class AuthService {
       return transformUsersToResponse(users);
     } catch (error) {
       console.error('Error getting all users:', error);
+      throw new Error('Failed to fetch users');
+    }
+  }
+
+  async getUsersByRoles(roles: UserRole[]): Promise<IUserResponse[]> {
+    try {
+      const users = await User.find({ role: { $in: roles } }).sort({ createdAt: -1 });
+      return transformUsersToResponse(users);
+    } catch (error) {
+      console.error('Error getting users by roles:', error);
       throw new Error('Failed to fetch users');
     }
   }

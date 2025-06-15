@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import { AuthService } from '@/services/auth.service';
-import { LoginRequest, RegisterRequest } from '@/schemas/auth.schema';
-import { AuthRequest, ApiResponse } from '@/types';
+import { LoginRequest, RegisterRequest, CreateUserRequest } from '@/schemas/auth.schema';
+import { AuthRequest, ApiResponse, UserRole } from '@/types';
+import { IUserResponse } from '@/types/user.type';
 
 export class AuthController {
   private authService: AuthService;
@@ -125,6 +126,65 @@ export class AuthController {
 
   /**
    * @swagger
+   * /api/auth/create-user:
+   *   post:
+   *     summary: Create a new user (Admin only)
+   *     tags: [Auth]
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - username
+   *               - password
+   *               - role
+   *             properties:
+   *               username:
+   *                 type: string
+   *               password:
+   *                 type: string
+   *               role:
+   *                 type: string
+   *                 enum: [superadmin, admin, manager, user]
+   *     responses:
+   *       201:
+   *         description: User created successfully
+   *       403:
+   *         description: Insufficient permissions
+   */
+  createUser = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      const data: CreateUserRequest = req.body;
+      const result = await this.authService.createUser(data);
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'User created successfully',
+        data: result,
+      };
+
+      res.status(201).json(response);
+    } catch (error) {
+      console.error('Create user error:', error);
+
+      const message = error instanceof Error ? error.message : 'User creation failed';
+      const statusCode = message === 'Username already exists' ? 409 : 400;
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(statusCode).json(response);
+    }
+  };
+
+  /**
+   * @swagger
    * /api/auth/profile:
    *   get:
    *     summary: Get user profile
@@ -185,7 +245,7 @@ export class AuthController {
    * @swagger
    * /api/auth/users:
    *   get:
-   *     summary: Get all users (Admin only)
+   *     summary: Get users based on role permissions
    *     tags: [Auth]
    *     security:
    *       - bearerAuth: []
@@ -194,6 +254,8 @@ export class AuthController {
    *         description: Users retrieved successfully
    *       401:
    *         description: Unauthorized
+   *       403:
+   *         description: Insufficient permissions
    */
   getAllUsers = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
@@ -206,7 +268,18 @@ export class AuthController {
         return;
       }
 
-      const users = await this.authService.getAllUsers();
+      let users: IUserResponse[];
+      const viewableRoles = (req as any).viewableRoles;
+
+      if (req.user.role === UserRole.SUPERADMIN) {
+        // Superadmin can see all users
+        users = await this.authService.getAllUsers();
+      } else if (viewableRoles && viewableRoles.length > 0) {
+        // Other roles can only see users they have permission to view
+        users = await this.authService.getUsersByRoles(viewableRoles);
+      } else {
+        users = [];
+      }
 
       const response: ApiResponse = {
         success: true,
