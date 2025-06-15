@@ -1,18 +1,18 @@
 import jwt from 'jsonwebtoken';
 import { User, IUser } from '@/models/user.model';
-import { JWTPayload, IUserResponse } from '@/types';
+import { JWTPayload, IUserResponse, transformUserToResponse, transformUsersToResponse } from '@/types';
 import { LoginRequest, RegisterRequest } from '@/schemas/auth.schema';
 
 export class AuthService {
   async register(data: RegisterRequest): Promise<{ user: IUserResponse }> {
     try {
-      // Kiểm tra username đã tồn tại
+      // Check if username already exists
       const existingUser = await User.findOne({ username: data.username });
       if (existingUser) {
         throw new Error('Username already exists');
       }
 
-      // Tạo user mới
+      // Create new user
       const newUser = new User({
         username: data.username,
         password: data.password
@@ -20,15 +20,7 @@ export class AuthService {
 
       await newUser.save();
 
-      // Return user without password
-      const userResponse: IUserResponse = {
-        id: newUser._id.toString(),
-        username: newUser.username,
-        createdAt: newUser.createdAt,
-        updatedAt: newUser.updatedAt
-      };
-
-      return { user: userResponse };
+      return { user: transformUserToResponse(newUser) };
     } catch (error) {
       if (error instanceof Error) {
         throw error;
@@ -39,19 +31,19 @@ export class AuthService {
 
   async login(data: LoginRequest): Promise<{ user: IUserResponse, token: string }> {
     try {
-      // Tìm user và include password để verify
+      // Find user and include password to verify
       const user = await User.findOne({ username: data.username }).select('+password');
       if (!user) {
         throw new Error('Invalid credentials');
       }
 
-      // Kiểm tra password
+      // Check password
       const isPasswordValid = await user.comparePassword(data.password);
       if (!isPasswordValid) {
         throw new Error('Invalid credentials');
       }
 
-      // Tạo JWT token
+      // Create JWT token
       const payload: JWTPayload = {
         userId: user._id.toString(),
         username: user.username,
@@ -61,15 +53,7 @@ export class AuthService {
         expiresIn: process.env.JWT_EXPIRES_IN || '7d',
       });
 
-      // Return user without password
-      const userResponse: IUserResponse = {
-        id: user._id.toString(),
-        username: user.username,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt
-      };
-
-      return { user: userResponse, token };
+      return { user: transformUserToResponse(user), token };
     } catch (error) {
       if (error instanceof Error) {
         throw error;
@@ -83,14 +67,7 @@ export class AuthService {
       const user = await User.findById(id);
       if (!user) return null;
 
-      const userResponse: IUserResponse = {
-        id: user._id.toString(),
-        username: user.username,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt
-      };
-
-      return userResponse;
+      return transformUserToResponse(user);
     } catch (error) {
       console.error('Error getting user by ID:', error);
       return null;
@@ -100,13 +77,7 @@ export class AuthService {
   async getAllUsers(): Promise<IUserResponse[]> {
     try {
       const users = await User.find({}).sort({ createdAt: -1 });
-
-      return users.map(user => ({
-        id: user._id.toString(),
-        username: user.username,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt
-      }));
+      return transformUsersToResponse(users);
     } catch (error) {
       console.error('Error getting all users:', error);
       throw new Error('Failed to fetch users');

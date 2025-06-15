@@ -1,10 +1,25 @@
 import { Request } from 'express';
 
-export interface IUserResponse {
+// Export user-related types and utilities from user.type.ts
+export * from './user.type';
+
+// Base interface for common entity fields
+export interface BaseEntity {
   id: string;
-  username: string;
   createdAt: Date;
   updatedAt: Date;
+}
+
+// User response interface extending base
+export interface IUserResponse extends BaseEntity {
+  username: string;
+}
+
+// Extended user response with additional fields (for future use)
+export interface IUserDetailResponse extends IUserResponse {
+  lastLoginAt?: Date;
+  isActive?: boolean;
+  roles?: string[];
 }
 
 export interface JWTPayload {
