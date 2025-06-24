@@ -41,6 +41,10 @@ app.use('/api', routes);
 
 // 404 handler
 app.use('*', (req, res) => {
+  if (req.originalUrl.includes('__webpack_hmr')) {
+    return;
+  }
+
   Logger.warn(`404 - Route not found: ${req.method} ${req.originalUrl}`);
   res.status(404).json({
     success: false,
