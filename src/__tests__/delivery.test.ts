@@ -33,7 +33,7 @@ describe('Delivery Endpoints', () => {
       senderName: 'John Sender',
       senderPhone: '+1234567890',
       receiverName: 'Jane Receiver',
-      receiverPhone: '+0987654321',
+      receiverPhone: '+1987654321',
       route: 'Hanoi - HCMC',
       name: 'Electronics Package',
       cost: 50000,
@@ -57,7 +57,6 @@ describe('Delivery Endpoints', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send(validDeliveryData)
         .expect(201);
-
       expect(response.body.success).toBe(true);
       expect(response.body.message).toBe('Delivery created successfully');
       expect(response.body.data.delivery).toEqual(mockDelivery);
@@ -128,7 +127,7 @@ describe('Delivery Endpoints', () => {
   });
 
   describe('PUT /api/delivery/:id', () => {
-    const deliveryId = 'delivery123';
+    const deliveryId = '507f1f77bcf86cd799439012';
     const updateData = {
       senderName: 'Updated Sender',
       senderPhone: '+1111111111',
@@ -185,7 +184,7 @@ describe('Delivery Endpoints', () => {
   });
 
   describe('GET /api/delivery/:id', () => {
-    const deliveryId = 'delivery123';
+    const deliveryId = '507f1f77bcf86cd799439012';
 
     it('should get delivery by ID successfully', async () => {
       const mockDelivery = createMockDelivery({ id: deliveryId });
@@ -226,7 +225,7 @@ describe('Delivery Endpoints', () => {
         .expect(500);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Failed to get delivery');
+      expect(response.body.message).toBe('Database error');
     });
   });
 
@@ -279,7 +278,7 @@ describe('Delivery Endpoints', () => {
         .expect(500);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Failed to get deliveries');
+      expect(response.body.message).toBe('Database connection failed');
     });
   });
 });

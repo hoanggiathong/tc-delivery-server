@@ -36,8 +36,8 @@ describe('Auth Endpoints', () => {
         id: 'user123',
         username: 'testuser',
         role: UserRole.USER,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
 
       mockAuthService.register.mockResolvedValue({ user: mockUser });
@@ -107,8 +107,8 @@ describe('Auth Endpoints', () => {
         id: 'user123',
         username: 'testuser',
         role: UserRole.USER,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
 
       const mockToken = 'valid-jwt-token';
@@ -164,8 +164,8 @@ describe('Auth Endpoints', () => {
         id: 'user123',
         username: 'testuser',
         role: UserRole.USER,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
 
       mockAuthService.getUserById.mockResolvedValue(mockUser);
@@ -212,7 +212,7 @@ describe('Auth Endpoints', () => {
         .expect(500);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Failed to get profile');
+      expect(response.body.message).toBe('Database error');
     });
   });
 
@@ -223,19 +223,19 @@ describe('Auth Endpoints', () => {
           id: 'user1',
           username: 'user1',
           role: UserRole.USER,
-          createdAt: new Date(),
-          updatedAt: new Date()
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
         },
         {
           id: 'user2',
           username: 'user2',
           role: UserRole.MANAGER,
-          createdAt: new Date(),
-          updatedAt: new Date()
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
         }
       ];
 
-      mockAuthService.getAllUsers.mockResolvedValue(mockUsers);
+      mockAuthService.getUsersByRoles.mockResolvedValue(mockUsers);
 
       const response = await request(app)
         .get('/api/auth/users')
@@ -258,7 +258,7 @@ describe('Auth Endpoints', () => {
     });
 
     it('should return 500 when service throws error', async () => {
-      mockAuthService.getAllUsers.mockRejectedValue(
+      mockAuthService.getUsersByRoles.mockRejectedValue(
         new Error('Database connection failed')
       );
 
@@ -268,7 +268,7 @@ describe('Auth Endpoints', () => {
         .expect(500);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Failed to get users');
+      expect(response.body.message).toBe('Database connection failed');
     });
   });
 });

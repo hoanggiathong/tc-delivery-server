@@ -268,9 +268,11 @@ export class DeliveryController {
     } catch (error) {
       console.error('Get delivery error:', error);
 
+      const message = error instanceof Error ? error.message : 'Failed to get delivery';
+
       const response: ApiResponse = {
         success: false,
-        message: 'Failed to get delivery'
+        message
       };
 
       res.status(500).json(response);
@@ -314,9 +316,11 @@ export class DeliveryController {
     } catch (error) {
       console.error('Get all deliveries error:', error);
 
+      const message = error instanceof Error ? error.message : 'Failed to get deliveries';
+
       const response: ApiResponse = {
         success: false,
-        message: 'Failed to get deliveries'
+        message
       };
 
       res.status(500).json(response);

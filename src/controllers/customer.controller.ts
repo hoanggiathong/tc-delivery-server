@@ -191,9 +191,11 @@ export class CustomerController {
     } catch (error) {
       console.error('Get customer error:', error);
 
+      const message = error instanceof Error ? error.message : 'Failed to get customer';
+
       const response: ApiResponse = {
         success: false,
-        message: 'Failed to get customer'
+        message
       };
 
       res.status(500).json(response);
@@ -230,9 +232,11 @@ export class CustomerController {
     } catch (error) {
       console.error('Get all customers error:', error);
 
+      const message = error instanceof Error ? error.message : 'Failed to get customers';
+
       const response: ApiResponse = {
         success: false,
-        message: 'Failed to get customers'
+        message
       };
 
       res.status(500).json(response);

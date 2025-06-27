@@ -119,17 +119,17 @@ describe('Customer Endpoints', () => {
   });
 
   describe('PUT /api/customer/:id', () => {
-    const customerId = 'customer123';
+    const customerId = '507f1f77bcf86cd799439011';
     const updateData = {
       name: 'Jane Doe',
-      phone: '+0987654321'
+      phone: '+1987654321'
     };
 
     it('should update customer successfully', async () => {
       const mockUpdatedCustomer = {
         id: customerId,
         name: 'Jane Doe',
-        phone: '+0987654321',
+        phone: '+1987654321',
         createdAt: '2025-06-27T07:51:17.342Z',
         updatedAt: '2025-06-27T07:51:17.342Z'
       };
@@ -179,7 +179,7 @@ describe('Customer Endpoints', () => {
   });
 
   describe('GET /api/customer/:id', () => {
-    const customerId = 'customer123';
+    const customerId = '507f1f77bcf86cd799439011';
 
     it('should get customer by ID successfully', async () => {
       const mockCustomer = {
@@ -225,7 +225,7 @@ describe('Customer Endpoints', () => {
         .expect(500);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Failed to get customer');
+      expect(response.body.message).toBe('Database error');
     });
   });
 
@@ -272,7 +272,7 @@ describe('Customer Endpoints', () => {
         .expect(500);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Failed to get customers');
+      expect(response.body.message).toBe('Database connection failed');
     });
   });
 });
