@@ -76,16 +76,25 @@ export class AuthService {
         throw new Error('Invalid credentials');
       }
 
-      // Create JWT token with role
+      // Alternative JWT signing approach
       const payload: JWTPayload = {
         userId: user._id.toString(),
         username: user.username,
         role: user.role,
       };
 
-      const token = jwt.sign(payload, process.env.JWT_SECRET!, {
-        expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-      });
+      const secretKey = process.env.JWT_SECRET;
+      if (!secretKey) {
+        throw new Error('JWT_SECRET is not defined');
+      }
+
+      // Use explicit typing
+      const expiresIn: number = parseInt(process.env.JWT_EXPIRES_IN || '604800'); // 7 days in seconds
+      const signOptions: jwt.SignOptions = {
+        expiresIn,
+      };
+
+      const token = jwt.sign(payload, secretKey, signOptions);
 
       return { user: transformUserToResponse(user), token };
     } catch (error) {

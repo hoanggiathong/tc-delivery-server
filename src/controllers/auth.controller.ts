@@ -268,17 +268,15 @@ export class AuthController {
         return;
       }
 
-      let users: IUserResponse[];
+      let users: IUserResponse[] = [];
       const viewableRoles = (req as any).viewableRoles;
 
       if (req.user.role === UserRole.SUPERADMIN) {
         // Superadmin can see all users
-        users = await this.authService.getAllUsers();
+        users = await this.authService.getAllUsers() || [];
       } else if (viewableRoles && viewableRoles.length > 0) {
         // Other roles can only see users they have permission to view
-        users = await this.authService.getUsersByRoles(viewableRoles);
-      } else {
-        users = [];
+        users = await this.authService.getUsersByRoles(viewableRoles) || [];
       }
 
       const response: ApiResponse = {

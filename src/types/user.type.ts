@@ -17,8 +17,8 @@ export const ROLE_HIERARCHY: Record<UserRole, number> = {
   [UserRole.USER]: 1
 };
 
-// Role permissions - what roles can each role view/create
-export const ROLE_PERMISSIONS = {
+// Fix: Add explicit typing for ROLE_PERMISSIONS
+export const ROLE_PERMISSIONS: Record<UserRole, { canView: UserRole[]; canCreate: UserRole[] }> = {
   [UserRole.SUPERADMIN]: {
     canView: [UserRole.ADMIN, UserRole.MANAGER, UserRole.USER],
     canCreate: [UserRole.ADMIN, UserRole.MANAGER, UserRole.USER]
@@ -35,7 +35,7 @@ export const ROLE_PERMISSIONS = {
     canView: [],
     canCreate: []
   }
-};
+} as const;
 
 // User response interface extending base
 export interface IUserResponse extends BaseEntity {
@@ -76,14 +76,14 @@ export const transformUsersToResponse = (users: IUser[]): IUserResponse[] => {
  * Check if user has permission to view target role
  */
 export const canViewRole = (userRole: UserRole, targetRole: UserRole): boolean => {
-  return ROLE_PERMISSIONS[userRole].canView.includes(targetRole);
+  return (ROLE_PERMISSIONS[userRole].canView as readonly UserRole[]).includes(targetRole);
 };
 
 /**
  * Check if user has permission to create target role
  */
 export const canCreateRole = (userRole: UserRole, targetRole: UserRole): boolean => {
-  return ROLE_PERMISSIONS[userRole].canCreate.includes(targetRole);
+  return (ROLE_PERMISSIONS[userRole].canCreate as readonly UserRole[]).includes(targetRole);
 };
 
 /**

@@ -22,7 +22,7 @@ export const debugMiddleware = (
 
   // Log response
   const oldSend = res.send;
-  res.send = function (data) {
+  res.send = function (data?: any) {
     const duration = Date.now() - start;
     Logger.http(
       `${req.method} ${req.path} - ${res.statusCode} - ${duration}ms`
@@ -32,7 +32,7 @@ export const debugMiddleware = (
       Logger.debug(`Response: ${data}`);
     }
 
-    return oldSend.apply(this, arguments);
+    return oldSend.call(this, data);
   };
 
   next();

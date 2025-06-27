@@ -39,6 +39,7 @@ export class DeliveryController {
    *               - collectCost
    *               - collectForCustomer
    *               - collectForCustomerCost
+   *               - collectForCustomerNote
    *             properties:
    *               senderName:
    *                 type: string
@@ -301,7 +302,7 @@ export class DeliveryController {
         return;
       }
 
-      const deliveries = await this.deliveryService.getAllDeliveries();
+      const deliveries = await this.deliveryService.getAllDeliveries() || [];
 
       const response: ApiResponse = {
         success: true,

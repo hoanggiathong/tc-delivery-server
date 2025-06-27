@@ -218,10 +218,12 @@ export class CustomerController {
     try {
       const customers = await this.customerService.getAllCustomers();
 
+      const customersArray = customers || [];
+
       const response: ApiResponse = {
         success: true,
         message: 'Customers retrieved successfully',
-        data: { customers, total: customers.length }
+        data: { customers: customersArray, total: customersArray.length }
       };
 
       res.status(200).json(response);

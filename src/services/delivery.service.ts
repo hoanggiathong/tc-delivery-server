@@ -1,6 +1,6 @@
 import { Delivery, IDelivery } from '@/models/delivery.model';
 import { CustomerService } from './customer.service';
-import { IDeliveryResponse } from '@/types/customer.type';
+import { IDeliveryResponse, IDeliveryWithPopulatedRefs } from '@/types/delivery.type';
 import { CreateDeliveryRequest, UpdateDeliveryRequest } from '@/schemas/delivery.schema';
 
 export class DeliveryService {
@@ -18,7 +18,7 @@ export class DeliveryService {
     const populatedDelivery = await Delivery.findById(delivery._id)
       .populate('sender')
       .populate('receiver')
-      .populate('createdByUser', 'username');
+      .populate('createdByUser', 'username') as IDeliveryWithPopulatedRefs | null;
 
     if (!populatedDelivery) {
       throw new Error('Delivery not found');
@@ -27,18 +27,18 @@ export class DeliveryService {
     return {
       id: populatedDelivery._id.toString(),
       sender: {
-        id: (populatedDelivery.sender as any)._id.toString(),
-        name: (populatedDelivery.sender as any).name,
-        phone: (populatedDelivery.sender as any).phone,
-        createdAt: (populatedDelivery.sender as any).createdAt,
-        updatedAt: (populatedDelivery.sender as any).updatedAt
+        id: populatedDelivery.sender._id.toString(),
+        name: populatedDelivery.sender.name,
+        phone: populatedDelivery.sender.phone,
+        createdAt: populatedDelivery.sender.createdAt,
+        updatedAt: populatedDelivery.sender.updatedAt
       },
       receiver: {
-        id: (populatedDelivery.receiver as any)._id.toString(),
-        name: (populatedDelivery.receiver as any).name,
-        phone: (populatedDelivery.receiver as any).phone,
-        createdAt: (populatedDelivery.receiver as any).createdAt,
-        updatedAt: (populatedDelivery.receiver as any).updatedAt
+        id: populatedDelivery.receiver._id.toString(),
+        name: populatedDelivery.receiver.name,
+        phone: populatedDelivery.receiver.phone,
+        createdAt: populatedDelivery.receiver.createdAt,
+        updatedAt: populatedDelivery.receiver.updatedAt
       },
       route: populatedDelivery.route,
       name: populatedDelivery.name,
@@ -51,7 +51,7 @@ export class DeliveryService {
       collectForCustomer: populatedDelivery.collectForCustomer,
       collectForCustomerCost: populatedDelivery.collectForCustomerCost,
       collectForCustomerNote: populatedDelivery.collectForCustomerNote,
-      createdByUser: (populatedDelivery.createdByUser as any).username,
+      createdByUser: populatedDelivery.createdByUser.username,
       createdAt: populatedDelivery.createdAt,
       updatedAt: populatedDelivery.updatedAt
     };
