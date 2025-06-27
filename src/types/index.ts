@@ -4,6 +4,9 @@ import { UserRole } from './user.type';
 // Export user-related types and utilities from user.type.ts
 export * from './user.type';
 
+// Export customer-related types
+export * from './customer.type';
+
 // Base interface for common entity fields
 export interface BaseEntity {
   id: string;
