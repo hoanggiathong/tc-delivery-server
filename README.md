@@ -6,26 +6,55 @@ Express TypeScript API server with JWT authentication, built with modern develop
 
 ```
 tc-delivery-server/
+├── docs/                       # Project documentation
+│   ├── DATABASE_SCHEMA.md      # Database schema documentation
+│   ├── ERD_DIAGRAM.md          # Entity Relationship Diagram
+│   └── LOGGING.md              # Logging system guide
 ├── src/
 │   ├── config/
-│   │   └── swagger.ts          # Swagger configuration
+│   │   ├── database.ts         # MongoDB connection configuration
+│   │   └── swagger.ts          # Swagger documentation setup
 │   ├── controllers/
-│   │   └── auth.controller.ts  # Authentication controller
+│   │   ├── auth.controller.ts  # Authentication controller
+│   │   ├── customer.controller.ts # Customer management
+│   │   └── delivery.controller.ts # Delivery management
 │   ├── middlewares/
 │   │   ├── auth.middleware.ts  # JWT authentication middleware
+│   │   ├── role.middleware.ts  # Role-based access control
 │   │   └── validation.middleware.ts # Zod validation middleware
+│   ├── models/
+│   │   ├── user.model.ts       # User MongoDB schema
+│   │   ├── customer.model.ts   # Customer MongoDB schema
+│   │   └── delivery.model.ts   # Delivery MongoDB schema
 │   ├── routes/
 │   │   ├── auth.routes.ts      # Authentication routes
+│   │   ├── customer.routes.ts  # Customer routes
+│   │   ├── delivery.routes.ts  # Delivery routes
 │   │   └── index.ts            # Main routes
 │   ├── schemas/
-│   │   └── auth.schema.ts      # Zod validation schemas
+│   │   ├── auth.schema.ts      # Authentication validation schemas
+│   │   ├── customer.schema.ts  # Customer validation schemas
+│   │   └── delivery.schema.ts  # Delivery validation schemas
 │   ├── services/
-│   │   └── auth.service.ts     # Authentication business logic
+│   │   ├── auth.service.ts     # Authentication business logic
+│   │   ├── customer.service.ts # Customer business logic
+│   │   └── delivery.service.ts # Delivery business logic
 │   ├── types/
-│   │   └── index.ts            # TypeScript type definitions
+│   │   ├── user.type.ts        # User type definitions
+│   │   ├── customer.type.ts    # Customer type definitions
+│   │   ├── delivery.type.ts    # Delivery type definitions
+│   │   └── index.ts            # Common type definitions
+│   ├── utils/
+│   │   └── logger.ts           # Winston logging configuration
 │   ├── app.ts                  # Express app configuration
 │   └── index.ts                # Server entry point
-├── dist/                       # Compiled JavaScript files
+├── tests/                      # Test files
+│   ├── unit/                   # Unit tests
+│   ├── integration/            # Integration tests
+│   ├── mocks/                  # Mock services
+│   └── helpers/                # Test utilities
+├── logs/                       # Log files (auto-generated)
+│   └── YYYY/MM/                # Organized by year/month
 ├── .env                        # Environment variables
 ├── .env.example               # Environment variables template
 ├── .eslintrc.json             # ESLint configuration
@@ -37,8 +66,10 @@ tc-delivery-server/
 
 ## 🚀 Features
 
+### Core Features
 - **TypeScript** - Full TypeScript support for type safety
-- **JWT Authentication** - Secure token-based authentication
+- **MongoDB & Mongoose** - NoSQL database with ODM for data modeling
+- **JWT Authentication** - Secure token-based authentication with role-based access control
 - **Zod Validation** - Runtime schema validation for API requests
 - **Swagger Documentation** - Interactive API documentation
 - **Clean Architecture** - Controller-Service pattern for maintainable code
@@ -47,11 +78,37 @@ tc-delivery-server/
 - **Path Mapping** - Clean imports with TypeScript path mapping
 - **Environment Configuration** - Dotenv for environment management
 
-## 📚 API Documentation
+### Business Features
+- **User Management** - Multi-role user system (superadmin, admin, manager, user)
+- **Customer Management** - Customer information with validation
+- **Delivery System** - Complete delivery management with cost breakdown
+- **Audit Trail** - Track who created what and when
 
+### Developer Experience
+- **Advanced Logging** - Winston with daily rotation and organized file structure
+- **Comprehensive Testing** - Jest with unit and integration tests
+- **Database Documentation** - Complete schema documentation with ERD diagrams
+- **Type Safety** - Full TypeScript coverage with strict mode
+
+## 📚 Documentation
+
+### API Documentation
 Once the server is running, you can access the interactive Swagger documentation at:
 
 **🌐 [http://localhost:3000/api-docs](http://localhost:3000/api-docs)**
+
+### Project Documentation
+
+| Document | Description |
+|----------|-------------|
+| 📊 **[Database Schema](docs/DATABASE_SCHEMA.md)** | Complete database schema with relationships and field descriptions |
+| 🔗 **[ERD Diagram](docs/ERD_DIAGRAM.md)** | Entity Relationship Diagram for quick reference |
+| 📝 **[Logging System](docs/LOGGING.md)** | Logging configuration, usage examples, and debugging guide |
+
+### Quick Links
+- **[Database Overview](docs/DATABASE_SCHEMA.md#overview)** - Collections and relationships
+- **[ERD Visualization](docs/ERD_DIAGRAM.md)** - Visual database structure
+- **[Logging Usage](docs/LOGGING.md#usage-examples)** - How to use the logging system
 
 ## 🛠️ Installation & Setup
 
@@ -113,17 +170,45 @@ The server will start at `http://localhost:3000`
 
 ### Authentication
 
-| Method | Endpoint | Description | Authentication |
-|--------|----------|-------------|----------------|
-| `POST` | `/api/auth/register` | Register a new user | None |
-| `POST` | `/api/auth/login` | Login user | None |
-| `GET` | `/api/auth/profile` | Get user profile | Bearer Token |
+| Method | Endpoint | Description | Authentication | Roles |
+|--------|----------|-------------|----------------|-------|
+| `POST` | `/api/auth/register` | Register a new user | None | - |
+| `POST` | `/api/auth/login` | Login user | None | - |
+| `GET` | `/api/auth/profile` | Get user profile | Bearer Token | All |
+| `GET` | `/api/auth/users` | Get all users | Bearer Token | Admin+ |
+| `GET` | `/api/auth/users/by-roles` | Get users by roles | Bearer Token | Admin+ |
+
+### Customer Management
+
+| Method | Endpoint | Description | Authentication | Roles |
+|--------|----------|-------------|----------------|-------|
+| `POST` | `/api/customers` | Create new customer | Bearer Token | User+ |
+| `GET` | `/api/customers` | Get all customers | Bearer Token | User+ |
+| `GET` | `/api/customers/:id` | Get customer by ID | Bearer Token | User+ |
+| `PUT` | `/api/customers/:id` | Update customer | Bearer Token | User+ |
+| `DELETE` | `/api/customers/:id` | Delete customer | Bearer Token | Manager+ |
+
+### Delivery Management
+
+| Method | Endpoint | Description | Authentication | Roles |
+|--------|----------|-------------|----------------|-------|
+| `POST` | `/api/deliveries` | Create new delivery | Bearer Token | User+ |
+| `GET` | `/api/deliveries` | Get all deliveries | Bearer Token | User+ |
+| `GET` | `/api/deliveries/:id` | Get delivery by ID | Bearer Token | User+ |
+| `PUT` | `/api/deliveries/:id` | Update delivery | Bearer Token | User+ |
+| `DELETE` | `/api/deliveries/:id` | Delete delivery | Bearer Token | Manager+ |
 
 ### Health Check
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/health` | Server health status |
+| Method | Endpoint | Description | Authentication |
+|--------|----------|-------------|----------------|
+| `GET` | `/health` | Server health status | None |
+
+### Role Hierarchy
+- **User** (Level 1): Basic CRUD operations
+- **Manager** (Level 2): Can delete records + User permissions
+- **Admin** (Level 3): User management + Manager permissions
+- **Superadmin** (Level 4): Full system access
 
 ## 🧪 Testing the API
 
