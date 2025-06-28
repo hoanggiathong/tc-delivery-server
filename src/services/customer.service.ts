@@ -141,4 +141,20 @@ export class CustomerService {
       throw new Error('Failed to find or create customer');
     }
   }
+
+  /**
+   * Find customers by name (case-insensitive)
+   */
+  async findCustomersByName(name: string): Promise<ICustomerResponse[]> {
+    try {
+      const customers = await Customer.find({
+        name: { $regex: name, $options: 'i' }
+      }).sort({ createdAt: -1 });
+
+      return customers.map(customer => this.transformCustomerToResponse(customer));
+    } catch (error) {
+      console.error('Error finding customers by name:', error);
+      throw new Error('Failed to find customers by name');
+    }
+  }
 }

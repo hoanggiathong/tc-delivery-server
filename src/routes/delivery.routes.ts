@@ -16,8 +16,13 @@ router.use(authenticateToken);
 
 // Delivery routes
 router.post('/', validate(createDeliverySchema), deliveryController.createDelivery);
-router.put('/:id', validate(deliveryParamsSchema), validate(updateDeliverySchema), deliveryController.updateDelivery);
-router.get('/:id', validate(deliveryParamsSchema), deliveryController.getDeliveryById);
 router.get('/', deliveryController.getAllDeliveries);
+
+// Related deliveries route (must be before /:id to avoid conflicts)
+router.get('/related/:senderName', deliveryController.getRelatedDeliveriesBySender);
+
+router.get('/:id', validate(deliveryParamsSchema), deliveryController.getDeliveryById);
+router.put('/:id', validate(deliveryParamsSchema), validate(updateDeliverySchema), deliveryController.updateDelivery);
+router.delete('/:id', validate(deliveryParamsSchema), deliveryController.deleteDelivery);
 
 export default router;

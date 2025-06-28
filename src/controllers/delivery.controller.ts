@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { DeliveryService } from '@/services/delivery.service';
 import { CreateDeliveryRequest, UpdateDeliveryRequest } from '@/schemas/delivery.schema';
 import { AuthRequest, ApiResponse } from '@/types';
+import Logger from '@/utils/logger';
 
 export class DeliveryController {
   private deliveryService: DeliveryService;
@@ -93,6 +94,12 @@ export class DeliveryController {
       const data: CreateDeliveryRequest = req.body;
       const delivery = await this.deliveryService.createDelivery(data, req.user.userId);
 
+      Logger.info('Delivery created successfully', {
+        deliveryId: delivery.id,
+        userId: req.user.userId,
+        senderName: data.senderName
+      });
+
       const response: ApiResponse = {
         success: true,
         message: 'Delivery created successfully',
@@ -101,7 +108,11 @@ export class DeliveryController {
 
       res.status(201).json(response);
     } catch (error) {
-      console.error('Create delivery error:', error);
+      Logger.error('Failed to create delivery', {
+        error: error instanceof Error ? error.message : error,
+        userId: req.user?.userId,
+        requestBody: req.body
+      });
 
       const message = error instanceof Error ? error.message : 'Failed to create delivery';
 
@@ -191,6 +202,11 @@ export class DeliveryController {
 
       const delivery = await this.deliveryService.updateDelivery(id, data);
 
+      Logger.info('Delivery updated successfully', {
+        deliveryId: id,
+        userId: req.user.userId
+      });
+
       const response: ApiResponse = {
         success: true,
         message: 'Delivery updated successfully',
@@ -199,7 +215,11 @@ export class DeliveryController {
 
       res.status(200).json(response);
     } catch (error) {
-      console.error('Update delivery error:', error);
+      Logger.error('Failed to update delivery', {
+        error: error instanceof Error ? error.message : error,
+        deliveryId: req.params.id,
+        userId: req.user?.userId
+      });
 
       const message = error instanceof Error ? error.message : 'Failed to update delivery';
       const statusCode = message === 'Delivery not found' ? 404 : 400;
@@ -250,6 +270,11 @@ export class DeliveryController {
       const delivery = await this.deliveryService.getDeliveryById(id);
 
       if (!delivery) {
+        Logger.warn('Delivery not found', {
+          deliveryId: id,
+          userId: req.user.userId
+        });
+
         const response: ApiResponse = {
           success: false,
           message: 'Delivery not found'
@@ -257,6 +282,11 @@ export class DeliveryController {
         res.status(404).json(response);
         return;
       }
+
+      Logger.info('Delivery retrieved successfully', {
+        deliveryId: id,
+        userId: req.user.userId
+      });
 
       const response: ApiResponse = {
         success: true,
@@ -266,7 +296,11 @@ export class DeliveryController {
 
       res.status(200).json(response);
     } catch (error) {
-      console.error('Get delivery error:', error);
+      Logger.error('Failed to get delivery', {
+        error: error instanceof Error ? error.message : error,
+        deliveryId: req.params.id,
+        userId: req.user?.userId
+      });
 
       const message = error instanceof Error ? error.message : 'Failed to get delivery';
 
@@ -306,6 +340,11 @@ export class DeliveryController {
 
       const deliveries = await this.deliveryService.getAllDeliveries() || [];
 
+      Logger.info('All deliveries retrieved successfully', {
+        count: deliveries.length,
+        userId: req.user.userId
+      });
+
       const response: ApiResponse = {
         success: true,
         message: 'Deliveries retrieved successfully',
@@ -314,9 +353,117 @@ export class DeliveryController {
 
       res.status(200).json(response);
     } catch (error) {
-      console.error('Get all deliveries error:', error);
+      Logger.error('Failed to get deliveries', {
+        error: error instanceof Error ? error.message : error,
+        userId: req.user?.userId
+      });
 
       const message = error instanceof Error ? error.message : 'Failed to get deliveries';
+
+      const response: ApiResponse = {
+        success: false,
+        message
+      };
+
+      res.status(500).json(response);
+    }
+  };
+
+    // Delete delivery
+  deleteDelivery = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized'
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { id } = req.params;
+      await this.deliveryService.deleteDelivery(id);
+
+      Logger.info('Delivery deleted successfully', {
+        deliveryId: id,
+        userId: req.user.userId
+      });
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Delivery deleted successfully'
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Failed to delete delivery', {
+        error: error instanceof Error ? error.message : error,
+        deliveryId: req.params.id,
+        userId: req.user?.userId
+      });
+
+      const message = error instanceof Error ? error.message : 'Failed to delete delivery';
+      const statusCode = error instanceof Error && error.message === 'Delivery not found' ? 404 : 400;
+
+      const response: ApiResponse = {
+        success: false,
+        message
+      };
+
+      res.status(statusCode).json(response);
+    }
+  };
+
+    // Get related deliveries by sender name
+  getRelatedDeliveriesBySender = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized'
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { senderName } = req.params;
+
+      if (!senderName) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Sender name is required'
+        };
+        res.status(400).json(response);
+        return;
+      }
+
+      const relatedDeliveries = await this.deliveryService.getRelatedDeliveriesBySender(senderName);
+
+      Logger.info('Related deliveries retrieved successfully', {
+        senderName,
+        count: relatedDeliveries.length,
+        userId: req.user.userId
+      });
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Related deliveries retrieved successfully',
+        data: {
+          senderName,
+          deliveries: relatedDeliveries,
+          count: relatedDeliveries.length
+        }
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Failed to get related deliveries', {
+        error: error instanceof Error ? error.message : error,
+        senderName: req.params.senderName,
+        userId: req.user?.userId
+      });
+
+      const message = error instanceof Error ? error.message : 'Failed to get related deliveries';
 
       const response: ApiResponse = {
         success: false,

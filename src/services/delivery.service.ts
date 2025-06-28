@@ -1,7 +1,12 @@
 import { Delivery, IDelivery } from '@/models/delivery.model';
-import { CustomerService } from './customer.service';
-import { IDeliveryResponse, IDeliveryWithPopulatedRefs } from '@/types/delivery.type';
-import { CreateDeliveryRequest, UpdateDeliveryRequest } from '@/schemas/delivery.schema';
+import { CustomerService } from '@/services/customer.service';
+import {
+  IDeliveryCreateRequest,
+  IDeliveryUpdateRequest,
+  IDeliveryResponse,
+  IDeliveryWithPopulatedRefs
+} from '@/types/delivery.type';
+import { ICustomerResponse } from '@/types/customer.type';
 
 export class DeliveryService {
   private customerService: CustomerService;
@@ -15,66 +20,58 @@ export class DeliveryService {
    */
   private async transformDeliveryToResponse(delivery: IDelivery): Promise<IDeliveryResponse> {
     // Populate sender and receiver
-    const populatedDelivery = await Delivery.findById(delivery._id)
-      .populate('sender')
-      .populate('receiver')
-      .populate('createdByUser', 'username') as IDeliveryWithPopulatedRefs | null;
+    const populatedDelivery = await delivery.populate([
+      { path: 'sender', select: '_id name phone createdAt updatedAt' },
+      { path: 'receiver', select: '_id name phone createdAt updatedAt' },
+      { path: 'createdByUser', select: '_id username' }
+    ]);
 
-    if (!populatedDelivery) {
-      throw new Error('Delivery not found');
-    }
+    const populated = populatedDelivery as unknown as IDeliveryWithPopulatedRefs;
 
     return {
-      id: populatedDelivery._id.toString(),
+      id: populated._id,
       sender: {
-        id: populatedDelivery.sender._id.toString(),
-        name: populatedDelivery.sender.name,
-        phone: populatedDelivery.sender.phone,
-        createdAt: populatedDelivery.sender.createdAt,
-        updatedAt: populatedDelivery.sender.updatedAt
+        id: populated.sender._id,
+        name: populated.sender.name,
+        phone: populated.sender.phone,
+        createdAt: populated.sender.createdAt,
+        updatedAt: populated.sender.updatedAt
       },
       receiver: {
-        id: populatedDelivery.receiver._id.toString(),
-        name: populatedDelivery.receiver.name,
-        phone: populatedDelivery.receiver.phone,
-        createdAt: populatedDelivery.receiver.createdAt,
-        updatedAt: populatedDelivery.receiver.updatedAt
+        id: populated.receiver._id,
+        name: populated.receiver.name,
+        phone: populated.receiver.phone,
+        createdAt: populated.receiver.createdAt,
+        updatedAt: populated.receiver.updatedAt
       },
-      route: populatedDelivery.route,
-      name: populatedDelivery.name,
-      cost: populatedDelivery.cost,
-      homeDelivery: populatedDelivery.homeDelivery,
-      homeDeliveryCost: populatedDelivery.homeDeliveryCost,
-      itemValue: populatedDelivery.itemValue,
-      itemCost: populatedDelivery.itemCost,
-      collectCost: populatedDelivery.collectCost,
-      collectForCustomer: populatedDelivery.collectForCustomer,
-      collectForCustomerCost: populatedDelivery.collectForCustomerCost,
-      collectForCustomerNote: populatedDelivery.collectForCustomerNote,
-      createdByUser: populatedDelivery.createdByUser.username,
-      createdAt: populatedDelivery.createdAt,
-      updatedAt: populatedDelivery.updatedAt
+      route: populated.route,
+      name: populated.name,
+      cost: populated.cost,
+      homeDelivery: populated.homeDelivery,
+      homeDeliveryCost: populated.homeDeliveryCost,
+      itemValue: populated.itemValue,
+      itemCost: populated.itemCost,
+      collectCost: populated.collectCost,
+      collectForCustomer: populated.collectForCustomer,
+      collectForCustomerCost: populated.collectForCustomerCost,
+      collectForCustomerNote: populated.collectForCustomerNote,
+      createdByUser: populated.createdByUser.username,
+      createdAt: populated.createdAt,
+      updatedAt: populated.updatedAt
     };
   }
 
   /**
    * Create a new delivery
    */
-  async createDelivery(data: CreateDeliveryRequest, createdByUserId: string): Promise<IDeliveryResponse> {
+  async createDelivery(data: IDeliveryCreateRequest, userId: string): Promise<IDeliveryResponse> {
     try {
-      // Find or create sender
-      const sender = await this.customerService.findOrCreateCustomer(
-        data.senderName,
-        data.senderPhone
-      );
+      // Find or create sender and receiver
+      const sender = await this.customerService.findOrCreateCustomer(data.senderName, data.senderPhone);
+      const receiver = await this.customerService.findOrCreateCustomer(data.receiverName, data.receiverPhone);
 
-      // Find or create receiver
-      const receiver = await this.customerService.findOrCreateCustomer(
-        data.receiverName,
-        data.receiverPhone
-      );
-
-      const newDelivery = new Delivery({
+      // Create delivery
+      const delivery = new Delivery({
         sender: sender.id,
         receiver: receiver.id,
         route: data.route,
@@ -88,56 +85,47 @@ export class DeliveryService {
         collectForCustomer: data.collectForCustomer,
         collectForCustomerCost: data.collectForCustomerCost,
         collectForCustomerNote: data.collectForCustomerNote,
-        createdByUser: createdByUserId
+        createdByUser: userId
       });
 
-      await newDelivery.save();
-      return await this.transformDeliveryToResponse(newDelivery);
+      await delivery.save();
+      return this.transformDeliveryToResponse(delivery);
     } catch (error) {
-      if (error instanceof Error) {
-        throw error;
-      }
-      throw new Error('Failed to create delivery');
+      throw error;
     }
   }
 
   /**
    * Update delivery by ID
    */
-  async updateDelivery(id: string, data: UpdateDeliveryRequest): Promise<IDeliveryResponse> {
+  async updateDelivery(id: string, data: IDeliveryUpdateRequest): Promise<IDeliveryResponse> {
     try {
-      const delivery = await Delivery.findById(id);
-      if (!delivery) {
+      // Check if delivery exists
+      const existingDelivery = await Delivery.findById(id);
+      if (!existingDelivery) {
         throw new Error('Delivery not found');
       }
 
-      let senderId = delivery.sender;
-      let receiverId = delivery.receiver;
+      // Prepare update object
+      const updateData: any = {
+        receiver: existingDelivery.receiver // Keep existing receiver by default
+      };
 
       // Update sender if provided
       if (data.senderName && data.senderPhone) {
-        const sender = await this.customerService.findOrCreateCustomer(
-          data.senderName,
-          data.senderPhone
-        );
-        senderId = sender.id as any;
+        const sender = await this.customerService.findOrCreateCustomer(data.senderName, data.senderPhone);
+        updateData.sender = sender.id;
+      } else {
+        updateData.sender = existingDelivery.sender; // Keep existing sender
       }
 
       // Update receiver if provided
       if (data.receiverName && data.receiverPhone) {
-        const receiver = await this.customerService.findOrCreateCustomer(
-          data.receiverName,
-          data.receiverPhone
-        );
-        receiverId = receiver.id as any;
+        const receiver = await this.customerService.findOrCreateCustomer(data.receiverName, data.receiverPhone);
+        updateData.receiver = receiver.id;
       }
 
-      const updateData: any = {
-        sender: senderId,
-        receiver: receiverId
-      };
-
-      // Add other fields if provided
+      // Update other fields if provided
       if (data.route !== undefined) updateData.route = data.route;
       if (data.name !== undefined) updateData.name = data.name;
       if (data.cost !== undefined) updateData.cost = data.cost;
@@ -150,6 +138,7 @@ export class DeliveryService {
       if (data.collectForCustomerCost !== undefined) updateData.collectForCustomerCost = data.collectForCustomerCost;
       if (data.collectForCustomerNote !== undefined) updateData.collectForCustomerNote = data.collectForCustomerNote;
 
+      // Update delivery
       const updatedDelivery = await Delivery.findByIdAndUpdate(
         id,
         { $set: updateData },
@@ -160,12 +149,9 @@ export class DeliveryService {
         throw new Error('Failed to update delivery');
       }
 
-      return await this.transformDeliveryToResponse(updatedDelivery);
+      return this.transformDeliveryToResponse(updatedDelivery);
     } catch (error) {
-      if (error instanceof Error) {
-        throw error;
-      }
-      throw new Error('Failed to update delivery');
+      throw error;
     }
   }
 
@@ -175,11 +161,11 @@ export class DeliveryService {
   async getDeliveryById(id: string): Promise<IDeliveryResponse | null> {
     try {
       const delivery = await Delivery.findById(id);
-      if (!delivery) return null;
-
-      return await this.transformDeliveryToResponse(delivery);
+      if (!delivery) {
+        return null;
+      }
+      return this.transformDeliveryToResponse(delivery);
     } catch (error) {
-      console.error('Error getting delivery by ID:', error);
       return null;
     }
   }
@@ -190,13 +176,70 @@ export class DeliveryService {
   async getAllDeliveries(): Promise<IDeliveryResponse[]> {
     try {
       const deliveries = await Delivery.find({}).sort({ createdAt: -1 });
-      const transformedDeliveries = await Promise.all(
+      const responses = await Promise.all(
         deliveries.map(delivery => this.transformDeliveryToResponse(delivery))
       );
-      return transformedDeliveries;
+      return responses;
     } catch (error) {
-      console.error('Error getting all deliveries:', error);
       throw new Error('Failed to fetch deliveries');
+    }
+  }
+
+  async deleteDelivery(id: string): Promise<void> {
+    try {
+      const delivery = await Delivery.findById(id);
+      if (!delivery) {
+        throw new Error('Delivery not found');
+      }
+
+      await Delivery.findByIdAndDelete(id);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getRelatedDeliveriesBySender(senderName: string): Promise<IDeliveryResponse[]> {
+    try {
+      // Find all customers with the given name (case-insensitive)
+      const senders = await this.customerService.findCustomersByName(senderName);
+
+      if (senders.length === 0) {
+        return [];
+      }
+
+      // Get sender IDs
+      const senderIds = senders.map((sender: ICustomerResponse) => sender.id);
+
+      // Find all deliveries by these senders
+      const deliveries = await Delivery.find({
+        sender: { $in: senderIds }
+      }).sort({ createdAt: -1 });
+
+      if (deliveries.length === 0) {
+        return [];
+      }
+
+      // Transform to response format
+      const deliveryResponses = await Promise.all(
+        deliveries.map(delivery => this.transformDeliveryToResponse(delivery))
+      );
+
+      // Filter unique combinations of receiverName, receiverPhone, and route
+      const uniqueDeliveries: IDeliveryResponse[] = [];
+      const seenCombinations = new Set<string>();
+
+      for (const delivery of deliveryResponses) {
+        const combination = `${delivery.receiver.name}|${delivery.receiver.phone}|${delivery.route}`;
+
+        if (!seenCombinations.has(combination)) {
+          seenCombinations.add(combination);
+          uniqueDeliveries.push(delivery);
+        }
+      }
+
+      return uniqueDeliveries;
+    } catch (error) {
+      throw new Error(`Failed to fetch related deliveries: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 }

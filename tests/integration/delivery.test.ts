@@ -281,4 +281,121 @@ describe('Delivery Endpoints', () => {
       expect(response.body.message).toBe('Database connection failed');
     });
   });
+
+  describe('GET /api/delivery/related/:senderName', () => {
+    const senderName = 'John Sender';
+
+    it('should get related deliveries by sender name successfully', async () => {
+      const mockRelatedDeliveries = [
+        createMockDelivery({
+          id: 'delivery1',
+          sender: createMockCustomer({ name: 'John Sender', phone: '+1234567890' }),
+          receiver: createMockCustomer({ name: 'Alice Receiver', phone: '+1111111111' }),
+          route: 'Hanoi - HCMC'
+        }),
+        createMockDelivery({
+          id: 'delivery2',
+          sender: createMockCustomer({ name: 'John Sender', phone: '+1234567890' }),
+          receiver: createMockCustomer({ name: 'Bob Receiver', phone: '+2222222222' }),
+          route: 'HCMC - Da Nang'
+        }),
+        createMockDelivery({
+          id: 'delivery3',
+          sender: createMockCustomer({ name: 'John Sender', phone: '+1234567890' }),
+          receiver: createMockCustomer({ name: 'Alice Receiver', phone: '+1111111111' }),
+          route: 'Hanoi - Da Nang'
+        })
+      ];
+
+      mockDeliveryService.getRelatedDeliveriesBySender.mockResolvedValue(mockRelatedDeliveries);
+
+      const response = await request(app)
+        .get(`/api/delivery/related/${encodeURIComponent(senderName)}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('Related deliveries retrieved successfully');
+      expect(response.body.data.senderName).toBe(senderName);
+      expect(response.body.data.deliveries).toEqual(mockRelatedDeliveries);
+      expect(response.body.data.count).toBe(3);
+      expect(mockDeliveryService.getRelatedDeliveriesBySender).toHaveBeenCalledWith(senderName);
+    });
+
+    it('should return empty array when no related deliveries found', async () => {
+      mockDeliveryService.getRelatedDeliveriesBySender.mockResolvedValue([]);
+
+      const response = await request(app)
+        .get(`/api/delivery/related/${encodeURIComponent(senderName)}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.deliveries).toEqual([]);
+      expect(response.body.data.count).toBe(0);
+    });
+
+    it('should return 401 when not authenticated', async () => {
+      const response = await request(app)
+        .get(`/api/delivery/related/${encodeURIComponent(senderName)}`)
+        .expect(401);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Access token is required');
+    });
+
+    it('should return 500 when service throws error', async () => {
+      mockDeliveryService.getRelatedDeliveriesBySender.mockRejectedValue(
+        new Error('Database connection failed')
+      );
+
+      const response = await request(app)
+        .get(`/api/delivery/related/${encodeURIComponent(senderName)}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(500);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Database connection failed');
+    });
+  });
+
+  describe('DELETE /api/delivery/:id', () => {
+    const deliveryId = '507f1f77bcf86cd799439012';
+
+    it('should delete delivery successfully', async () => {
+      mockDeliveryService.deleteDelivery.mockResolvedValue(undefined);
+
+      const response = await request(app)
+        .delete(`/api/delivery/${deliveryId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('Delivery deleted successfully');
+      expect(mockDeliveryService.deleteDelivery).toHaveBeenCalledWith(deliveryId);
+    });
+
+    it('should return 404 when delivery not found', async () => {
+      mockDeliveryService.deleteDelivery.mockRejectedValue(
+        new Error('Delivery not found')
+      );
+
+      const response = await request(app)
+        .delete(`/api/delivery/${deliveryId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(404);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Delivery not found');
+    });
+
+    it('should return 401 when not authenticated', async () => {
+      const response = await request(app)
+        .delete(`/api/delivery/${deliveryId}`)
+        .expect(401);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Access token is required');
+    });
+  });
 });
