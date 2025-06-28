@@ -1,11 +1,11 @@
 import request from 'supertest';
-import app from '../app';
+import app from '../../src/app';
 import jwt from 'jsonwebtoken';
-import { UserRole } from '../types/user.type';
-import { mockAuthService } from './__mocks__/auth.service';
+import { UserRole } from '../../src/types/user.type';
+import { mockAuthService } from '../mocks/auth.service';
 
 // Mock AuthService
-jest.mock('../services/auth.service', () => require('./__mocks__/auth.service'));
+jest.mock('../../src/services/auth.service', () => require('../mocks/auth.service'));
 
 describe('Auth Endpoints', () => {
   let adminToken: string;

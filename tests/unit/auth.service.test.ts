@@ -1,10 +1,10 @@
-import { AuthService } from '../services/auth.service';
-import { User } from '../models/user.model';
+import { AuthService } from '../../src/services/auth.service';
+import { User } from '../../src/models/user.model';
 import jwt from 'jsonwebtoken';
-import { UserRole } from '../types/user.type';
+import { UserRole } from '../../src/types/user.type';
 
 // Mock User model
-jest.mock('../models/user.model');
+jest.mock('../../src/models/user.model');
 const MockedUser = User as jest.MockedClass<typeof User>;
 
 // Mock jwt

@@ -1,8 +1,8 @@
-import { CustomerService } from '../services/customer.service';
-import { Customer } from '../models/customer.model';
+import { CustomerService } from '../../src/services/customer.service';
+import { Customer } from '../../src/models/customer.model';
 
 // Mock Customer model
-jest.mock('../models/customer.model');
+jest.mock('../../src/models/customer.model');
 const MockedCustomer = Customer as jest.MockedClass<typeof Customer>;
 
 describe('CustomerService', () => {

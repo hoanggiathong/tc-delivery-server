@@ -1,12 +1,12 @@
 import request from 'supertest';
-import app from '../app';
+import app from '../../src/app';
 import jwt from 'jsonwebtoken';
-import { UserRole } from '../types/user.type';
-import { mockCustomerService } from './__mocks__/customer.service';
-import { createMockCustomer } from './helpers/test-helpers';
+import { UserRole } from '../../src/types/user.type';
+import { mockCustomerService } from '../mocks/customer.service';
+import { createMockCustomer } from '../helpers/test-helpers';
 
 // Mock CustomerService
-jest.mock('../services/customer.service', () => require('./__mocks__/customer.service'));
+jest.mock('../../src/services/customer.service', () => require('../mocks/customer.service'));
 
 describe('Customer Endpoints', () => {
   let adminToken: string;

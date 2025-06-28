@@ -1,12 +1,12 @@
 import request from 'supertest';
-import app from '../app';
+import app from '../../src/app';
 import jwt from 'jsonwebtoken';
-import { UserRole } from '../types/user.type';
-import { mockDeliveryService } from './__mocks__/delivery.service';
-import { createMockDelivery, createMockCustomer } from './helpers/test-helpers';
+import { UserRole } from '../../src/types/user.type';
+import { mockDeliveryService } from '../mocks/delivery.service';
+import { createMockDelivery, createMockCustomer } from '../helpers/test-helpers';
 
 // Mock DeliveryService
-jest.mock('../services/delivery.service', () => require('./__mocks__/delivery.service'));
+jest.mock('../../src/services/delivery.service', () => require('../mocks/delivery.service'));
 
 describe('Delivery Endpoints', () => {
   let adminToken: string;
