@@ -42,7 +42,7 @@ describe('Delivery Endpoints', () => {
       itemValue: 1000000,
       itemCost: 30000,
       collectCost: 15000,
-      collectForCustomer: true,
+      collectForCustomer: 25000,
       collectForCustomerCost: 20000,
       collectForCustomerNote: 'Handle with care'
     };

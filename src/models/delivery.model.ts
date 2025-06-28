@@ -12,7 +12,7 @@ export interface IDelivery extends Document {
   itemValue: number;
   itemCost: number;
   collectCost: number;
-  collectForCustomer: boolean;
+  collectForCustomer: number;
   collectForCustomerCost: number;
   collectForCustomerNote?: string;
   createdByUser: mongoose.Types.ObjectId;
@@ -72,9 +72,10 @@ const deliverySchema = new Schema<IDelivery>({
     min: [0, 'Collect cost must be positive']
   },
   collectForCustomer: {
-    type: Boolean,
-    required: [true, 'Collect for customer flag is required'],
-    default: false
+    type: Number,
+    required: [true, 'Collect for customer amount is required'],
+    min: [0, 'Collect for customer amount must be positive'],
+    default: 0
   },
   collectForCustomerCost: {
     type: Number,

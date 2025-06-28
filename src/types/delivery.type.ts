@@ -16,7 +16,7 @@ export interface IDeliveryResponse extends BaseEntity {
   itemValue: number;
   itemCost: number;
   collectCost: number;
-  collectForCustomer: boolean;
+  collectForCustomer: number;
   collectForCustomerCost: number;
   collectForCustomerNote?: string;
   createdByUser: string;
@@ -36,7 +36,7 @@ export interface IDeliveryCreateRequest {
   itemValue: number;
   itemCost: number;
   collectCost: number;
-  collectForCustomer: boolean;
+  collectForCustomer: number;
   collectForCustomerCost: number;
   collectForCustomerNote?: string;
 }
@@ -55,7 +55,7 @@ export interface IDeliveryUpdateRequest {
   itemValue?: number;
   itemCost?: number;
   collectCost?: number;
-  collectForCustomer?: boolean;
+  collectForCustomer?: number;
   collectForCustomerCost?: number;
   collectForCustomerNote?: string;
 }
@@ -80,7 +80,7 @@ export interface IDeliveryWithPopulatedRefs {
   itemValue: number;
   itemCost: number;
   collectCost: number;
-  collectForCustomer: boolean;
+  collectForCustomer: number;
   collectForCustomerCost: number;
   collectForCustomerNote?: string;
   createdByUser: {

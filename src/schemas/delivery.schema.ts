@@ -37,7 +37,8 @@ export const createDeliverySchema = z.object({
       .min(0, 'Item cost must be positive'),
     collectCost: z.number()
       .min(0, 'Collect cost must be positive'),
-    collectForCustomer: z.boolean(),
+    collectForCustomer: z.number()
+      .min(0, 'Collect for customer amount must be positive'),
     collectForCustomerCost: z.number()
       .min(0, 'Collect for customer cost must be positive'),
     collectForCustomerNote: z.string()
@@ -95,7 +96,8 @@ export const updateDeliverySchema = z.object({
     collectCost: z.number()
       .min(0, 'Collect cost must be positive')
       .optional(),
-    collectForCustomer: z.boolean()
+    collectForCustomer: z.number()
+      .min(0, 'Collect for customer amount must be positive')
       .optional(),
     collectForCustomerCost: z.number()
       .min(0, 'Collect for customer cost must be positive')

@@ -46,7 +46,7 @@ erDiagram
         number itemValue "item value, min 0"
         number itemCost "item cost, min 0"
         number collectCost "collection cost, min 0"
-        boolean collectForCustomer "default false"
+        number collectForCustomer "min 0, default 0"
         number collectForCustomerCost "min 0"
         string collectForCustomerNote "optional"
         ObjectId createdByUser FK "ref: USERS"
@@ -134,7 +134,7 @@ erDiagram
 | `itemValue` | Number | ✅ | Min 0 | Declared value of the item |
 | `itemCost` | Number | ✅ | Min 0 | Cost of the item itself |
 | `collectCost` | Number | ✅ | Min 0 | Collection/pickup cost |
-| `collectForCustomer` | Boolean | ✅ | Default: false | Whether to collect payment from customer |
+| `collectForCustomer` | Number | ✅ | Min 0, Default: 0 | Amount to collect for customer (thu dùm) |
 | `collectForCustomerCost` | Number | ✅ | Min 0 | Amount to collect from customer |
 | `collectForCustomerNote` | String | ❌ | Trimmed | Additional notes for customer collection |
 | `createdByUser` | ObjectId | ✅ | References USERS | User who created this delivery |
@@ -150,7 +150,8 @@ The delivery system tracks multiple cost components:
 3. **Item Value** (`itemValue`): Declared value for insurance purposes
 4. **Item Cost** (`itemCost`): Actual cost of the item
 5. **Collect Cost** (`collectCost`): Fee for collection service
-6. **Customer Collection** (`collectForCustomerCost`): Amount to collect from receiver
+6. **Collect For Customer** (`collectForCustomer`): Amount to collect on behalf of customer (thu dùm)
+7. **Customer Collection Cost** (`collectForCustomerCost`): Service fee for collecting on behalf of customer
 
 #### Relationships
 - **Many-to-One** with CUSTOMERS (sender): One customer can send multiple deliveries
@@ -257,7 +258,7 @@ The delivery system tracks multiple cost components:
   "itemValue": 500000,
   "itemCost": 450000,
   "collectCost": 5000,
-  "collectForCustomer": true,
+  "collectForCustomer": 100000,
   "collectForCustomerCost": 100000,
   "collectForCustomerNote": "Collect payment for goods",
   "createdByUser": "ObjectId('user_id')",

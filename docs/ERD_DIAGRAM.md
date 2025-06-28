@@ -37,7 +37,7 @@ erDiagram
         number itemValue "item value, min 0"
         number itemCost "item cost, min 0"
         number collectCost "collection cost, min 0"
-        boolean collectForCustomer "default false"
+        number collectForCustomer "min 0, default 0"
         number collectForCustomerCost "min 0"
         string collectForCustomerNote "optional"
         ObjectId createdByUser FK "ref: USERS"
