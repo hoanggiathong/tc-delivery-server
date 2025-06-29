@@ -86,19 +86,6 @@ Common setup file for all tests:
 - Cleanup after each test
 - Configure Jest environment
 
-## 🚀 Migration from `__tests__`
-
-The old `src/__tests__/` structure has been moved to:
-
-```
-src/__tests__/          →  tests/
-├── __mocks__/          →  mocks/
-├── helpers/            →  helpers/
-├── *.service.test.ts   →  unit/
-├── *.test.ts           →  integration/
-└── setup.ts            →  setup.ts
-```
-
 ## 📝 Naming Conventions
 
 - **Unit tests**: `*.service.test.ts`

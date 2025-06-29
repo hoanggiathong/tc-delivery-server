@@ -17,3 +17,12 @@ export interface ICustomerUpdateRequest {
   name?: string;
   phone?: string;
 }
+
+// Lean type for MongoDB customer documents (when using .lean())
+export interface ICustomerLean {
+  _id: string;
+  name: string;
+  phone: string;
+  createdAt: Date;
+  updatedAt: Date;
+}

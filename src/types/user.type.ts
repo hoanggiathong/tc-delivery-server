@@ -1,5 +1,5 @@
 import { BaseEntity } from '.';
-import { IUser } from '@/models/user.model';
+import { Document } from 'mongoose';
 
 // Role enum
 export enum UserRole {
@@ -37,10 +37,49 @@ export const ROLE_PERMISSIONS: Record<UserRole, { canView: UserRole[]; canCreate
   }
 } as const;
 
-// User response interface extending base
-export interface IUserResponse extends BaseEntity {
+// Base user interface (without password)
+export interface IUserBase {
+  _id: string;
   username: string;
   role: UserRole;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// User document interface (extends Mongoose Document)
+export interface IUser extends Document {
+  _id: string;
+  username: string;
+  password: string;
+  role: UserRole;
+  createdAt: Date;
+  updatedAt: Date;
+  comparePassword(candidatePassword: string): Promise<boolean>;
+}
+
+// User response interface (for API responses)
+export interface IUserResponse {
+  id: string;
+  username: string;
+  role: UserRole;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// JWT payload interface
+export interface JWTPayload {
+  userId: string;
+  username: string;
+  role: UserRole;
+}
+
+// Lean type for MongoDB user documents (when using .lean())
+export interface IUserLean {
+  _id: string;
+  username: string;
+  role: UserRole;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // Extended user response with additional fields (for future use)
@@ -66,10 +105,31 @@ export const transformUserToResponse = (user: IUser): IUserResponse => {
 };
 
 /**
+ * Transform IUserLean to IUserResponse
+ * For lean documents from .lean() queries
+ */
+export const transformUserLeanToResponse = (user: IUserLean): IUserResponse => {
+  return {
+    id: user._id.toString(),
+    username: user.username,
+    role: user.role,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt
+  };
+};
+
+/**
  * Transform multiple users to response format
  */
 export const transformUsersToResponse = (users: IUser[]): IUserResponse[] => {
   return users.map(transformUserToResponse);
+};
+
+/**
+ * Transform multiple lean users to response format
+ */
+export const transformUsersLeanToResponse = (users: IUserLean[]): IUserResponse[] => {
+  return users.map(transformUserLeanToResponse);
 };
 
 /**

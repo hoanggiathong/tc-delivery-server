@@ -1,5 +1,5 @@
 import { Customer, ICustomer } from '@/models/customer.model';
-import { ICustomerResponse } from '@/types/customer.type';
+import { ICustomerResponse, ICustomerLean } from '@/types/customer.type';
 import { CreateCustomerRequest, UpdateCustomerRequest } from '@/schemas/customer.schema';
 
 export class CustomerService {
@@ -7,6 +7,19 @@ export class CustomerService {
    * Transform ICustomer to ICustomerResponse
    */
   private transformCustomerToResponse(customer: ICustomer): ICustomerResponse {
+    return {
+      id: customer._id.toString(),
+      name: customer.name,
+      phone: customer.phone,
+      createdAt: customer.createdAt,
+      updatedAt: customer.updatedAt
+    };
+  }
+
+  /**
+   * Transform ICustomerLean to ICustomerResponse (for lean documents)
+   */
+  private transformCustomerLeanToResponse(customer: ICustomerLean): ICustomerResponse {
     return {
       id: customer._id.toString(),
       name: customer.name,
@@ -96,10 +109,10 @@ export class CustomerService {
    */
   async getCustomerById(id: string): Promise<ICustomerResponse | null> {
     try {
-      const customer = await Customer.findById(id);
+      const customer = await Customer.findById(id).lean();
       if (!customer) return null;
 
-      return this.transformCustomerToResponse(customer);
+      return this.transformCustomerLeanToResponse(customer as ICustomerLean);
     } catch (error) {
       console.error('Error getting customer by ID:', error);
       return null;
@@ -111,8 +124,8 @@ export class CustomerService {
    */
   async getAllCustomers(): Promise<ICustomerResponse[]> {
     try {
-      const customers = await Customer.find({}).sort({ createdAt: -1 });
-      return customers.map(customer => this.transformCustomerToResponse(customer));
+      const customers = await Customer.find({}).sort({ createdAt: -1 }).lean();
+      return customers.map(customer => this.transformCustomerLeanToResponse(customer as ICustomerLean));
     } catch (error) {
       console.error('Error getting all customers:', error);
       throw new Error('Failed to fetch customers');
@@ -125,15 +138,17 @@ export class CustomerService {
   async findOrCreateCustomer(name: string, phone: string): Promise<ICustomerResponse> {
     try {
       // Try to find existing customer
-      let customer = await Customer.findOne({ name, phone });
+      const existingCustomer = await Customer.findOne({ name, phone }).lean();
 
-      if (!customer) {
-        // Create new customer if not found
-        customer = new Customer({ name, phone });
-        await customer.save();
+      if (existingCustomer) {
+        return this.transformCustomerLeanToResponse(existingCustomer as ICustomerLean);
       }
 
-      return this.transformCustomerToResponse(customer);
+      // Create new customer if not found
+      const newCustomer = new Customer({ name, phone });
+      const savedCustomer = await newCustomer.save();
+
+      return this.transformCustomerToResponse(savedCustomer);
     } catch (error) {
       if (error instanceof Error) {
         throw error;
@@ -149,9 +164,9 @@ export class CustomerService {
     try {
       const customers = await Customer.find({
         name: { $regex: name, $options: 'i' }
-      }).sort({ createdAt: -1 });
+      }).sort({ createdAt: -1 }).lean();
 
-      return customers.map(customer => this.transformCustomerToResponse(customer));
+      return customers.map(customer => this.transformCustomerLeanToResponse(customer as ICustomerLean));
     } catch (error) {
       console.error('Error finding customers by name:', error);
       throw new Error('Failed to find customers by name');

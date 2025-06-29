@@ -1,17 +1,17 @@
-import { AuthService } from '@/services/auth.service';
-import { User } from '@/models/user.model';
-import jwt from 'jsonwebtoken';
-import { UserRole } from '@/types/user.type';
+import { AuthService } from "@/services/auth.service";
+import { User } from "@/models/user.model";
+import jwt from "jsonwebtoken";
+import { UserRole } from "@/types/user.type";
 
 // Mock User model
-jest.mock('@/models/user.model');
+jest.mock("@/models/user.model");
 const MockedUser = User as jest.MockedClass<typeof User>;
 
 // Mock jwt
-jest.mock('jsonwebtoken');
+jest.mock("jsonwebtoken");
 const mockedJwt = jwt as jest.Mocked<typeof jwt>;
 
-describe('AuthService', () => {
+describe("AuthService", () => {
   let authService: AuthService;
   let mockUserInstance: any;
 
@@ -21,23 +21,23 @@ describe('AuthService', () => {
 
     // Mock user instance
     mockUserInstance = {
-      _id: 'user123',
-      username: 'testuser',
-      password: 'hashedPassword',
+      _id: "user123",
+      username: "testuser",
+      password: "hashedPassword",
       role: UserRole.USER,
       createdAt: new Date(),
       updatedAt: new Date(),
       save: jest.fn(),
-      comparePassword: jest.fn()
+      comparePassword: jest.fn(),
     };
   });
 
-  describe('register', () => {
-    it('should register a new user successfully', async () => {
+  describe("register", () => {
+    it("should register a new user successfully", async () => {
       const userData = {
-        username: 'testuser',
-        password: 'TestPass123',
-        role: UserRole.USER
+        username: "testuser",
+        password: "TestPass123",
+        role: UserRole.USER,
       };
 
       // Mock findOne to return null (no existing user)
@@ -53,46 +53,49 @@ describe('AuthService', () => {
 
       const result = await authService.register(userData);
 
-      expect(MockedUser.findOne).toHaveBeenCalledWith({ username: userData.username });
+      expect(MockedUser.findOne).toHaveBeenCalledWith({
+        username: userData.username,
+      });
       expect(MockedUser).toHaveBeenCalledWith(userData);
       expect(mockUserInstance.save).toHaveBeenCalled();
       expect(result.user).toEqual({
-        id: 'user123',
-        username: userData.username,  // Now matches the actual input
-        role: userData.role,          // Now matches the actual input
+        id: "user123",
+        username: userData.username,
+        role: userData.role,
         createdAt: mockUserInstance.createdAt,
-        updatedAt: mockUserInstance.updatedAt
+        updatedAt: mockUserInstance.updatedAt,
       });
     });
 
-
-
-    it('should throw error when username already exists', async () => {
+    it("should throw error when username already exists", async () => {
       const userData = {
-        username: 'testuser',
-        password: 'TestPass123',
-        role: UserRole.USER
+        username: "testuser",
+        password: "TestPass123",
+        role: UserRole.USER,
       };
 
       // Mock findOne to return existing user
       MockedUser.findOne = jest.fn().mockResolvedValue(mockUserInstance);
 
-      await expect(authService.register(userData))
-        .rejects.toThrow('Username already exists');
+      await expect(authService.register(userData)).rejects.toThrow(
+        "Username already exists"
+      );
 
-      expect(MockedUser.findOne).toHaveBeenCalledWith({ username: userData.username });
+      expect(MockedUser.findOne).toHaveBeenCalledWith({
+        username: userData.username,
+      });
       expect(MockedUser).not.toHaveBeenCalled();
     });
   });
 
-  describe('login', () => {
-    it('should login successfully with valid credentials', async () => {
+  describe("login", () => {
+    it("should login successfully with valid credentials", async () => {
       const loginData = {
-        username: 'testuser',
-        password: 'TestPass123'
+        username: "testuser",
+        password: "TestPass123",
       };
 
-      const mockToken = 'valid-jwt-token';
+      const mockToken = "valid-jwt-token";
 
       // Mock findOne to return user with password
       const mockSelect = jest.fn().mockResolvedValue(mockUserInstance);
@@ -106,32 +109,37 @@ describe('AuthService', () => {
 
       const result = await authService.login(loginData);
 
-      expect(MockedUser.findOne).toHaveBeenCalledWith({ username: loginData.username });
-      expect(mockSelect).toHaveBeenCalledWith('+password');
-      expect(mockUserInstance.comparePassword).toHaveBeenCalledWith(loginData.password);
+      expect(MockedUser.findOne).toHaveBeenCalledWith({
+        username: loginData.username,
+      });
+      expect(mockSelect).toHaveBeenCalledWith("+password");
+      expect(mockUserInstance.comparePassword).toHaveBeenCalledWith(
+        loginData.password
+      );
       expect(mockedJwt.sign).toHaveBeenCalled();
       expect(result.token).toBe(mockToken);
-      expect(result.user.username).toBe('testuser');
+      expect(result.user.username).toBe("testuser");
     });
 
-    it('should throw error when user not found', async () => {
+    it("should throw error when user not found", async () => {
       const loginData = {
-        username: 'nonexistent',
-        password: 'TestPass123'
+        username: "nonexistent",
+        password: "TestPass123",
       };
 
       // Mock findOne to return null
       const mockSelect = jest.fn().mockResolvedValue(null);
       MockedUser.findOne = jest.fn().mockReturnValue({ select: mockSelect });
 
-      await expect(authService.login(loginData))
-        .rejects.toThrow('Invalid credentials');
+      await expect(authService.login(loginData)).rejects.toThrow(
+        "Invalid credentials"
+      );
     });
 
-    it('should throw error when password is invalid', async () => {
+    it("should throw error when password is invalid", async () => {
       const loginData = {
-        username: 'testuser',
-        password: 'wrongpassword'
+        username: "testuser",
+        password: "wrongpassword",
       };
 
       // Mock findOne to return user
@@ -141,48 +149,61 @@ describe('AuthService', () => {
       // Mock password comparison to return false
       mockUserInstance.comparePassword.mockResolvedValue(false);
 
-      await expect(authService.login(loginData))
-        .rejects.toThrow('Invalid credentials');
+      await expect(authService.login(loginData)).rejects.toThrow(
+        "Invalid credentials"
+      );
 
-      expect(mockUserInstance.comparePassword).toHaveBeenCalledWith(loginData.password);
+      expect(mockUserInstance.comparePassword).toHaveBeenCalledWith(
+        loginData.password
+      );
     });
   });
 
-  describe('getUserById', () => {
-    it('should return user when found', async () => {
-      const userId = 'user123';
+  describe("getUserById", () => {
+    it("should return user when found", async () => {
+      const userId = "user123";
 
-      MockedUser.findById = jest.fn().mockResolvedValue(mockUserInstance);
+      const mockFindById = {
+        lean: jest.fn().mockResolvedValue(mockUserInstance),
+      };
+      MockedUser.findById = jest.fn().mockReturnValue(mockFindById);
 
       const result = await authService.getUserById(userId);
 
       expect(MockedUser.findById).toHaveBeenCalledWith(userId);
+      expect(mockFindById.lean).toHaveBeenCalled();
       expect(result).toEqual({
-        id: 'user123',
-        username: 'testuser',
+        id: "user123",
+        username: "testuser",
         role: UserRole.USER,
         createdAt: mockUserInstance.createdAt,
-        updatedAt: mockUserInstance.updatedAt
+        updatedAt: mockUserInstance.updatedAt,
       });
     });
 
-    it('should return null when user not found', async () => {
-      const userId = 'nonexistent';
+    it("should return null when user not found", async () => {
+      const userId = "nonexistent";
 
-      MockedUser.findById = jest.fn().mockResolvedValue(null);
+      const mockFindById = {
+        lean: jest.fn().mockResolvedValue(null),
+      };
+      MockedUser.findById = jest.fn().mockReturnValue(mockFindById);
 
       const result = await authService.getUserById(userId);
 
       expect(MockedUser.findById).toHaveBeenCalledWith(userId);
+      expect(mockFindById.lean).toHaveBeenCalled();
       expect(result).toBeNull();
     });
   });
 
-  describe('getAllUsers', () => {
-    it('should return all users', async () => {
+  describe("getAllUsers", () => {
+    it("should return all users", async () => {
       const mockUsers = [mockUserInstance];
       const mockFind = {
-        sort: jest.fn().mockResolvedValue(mockUsers)
+        sort: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue(mockUsers),
+        }),
       };
 
       MockedUser.find = jest.fn().mockReturnValue(mockFind);
@@ -192,16 +213,18 @@ describe('AuthService', () => {
       expect(MockedUser.find).toHaveBeenCalledWith({});
       expect(mockFind.sort).toHaveBeenCalledWith({ createdAt: -1 });
       expect(result).toHaveLength(1);
-      expect(result[0].id).toBe('user123');
+      expect(result[0].id).toBe("user123");
     });
   });
 
-  describe('getUsersByRoles', () => {
-    it('should return users with specified roles', async () => {
+  describe("getUsersByRoles", () => {
+    it("should return users with specified roles", async () => {
       const roles = [UserRole.USER, UserRole.MANAGER];
       const mockUsers = [mockUserInstance];
       const mockFind = {
-        sort: jest.fn().mockResolvedValue(mockUsers)
+        sort: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue(mockUsers),
+        }),
       };
 
       MockedUser.find = jest.fn().mockReturnValue(mockFind);

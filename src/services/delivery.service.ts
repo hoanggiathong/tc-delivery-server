@@ -4,7 +4,8 @@ import {
   IDeliveryCreateRequest,
   IDeliveryUpdateRequest,
   IDeliveryResponse,
-  IDeliveryWithPopulatedRefs
+  IDeliveryWithPopulatedRefs,
+  IDeliveryLeanPopulated
 } from '@/types/delivery.type';
 import { ICustomerResponse } from '@/types/customer.type';
 
@@ -62,6 +63,43 @@ export class DeliveryService {
   }
 
   /**
+   * Transform pre-populated lean delivery to IDeliveryResponse (optimized)
+   */
+  private transformDeliveryToResponseOptimized(delivery: IDeliveryLeanPopulated): IDeliveryResponse {
+    return {
+      id: delivery._id,
+      sender: {
+        id: delivery.sender._id,
+        name: delivery.sender.name,
+        phone: delivery.sender.phone,
+        createdAt: delivery.sender.createdAt,
+        updatedAt: delivery.sender.updatedAt
+      },
+      receiver: {
+        id: delivery.receiver._id,
+        name: delivery.receiver.name,
+        phone: delivery.receiver.phone,
+        createdAt: delivery.receiver.createdAt,
+        updatedAt: delivery.receiver.updatedAt
+      },
+      route: delivery.route,
+      name: delivery.name,
+      cost: delivery.cost,
+      homeDelivery: delivery.homeDelivery,
+      homeDeliveryCost: delivery.homeDeliveryCost,
+      itemValue: delivery.itemValue,
+      itemCost: delivery.itemCost,
+      collectCost: delivery.collectCost,
+      collectForCustomer: delivery.collectForCustomer,
+      collectForCustomerCost: delivery.collectForCustomerCost,
+      collectForCustomerNote: delivery.collectForCustomerNote,
+      createdByUser: delivery.createdByUser.username,
+      createdAt: delivery.createdAt,
+      updatedAt: delivery.updatedAt
+    };
+  }
+
+  /**
    * Create a new delivery
    */
   async createDelivery(data: IDeliveryCreateRequest, userId: string): Promise<IDeliveryResponse> {
@@ -100,32 +138,34 @@ export class DeliveryService {
    */
   async updateDelivery(id: string, data: IDeliveryUpdateRequest): Promise<IDeliveryResponse> {
     try {
-      // Check if delivery exists
-      const existingDelivery = await Delivery.findById(id);
-      if (!existingDelivery) {
+      const delivery = await Delivery.findById(id);
+      if (!delivery) {
         throw new Error('Delivery not found');
       }
 
-      // Prepare update object
-      const updateData: any = {
-        receiver: existingDelivery.receiver // Keep existing receiver by default
-      };
+      const updateData: any = {};
 
-      // Update sender if provided
-      if (data.senderName && data.senderPhone) {
-        const sender = await this.customerService.findOrCreateCustomer(data.senderName, data.senderPhone);
+      // Handle sender update
+      if (data.senderName || data.senderPhone) {
+        const senderName = data.senderName || delivery.sender.toString();
+        const senderPhone = data.senderPhone || delivery.sender.toString();
+        const sender = await this.customerService.findOrCreateCustomer(senderName, senderPhone);
         updateData.sender = sender.id;
       } else {
-        updateData.sender = existingDelivery.sender; // Keep existing sender
+        updateData.sender = delivery.sender;
       }
 
-      // Update receiver if provided
-      if (data.receiverName && data.receiverPhone) {
-        const receiver = await this.customerService.findOrCreateCustomer(data.receiverName, data.receiverPhone);
+      // Handle receiver update
+      if (data.receiverName || data.receiverPhone) {
+        const receiverName = data.receiverName || delivery.receiver.toString();
+        const receiverPhone = data.receiverPhone || delivery.receiver.toString();
+        const receiver = await this.customerService.findOrCreateCustomer(receiverName, receiverPhone);
         updateData.receiver = receiver.id;
+      } else {
+        updateData.receiver = delivery.receiver;
       }
 
-      // Update other fields if provided
+      // Handle other field updates
       if (data.route !== undefined) updateData.route = data.route;
       if (data.name !== undefined) updateData.name = data.name;
       if (data.cost !== undefined) updateData.cost = data.cost;
@@ -160,11 +200,19 @@ export class DeliveryService {
    */
   async getDeliveryById(id: string): Promise<IDeliveryResponse | null> {
     try {
-      const delivery = await Delivery.findById(id);
+      const delivery = await Delivery.findById(id)
+        .populate([
+          { path: 'sender', select: '_id name phone createdAt updatedAt' },
+          { path: 'receiver', select: '_id name phone createdAt updatedAt' },
+          { path: 'createdByUser', select: '_id username' }
+        ])
+        .lean();
+
       if (!delivery) {
         return null;
       }
-      return this.transformDeliveryToResponse(delivery);
+
+      return this.transformDeliveryToResponseOptimized(delivery as unknown as IDeliveryLeanPopulated);
     } catch (error) {
       return null;
     }
@@ -175,11 +223,16 @@ export class DeliveryService {
    */
   async getAllDeliveries(): Promise<IDeliveryResponse[]> {
     try {
-      const deliveries = await Delivery.find({}).sort({ createdAt: -1 });
-      const responses = await Promise.all(
-        deliveries.map(delivery => this.transformDeliveryToResponse(delivery))
-      );
-      return responses;
+      const deliveries = await Delivery.find({})
+        .populate([
+          { path: 'sender', select: '_id name phone createdAt updatedAt' },
+          { path: 'receiver', select: '_id name phone createdAt updatedAt' },
+          { path: 'createdByUser', select: '_id username' }
+        ])
+        .sort({ createdAt: -1 })
+        .lean();
+
+      return deliveries.map(delivery => this.transformDeliveryToResponseOptimized(delivery as unknown as IDeliveryLeanPopulated));
     } catch (error) {
       throw new Error('Failed to fetch deliveries');
     }
@@ -210,18 +263,25 @@ export class DeliveryService {
       // Get sender IDs
       const senderIds = senders.map((sender: ICustomerResponse) => sender.id);
 
-      // Find all deliveries by these senders
+      // Find all deliveries by these senders with populated data
       const deliveries = await Delivery.find({
         sender: { $in: senderIds }
-      }).sort({ createdAt: -1 });
+      })
+        .populate([
+          { path: 'sender', select: '_id name phone createdAt updatedAt' },
+          { path: 'receiver', select: '_id name phone createdAt updatedAt' },
+          { path: 'createdByUser', select: '_id username' }
+        ])
+        .sort({ createdAt: -1 })
+        .lean();
 
       if (deliveries.length === 0) {
         return [];
       }
 
       // Transform to response format
-      const deliveryResponses = await Promise.all(
-        deliveries.map(delivery => this.transformDeliveryToResponse(delivery))
+      const deliveryResponses = deliveries.map(delivery =>
+        this.transformDeliveryToResponseOptimized(delivery as unknown as IDeliveryLeanPopulated)
       );
 
       // Filter unique combinations of receiverName, receiverPhone, and route

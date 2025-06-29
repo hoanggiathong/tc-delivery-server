@@ -90,3 +90,39 @@ export interface IDeliveryWithPopulatedRefs {
   createdAt: Date;
   updatedAt: Date;
 }
+
+// Lean types for MongoDB documents (when using .lean())
+export interface IDeliveryLeanPopulated {
+  _id: string;
+  sender: {
+    _id: string;
+    name: string;
+    phone: string;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+  receiver: {
+    _id: string;
+    name: string;
+    phone: string;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+  route: string;
+  name: string;
+  cost: number;
+  homeDelivery: string;
+  homeDeliveryCost: number;
+  itemValue: number;
+  itemCost: number;
+  collectCost: number;
+  collectForCustomer: number;
+  collectForCustomerCost: number;
+  collectForCustomerNote?: string;
+  createdByUser: {
+    _id: string;
+    username: string;
+  };
+  createdAt: Date;
+  updatedAt: Date;
+}

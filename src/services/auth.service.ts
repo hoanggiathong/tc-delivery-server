@@ -3,8 +3,10 @@ import { User, IUser } from '@/models/user.model';
 import {
   JWTPayload,
   IUserResponse,
+  IUserLean,
   transformUserToResponse,
-  transformUsersToResponse,
+  transformUserLeanToResponse,
+  transformUsersLeanToResponse,
   UserRole
 } from '@/types';
 import { LoginRequest, RegisterRequest, CreateUserRequest } from '@/schemas/auth.schema';
@@ -107,10 +109,10 @@ export class AuthService {
 
   async getUserById(id: string): Promise<IUserResponse | null> {
     try {
-      const user = await User.findById(id);
+      const user = await User.findById(id).lean();
       if (!user) return null;
 
-      return transformUserToResponse(user);
+      return transformUserLeanToResponse(user as IUserLean);
     } catch (error) {
       console.error('Error getting user by ID:', error);
       return null;
@@ -119,8 +121,8 @@ export class AuthService {
 
   async getAllUsers(): Promise<IUserResponse[]> {
     try {
-      const users = await User.find({}).sort({ createdAt: -1 });
-      return transformUsersToResponse(users);
+      const users = await User.find({}).sort({ createdAt: -1 }).lean();
+      return transformUsersLeanToResponse(users as IUserLean[]);
     } catch (error) {
       console.error('Error getting all users:', error);
       throw new Error('Failed to fetch users');
@@ -129,8 +131,8 @@ export class AuthService {
 
   async getUsersByRoles(roles: UserRole[]): Promise<IUserResponse[]> {
     try {
-      const users = await User.find({ role: { $in: roles } }).sort({ createdAt: -1 });
-      return transformUsersToResponse(users);
+      const users = await User.find({ role: { $in: roles } }).sort({ createdAt: -1 }).lean();
+      return transformUsersLeanToResponse(users as IUserLean[]);
     } catch (error) {
       console.error('Error getting users by roles:', error);
       throw new Error('Failed to fetch users');
