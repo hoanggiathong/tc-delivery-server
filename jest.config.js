@@ -6,9 +6,6 @@ module.exports = {
   testEnvironment: 'node',
   roots: ['<rootDir>/src', '<rootDir>/tests'],
   testMatch: ['**/tests/**/*.test.ts'],
-  transform: {
-    '^.+\\.ts$': 'ts-jest',
-  },
   collectCoverageFrom: [
     'src/**/*.{ts,js}',
     '!src/**/*.d.ts',
@@ -22,15 +19,15 @@ module.exports = {
     prefix: '<rootDir>/'
   }),
 
-  // Configure ts-jest with tsconfig paths
-  globals: {
-    'ts-jest': {
+  // Configure ts-jest with tsconfig paths (new format)
+  transform: {
+    '^.+\\.ts$': ['ts-jest', {
       tsconfig: {
         ...compilerOptions,
         baseUrl: '.',
         paths: compilerOptions.paths
       }
-    }
+    }]
   },
 
   clearMocks: true,

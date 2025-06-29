@@ -4,6 +4,7 @@ export const mockCustomerService = {
   getCustomerById: jest.fn(),
   getAllCustomers: jest.fn(),
   findOrCreateCustomer: jest.fn(),
+  findCustomersByName: jest.fn(),
 };
 
 export class CustomerService {
@@ -12,4 +13,5 @@ export class CustomerService {
   getCustomerById = mockCustomerService.getCustomerById;
   getAllCustomers = mockCustomerService.getAllCustomers;
   findOrCreateCustomer = mockCustomerService.findOrCreateCustomer;
+  findCustomersByName = mockCustomerService.findCustomersByName;
 }

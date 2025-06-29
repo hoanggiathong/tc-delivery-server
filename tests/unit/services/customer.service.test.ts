@@ -1,8 +1,8 @@
-import { CustomerService } from '../../src/services/customer.service';
-import { Customer } from '../../src/models/customer.model';
+import { CustomerService } from '@/services/customer.service';
+import { Customer } from '@/models/customer.model';
 
 // Mock Customer model
-jest.mock('../../src/models/customer.model');
+jest.mock('@/models/customer.model');
 const MockedCustomer = Customer as jest.MockedClass<typeof Customer>;
 
 describe('CustomerService', () => {
@@ -34,6 +34,10 @@ describe('CustomerService', () => {
       // Mock findOne to return null (no existing customer)
       MockedCustomer.findOne = jest.fn().mockResolvedValue(null);
 
+      // Update mockCustomerInstance with customerData values
+      mockCustomerInstance.name = customerData.name;
+      mockCustomerInstance.phone = customerData.phone;
+
       // Mock constructor and save
       MockedCustomer.mockImplementation(() => mockCustomerInstance);
       mockCustomerInstance.save.mockResolvedValue(mockCustomerInstance);
@@ -48,8 +52,8 @@ describe('CustomerService', () => {
       expect(mockCustomerInstance.save).toHaveBeenCalled();
       expect(result).toEqual({
         id: 'customer123',
-        name: 'John Doe',
-        phone: '+1234567890',
+        name: customerData.name,
+        phone: customerData.phone,
         createdAt: mockCustomerInstance.createdAt,
         updatedAt: mockCustomerInstance.updatedAt
       });
@@ -195,6 +199,10 @@ describe('CustomerService', () => {
       // Mock findOne to return null (not found)
       MockedCustomer.findOne = jest.fn().mockResolvedValue(null);
 
+      // Update mockCustomerInstance with input values
+      mockCustomerInstance.name = name;
+      mockCustomerInstance.phone = phone;
+
       // Mock constructor and save
       MockedCustomer.mockImplementation(() => mockCustomerInstance);
       mockCustomerInstance.save.mockResolvedValue(mockCustomerInstance);
@@ -205,6 +213,8 @@ describe('CustomerService', () => {
       expect(MockedCustomer).toHaveBeenCalledWith({ name, phone });
       expect(mockCustomerInstance.save).toHaveBeenCalled();
       expect(result.id).toBe('customer123');
+      expect(result.name).toBe(name);
+      expect(result.phone).toBe(phone);
     });
   });
 });

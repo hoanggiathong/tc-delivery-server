@@ -23,7 +23,7 @@
     "declaration": true,
     "declarationMap": true,
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": "./",
     "removeComments": true,
     "baseUrl": "./",
     "paths": {
@@ -32,7 +32,8 @@
     "types": ["node", "jest"]
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "tests/**/*"
   ],
   "exclude": [
     "node_modules",

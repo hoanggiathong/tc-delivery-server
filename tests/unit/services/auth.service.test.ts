@@ -1,10 +1,10 @@
-import { AuthService } from '../../src/services/auth.service';
-import { User } from '../../src/models/user.model';
+import { AuthService } from '@/services/auth.service';
+import { User } from '@/models/user.model';
 import jwt from 'jsonwebtoken';
-import { UserRole } from '../../src/types/user.type';
+import { UserRole } from '@/types/user.type';
 
 // Mock User model
-jest.mock('../../src/models/user.model');
+jest.mock('@/models/user.model');
 const MockedUser = User as jest.MockedClass<typeof User>;
 
 // Mock jwt
@@ -43,6 +43,10 @@ describe('AuthService', () => {
       // Mock findOne to return null (no existing user)
       MockedUser.findOne = jest.fn().mockResolvedValue(null);
 
+      // Update mockUserInstance with userData values
+      mockUserInstance.username = userData.username;
+      mockUserInstance.role = userData.role;
+
       // Mock constructor and save
       MockedUser.mockImplementation(() => mockUserInstance);
       mockUserInstance.save.mockResolvedValue(mockUserInstance);
@@ -54,12 +58,14 @@ describe('AuthService', () => {
       expect(mockUserInstance.save).toHaveBeenCalled();
       expect(result.user).toEqual({
         id: 'user123',
-        username: 'testuser',
-        role: UserRole.USER,
+        username: userData.username,  // Now matches the actual input
+        role: userData.role,          // Now matches the actual input
         createdAt: mockUserInstance.createdAt,
         updatedAt: mockUserInstance.updatedAt
       });
     });
+
+
 
     it('should throw error when username already exists', async () => {
       const userData = {

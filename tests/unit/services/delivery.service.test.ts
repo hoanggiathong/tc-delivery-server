@@ -1,24 +1,21 @@
-import { DeliveryService } from '../../src/services/delivery.service';
-import { Delivery } from '../../src/models/delivery.model';
-import { CustomerService } from '../../src/services/customer.service';
-import { IDeliveryResponse } from '../../src/types/delivery.type';
+import { DeliveryService } from '@/services/delivery.service';
+import { Delivery } from '@/models/delivery.model';
+import { CustomerService } from '@/services/customer.service';
+import { IDeliveryResponse } from '@/types/delivery.type';
+import { mockCustomerService } from '../../mocks/customer.service';
 
 // Mock the Delivery model
-jest.mock('../../src/models/delivery.model');
-jest.mock('../../src/services/customer.service');
+jest.mock('@/models/delivery.model');
+jest.mock('@/services/customer.service', () => require('../../mocks/customer.service'));
 
 const MockedDelivery = Delivery as jest.MockedClass<typeof Delivery>;
-const MockedCustomerService = CustomerService as jest.MockedClass<typeof CustomerService>;
 
 describe('DeliveryService', () => {
   let deliveryService: DeliveryService;
-  let mockCustomerService: jest.Mocked<CustomerService>;
 
   beforeEach(() => {
     jest.clearAllMocks();
     deliveryService = new DeliveryService();
-    mockCustomerService = new MockedCustomerService() as jest.Mocked<CustomerService>;
-    (deliveryService as any).customerService = mockCustomerService;
   });
 
   describe('createDelivery', () => {
