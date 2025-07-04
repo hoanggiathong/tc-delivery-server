@@ -1,14 +1,17 @@
 import { BaseEntity } from '.';
 import { ICustomerResponse } from './customer.type';
+import { IRouteResponse } from './route.type';
 import { ICustomer } from '@/models/customer.model';
 import { IDelivery } from '@/models/delivery.model';
 import { IUser } from '@/models/user.model';
+import { IRoute } from '@/models/route.model';
 
 // Delivery response interface
 export interface IDeliveryResponse extends BaseEntity {
   sender: ICustomerResponse;
   receiver: ICustomerResponse;
-  route: string;
+  fromRoute: IRouteResponse;
+  toRoute: IRouteResponse;
   name: string;
   cost: number;
   homeDelivery: string;
@@ -28,7 +31,8 @@ export interface IDeliveryCreateRequest {
   senderPhone: string;
   receiverName: string;
   receiverPhone: string;
-  route: string;
+  fromRouteId: string;
+  toRouteId: string;
   name: string;
   cost: number;
   homeDelivery: string;
@@ -47,7 +51,8 @@ export interface IDeliveryUpdateRequest {
   senderPhone?: string;
   receiverName?: string;
   receiverPhone?: string;
-  route?: string;
+  fromRouteId?: string;
+  toRouteId?: string;
   name?: string;
   cost?: number;
   homeDelivery?: string;
@@ -60,10 +65,12 @@ export interface IDeliveryUpdateRequest {
   collectForCustomerNote?: string;
 }
 
-// Interface for populated delivery (when sender, receiver, createdByUser are populated)
-export interface IDeliveryPopulated extends Omit<IDelivery, 'sender' | 'receiver' | 'createdByUser'> {
+// Interface for populated delivery (when sender, receiver, fromRoute, toRoute, createdByUser are populated)
+export interface IDeliveryPopulated extends Omit<IDelivery, 'sender' | 'receiver' | 'fromRoute' | 'toRoute' | 'createdByUser'> {
   sender: ICustomer;
   receiver: ICustomer;
+  fromRoute: IRoute;
+  toRoute: IRoute;
   createdByUser: IUser;
 }
 
@@ -72,7 +79,8 @@ export interface IDeliveryWithPopulatedRefs {
   _id: string;
   sender: ICustomer;
   receiver: ICustomer;
-  route: string;
+  fromRoute: IRoute;
+  toRoute: IRoute;
   name: string;
   cost: number;
   homeDelivery: string;
@@ -108,7 +116,20 @@ export interface IDeliveryLeanPopulated {
     createdAt: Date;
     updatedAt: Date;
   };
-  route: string;
+  fromRoute: {
+    _id: string;
+    code: string;
+    name: string;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+  toRoute: {
+    _id: string;
+    code: string;
+    name: string;
+    createdAt: Date;
+    updatedAt: Date;
+  };
   name: string;
   cost: number;
   homeDelivery: string;

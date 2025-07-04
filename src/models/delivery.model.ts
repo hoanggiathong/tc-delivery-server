@@ -4,7 +4,8 @@ export interface IDelivery extends Document {
   _id: string;
   sender: mongoose.Types.ObjectId;
   receiver: mongoose.Types.ObjectId;
-  route: string;
+  fromRoute: mongoose.Types.ObjectId;
+  toRoute: mongoose.Types.ObjectId;
   name: string;
   cost: number;
   homeDelivery: string;
@@ -31,10 +32,15 @@ const deliverySchema = new Schema<IDelivery>({
     ref: 'Customer',
     required: [true, 'Receiver is required']
   },
-  route: {
-    type: String,
-    required: [true, 'Route is required'],
-    trim: true
+  fromRoute: {
+    type: Schema.Types.ObjectId,
+    ref: 'Route',
+    required: [true, 'From route is required']
+  },
+  toRoute: {
+    type: Schema.Types.ObjectId,
+    ref: 'Route',
+    required: [true, 'To route is required']
   },
   name: {
     type: String,
@@ -102,5 +108,42 @@ const deliverySchema = new Schema<IDelivery>({
     }
   }
 });
+
+// =========================================
+// PERFORMANCE INDEXES FOR SCALE (10M+ records)
+// =========================================
+
+// 1. Most common query patterns - Single field indexes
+deliverySchema.index({ sender: 1 });
+deliverySchema.index({ receiver: 1 });
+deliverySchema.index({ fromRoute: 1 });
+deliverySchema.index({ toRoute: 1 });
+deliverySchema.index({ createdByUser: 1 });
+
+// 2. Time-based queries (very important for large datasets)
+deliverySchema.index({ createdAt: -1 }); // Recent first
+deliverySchema.index({ updatedAt: -1 });
+
+// 3. Compound indexes for common filter combinations
+deliverySchema.index({ fromRoute: 1, toRoute: 1, createdAt: -1 }); // Route analysis
+deliverySchema.index({ sender: 1, createdAt: -1 }); // Sender history
+deliverySchema.index({ receiver: 1, createdAt: -1 }); // Receiver history
+deliverySchema.index({ createdByUser: 1, createdAt: -1 }); // User activity
+
+// 4. Cost and value analysis indexes
+deliverySchema.index({ cost: 1 });
+deliverySchema.index({ itemValue: 1 });
+deliverySchema.index({ collectForCustomer: 1 });
+
+// 5. Route pair analysis (for business intelligence)
+deliverySchema.index({ fromRoute: 1, toRoute: 1 });
+
+// 6. Date range queries optimization
+deliverySchema.index({ createdAt: -1, fromRoute: 1 });
+deliverySchema.index({ createdAt: -1, toRoute: 1 });
+
+// 7. Text search on item names (if needed)
+// Uncomment if you need text search functionality
+// deliverySchema.index({ name: 'text' });
 
 export const Delivery = mongoose.model<IDelivery>('Delivery', deliverySchema);

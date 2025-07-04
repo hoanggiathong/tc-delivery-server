@@ -20,7 +20,20 @@ export const createMockDelivery = (overrides: any = {}) => ({
   id: 'delivery123',
   sender: createMockCustomer({ id: 'sender123', name: 'John Sender' }),
   receiver: createMockCustomer({ id: 'receiver123', name: 'Jane Receiver' }),
-  route: 'Hanoi - HCMC',
+  fromRoute: {
+    id: 'fromRoute123',
+    code: 'T1',
+    name: 'Ho Chi Minh',
+    createdAt: '2025-06-27T07:51:17.342Z',
+    updatedAt: '2025-06-27T07:51:17.342Z'
+  },
+  toRoute: {
+    id: 'toRoute123',
+    code: 'T2',
+    name: 'Long An',
+    createdAt: '2025-06-27T07:51:17.342Z',
+    updatedAt: '2025-06-27T07:51:17.342Z'
+  },
   name: 'Electronics Package',
   cost: 50000,
   homeDelivery: '123 Main Street',

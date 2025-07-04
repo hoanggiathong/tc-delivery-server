@@ -5,7 +5,8 @@ describe('Delivery Model', () => {
   const validDeliveryData = {
     sender: new mongoose.Types.ObjectId(),
     receiver: new mongoose.Types.ObjectId(),
-    route: 'Route A to B',
+    fromRoute: new mongoose.Types.ObjectId(),
+    toRoute: new mongoose.Types.ObjectId(),
     name: 'Test Item',
     cost: 100,
     homeDelivery: '123 Main St',
@@ -24,7 +25,8 @@ describe('Delivery Model', () => {
       const delivery = new Delivery(validDeliveryData);
       expect(delivery.sender).toEqual(validDeliveryData.sender);
       expect(delivery.receiver).toEqual(validDeliveryData.receiver);
-      expect(delivery.route).toBe(validDeliveryData.route);
+      expect(delivery.fromRoute).toEqual(validDeliveryData.fromRoute);
+      expect(delivery.toRoute).toEqual(validDeliveryData.toRoute);
       expect(delivery.name).toBe(validDeliveryData.name);
       expect(delivery.cost).toBe(validDeliveryData.cost);
     });
@@ -49,14 +51,24 @@ describe('Delivery Model', () => {
       expect(error?.errors.receiver.message).toBe('Receiver is required');
     });
 
-    it('should fail validation without route', () => {
+    it('should fail validation without fromRoute', () => {
       const deliveryData = { ...validDeliveryData };
-      delete (deliveryData as any).route;
+      delete (deliveryData as any).fromRoute;
 
       const delivery = new Delivery(deliveryData);
       const error = delivery.validateSync();
-      expect(error?.errors.route).toBeDefined();
-      expect(error?.errors.route.message).toBe('Route is required');
+      expect(error?.errors.fromRoute).toBeDefined();
+      expect(error?.errors.fromRoute.message).toBe('From route is required');
+    });
+
+    it('should fail validation without toRoute', () => {
+      const deliveryData = { ...validDeliveryData };
+      delete (deliveryData as any).toRoute;
+
+      const delivery = new Delivery(deliveryData);
+      const error = delivery.validateSync();
+      expect(error?.errors.toRoute).toBeDefined();
+      expect(error?.errors.toRoute.message).toBe('To route is required');
     });
 
     it('should fail validation without item name', () => {
@@ -164,14 +176,12 @@ describe('Delivery Model', () => {
     it('should trim whitespace from string fields', () => {
       const deliveryData = {
         ...validDeliveryData,
-        route: '  Route A to B  ',
         name: '  Test Item  ',
         homeDelivery: '  123 Main St  ',
         collectForCustomerNote: '  Handle with care  '
       };
 
       const delivery = new Delivery(deliveryData);
-      expect(delivery.route).toBe('Route A to B');
       expect(delivery.name).toBe('Test Item');
       expect(delivery.homeDelivery).toBe('123 Main St');
       expect(delivery.collectForCustomerNote).toBe('Handle with care');
@@ -205,7 +215,8 @@ describe('Delivery Model', () => {
       expect(jsonDelivery.__v).toBeUndefined();
       expect(jsonDelivery.sender).toEqual(validDeliveryData.sender);
       expect(jsonDelivery.receiver).toEqual(validDeliveryData.receiver);
-      expect(jsonDelivery.route).toBe(validDeliveryData.route);
+      expect(jsonDelivery.fromRoute).toEqual(validDeliveryData.fromRoute);
+      expect(jsonDelivery.toRoute).toEqual(validDeliveryData.toRoute);
       expect(jsonDelivery.name).toBe(validDeliveryData.name);
       expect(jsonDelivery.cost).toBe(validDeliveryData.cost);
       expect(jsonDelivery.createdAt).toBeDefined();

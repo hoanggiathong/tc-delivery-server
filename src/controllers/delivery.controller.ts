@@ -30,7 +30,8 @@ export class DeliveryController {
    *               - senderPhone
    *               - receiverName
    *               - receiverPhone
-   *               - route
+   *               - fromRouteId
+   *               - toRouteId
    *               - name
    *               - cost
    *               - homeDelivery
@@ -50,8 +51,12 @@ export class DeliveryController {
    *                 type: string
    *               receiverPhone:
    *                 type: string
-   *               route:
+   *               fromRouteId:
    *                 type: string
+   *                 description: ObjectId of the from route
+   *               toRouteId:
+   *                 type: string
+   *                 description: ObjectId of the to route
    *               name:
    *                 type: string
    *               cost:
@@ -154,8 +159,12 @@ export class DeliveryController {
    *                 type: string
    *               receiverPhone:
    *                 type: string
-   *               route:
+   *               fromRouteId:
    *                 type: string
+   *                 description: ObjectId of the from route
+   *               toRouteId:
+   *                 type: string
+   *                 description: ObjectId of the to route
    *               name:
    *                 type: string
    *               cost:

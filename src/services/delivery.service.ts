@@ -1,4 +1,5 @@
 import { Delivery, IDelivery } from '@/models/delivery.model';
+import { Route } from '@/models/route.model';
 import { CustomerService } from '@/services/customer.service';
 import {
   IDeliveryCreateRequest,
@@ -17,17 +18,33 @@ export class DeliveryService {
   }
 
   /**
+   * Type assertion helper for populated delivery objects
+   */
+  private toPopulatedDelivery(delivery: any): IDeliveryWithPopulatedRefs {
+    return delivery;
+  }
+
+  /**
+   * Type assertion helper for lean populated delivery objects
+   */
+  private toPopulatedDeliveryLean(delivery: any): IDeliveryLeanPopulated {
+    return delivery;
+  }
+
+  /**
    * Transform IDelivery to IDeliveryResponse
    */
   private async transformDeliveryToResponse(delivery: IDelivery): Promise<IDeliveryResponse> {
-    // Populate sender and receiver
+    // Populate sender, receiver, fromRoute, toRoute and createdByUser
     const populatedDelivery = await delivery.populate([
       { path: 'sender', select: '_id name phone createdAt updatedAt' },
       { path: 'receiver', select: '_id name phone createdAt updatedAt' },
+      { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
+      { path: 'toRoute', select: '_id code name createdAt updatedAt' },
       { path: 'createdByUser', select: '_id username' }
     ]);
 
-    const populated = populatedDelivery as unknown as IDeliveryWithPopulatedRefs;
+    const populated = this.toPopulatedDelivery(populatedDelivery);
 
     return {
       id: populated._id,
@@ -45,7 +62,20 @@ export class DeliveryService {
         createdAt: populated.receiver.createdAt,
         updatedAt: populated.receiver.updatedAt
       },
-      route: populated.route,
+      fromRoute: {
+        id: populated.fromRoute._id,
+        code: populated.fromRoute.code,
+        name: populated.fromRoute.name,
+        createdAt: populated.fromRoute.createdAt,
+        updatedAt: populated.fromRoute.updatedAt
+      },
+      toRoute: {
+        id: populated.toRoute._id,
+        code: populated.toRoute.code,
+        name: populated.toRoute.name,
+        createdAt: populated.toRoute.createdAt,
+        updatedAt: populated.toRoute.updatedAt
+      },
       name: populated.name,
       cost: populated.cost,
       homeDelivery: populated.homeDelivery,
@@ -82,7 +112,20 @@ export class DeliveryService {
         createdAt: delivery.receiver.createdAt,
         updatedAt: delivery.receiver.updatedAt
       },
-      route: delivery.route,
+      fromRoute: {
+        id: delivery.fromRoute._id,
+        code: delivery.fromRoute.code,
+        name: delivery.fromRoute.name,
+        createdAt: delivery.fromRoute.createdAt,
+        updatedAt: delivery.fromRoute.updatedAt
+      },
+      toRoute: {
+        id: delivery.toRoute._id,
+        code: delivery.toRoute.code,
+        name: delivery.toRoute.name,
+        createdAt: delivery.toRoute.createdAt,
+        updatedAt: delivery.toRoute.updatedAt
+      },
       name: delivery.name,
       cost: delivery.cost,
       homeDelivery: delivery.homeDelivery,
@@ -108,11 +151,23 @@ export class DeliveryService {
       const sender = await this.customerService.findOrCreateCustomer(data.senderName, data.senderPhone);
       const receiver = await this.customerService.findOrCreateCustomer(data.receiverName, data.receiverPhone);
 
+      // Validate fromRoute and toRoute exist
+      const fromRoute = await Route.findById(data.fromRouteId);
+      if (!fromRoute) {
+        throw new Error('From route not found');
+      }
+
+      const toRoute = await Route.findById(data.toRouteId);
+      if (!toRoute) {
+        throw new Error('To route not found');
+      }
+
       // Create delivery
       const delivery = new Delivery({
         sender: sender.id,
         receiver: receiver.id,
-        route: data.route,
+        fromRoute: data.fromRouteId,
+        toRoute: data.toRouteId,
         name: data.name,
         cost: data.cost,
         homeDelivery: data.homeDelivery,
@@ -143,7 +198,7 @@ export class DeliveryService {
         throw new Error('Delivery not found');
       }
 
-      const updateData: any = {};
+      const updateData: Record<string, any> = {};
 
       // Handle sender update
       if (data.senderName || data.senderPhone) {
@@ -165,8 +220,22 @@ export class DeliveryService {
         updateData.receiver = delivery.receiver;
       }
 
-      // Handle other field updates
-      if (data.route !== undefined) updateData.route = data.route;
+      // Handle route updates
+      if (data.fromRouteId !== undefined) {
+        const fromRoute = await Route.findById(data.fromRouteId);
+        if (!fromRoute) {
+          throw new Error('From route not found');
+        }
+        updateData.fromRoute = data.fromRouteId;
+      }
+
+      if (data.toRouteId !== undefined) {
+        const toRoute = await Route.findById(data.toRouteId);
+        if (!toRoute) {
+          throw new Error('To route not found');
+        }
+        updateData.toRoute = data.toRouteId;
+      }
       if (data.name !== undefined) updateData.name = data.name;
       if (data.cost !== undefined) updateData.cost = data.cost;
       if (data.homeDelivery !== undefined) updateData.homeDelivery = data.homeDelivery;
@@ -204,6 +273,8 @@ export class DeliveryService {
         .populate([
           { path: 'sender', select: '_id name phone createdAt updatedAt' },
           { path: 'receiver', select: '_id name phone createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name createdAt updatedAt' },
           { path: 'createdByUser', select: '_id username' }
         ])
         .lean();
@@ -212,7 +283,7 @@ export class DeliveryService {
         return null;
       }
 
-      return this.transformDeliveryToResponseOptimized(delivery as unknown as IDeliveryLeanPopulated);
+      return this.transformDeliveryToResponseOptimized(this.toPopulatedDeliveryLean(delivery));
     } catch (error) {
       return null;
     }
@@ -227,12 +298,14 @@ export class DeliveryService {
         .populate([
           { path: 'sender', select: '_id name phone createdAt updatedAt' },
           { path: 'receiver', select: '_id name phone createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name createdAt updatedAt' },
           { path: 'createdByUser', select: '_id username' }
         ])
         .sort({ createdAt: -1 })
         .lean();
 
-      return deliveries.map(delivery => this.transformDeliveryToResponseOptimized(delivery as unknown as IDeliveryLeanPopulated));
+      return deliveries.map(delivery => this.transformDeliveryToResponseOptimized(this.toPopulatedDeliveryLean(delivery)));
     } catch (error) {
       throw new Error('Failed to fetch deliveries');
     }
@@ -270,6 +343,8 @@ export class DeliveryService {
         .populate([
           { path: 'sender', select: '_id name phone createdAt updatedAt' },
           { path: 'receiver', select: '_id name phone createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name createdAt updatedAt' },
           { path: 'createdByUser', select: '_id username' }
         ])
         .sort({ createdAt: -1 })
@@ -281,15 +356,15 @@ export class DeliveryService {
 
       // Transform to response format
       const deliveryResponses = deliveries.map(delivery =>
-        this.transformDeliveryToResponseOptimized(delivery as unknown as IDeliveryLeanPopulated)
+        this.transformDeliveryToResponseOptimized(this.toPopulatedDeliveryLean(delivery))
       );
 
-      // Filter unique combinations of receiverName, receiverPhone, and route
+      // Filter unique combinations of receiverName, receiverPhone, fromRoute and toRoute
       const uniqueDeliveries: IDeliveryResponse[] = [];
       const seenCombinations = new Set<string>();
 
       for (const delivery of deliveryResponses) {
-        const combination = `${delivery.receiver.name}|${delivery.receiver.phone}|${delivery.route}`;
+        const combination = `${delivery.receiver.name}|${delivery.receiver.phone}|${delivery.fromRoute.code}|${delivery.toRoute.code}`;
 
         if (!seenCombinations.has(combination)) {
           seenCombinations.add(combination);
@@ -299,7 +374,7 @@ export class DeliveryService {
 
       return uniqueDeliveries;
     } catch (error) {
-      throw new Error(`Failed to fetch related deliveries: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(`Failed to fetch related deliveries: ${error instanceof Error ? error.message : 'Unexpected error occurred'}`);
     }
   }
 }

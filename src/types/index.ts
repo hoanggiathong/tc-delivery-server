@@ -10,6 +10,12 @@ export * from './customer.type';
 // Export delivery-related types
 export * from './delivery.type';
 
+// Export route-related types
+export * from './route.type';
+
+// Export user-route-related types
+export * from './user-route.type';
+
 // Base interface for common entity fields
 export interface BaseEntity {
   id: string;

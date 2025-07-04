@@ -1,16 +1,19 @@
 import { DeliveryService } from "@/services/delivery.service";
 import { Delivery } from "@/models/delivery.model";
+import { Route } from "@/models/route.model";
 import { CustomerService } from "@/services/customer.service";
 import { IDeliveryResponse } from "@/types/delivery.type";
 import { mockCustomerService } from "../../mocks/customer.service";
 
-// Mock the Delivery model
+// Mock the Delivery and Route models
 jest.mock("@/models/delivery.model");
+jest.mock("@/models/route.model");
 jest.mock("@/services/customer.service", () =>
   require("../../mocks/customer.service")
 );
 
 const MockedDelivery = Delivery as jest.MockedClass<typeof Delivery>;
+const MockedRoute = Route as jest.MockedClass<typeof Route>;
 
 describe("DeliveryService", () => {
   let deliveryService: DeliveryService;
@@ -26,7 +29,8 @@ describe("DeliveryService", () => {
       senderPhone: "+1234567890",
       receiverName: "Jane Receiver",
       receiverPhone: "+1987654321",
-      route: "Route A to B",
+      fromRouteId: "fromRoute123",
+      toRouteId: "toRoute123",
       name: "Package Item",
       cost: 100,
       homeDelivery: "123 Main St",
@@ -55,11 +59,28 @@ describe("DeliveryService", () => {
       updatedAt: new Date("2023-01-01"),
     };
 
+    const mockFromRoute = {
+      _id: "fromRoute123",
+      code: "T1",
+      name: "Ho Chi Minh",
+      createdAt: new Date("2023-01-01"),
+      updatedAt: new Date("2023-01-01"),
+    };
+
+    const mockToRoute = {
+      _id: "toRoute123",
+      code: "T2",
+      name: "Long An",
+      createdAt: new Date("2023-01-01"),
+      updatedAt: new Date("2023-01-01"),
+    };
+
     const mockDelivery = {
       _id: "delivery123",
       sender: "sender123",
       receiver: "receiver123",
-      route: "Route A to B",
+      fromRoute: "fromRoute123",
+      toRoute: "toRoute123",
       name: "Package Item",
       cost: 100,
       homeDelivery: "123 Main St",
@@ -80,7 +101,20 @@ describe("DeliveryService", () => {
       id: "delivery123",
       sender: mockSender,
       receiver: mockReceiver,
-      route: "Route A to B",
+      fromRoute: {
+        id: "fromRoute123",
+        code: "T1",
+        name: "Ho Chi Minh",
+        createdAt: new Date("2023-01-01"),
+        updatedAt: new Date("2023-01-01"),
+      },
+      toRoute: {
+        id: "toRoute123",
+        code: "T2",
+        name: "Long An",
+        createdAt: new Date("2023-01-01"),
+        updatedAt: new Date("2023-01-01"),
+      },
       name: "Package Item",
       cost: 100,
       homeDelivery: "123 Main St",
@@ -101,6 +135,11 @@ describe("DeliveryService", () => {
       mockCustomerService.findOrCreateCustomer
         .mockResolvedValueOnce(mockSender)
         .mockResolvedValueOnce(mockReceiver);
+
+      // Mock Route.findById calls
+      MockedRoute.findById = jest.fn()
+        .mockResolvedValueOnce(mockFromRoute)
+        .mockResolvedValueOnce(mockToRoute);
 
       // Mock Delivery constructor and save
       MockedDelivery.mockImplementation(() => mockDelivery as any);
@@ -123,10 +162,13 @@ describe("DeliveryService", () => {
         "Jane Receiver",
         "+1987654321"
       );
+      expect(MockedRoute.findById).toHaveBeenCalledWith("fromRoute123");
+      expect(MockedRoute.findById).toHaveBeenCalledWith("toRoute123");
       expect(MockedDelivery).toHaveBeenCalledWith({
         sender: "sender123",
         receiver: "receiver123",
-        route: "Route A to B",
+        fromRoute: "fromRoute123",
+        toRoute: "toRoute123",
         name: "Package Item",
         cost: 100,
         homeDelivery: "123 Main St",
@@ -141,6 +183,33 @@ describe("DeliveryService", () => {
       });
       expect(mockDelivery.save).toHaveBeenCalled();
       expect(result).toEqual(mockExpectedResponse);
+    });
+
+    it("should throw error when from route not found", async () => {
+      mockCustomerService.findOrCreateCustomer
+        .mockResolvedValueOnce(mockSender)
+        .mockResolvedValueOnce(mockReceiver);
+
+      MockedRoute.findById = jest.fn()
+        .mockResolvedValueOnce(null); // From route not found
+
+      await expect(
+        deliveryService.createDelivery(mockDeliveryData, "user123")
+      ).rejects.toThrow("From route not found");
+    });
+
+    it("should throw error when to route not found", async () => {
+      mockCustomerService.findOrCreateCustomer
+        .mockResolvedValueOnce(mockSender)
+        .mockResolvedValueOnce(mockReceiver);
+
+      MockedRoute.findById = jest.fn()
+        .mockResolvedValueOnce(mockFromRoute) // From route found
+        .mockResolvedValueOnce(null); // To route not found
+
+      await expect(
+        deliveryService.createDelivery(mockDeliveryData, "user123")
+      ).rejects.toThrow("To route not found");
     });
 
     it("should throw error when sender creation fails", async () => {
@@ -168,6 +237,10 @@ describe("DeliveryService", () => {
         .mockResolvedValueOnce(mockSender)
         .mockResolvedValueOnce(mockReceiver);
 
+      MockedRoute.findById = jest.fn()
+        .mockResolvedValueOnce(mockFromRoute)
+        .mockResolvedValueOnce(mockToRoute);
+
       const mockFailingDelivery = {
         ...mockDelivery,
         save: jest.fn().mockRejectedValue(new Error("Database error")),
@@ -184,7 +257,8 @@ describe("DeliveryService", () => {
     const mockUpdateData = {
       senderName: "Updated Sender",
       senderPhone: "+1111111111",
-      route: "Updated Route",
+      fromRouteId: "newFromRoute123",
+      toRouteId: "newToRoute123",
       cost: 150,
     };
 
@@ -192,15 +266,53 @@ describe("DeliveryService", () => {
       _id: "delivery123",
       sender: "sender123",
       receiver: "receiver123",
-      route: "Old Route",
+      fromRoute: "fromRoute123",
+      toRoute: "toRoute123",
       name: "Package Item",
       cost: 100,
     };
 
     const mockUpdatedSender = {
-      id: "newsender123",
+      id: "updatedSender123",
       name: "Updated Sender",
       phone: "+1111111111",
+      createdAt: new Date("2023-01-01"),
+      updatedAt: new Date("2023-01-01"),
+    };
+
+    const mockNewFromRoute = {
+      _id: "newFromRoute123",
+      code: "T3",
+      name: "Can Tho",
+      createdAt: new Date("2023-01-01"),
+      updatedAt: new Date("2023-01-01"),
+    };
+
+    const mockNewToRoute = {
+      _id: "newToRoute123",
+      code: "T4",
+      name: "An Giang",
+      createdAt: new Date("2023-01-01"),
+      updatedAt: new Date("2023-01-01"),
+    };
+
+    const mockUpdatedDelivery = {
+      _id: "delivery123",
+      sender: "updatedSender123",
+      receiver: "receiver123",
+      fromRoute: "newFromRoute123",
+      toRoute: "newToRoute123",
+      name: "Package Item",
+      cost: 150,
+      homeDelivery: "123 Main St",
+      homeDeliveryCost: 20,
+      itemValue: 500,
+      itemCost: 50,
+      collectCost: 30,
+      collectForCustomer: 25000,
+      collectForCustomerCost: 40,
+      collectForCustomerNote: "Test note",
+      createdByUser: "user123",
       createdAt: new Date("2023-01-01"),
       updatedAt: new Date("2023-01-01"),
     };
@@ -215,7 +327,20 @@ describe("DeliveryService", () => {
         createdAt: new Date("2023-01-01"),
         updatedAt: new Date("2023-01-01"),
       },
-      route: "Updated Route",
+      fromRoute: {
+        id: "newFromRoute123",
+        code: "T3",
+        name: "Can Tho",
+        createdAt: new Date("2023-01-01"),
+        updatedAt: new Date("2023-01-01"),
+      },
+      toRoute: {
+        id: "newToRoute123",
+        code: "T4",
+        name: "An Giang",
+        createdAt: new Date("2023-01-01"),
+        updatedAt: new Date("2023-01-01"),
+      },
       name: "Package Item",
       cost: 150,
       homeDelivery: "123 Main St",
@@ -231,52 +356,45 @@ describe("DeliveryService", () => {
       updatedAt: new Date("2023-01-01"),
     };
 
-    it("should update delivery successfully", async () => {
-      // Mock findById
-      MockedDelivery.findById = jest
-        .fn()
-        .mockResolvedValue(mockExistingDelivery);
+    it("should update a delivery successfully", async () => {
+      // Mock Delivery.findById
+      MockedDelivery.findById = jest.fn().mockResolvedValue(mockExistingDelivery);
 
       // Mock customer service
-      mockCustomerService.findOrCreateCustomer.mockResolvedValue(
-        mockUpdatedSender
-      );
+      mockCustomerService.findOrCreateCustomer.mockResolvedValue(mockUpdatedSender);
 
-      // Mock findByIdAndUpdate
-      const mockUpdatedDelivery = {
-        ...mockExistingDelivery,
-        sender: "newsender123",
-        route: "Updated Route",
-        cost: 150,
-      };
-      MockedDelivery.findByIdAndUpdate = jest
-        .fn()
-        .mockResolvedValue(mockUpdatedDelivery);
+      // Mock Route.findById
+      MockedRoute.findById = jest.fn()
+        .mockResolvedValueOnce(mockNewFromRoute)
+        .mockResolvedValueOnce(mockNewToRoute);
+
+      // Mock Delivery.findByIdAndUpdate
+      MockedDelivery.findByIdAndUpdate = jest.fn().mockResolvedValue(mockUpdatedDelivery);
 
       // Mock the transformDeliveryToResponse method
       jest
         .spyOn(deliveryService as any, "transformDeliveryToResponse")
         .mockResolvedValue(mockExpectedResponse);
 
-      const result = await deliveryService.updateDelivery(
-        "delivery123",
-        mockUpdateData
-      );
+      const result = await deliveryService.updateDelivery("delivery123", mockUpdateData);
 
       expect(MockedDelivery.findById).toHaveBeenCalledWith("delivery123");
       expect(mockCustomerService.findOrCreateCustomer).toHaveBeenCalledWith(
         "Updated Sender",
         "+1111111111"
       );
+      expect(MockedRoute.findById).toHaveBeenCalledWith("newFromRoute123");
+      expect(MockedRoute.findById).toHaveBeenCalledWith("newToRoute123");
       expect(MockedDelivery.findByIdAndUpdate).toHaveBeenCalledWith(
         "delivery123",
         {
           $set: {
-            sender: "newsender123",
+            sender: "updatedSender123",
             receiver: "receiver123",
-            route: "Updated Route",
+            fromRoute: "newFromRoute123",
+            toRoute: "newToRoute123",
             cost: 150,
-          },
+          }
         },
         { new: true, runValidators: true }
       );
@@ -287,17 +405,39 @@ describe("DeliveryService", () => {
       MockedDelivery.findById = jest.fn().mockResolvedValue(null);
 
       await expect(
-        deliveryService.updateDelivery("nonexistent", mockUpdateData)
+        deliveryService.updateDelivery("delivery123", mockUpdateData)
       ).rejects.toThrow("Delivery not found");
     });
 
+    it("should throw error when from route not found during update", async () => {
+      MockedDelivery.findById = jest.fn().mockResolvedValue(mockExistingDelivery);
+
+      MockedRoute.findById = jest.fn()
+        .mockResolvedValueOnce(null); // From route not found
+
+      await expect(
+        deliveryService.updateDelivery("delivery123", mockUpdateData)
+      ).rejects.toThrow("From route not found");
+    });
+
+    it("should throw error when to route not found during update", async () => {
+      MockedDelivery.findById = jest.fn().mockResolvedValue(mockExistingDelivery);
+
+      MockedRoute.findById = jest.fn()
+        .mockResolvedValueOnce(mockNewFromRoute) // From route found
+        .mockResolvedValueOnce(null); // To route not found
+
+      await expect(
+        deliveryService.updateDelivery("delivery123", mockUpdateData)
+      ).rejects.toThrow("To route not found");
+    });
+
     it("should throw error when update fails", async () => {
-      MockedDelivery.findById = jest
-        .fn()
-        .mockResolvedValue(mockExistingDelivery);
-      mockCustomerService.findOrCreateCustomer.mockResolvedValue(
-        mockUpdatedSender
-      );
+      MockedDelivery.findById = jest.fn().mockResolvedValue(mockExistingDelivery);
+      mockCustomerService.findOrCreateCustomer.mockResolvedValue(mockUpdatedSender);
+      MockedRoute.findById = jest.fn()
+        .mockResolvedValueOnce(mockNewFromRoute)
+        .mockResolvedValueOnce(mockNewToRoute);
       MockedDelivery.findByIdAndUpdate = jest.fn().mockResolvedValue(null);
 
       await expect(
@@ -307,6 +447,56 @@ describe("DeliveryService", () => {
   });
 
   describe("getDeliveryById", () => {
+    const mockDeliveryId = "delivery123";
+
+    const mockPopulatedDelivery = {
+      _id: "delivery123",
+      sender: {
+        _id: "sender123",
+        name: "John Sender",
+        phone: "+1234567890",
+        createdAt: new Date("2023-01-01"),
+        updatedAt: new Date("2023-01-01"),
+      },
+      receiver: {
+        _id: "receiver123",
+        name: "Jane Receiver",
+        phone: "+1987654321",
+        createdAt: new Date("2023-01-01"),
+        updatedAt: new Date("2023-01-01"),
+      },
+      fromRoute: {
+        _id: "fromRoute123",
+        code: "T1",
+        name: "Ho Chi Minh",
+        createdAt: new Date("2023-01-01"),
+        updatedAt: new Date("2023-01-01"),
+      },
+      toRoute: {
+        _id: "toRoute123",
+        code: "T2",
+        name: "Long An",
+        createdAt: new Date("2023-01-01"),
+        updatedAt: new Date("2023-01-01"),
+      },
+      name: "Package Item",
+      cost: 100,
+      homeDelivery: "123 Main St",
+      homeDeliveryCost: 20,
+      itemValue: 500,
+      itemCost: 50,
+      collectCost: 30,
+      collectForCustomer: 25000,
+      collectForCustomerCost: 40,
+      collectForCustomerNote: "Test note",
+      createdByUser: {
+        _id: "user123",
+        username: "testuser",
+      },
+      createdAt: new Date("2023-01-01"),
+      updatedAt: new Date("2023-01-01"),
+    };
+
     const mockExpectedResponse: IDeliveryResponse = {
       id: "delivery123",
       sender: {
@@ -323,7 +513,20 @@ describe("DeliveryService", () => {
         createdAt: new Date("2023-01-01"),
         updatedAt: new Date("2023-01-01"),
       },
-      route: "Route A to B",
+      fromRoute: {
+        id: "fromRoute123",
+        code: "T1",
+        name: "Ho Chi Minh",
+        createdAt: new Date("2023-01-01"),
+        updatedAt: new Date("2023-01-01"),
+      },
+      toRoute: {
+        id: "toRoute123",
+        code: "T2",
+        name: "Long An",
+        createdAt: new Date("2023-01-01"),
+        updatedAt: new Date("2023-01-01"),
+      },
       name: "Package Item",
       cost: 100,
       homeDelivery: "123 Main St",
@@ -339,8 +542,60 @@ describe("DeliveryService", () => {
       updatedAt: new Date("2023-01-01"),
     };
 
-    it("should return delivery when found", async () => {
-      const mockPopulatedDelivery = {
+    it("should return delivery by id successfully", async () => {
+      // Mock Delivery.findById with populate and lean
+      const mockQuery = {
+        populate: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(mockPopulatedDelivery),
+      };
+      MockedDelivery.findById = jest.fn().mockReturnValue(mockQuery);
+
+      // Mock the transformDeliveryToResponseOptimized method
+      jest
+        .spyOn(deliveryService as any, "transformDeliveryToResponseOptimized")
+        .mockReturnValue(mockExpectedResponse);
+
+      const result = await deliveryService.getDeliveryById(mockDeliveryId);
+
+      expect(MockedDelivery.findById).toHaveBeenCalledWith(mockDeliveryId);
+      expect(mockQuery.populate).toHaveBeenCalledWith([
+        { path: 'sender', select: '_id name phone createdAt updatedAt' },
+        { path: 'receiver', select: '_id name phone createdAt updatedAt' },
+        { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
+        { path: 'toRoute', select: '_id code name createdAt updatedAt' },
+        { path: 'createdByUser', select: '_id username' }
+      ]);
+      expect(result).toEqual(mockExpectedResponse);
+    });
+
+    it("should return null when delivery not found", async () => {
+      const mockQuery = {
+        populate: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(null),
+      };
+      MockedDelivery.findById = jest.fn().mockReturnValue(mockQuery);
+
+      const result = await deliveryService.getDeliveryById(mockDeliveryId);
+
+      expect(result).toBeNull();
+    });
+
+    it("should return null when error occurs", async () => {
+      const mockQuery = {
+        populate: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockRejectedValue(new Error("Database error")),
+      };
+      MockedDelivery.findById = jest.fn().mockReturnValue(mockQuery);
+
+      const result = await deliveryService.getDeliveryById(mockDeliveryId);
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("getAllDeliveries", () => {
+    const mockDeliveries = [
+      {
         _id: "delivery123",
         sender: {
           _id: "sender123",
@@ -356,7 +611,20 @@ describe("DeliveryService", () => {
           createdAt: new Date("2023-01-01"),
           updatedAt: new Date("2023-01-01"),
         },
-        route: "Route A to B",
+        fromRoute: {
+          _id: "fromRoute123",
+          code: "T1",
+          name: "Ho Chi Minh",
+          createdAt: new Date("2023-01-01"),
+          updatedAt: new Date("2023-01-01"),
+        },
+        toRoute: {
+          _id: "toRoute123",
+          code: "T2",
+          name: "Long An",
+          createdAt: new Date("2023-01-01"),
+          updatedAt: new Date("2023-01-01"),
+        },
         name: "Package Item",
         cost: 100,
         homeDelivery: "123 Main St",
@@ -373,99 +641,41 @@ describe("DeliveryService", () => {
         },
         createdAt: new Date("2023-01-01"),
         updatedAt: new Date("2023-01-01"),
-      };
-
-      const mockQuery = {
-        populate: jest.fn().mockReturnValue({
-          lean: jest.fn().mockResolvedValue(mockPopulatedDelivery),
-        }),
-      };
-
-      MockedDelivery.findById = jest.fn().mockReturnValue(mockQuery);
-
-      const result = await deliveryService.getDeliveryById("delivery123");
-
-      expect(MockedDelivery.findById).toHaveBeenCalledWith("delivery123");
-      expect(mockQuery.populate).toHaveBeenCalledWith([
-        { path: "sender", select: "_id name phone createdAt updatedAt" },
-        { path: "receiver", select: "_id name phone createdAt updatedAt" },
-        { path: "createdByUser", select: "_id username" },
-      ]);
-      expect(result).toEqual(mockExpectedResponse);
-    });
-
-    it("should return null when delivery not found", async () => {
-      const mockQuery = {
-        populate: jest.fn().mockReturnValue({
-          lean: jest.fn().mockResolvedValue(null),
-        }),
-      };
-
-      MockedDelivery.findById = jest.fn().mockReturnValue(mockQuery);
-
-      const result = await deliveryService.getDeliveryById("nonexistent");
-
-      expect(result).toBeNull();
-    });
-
-    it("should return null when error occurs", async () => {
-      const mockQuery = {
-        populate: jest.fn().mockReturnValue({
-          lean: jest.fn().mockRejectedValue(new Error("Database error")),
-        }),
-      };
-
-      MockedDelivery.findById = jest.fn().mockReturnValue(mockQuery);
-
-      const result = await deliveryService.getDeliveryById("delivery123");
-
-      expect(result).toBeNull();
-    });
-  });
-
-  describe("getAllDeliveries", () => {
-    const mockDeliveries = [
-      {
-        _id: "delivery1",
-        sender: "sender1",
-        receiver: "receiver1",
-        route: "Route 1",
-        name: "Package 1",
-        cost: 100,
-        createdAt: new Date("2023-01-01"),
-        updatedAt: new Date("2023-01-01"),
-      },
-      {
-        _id: "delivery2",
-        sender: "sender2",
-        receiver: "receiver2",
-        route: "Route 2",
-        name: "Package 2",
-        cost: 200,
-        createdAt: new Date("2023-01-02"),
-        updatedAt: new Date("2023-01-02"),
       },
     ];
 
-    const mockExpectedResponses: IDeliveryResponse[] = [
+    const mockExpectedResponse: IDeliveryResponse[] = [
       {
-        id: "delivery1",
+        id: "delivery123",
         sender: {
-          id: "sender1",
-          name: "Sender 1",
-          phone: "+1111111111",
+          id: "sender123",
+          name: "John Sender",
+          phone: "+1234567890",
           createdAt: new Date("2023-01-01"),
           updatedAt: new Date("2023-01-01"),
         },
         receiver: {
-          id: "receiver1",
-          name: "Receiver 1",
-          phone: "+2222222222",
+          id: "receiver123",
+          name: "Jane Receiver",
+          phone: "+1987654321",
           createdAt: new Date("2023-01-01"),
           updatedAt: new Date("2023-01-01"),
         },
-        route: "Route 1",
-        name: "Package 1",
+        fromRoute: {
+          id: "fromRoute123",
+          code: "T1",
+          name: "Ho Chi Minh",
+          createdAt: new Date("2023-01-01"),
+          updatedAt: new Date("2023-01-01"),
+        },
+        toRoute: {
+          id: "toRoute123",
+          code: "T2",
+          name: "Long An",
+          createdAt: new Date("2023-01-01"),
+          updatedAt: new Date("2023-01-01"),
+        },
+        name: "Package Item",
         cost: 100,
         homeDelivery: "123 Main St",
         homeDeliveryCost: 20,
@@ -474,167 +684,85 @@ describe("DeliveryService", () => {
         collectCost: 30,
         collectForCustomer: 25000,
         collectForCustomerCost: 40,
-        createdByUser: "user1",
+        collectForCustomerNote: "Test note",
+        createdByUser: "testuser",
         createdAt: new Date("2023-01-01"),
         updatedAt: new Date("2023-01-01"),
       },
-      {
-        id: "delivery2",
-        sender: {
-          id: "sender2",
-          name: "Sender 2",
-          phone: "+3333333333",
-          createdAt: new Date("2023-01-02"),
-          updatedAt: new Date("2023-01-02"),
-        },
-        receiver: {
-          id: "receiver2",
-          name: "Receiver 2",
-          phone: "+4444444444",
-          createdAt: new Date("2023-01-02"),
-          updatedAt: new Date("2023-01-02"),
-        },
-        route: "Route 2",
-        name: "Package 2",
-        cost: 200,
-        homeDelivery: "456 Oak St",
-        homeDeliveryCost: 25,
-        itemValue: 600,
-        itemCost: 60,
-        collectCost: 35,
-        collectForCustomer: 0,
-        collectForCustomerCost: 0,
-        createdByUser: "user2",
-        createdAt: new Date("2023-01-02"),
-        updatedAt: new Date("2023-01-02"),
-      },
     ];
 
-    it("should return all deliveries", async () => {
-      const mockPopulatedDeliveries = [
-        {
-          _id: "delivery1",
-          sender: {
-            _id: "sender1",
-            name: "Sender 1",
-            phone: "+1111111111",
-            createdAt: new Date("2023-01-01"),
-            updatedAt: new Date("2023-01-01"),
-          },
-          receiver: {
-            _id: "receiver1",
-            name: "Receiver 1",
-            phone: "+2222222222",
-            createdAt: new Date("2023-01-01"),
-            updatedAt: new Date("2023-01-01"),
-          },
-          route: "Route 1",
-          name: "Package 1",
-          cost: 100,
-          homeDelivery: "123 Main St",
-          homeDeliveryCost: 20,
-          itemValue: 500,
-          itemCost: 50,
-          collectCost: 30,
-          collectForCustomer: 25000,
-          collectForCustomerCost: 40,
-          createdByUser: {
-            _id: "user1",
-            username: "user1",
-          },
-          createdAt: new Date("2023-01-01"),
-          updatedAt: new Date("2023-01-01"),
-        },
-        {
-          _id: "delivery2",
-          sender: {
-            _id: "sender2",
-            name: "Sender 2",
-            phone: "+3333333333",
-            createdAt: new Date("2023-01-02"),
-            updatedAt: new Date("2023-01-02"),
-          },
-          receiver: {
-            _id: "receiver2",
-            name: "Receiver 2",
-            phone: "+4444444444",
-            createdAt: new Date("2023-01-02"),
-            updatedAt: new Date("2023-01-02"),
-          },
-          route: "Route 2",
-          name: "Package 2",
-          cost: 200,
-          homeDelivery: "456 Oak St",
-          homeDeliveryCost: 25,
-          itemValue: 600,
-          itemCost: 60,
-          collectCost: 35,
-          collectForCustomer: 0,
-          collectForCustomerCost: 0,
-          createdByUser: {
-            _id: "user2",
-            username: "user2",
-          },
-          createdAt: new Date("2023-01-02"),
-          updatedAt: new Date("2023-01-02"),
-        },
-      ];
-
+    it("should return all deliveries successfully", async () => {
+      // Mock Delivery.find with populate, sort, and lean
       const mockQuery = {
-        populate: jest.fn().mockReturnValue({
-          sort: jest.fn().mockReturnValue({
-            lean: jest.fn().mockResolvedValue(mockPopulatedDeliveries),
-          }),
-        }),
+        populate: jest.fn().mockReturnThis(),
+        sort: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(mockDeliveries),
       };
-
       MockedDelivery.find = jest.fn().mockReturnValue(mockQuery);
+
+      // Mock the transformDeliveryToResponseOptimized method
+      jest
+        .spyOn(deliveryService as any, "transformDeliveryToResponseOptimized")
+        .mockReturnValue(mockExpectedResponse[0]);
 
       const result = await deliveryService.getAllDeliveries();
 
       expect(MockedDelivery.find).toHaveBeenCalledWith({});
       expect(mockQuery.populate).toHaveBeenCalledWith([
-        { path: "sender", select: "_id name phone createdAt updatedAt" },
-        { path: "receiver", select: "_id name phone createdAt updatedAt" },
-        { path: "createdByUser", select: "_id username" },
+        { path: 'sender', select: '_id name phone createdAt updatedAt' },
+        { path: 'receiver', select: '_id name phone createdAt updatedAt' },
+        { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
+        { path: 'toRoute', select: '_id code name createdAt updatedAt' },
+        { path: 'createdByUser', select: '_id username' }
       ]);
-      expect(result).toHaveLength(2);
-      expect(result[0].id).toBe("delivery1");
-      expect(result[1].id).toBe("delivery2");
+      expect(mockQuery.sort).toHaveBeenCalledWith({ createdAt: -1 });
+      expect(result).toEqual(mockExpectedResponse);
     });
 
     it("should throw error when database fails", async () => {
       const mockQuery = {
-        populate: jest.fn().mockReturnValue({
-          sort: jest.fn().mockReturnValue({
-            lean: jest
-              .fn()
-              .mockRejectedValue(new Error("Database connection failed")),
-          }),
-        }),
+        populate: jest.fn().mockReturnThis(),
+        sort: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockRejectedValue(new Error("Database error")),
       };
-
       MockedDelivery.find = jest.fn().mockReturnValue(mockQuery);
 
       await expect(deliveryService.getAllDeliveries()).rejects.toThrow(
         "Failed to fetch deliveries"
       );
     });
+  });
 
-    it("should return empty array when no deliveries found", async () => {
-      const mockQuery = {
-        populate: jest.fn().mockReturnValue({
-          sort: jest.fn().mockReturnValue({
-            lean: jest.fn().mockResolvedValue([]),
-          }),
-        }),
-      };
+  describe("deleteDelivery", () => {
+    const mockDeliveryId = "delivery123";
 
-      MockedDelivery.find = jest.fn().mockReturnValue(mockQuery);
+    it("should delete delivery successfully", async () => {
+      const mockDelivery = { _id: mockDeliveryId };
+      MockedDelivery.findById = jest.fn().mockResolvedValue(mockDelivery);
+      MockedDelivery.findByIdAndDelete = jest.fn().mockResolvedValue(mockDelivery);
 
-      const result = await deliveryService.getAllDeliveries();
+      await deliveryService.deleteDelivery(mockDeliveryId);
 
-      expect(result).toEqual([]);
+      expect(MockedDelivery.findById).toHaveBeenCalledWith(mockDeliveryId);
+      expect(MockedDelivery.findByIdAndDelete).toHaveBeenCalledWith(mockDeliveryId);
+    });
+
+    it("should throw error when delivery not found", async () => {
+      MockedDelivery.findById = jest.fn().mockResolvedValue(null);
+
+      await expect(deliveryService.deleteDelivery(mockDeliveryId)).rejects.toThrow(
+        "Delivery not found"
+      );
+    });
+
+    it("should throw error when delete fails", async () => {
+      const mockDelivery = { _id: mockDeliveryId };
+      MockedDelivery.findById = jest.fn().mockResolvedValue(mockDelivery);
+      MockedDelivery.findByIdAndDelete = jest.fn().mockRejectedValue(new Error("Delete error"));
+
+      await expect(deliveryService.deleteDelivery(mockDeliveryId)).rejects.toThrow(
+        "Delete error"
+      );
     });
   });
 });

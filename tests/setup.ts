@@ -33,16 +33,16 @@ afterAll(async () => {
   }
 });
 
-afterEach(async () => {
-  try {
-    if (mongoose.connection.readyState === 1) {
-      const collections = mongoose.connection.collections;
-      for (const key in collections) {
-        const collection = collections[key];
-        await collection.deleteMany({});
-      }
-    }
-  } catch (error) {
-    console.error('Failed to cleanup collections:', error);
-  }
-});
+// afterEach(async () => {
+//   try {
+//     if (mongoose.connection.readyState === 1) {
+//       const collections = mongoose.connection.collections;
+//       for (const key in collections) {
+//         const collection = collections[key];
+//         await collection.deleteMany({});
+//       }
+//     }
+//   } catch (error) {
+//     console.error('Failed to cleanup collections:', error);
+//   }
+// });

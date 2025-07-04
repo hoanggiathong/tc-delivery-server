@@ -34,7 +34,8 @@ describe('Delivery Endpoints', () => {
       senderPhone: '+1234567890',
       receiverName: 'Jane Receiver',
       receiverPhone: '+1987654321',
-      route: 'Hanoi - HCMC',
+      fromRouteId: '507f1f77bcf86cd799439011',
+      toRouteId: '507f1f77bcf86cd799439012',
       name: 'Electronics Package',
       cost: 50000,
       homeDelivery: '123 Main Street, District 1',
@@ -131,7 +132,8 @@ describe('Delivery Endpoints', () => {
     const updateData = {
       senderName: 'Updated Sender',
       senderPhone: '+1111111111',
-      route: 'Updated Route',
+      fromRouteId: '507f1f77bcf86cd799439013',
+      toRouteId: '507f1f77bcf86cd799439014',
       cost: 75000
     };
 
@@ -139,7 +141,8 @@ describe('Delivery Endpoints', () => {
       const mockUpdatedDelivery = createMockDelivery({
         id: deliveryId,
         sender: createMockCustomer({ name: 'Updated Sender', phone: '+1111111111' }),
-        route: 'Updated Route',
+        fromRoute: { id: '507f1f77bcf86cd799439013', code: 'T3', name: 'Can Tho', createdAt: '2025-06-27T07:51:17.342Z', updatedAt: '2025-06-27T07:51:17.342Z' },
+        toRoute: { id: '507f1f77bcf86cd799439014', code: 'T4', name: 'An Giang', createdAt: '2025-06-27T07:51:17.342Z', updatedAt: '2025-06-27T07:51:17.342Z' },
         cost: 75000
       });
 
