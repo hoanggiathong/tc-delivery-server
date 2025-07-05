@@ -4,7 +4,9 @@ export const mockDeliveryService = {
   getDeliveryById: jest.fn(),
   getAllDeliveries: jest.fn(),
   deleteDelivery: jest.fn(),
-  getRelatedDeliveriesBySender: jest.fn()
+  getRelatedDeliveriesBySender: jest.fn(),
+  getNextCode: jest.fn(),
+  getDeliveryByCode: jest.fn()
 };
 
 export class DeliveryService {
@@ -14,4 +16,6 @@ export class DeliveryService {
   getAllDeliveries = mockDeliveryService.getAllDeliveries;
   deleteDelivery = mockDeliveryService.deleteDelivery;
   getRelatedDeliveriesBySender = mockDeliveryService.getRelatedDeliveriesBySender;
+  getNextCode = mockDeliveryService.getNextCode;
+  getDeliveryByCode = mockDeliveryService.getDeliveryByCode;
 }

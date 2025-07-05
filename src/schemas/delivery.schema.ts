@@ -125,5 +125,33 @@ export const deliveryParamsSchema = z.object({
   })
 });
 
+// Schema for getting next delivery code
+export const getNextCodeSchema = z.object({
+  body: z.object({
+    toRouteId: z.string()
+      .min(1, 'To route ID is required')
+      .regex(/^[0-9a-fA-F]{24}$/, 'Please provide a valid to route ID')
+      .trim()
+  })
+});
+
+// Schema for delivery code lookup
+export const deliveryCodeSchema = z.object({
+  params: z.object({
+    deliveryIdentifier: z.string()
+      .min(12, 'Delivery identifier must be at least 12 characters') // 10 digits code + 2 route codes minimum
+      .max(20, 'Delivery identifier must not exceed 20 characters')
+      .regex(/^\d{10}[A-Z]\d+[A-Z]\d+$/, 'Invalid delivery identifier format. Expected: codeFromRouteToRoute (e.g., 2401250001T1T2)')
+      .trim()
+  })
+});
+
+// Schema for delivery code validation
+export const deliveryCodeValidationSchema = z.string()
+  .length(10, 'Delivery code must be exactly 10 digits')
+  .regex(/^\d{10}$/, 'Delivery code must contain only digits in format DDMMYY + sequence (0001-9999)');
+
 export type CreateDeliveryRequest = z.infer<typeof createDeliverySchema>['body'];
 export type UpdateDeliveryRequest = z.infer<typeof updateDeliverySchema>['body'];
+export type GetNextCodeRequest = z.infer<typeof getNextCodeSchema>['body'];
+export type DeliveryCodeParams = z.infer<typeof deliveryCodeSchema>['params'];

@@ -1,12 +1,14 @@
 import { Delivery, IDelivery } from '@/models/delivery.model';
 import { Route } from '@/models/route.model';
 import { CustomerService } from '@/services/customer.service';
+import { CodeGeneratorService } from '@/services/code-generator.service';
 import {
   IDeliveryCreateRequest,
   IDeliveryUpdateRequest,
   IDeliveryResponse,
   IDeliveryWithPopulatedRefs,
-  IDeliveryLeanPopulated
+  IDeliveryLeanPopulated,
+  INextCodeResponse
 } from '@/types/delivery.type';
 import { ICustomerResponse } from '@/types/customer.type';
 
@@ -48,6 +50,7 @@ export class DeliveryService {
 
     return {
       id: populated._id,
+      code: populated.code,
       sender: {
         id: populated.sender._id,
         name: populated.sender.name,
@@ -98,6 +101,7 @@ export class DeliveryService {
   private transformDeliveryToResponseOptimized(delivery: IDeliveryLeanPopulated): IDeliveryResponse {
     return {
       id: delivery._id,
+      code: delivery.code,
       sender: {
         id: delivery.sender._id,
         name: delivery.sender.name,
@@ -162,8 +166,12 @@ export class DeliveryService {
         throw new Error('To route not found');
       }
 
+      // Generate delivery code
+      const deliveryCode = await CodeGeneratorService.generateNextCode();
+
       // Create delivery
       const delivery = new Delivery({
+        code: deliveryCode,
         sender: sender.id,
         receiver: receiver.id,
         fromRoute: data.fromRouteId,
@@ -376,5 +384,110 @@ export class DeliveryService {
     } catch (error) {
       throw new Error(`Failed to fetch related deliveries: ${error instanceof Error ? error.message : 'Unexpected error occurred'}`);
     }
+  }
+
+  /**
+   * Get next delivery code for a specific route
+   */
+  async getNextCode(toRouteId: string): Promise<INextCodeResponse> {
+    try {
+      // Validate toRoute exists
+      const toRoute = await Route.findById(toRouteId);
+      if (!toRoute) {
+        throw new Error('To route not found');
+      }
+
+      // Get next code preview
+      const nextCode = await CodeGeneratorService.getNextCodePreview();
+
+      return {
+        nextCode,
+        toRoute: {
+          id: toRoute._id,
+          code: toRoute.code,
+          name: toRoute.name,
+          createdAt: toRoute.createdAt,
+          updatedAt: toRoute.updatedAt
+        }
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Get delivery by code and route combination
+   * @param deliveryIdentifier - Format: codeFromRouteToRoute (e.g., 2401250001T1T2)
+   */
+  async getDeliveryByCode(deliveryIdentifier: string): Promise<IDeliveryResponse | null> {
+    try {
+      // Parse delivery identifier
+      const parsed = this.parseDeliveryIdentifier(deliveryIdentifier);
+      if (!parsed) {
+        throw new Error('Invalid delivery identifier format. Expected: codeFromRouteToRoute (e.g., 2401250001T1T2)');
+      }
+
+      const { code, fromRouteCode, toRouteCode } = parsed;
+
+      // Find routes by code
+      const fromRoute = await Route.findOne({ code: fromRouteCode });
+      if (!fromRoute) {
+        throw new Error(`From route with code ${fromRouteCode} not found`);
+      }
+
+      const toRoute = await Route.findOne({ code: toRouteCode });
+      if (!toRoute) {
+        throw new Error(`To route with code ${toRouteCode} not found`);
+      }
+
+      // Find delivery by code and routes
+      const delivery = await Delivery.findOne({
+        code: code,
+        fromRoute: fromRoute._id,
+        toRoute: toRoute._id
+      })
+        .populate([
+          { path: 'sender', select: '_id name phone createdAt updatedAt' },
+          { path: 'receiver', select: '_id name phone createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name createdAt updatedAt' },
+          { path: 'createdByUser', select: '_id username' }
+        ])
+        .lean();
+
+      if (!delivery) {
+        return null;
+      }
+
+      return this.transformDeliveryToResponseOptimized(this.toPopulatedDeliveryLean(delivery));
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Parse delivery identifier to extract code and route codes
+   * @param deliveryIdentifier - Format: codeFromRouteToRoute (e.g., 2401250001T1T2)
+   */
+  private parseDeliveryIdentifier(deliveryIdentifier: string): { code: string; fromRouteCode: string; toRouteCode: string } | null {
+    // Expected format: 10 digits + route codes (e.g., 2401250001T1T2)
+    const match = deliveryIdentifier.match(/^(\d{10})([A-Z]\d+)([A-Z]\d+)$/);
+
+    if (!match) {
+      return null;
+    }
+
+    const [, code, fromRouteCode, toRouteCode] = match;
+
+    // Validate code format
+    if (!CodeGeneratorService.validateCodeFormat(code)) {
+      return null;
+    }
+
+    return {
+      code,
+      fromRouteCode,
+      toRouteCode
+    };
   }
 }

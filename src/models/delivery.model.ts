@@ -2,6 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IDelivery extends Document {
   _id: string;
+  code: string;
   sender: mongoose.Types.ObjectId;
   receiver: mongoose.Types.ObjectId;
   fromRoute: mongoose.Types.ObjectId;
@@ -22,6 +23,13 @@ export interface IDelivery extends Document {
 }
 
 const deliverySchema = new Schema<IDelivery>({
+  code: {
+    type: String,
+    required: [true, 'Delivery code is required'],
+    unique: true,
+    trim: true,
+    match: [/^\d{10}$/, 'Code must be 10 digits in format DDMMYY + sequence (0001-9999)']
+  },
   sender: {
     type: Schema.Types.ObjectId,
     ref: 'Customer',
@@ -114,6 +122,7 @@ const deliverySchema = new Schema<IDelivery>({
 // =========================================
 
 // 1. Most common query patterns - Single field indexes
+deliverySchema.index({ code: 1 }); // High priority for code lookup
 deliverySchema.index({ sender: 1 });
 deliverySchema.index({ receiver: 1 });
 deliverySchema.index({ fromRoute: 1 });
@@ -142,7 +151,10 @@ deliverySchema.index({ fromRoute: 1, toRoute: 1 });
 deliverySchema.index({ createdAt: -1, fromRoute: 1 });
 deliverySchema.index({ createdAt: -1, toRoute: 1 });
 
-// 7. Text search on item names (if needed)
+// 7. Code-based queries optimization
+deliverySchema.index({ code: 1, fromRoute: 1, toRoute: 1 }); // For code + route lookup
+
+// 8. Text search on item names (if needed)
 // Uncomment if you need text search functionality
 // deliverySchema.index({ name: 'text' });
 

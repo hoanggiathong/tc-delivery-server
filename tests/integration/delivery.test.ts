@@ -401,4 +401,209 @@ describe('Delivery Endpoints', () => {
       expect(response.body.message).toBe('Access token is required');
     });
   });
+
+  describe('POST /api/delivery/next-code', () => {
+    const validRequestData = {
+      toRouteId: '507f1f77bcf86cd799439012'
+    };
+
+    it('should get next delivery code successfully', async () => {
+      const mockNextCodeResponse = {
+        nextCode: '2501270001',
+        toRoute: {
+          id: '507f1f77bcf86cd799439012',
+          code: 'T2',
+          name: 'Long An',
+          createdAt: '2025-01-27T00:00:00.000Z',
+          updatedAt: '2025-01-27T00:00:00.000Z'
+        }
+      };
+
+      mockDeliveryService.getNextCode.mockResolvedValue(mockNextCodeResponse);
+
+      const response = await request(app)
+        .post('/api/delivery/next-code')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send(validRequestData)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('Next delivery code retrieved successfully');
+      expect(response.body.data).toEqual(mockNextCodeResponse);
+      expect(mockDeliveryService.getNextCode).toHaveBeenCalledWith('507f1f77bcf86cd799439012');
+    });
+
+    it('should return 401 when not authenticated', async () => {
+      const response = await request(app)
+        .post('/api/delivery/next-code')
+        .send(validRequestData)
+        .expect(401);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Access token is required');
+      expect(mockDeliveryService.getNextCode).not.toHaveBeenCalled();
+    });
+
+    it('should return 400 with validation errors for invalid toRouteId', async () => {
+      const invalidData = {
+        toRouteId: 'invalid-id'
+      };
+
+      const response = await request(app)
+        .post('/api/delivery/next-code')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send(invalidData)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Validation failed');
+      expect(mockDeliveryService.getNextCode).not.toHaveBeenCalled();
+    });
+
+    it('should return 400 when to route not found', async () => {
+      mockDeliveryService.getNextCode.mockRejectedValue(
+        new Error('To route not found')
+      );
+
+      const response = await request(app)
+        .post('/api/delivery/next-code')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send(validRequestData)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('To route not found');
+    });
+
+    it('should return 400 when maximum deliveries reached for the day', async () => {
+      mockDeliveryService.getNextCode.mockRejectedValue(
+        new Error('Maximum number of deliveries (9999) reached for date 250127')
+      );
+
+      const response = await request(app)
+        .post('/api/delivery/next-code')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send(validRequestData)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Maximum number of deliveries (9999) reached for date 250127');
+    });
+  });
+
+  describe('GET /api/delivery/code/:deliveryIdentifier', () => {
+    const validDeliveryIdentifier = '2501270001T1T2';
+
+    it('should get delivery by code successfully', async () => {
+      const mockDelivery = createMockDelivery({
+        id: 'delivery123',
+        code: '2501270001',
+        fromRoute: { id: '507f1f77bcf86cd799439011', code: 'T1', name: 'Ho Chi Minh', createdAt: '2025-01-27T00:00:00.000Z', updatedAt: '2025-01-27T00:00:00.000Z' },
+        toRoute: { id: '507f1f77bcf86cd799439012', code: 'T2', name: 'Long An', createdAt: '2025-01-27T00:00:00.000Z', updatedAt: '2025-01-27T00:00:00.000Z' }
+      });
+
+      mockDeliveryService.getDeliveryByCode.mockResolvedValue(mockDelivery);
+
+      const response = await request(app)
+        .get(`/api/delivery/code/${validDeliveryIdentifier}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('Delivery retrieved successfully');
+      expect(response.body.data.delivery).toEqual(mockDelivery);
+      expect(mockDeliveryService.getDeliveryByCode).toHaveBeenCalledWith(validDeliveryIdentifier);
+    });
+
+    it('should return 404 when delivery not found', async () => {
+      mockDeliveryService.getDeliveryByCode.mockResolvedValue(null);
+
+      const response = await request(app)
+        .get(`/api/delivery/code/${validDeliveryIdentifier}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(404);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Delivery not found');
+    });
+
+    it('should return 401 when not authenticated', async () => {
+      const response = await request(app)
+        .get(`/api/delivery/code/${validDeliveryIdentifier}`)
+        .expect(401);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Access token is required');
+      expect(mockDeliveryService.getDeliveryByCode).not.toHaveBeenCalled();
+    });
+
+    it('should return 400 with validation errors for invalid delivery identifier format', async () => {
+      const invalidIdentifier = 'invalid-format';
+
+      const response = await request(app)
+        .get(`/api/delivery/code/${invalidIdentifier}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Validation failed');
+      expect(mockDeliveryService.getDeliveryByCode).not.toHaveBeenCalled();
+    });
+
+    it('should return 400 when delivery identifier format is invalid in service', async () => {
+      mockDeliveryService.getDeliveryByCode.mockRejectedValue(
+        new Error('Invalid delivery identifier format. Expected: codeFromRouteToRoute (e.g., 2401250001T1T2)')
+      );
+
+      const response = await request(app)
+        .get(`/api/delivery/code/${validDeliveryIdentifier}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Invalid delivery identifier format. Expected: codeFromRouteToRoute (e.g., 2401250001T1T2)');
+    });
+
+    it('should return 400 when from route not found', async () => {
+      mockDeliveryService.getDeliveryByCode.mockRejectedValue(
+        new Error('From route with code T1 not found')
+      );
+
+      const response = await request(app)
+        .get(`/api/delivery/code/${validDeliveryIdentifier}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('From route with code T1 not found');
+    });
+
+    it('should return 400 when to route not found', async () => {
+      mockDeliveryService.getDeliveryByCode.mockRejectedValue(
+        new Error('To route with code T2 not found')
+      );
+
+      const response = await request(app)
+        .get(`/api/delivery/code/${validDeliveryIdentifier}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('To route with code T2 not found');
+    });
+
+    it('should return 500 when service throws unexpected error', async () => {
+      mockDeliveryService.getDeliveryByCode.mockRejectedValue(
+        new Error('Database connection failed')
+      );
+
+      const response = await request(app)
+        .get(`/api/delivery/code/${validDeliveryIdentifier}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(500);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Database connection failed');
+    });
+  });
 });

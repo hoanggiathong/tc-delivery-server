@@ -5,7 +5,9 @@ import { authenticateToken } from '@/middlewares/auth.middleware';
 import {
   createDeliverySchema,
   updateDeliverySchema,
-  deliveryParamsSchema
+  deliveryParamsSchema,
+  getNextCodeSchema,
+  deliveryCodeSchema
 } from '@/schemas/delivery.schema';
 
 const router = Router();
@@ -17,6 +19,12 @@ router.use(authenticateToken);
 // Delivery routes
 router.post('/', validate(createDeliverySchema), deliveryController.createDelivery);
 router.get('/', deliveryController.getAllDeliveries);
+
+// Next code route (must be before /:id to avoid conflicts)
+router.post('/next-code', validate(getNextCodeSchema), deliveryController.getNextCode);
+
+// Get delivery by code route (must be before /:id to avoid conflicts)
+router.get('/code/:deliveryIdentifier', validate(deliveryCodeSchema), deliveryController.getDeliveryByCode);
 
 // Related deliveries route (must be before /:id to avoid conflicts)
 router.get('/related/:senderName', deliveryController.getRelatedDeliveriesBySender);

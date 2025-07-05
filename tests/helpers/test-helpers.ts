@@ -18,6 +18,7 @@ export const createMockUser = (overrides: any = {}) => ({
 
 export const createMockDelivery = (overrides: any = {}) => ({
   id: 'delivery123',
+  code: '2501270001',
   sender: createMockCustomer({ id: 'sender123', name: 'John Sender' }),
   receiver: createMockCustomer({ id: 'receiver123', name: 'Jane Receiver' }),
   fromRoute: {

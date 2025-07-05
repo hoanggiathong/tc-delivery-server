@@ -2,6 +2,7 @@ import { DeliveryService } from "@/services/delivery.service";
 import { Delivery } from "@/models/delivery.model";
 import { Route } from "@/models/route.model";
 import { CustomerService } from "@/services/customer.service";
+import { CodeGeneratorService } from "@/services/code-generator.service";
 import { IDeliveryResponse } from "@/types/delivery.type";
 import { mockCustomerService } from "../../mocks/customer.service";
 
@@ -11,9 +12,17 @@ jest.mock("@/models/route.model");
 jest.mock("@/services/customer.service", () =>
   require("../../mocks/customer.service")
 );
+jest.mock("@/services/code-generator.service", () => ({
+  CodeGeneratorService: {
+    generateNextCode: jest.fn(),
+    getNextCodePreview: jest.fn(),
+    validateCodeFormat: jest.fn(),
+  }
+}));
 
 const MockedDelivery = Delivery as jest.MockedClass<typeof Delivery>;
 const MockedRoute = Route as jest.MockedClass<typeof Route>;
+const MockedCodeGeneratorService = CodeGeneratorService as jest.Mocked<typeof CodeGeneratorService>;
 
 describe("DeliveryService", () => {
   let deliveryService: DeliveryService;
@@ -77,6 +86,7 @@ describe("DeliveryService", () => {
 
     const mockDelivery = {
       _id: "delivery123",
+      code: "2401250001",
       sender: "sender123",
       receiver: "receiver123",
       fromRoute: "fromRoute123",
@@ -99,6 +109,7 @@ describe("DeliveryService", () => {
 
     const mockExpectedResponse: IDeliveryResponse = {
       id: "delivery123",
+      code: "2401250001",
       sender: mockSender,
       receiver: mockReceiver,
       fromRoute: {
@@ -141,6 +152,9 @@ describe("DeliveryService", () => {
         .mockResolvedValueOnce(mockFromRoute)
         .mockResolvedValueOnce(mockToRoute);
 
+      // Mock CodeGeneratorService
+      MockedCodeGeneratorService.generateNextCode.mockResolvedValue("2401250001");
+
       // Mock Delivery constructor and save
       MockedDelivery.mockImplementation(() => mockDelivery as any);
 
@@ -164,7 +178,9 @@ describe("DeliveryService", () => {
       );
       expect(MockedRoute.findById).toHaveBeenCalledWith("fromRoute123");
       expect(MockedRoute.findById).toHaveBeenCalledWith("toRoute123");
+      expect(MockedCodeGeneratorService.generateNextCode).toHaveBeenCalled();
       expect(MockedDelivery).toHaveBeenCalledWith({
+        code: "2401250001",
         sender: "sender123",
         receiver: "receiver123",
         fromRoute: "fromRoute123",
@@ -319,6 +335,7 @@ describe("DeliveryService", () => {
 
     const mockExpectedResponse: IDeliveryResponse = {
       id: "delivery123",
+      code: "2401250001",
       sender: mockUpdatedSender,
       receiver: {
         id: "receiver123",
@@ -499,6 +516,7 @@ describe("DeliveryService", () => {
 
     const mockExpectedResponse: IDeliveryResponse = {
       id: "delivery123",
+      code: "2401250001",
       sender: {
         id: "sender123",
         name: "John Sender",
@@ -647,6 +665,7 @@ describe("DeliveryService", () => {
     const mockExpectedResponse: IDeliveryResponse[] = [
       {
         id: "delivery123",
+        code: "2401250001",
         sender: {
           id: "sender123",
           name: "John Sender",
@@ -763,6 +782,247 @@ describe("DeliveryService", () => {
       await expect(deliveryService.deleteDelivery(mockDeliveryId)).rejects.toThrow(
         "Delete error"
       );
+    });
+  });
+
+  describe("getNextCode", () => {
+    const mockToRoute = {
+      _id: "toRoute123",
+      code: "T2",
+      name: "Long An",
+      createdAt: new Date("2023-01-01"),
+      updatedAt: new Date("2023-01-01"),
+    };
+
+    it("should get next code successfully", async () => {
+      // Mock Route.findById
+      MockedRoute.findById = jest.fn().mockResolvedValue(mockToRoute);
+
+      // Mock CodeGeneratorService
+      MockedCodeGeneratorService.getNextCodePreview.mockResolvedValue("2401250001");
+
+      const result = await deliveryService.getNextCode("toRoute123");
+
+      expect(MockedRoute.findById).toHaveBeenCalledWith("toRoute123");
+      expect(MockedCodeGeneratorService.getNextCodePreview).toHaveBeenCalled();
+      expect(result).toEqual({
+        nextCode: "2401250001",
+        toRoute: {
+          id: "toRoute123",
+          code: "T2",
+          name: "Long An",
+          createdAt: new Date("2023-01-01"),
+          updatedAt: new Date("2023-01-01"),
+        }
+      });
+    });
+
+    it("should throw error when to route not found", async () => {
+      MockedRoute.findById = jest.fn().mockResolvedValue(null);
+
+      await expect(
+        deliveryService.getNextCode("toRoute123")
+      ).rejects.toThrow("To route not found");
+    });
+  });
+
+  describe("getDeliveryByCode", () => {
+    const mockFromRoute = {
+      _id: "fromRoute123",
+      code: "T1",
+      name: "Ho Chi Minh",
+      createdAt: new Date("2023-01-01"),
+      updatedAt: new Date("2023-01-01"),
+    };
+
+    const mockToRoute = {
+      _id: "toRoute123",
+      code: "T2",
+      name: "Long An",
+      createdAt: new Date("2023-01-01"),
+      updatedAt: new Date("2023-01-01"),
+    };
+
+    const mockPopulatedDelivery = {
+      _id: "delivery123",
+      code: "2401250001",
+      sender: {
+        _id: "sender123",
+        name: "John Sender",
+        phone: "+1234567890",
+        createdAt: new Date("2023-01-01"),
+        updatedAt: new Date("2023-01-01"),
+      },
+      receiver: {
+        _id: "receiver123",
+        name: "Jane Receiver",
+        phone: "+1987654321",
+        createdAt: new Date("2023-01-01"),
+        updatedAt: new Date("2023-01-01"),
+      },
+      fromRoute: {
+        _id: "fromRoute123",
+        code: "T1",
+        name: "Ho Chi Minh",
+        createdAt: new Date("2023-01-01"),
+        updatedAt: new Date("2023-01-01"),
+      },
+      toRoute: {
+        _id: "toRoute123",
+        code: "T2",
+        name: "Long An",
+        createdAt: new Date("2023-01-01"),
+        updatedAt: new Date("2023-01-01"),
+      },
+      name: "Package Item",
+      cost: 100,
+      homeDelivery: "123 Main St",
+      homeDeliveryCost: 20,
+      itemValue: 500,
+      itemCost: 50,
+      collectCost: 30,
+      collectForCustomer: 25000,
+      collectForCustomerCost: 40,
+      collectForCustomerNote: "Test note",
+      createdByUser: {
+        _id: "user123",
+        username: "testuser",
+      },
+      createdAt: new Date("2023-01-01"),
+      updatedAt: new Date("2023-01-01"),
+    };
+
+    const mockExpectedResponse: IDeliveryResponse = {
+      id: "delivery123",
+      code: "2401250001",
+      sender: {
+        id: "sender123",
+        name: "John Sender",
+        phone: "+1234567890",
+        createdAt: new Date("2023-01-01"),
+        updatedAt: new Date("2023-01-01"),
+      },
+      receiver: {
+        id: "receiver123",
+        name: "Jane Receiver",
+        phone: "+1987654321",
+        createdAt: new Date("2023-01-01"),
+        updatedAt: new Date("2023-01-01"),
+      },
+      fromRoute: {
+        id: "fromRoute123",
+        code: "T1",
+        name: "Ho Chi Minh",
+        createdAt: new Date("2023-01-01"),
+        updatedAt: new Date("2023-01-01"),
+      },
+      toRoute: {
+        id: "toRoute123",
+        code: "T2",
+        name: "Long An",
+        createdAt: new Date("2023-01-01"),
+        updatedAt: new Date("2023-01-01"),
+      },
+      name: "Package Item",
+      cost: 100,
+      homeDelivery: "123 Main St",
+      homeDeliveryCost: 20,
+      itemValue: 500,
+      itemCost: 50,
+      collectCost: 30,
+      collectForCustomer: 25000,
+      collectForCustomerCost: 40,
+      collectForCustomerNote: "Test note",
+      createdByUser: "testuser",
+      createdAt: new Date("2023-01-01"),
+      updatedAt: new Date("2023-01-01"),
+    };
+
+    it("should get delivery by code successfully", async () => {
+      // Mock CodeGeneratorService.validateCodeFormat
+      MockedCodeGeneratorService.validateCodeFormat.mockReturnValue(true);
+
+      // Mock Route.findOne calls
+      MockedRoute.findOne = jest.fn()
+        .mockResolvedValueOnce(mockFromRoute)
+        .mockResolvedValueOnce(mockToRoute);
+
+      // Mock Delivery.findOne with populate and lean
+      const mockQuery = {
+        populate: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(mockPopulatedDelivery),
+      };
+      MockedDelivery.findOne = jest.fn().mockReturnValue(mockQuery);
+
+      // Mock the transformDeliveryToResponseOptimized method
+      jest
+        .spyOn(deliveryService as any, "transformDeliveryToResponseOptimized")
+        .mockReturnValue(mockExpectedResponse);
+
+      const result = await deliveryService.getDeliveryByCode("2401250001T1T2");
+
+      expect(MockedRoute.findOne).toHaveBeenCalledWith({ code: "T1" });
+      expect(MockedRoute.findOne).toHaveBeenCalledWith({ code: "T2" });
+      expect(MockedDelivery.findOne).toHaveBeenCalledWith({
+        code: "2401250001",
+        fromRoute: "fromRoute123",
+        toRoute: "toRoute123",
+      });
+      expect(result).toEqual(mockExpectedResponse);
+    });
+
+    it("should throw error for invalid delivery identifier format", async () => {
+      await expect(
+        deliveryService.getDeliveryByCode("invalid")
+      ).rejects.toThrow("Invalid delivery identifier format");
+    });
+
+    it("should throw error when from route not found", async () => {
+      // Mock CodeGeneratorService.validateCodeFormat
+      MockedCodeGeneratorService.validateCodeFormat.mockReturnValue(true);
+
+      // Mock Route.findOne calls
+      MockedRoute.findOne = jest.fn()
+        .mockResolvedValueOnce(null); // From route not found
+
+      await expect(
+        deliveryService.getDeliveryByCode("2401250001T1T2")
+      ).rejects.toThrow("From route with code T1 not found");
+    });
+
+    it("should throw error when to route not found", async () => {
+      // Mock CodeGeneratorService.validateCodeFormat
+      MockedCodeGeneratorService.validateCodeFormat.mockReturnValue(true);
+
+      // Mock Route.findOne calls
+      MockedRoute.findOne = jest.fn()
+        .mockResolvedValueOnce(mockFromRoute)
+        .mockResolvedValueOnce(null); // To route not found
+
+      await expect(
+        deliveryService.getDeliveryByCode("2401250001T1T2")
+      ).rejects.toThrow("To route with code T2 not found");
+    });
+
+    it("should return null when delivery not found", async () => {
+      // Mock CodeGeneratorService.validateCodeFormat
+      MockedCodeGeneratorService.validateCodeFormat.mockReturnValue(true);
+
+      // Mock Route.findOne calls
+      MockedRoute.findOne = jest.fn()
+        .mockResolvedValueOnce(mockFromRoute)
+        .mockResolvedValueOnce(mockToRoute);
+
+      // Mock Delivery.findOne with populate and lean
+      const mockQuery = {
+        populate: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(null),
+      };
+      MockedDelivery.findOne = jest.fn().mockReturnValue(mockQuery);
+
+      const result = await deliveryService.getDeliveryByCode("2401250001T1T2");
+
+      expect(result).toBeNull();
     });
   });
 });

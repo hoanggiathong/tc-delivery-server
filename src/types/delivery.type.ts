@@ -8,6 +8,7 @@ import { IRoute } from '@/models/route.model';
 
 // Delivery response interface
 export interface IDeliveryResponse extends BaseEntity {
+  code: string;
   sender: ICustomerResponse;
   receiver: ICustomerResponse;
   fromRoute: IRouteResponse;
@@ -77,6 +78,7 @@ export interface IDeliveryPopulated extends Omit<IDelivery, 'sender' | 'receiver
 // Interface for delivery with populated documents
 export interface IDeliveryWithPopulatedRefs {
   _id: string;
+  code: string;
   sender: ICustomer;
   receiver: ICustomer;
   fromRoute: IRoute;
@@ -99,9 +101,31 @@ export interface IDeliveryWithPopulatedRefs {
   updatedAt: Date;
 }
 
+// Interface for getting next delivery code
+export interface INextCodeRequest {
+  toRouteId: string;
+}
+
+export interface INextCodeResponse {
+  nextCode: string;
+  toRoute: IRouteResponse;
+}
+
+// Interface for delivery code lookup (code + fromRoute + toRoute)
+export interface IDeliveryCodeRequest {
+  deliveryIdentifier: string; // Format: codeT1T2 (e.g., 2401250001T1T2)
+}
+
+// Interface for code generation
+export interface ICodeGenerationData {
+  date: Date;
+  toRoute: IRouteResponse;
+}
+
 // Lean types for MongoDB documents (when using .lean())
 export interface IDeliveryLeanPopulated {
   _id: string;
+  code: string;
   sender: {
     _id: string;
     name: string;

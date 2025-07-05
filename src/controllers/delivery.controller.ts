@@ -482,4 +482,158 @@ export class DeliveryController {
       res.status(500).json(response);
     }
   };
+
+  /**
+   * @swagger
+   * /api/delivery/next-code:
+   *   post:
+   *     summary: Get next available delivery code
+   *     tags: [Delivery]
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - toRouteId
+   *             properties:
+   *               toRouteId:
+   *                 type: string
+   *                 description: ObjectId of the destination route
+   *     responses:
+   *       200:
+   *         description: Next code retrieved successfully
+   *       400:
+   *         description: Validation error
+   *       401:
+   *         description: Unauthorized
+   */
+  getNextCode = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized'
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { toRouteId } = req.body;
+      const nextCodeData = await this.deliveryService.getNextCode(toRouteId);
+
+      Logger.info('Next delivery code retrieved successfully', {
+        nextCode: nextCodeData.nextCode,
+        toRouteId,
+        userId: req.user.userId
+      });
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Next delivery code retrieved successfully',
+        data: nextCodeData
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Failed to get next delivery code', {
+        error: error instanceof Error ? error.message : error,
+        toRouteId: req.body.toRouteId,
+        userId: req.user?.userId
+      });
+
+      const message = error instanceof Error ? error.message : 'Failed to get next delivery code';
+
+      const response: ApiResponse = {
+        success: false,
+        message
+      };
+
+      res.status(400).json(response);
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/delivery/code/{deliveryIdentifier}:
+   *   get:
+   *     summary: Get delivery by code and route combination
+   *     tags: [Delivery]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: deliveryIdentifier
+   *         required: true
+   *         schema:
+   *           type: string
+   *           example: "2401250001T1T2"
+   *         description: Delivery identifier in format codeFromRouteToRoute (e.g., 2401250001T1T2)
+   *     responses:
+   *       200:
+   *         description: Delivery retrieved successfully
+   *       400:
+   *         description: Invalid delivery identifier format
+   *       404:
+   *         description: Delivery not found
+   *       401:
+   *         description: Unauthorized
+   */
+  getDeliveryByCode = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized'
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { deliveryIdentifier } = req.params;
+      const delivery = await this.deliveryService.getDeliveryByCode(deliveryIdentifier);
+
+      if (!delivery) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Delivery not found'
+        };
+        res.status(404).json(response);
+        return;
+      }
+
+      Logger.info('Delivery retrieved by code successfully', {
+        deliveryIdentifier,
+        deliveryId: delivery.id,
+        userId: req.user.userId
+      });
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Delivery retrieved successfully',
+        data: { delivery }
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Failed to get delivery by code', {
+        error: error instanceof Error ? error.message : error,
+        deliveryIdentifier: req.params.deliveryIdentifier,
+        userId: req.user?.userId
+      });
+
+      const message = error instanceof Error ? error.message : 'Failed to get delivery by code';
+      const statusCode = error instanceof Error && error.message.includes('Invalid') ? 400 : 500;
+
+      const response: ApiResponse = {
+        success: false,
+        message
+      };
+
+      res.status(statusCode).json(response);
+    }
+  };
 }
