@@ -19,6 +19,65 @@ export class MoneyDeliveryController {
   /**
    * Create a new money delivery
    * POST /api/money-deliveries
+   * @swagger
+   * /api/money-deliveries:
+   *   post:
+   *     summary: Create a new money delivery
+   *     tags: [MoneyDelivery]
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - senderName
+   *               - senderPhone
+   *               - receiverName
+   *               - receiverPhone
+   *               - fromRouteId
+   *               - toRouteId
+   *               - sendMoneyAmount
+   *               - sendCost
+   *             properties:
+   *               senderName:
+   *                 type: string
+   *                 description: Name of the sender
+   *               senderPhone:
+   *                 type: string
+   *                 description: Phone number of the sender
+   *               receiverName:
+   *                 type: string
+   *                 description: Name of the receiver
+   *               receiverPhone:
+   *                 type: string
+   *                 description: Phone number of the receiver
+   *               fromRouteId:
+   *                 type: string
+   *                 description: ObjectId of the from route
+   *               toRouteId:
+   *                 type: string
+   *                 description: ObjectId of the to route
+   *               sendMoneyAmount:
+   *                 type: number
+   *                 description: Amount of money to send
+   *               sendCost:
+   *                 type: number
+   *                 description: Service cost for money transfer
+   *               notes:
+   *                 type: string
+   *                 description: Optional notes for the money delivery
+   *     responses:
+   *       201:
+   *         description: Money delivery created successfully
+   *       400:
+   *         description: Validation error
+   *       401:
+   *         description: Unauthorized
+   *       404:
+   *         description: Route not found
    */
   createMoneyDelivery = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
@@ -70,6 +129,18 @@ export class MoneyDeliveryController {
   /**
    * Get all money deliveries
    * GET /api/money-deliveries
+   * @swagger
+   * /api/money-deliveries:
+   *   get:
+   *     summary: Get all money deliveries
+   *     tags: [MoneyDelivery]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Money deliveries retrieved successfully
+   *       401:
+   *         description: Unauthorized
    */
   getAllMoneyDeliveries = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
@@ -110,6 +181,27 @@ export class MoneyDeliveryController {
   /**
    * Get money delivery by ID
    * GET /api/money-deliveries/:id
+   * @swagger
+   * /api/money-deliveries/{id}:
+   *   get:
+   *     summary: Get money delivery by ID
+   *     tags: [MoneyDelivery]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Money delivery ID
+   *     responses:
+   *       200:
+   *         description: Money delivery retrieved successfully
+   *       404:
+   *         description: Money delivery not found
+   *       401:
+   *         description: Unauthorized
    */
   getMoneyDeliveryById = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
@@ -161,6 +253,63 @@ export class MoneyDeliveryController {
   /**
    * Update money delivery by ID
    * PUT /api/money-deliveries/:id
+   * @swagger
+   * /api/money-deliveries/{id}:
+   *   put:
+   *     summary: Update money delivery by ID
+   *     tags: [MoneyDelivery]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Money delivery ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               senderName:
+   *                 type: string
+   *                 description: Name of the sender
+   *               senderPhone:
+   *                 type: string
+   *                 description: Phone number of the sender
+   *               receiverName:
+   *                 type: string
+   *                 description: Name of the receiver
+   *               receiverPhone:
+   *                 type: string
+   *                 description: Phone number of the receiver
+   *               fromRouteId:
+   *                 type: string
+   *                 description: ObjectId of the from route
+   *               toRouteId:
+   *                 type: string
+   *                 description: ObjectId of the to route
+   *               sendMoneyAmount:
+   *                 type: number
+   *                 description: Amount of money to send
+   *               sendCost:
+   *                 type: number
+   *                 description: Service cost for money transfer
+   *               notes:
+   *                 type: string
+   *                 description: Optional notes for the money delivery
+   *     responses:
+   *       200:
+   *         description: Money delivery updated successfully
+   *       400:
+   *         description: Validation error
+   *       404:
+   *         description: Money delivery not found
+   *       401:
+   *         description: Unauthorized
    */
   updateMoneyDelivery = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
@@ -206,6 +355,27 @@ export class MoneyDeliveryController {
   /**
    * Delete money delivery by ID
    * DELETE /api/money-deliveries/:id
+   * @swagger
+   * /api/money-deliveries/{id}:
+   *   delete:
+   *     summary: Delete money delivery by ID
+   *     tags: [MoneyDelivery]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Money delivery ID
+   *     responses:
+   *       200:
+   *         description: Money delivery deleted successfully
+   *       404:
+   *         description: Money delivery not found
+   *       401:
+   *         description: Unauthorized
    */
   deleteMoneyDelivery = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
@@ -249,6 +419,34 @@ export class MoneyDeliveryController {
   /**
    * Get next money delivery code for a specific route
    * POST /api/money-deliveries/next-code
+   * @swagger
+   * /api/money-deliveries/next-code:
+   *   post:
+   *     summary: Get next available money delivery code
+   *     tags: [MoneyDelivery]
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - toRouteId
+   *             properties:
+   *               toRouteId:
+   *                 type: string
+   *                 description: ObjectId of the destination route
+   *     responses:
+   *       200:
+   *         description: Next code retrieved successfully
+   *       400:
+   *         description: Validation error
+   *       401:
+   *         description: Unauthorized
+   *       404:
+   *         description: Route not found
    */
   getNextCode = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
@@ -293,6 +491,30 @@ export class MoneyDeliveryController {
   /**
    * Get money delivery by code
    * GET /api/money-deliveries/code/:deliveryIdentifier
+   * @swagger
+   * /api/money-deliveries/code/{deliveryIdentifier}:
+   *   get:
+   *     summary: Get money delivery by code and route combination
+   *     tags: [MoneyDelivery]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: deliveryIdentifier
+   *         required: true
+   *         schema:
+   *           type: string
+   *           example: "2401250001T1T2"
+   *         description: Money delivery identifier in format codeFromRouteToRoute (e.g., 2401250001T1T2)
+   *     responses:
+   *       200:
+   *         description: Money delivery retrieved successfully
+   *       400:
+   *         description: Invalid delivery identifier format
+   *       404:
+   *         description: Money delivery not found
+   *       401:
+   *         description: Unauthorized
    */
   getMoneyDeliveryByCode = async (req: AuthRequest, res: Response): Promise<void> => {
     try {

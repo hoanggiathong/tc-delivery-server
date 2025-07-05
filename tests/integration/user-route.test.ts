@@ -453,6 +453,19 @@ describe('User Route Integration Tests', () => {
     });
 
     it('should remove multiple route assignments successfully', async () => {
+      // Clean up existing assignments and create fresh ones for this test
+      await UserRoute.deleteMany({ userId: regularUserId });
+      await UserRoute.create({
+        userId: regularUserId,
+        routeId: routeId1,
+        assignedBy: managerId
+      });
+      await UserRoute.create({
+        userId: regularUserId,
+        routeId: routeId2,
+        assignedBy: managerId
+      });
+
       const removeData = {
         userId: regularUserId,
         routeIds: [routeId1, routeId2]
@@ -461,8 +474,9 @@ describe('User Route Integration Tests', () => {
       const response = await request(app)
         .delete('/api/user-route/remove-multiple')
         .set('Authorization', `Bearer ${managerToken}`)
-        .send(removeData)
-        .expect(200);
+        .send(removeData);
+
+      expect(response.status).toBe(200);
 
       expect(response.body.success).toBe(true);
       expect(response.body.message).toBe('Route assignments removed successfully');
