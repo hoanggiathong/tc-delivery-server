@@ -23,6 +23,7 @@ export interface IDeliveryResponse extends BaseEntity {
   collectForCustomer: number;
   collectForCustomerCost: number;
   collectForCustomerNote?: string;
+  notes?: string;
   createdByUser: string;
 }
 
@@ -44,6 +45,7 @@ export interface IDeliveryCreateRequest {
   collectForCustomer: number;
   collectForCustomerCost: number;
   collectForCustomerNote?: string;
+  notes?: string;
 }
 
 // Delivery update request interface
@@ -64,6 +66,7 @@ export interface IDeliveryUpdateRequest {
   collectForCustomer?: number;
   collectForCustomerCost?: number;
   collectForCustomerNote?: string;
+  notes?: string;
 }
 
 // Interface for populated delivery (when sender, receiver, fromRoute, toRoute, createdByUser are populated)
@@ -93,6 +96,7 @@ export interface IDeliveryWithPopulatedRefs {
   collectForCustomer: number;
   collectForCustomerCost: number;
   collectForCustomerNote?: string;
+  notes?: string;
   createdByUser: {
     _id: string;
     username: string;
@@ -164,6 +168,7 @@ export interface IDeliveryLeanPopulated {
   collectForCustomer: number;
   collectForCustomerCost: number;
   collectForCustomerNote?: string;
+  notes?: string;
   createdByUser: {
     _id: string;
     username: string;

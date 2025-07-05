@@ -89,6 +89,7 @@ export class DeliveryService {
       collectForCustomer: populated.collectForCustomer,
       collectForCustomerCost: populated.collectForCustomerCost,
       collectForCustomerNote: populated.collectForCustomerNote,
+      notes: populated.notes,
       createdByUser: populated.createdByUser.username,
       createdAt: populated.createdAt,
       updatedAt: populated.updatedAt
@@ -140,6 +141,7 @@ export class DeliveryService {
       collectForCustomer: delivery.collectForCustomer,
       collectForCustomerCost: delivery.collectForCustomerCost,
       collectForCustomerNote: delivery.collectForCustomerNote,
+      notes: delivery.notes,
       createdByUser: delivery.createdByUser.username,
       createdAt: delivery.createdAt,
       updatedAt: delivery.updatedAt
@@ -186,6 +188,7 @@ export class DeliveryService {
         collectForCustomer: data.collectForCustomer,
         collectForCustomerCost: data.collectForCustomerCost,
         collectForCustomerNote: data.collectForCustomerNote,
+        notes: data.notes,
         createdByUser: userId
       });
 
@@ -254,6 +257,7 @@ export class DeliveryService {
       if (data.collectForCustomer !== undefined) updateData.collectForCustomer = data.collectForCustomer;
       if (data.collectForCustomerCost !== undefined) updateData.collectForCustomerCost = data.collectForCustomerCost;
       if (data.collectForCustomerNote !== undefined) updateData.collectForCustomerNote = data.collectForCustomerNote;
+      if (data.notes !== undefined) updateData.notes = data.notes;
 
       // Update delivery
       const updatedDelivery = await Delivery.findByIdAndUpdate(

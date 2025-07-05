@@ -60,6 +60,7 @@ export const createMockDelivery = (overrides: any = {}) => ({
   collectForCustomer: 25000,
   collectForCustomerCost: 20000,
   collectForCustomerNote: 'Handle with care',
+  notes: 'Delivery notes',
   createdByUser: 'admin',
   createdAt: '2025-06-27T07:51:17.342Z',
   updatedAt: '2025-06-27T07:51:17.342Z',
@@ -84,6 +85,7 @@ export const createMockDeliveryRequest = (overrides: any = {}) => ({
   collectForCustomer: 25000,
   collectForCustomerCost: 40,
   collectForCustomerNote: 'Test note',
+  notes: 'Test delivery notes',
   ...overrides
 });
 

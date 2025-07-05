@@ -10,6 +10,9 @@ export * from './customer.type';
 // Export delivery-related types
 export * from './delivery.type';
 
+// Export money-delivery-related types
+export * from './money-delivery.type';
+
 // Export route-related types
 export * from './route.type';
 

@@ -17,6 +17,7 @@ export interface IDelivery extends Document {
   collectForCustomer: number;
   collectForCustomerCost: number;
   collectForCustomerNote?: string;
+  notes?: string;
   createdByUser: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -97,6 +98,10 @@ const deliverySchema = new Schema<IDelivery>({
     min: [0, 'Collect for customer cost must be positive']
   },
   collectForCustomerNote: {
+    type: String,
+    trim: true
+  },
+  notes: {
     type: String,
     trim: true
   },

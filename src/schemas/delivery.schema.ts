@@ -48,6 +48,9 @@ export const createDeliverySchema = z.object({
       .min(0, 'Collect for customer cost must be positive'),
     collectForCustomerNote: z.string()
       .trim()
+      .optional(),
+    notes: z.string()
+      .trim()
       .optional()
   })
 });
@@ -114,6 +117,9 @@ export const updateDeliverySchema = z.object({
       .min(0, 'Collect for customer cost must be positive')
       .optional(),
     collectForCustomerNote: z.string()
+      .trim()
+      .optional(),
+    notes: z.string()
       .trim()
       .optional()
   })

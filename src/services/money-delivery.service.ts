@@ -1,0 +1,398 @@
+import { MoneyDelivery, IMoneyDelivery } from '@/models/money-delivery.model';
+import { Route } from '@/models/route.model';
+import { CustomerService } from '@/services/customer.service';
+import { CodeGeneratorService } from '@/services/code-generator.service';
+import {
+  IMoneyDeliveryCreateRequest,
+  IMoneyDeliveryUpdateRequest,
+  IMoneyDeliveryResponse,
+  IMoneyDeliveryWithPopulatedRefs,
+  IMoneyDeliveryLeanPopulated,
+  INextMoneyDeliveryCodeResponse
+} from '@/types/money-delivery.type';
+import { ICustomerResponse } from '@/types/customer.type';
+
+export class MoneyDeliveryService {
+  private customerService: CustomerService;
+
+  constructor() {
+    this.customerService = new CustomerService();
+  }
+
+  /**
+   * Type assertion helper for populated money delivery objects
+   */
+  private toPopulatedMoneyDelivery(moneyDelivery: any): IMoneyDeliveryWithPopulatedRefs {
+    return moneyDelivery;
+  }
+
+  /**
+   * Type assertion helper for lean populated money delivery objects
+   */
+  private toPopulatedMoneyDeliveryLean(moneyDelivery: any): IMoneyDeliveryLeanPopulated {
+    return moneyDelivery;
+  }
+
+  /**
+   * Transform IMoneyDelivery to IMoneyDeliveryResponse
+   */
+  private async transformMoneyDeliveryToResponse(moneyDelivery: IMoneyDelivery): Promise<IMoneyDeliveryResponse> {
+    // Populate sender, receiver, fromRoute, toRoute and createdByUser
+    const populatedMoneyDelivery = await moneyDelivery.populate([
+      { path: 'sender', select: '_id name phone createdAt updatedAt' },
+      { path: 'receiver', select: '_id name phone createdAt updatedAt' },
+      { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
+      { path: 'toRoute', select: '_id code name createdAt updatedAt' },
+      { path: 'createdByUser', select: '_id username' }
+    ]);
+
+    const populated = this.toPopulatedMoneyDelivery(populatedMoneyDelivery);
+
+    return {
+      id: populated._id,
+      code: populated.code,
+      sender: {
+        id: populated.sender._id,
+        name: populated.sender.name,
+        phone: populated.sender.phone,
+        createdAt: populated.sender.createdAt,
+        updatedAt: populated.sender.updatedAt
+      },
+      receiver: {
+        id: populated.receiver._id,
+        name: populated.receiver.name,
+        phone: populated.receiver.phone,
+        createdAt: populated.receiver.createdAt,
+        updatedAt: populated.receiver.updatedAt
+      },
+      fromRoute: {
+        id: populated.fromRoute._id,
+        code: populated.fromRoute.code,
+        name: populated.fromRoute.name,
+        createdAt: populated.fromRoute.createdAt,
+        updatedAt: populated.fromRoute.updatedAt
+      },
+      toRoute: {
+        id: populated.toRoute._id,
+        code: populated.toRoute.code,
+        name: populated.toRoute.name,
+        createdAt: populated.toRoute.createdAt,
+        updatedAt: populated.toRoute.updatedAt
+      },
+      sendMoneyAmount: populated.sendMoneyAmount,
+      sendCost: populated.sendCost,
+      notes: populated.notes,
+      createdByUser: populated.createdByUser.username,
+      createdAt: populated.createdAt,
+      updatedAt: populated.updatedAt
+    };
+  }
+
+  /**
+   * Transform pre-populated lean money delivery to IMoneyDeliveryResponse (optimized)
+   */
+  private transformMoneyDeliveryToResponseOptimized(moneyDelivery: IMoneyDeliveryLeanPopulated): IMoneyDeliveryResponse {
+    return {
+      id: moneyDelivery._id,
+      code: moneyDelivery.code,
+      sender: {
+        id: moneyDelivery.sender._id,
+        name: moneyDelivery.sender.name,
+        phone: moneyDelivery.sender.phone,
+        createdAt: moneyDelivery.sender.createdAt,
+        updatedAt: moneyDelivery.sender.updatedAt
+      },
+      receiver: {
+        id: moneyDelivery.receiver._id,
+        name: moneyDelivery.receiver.name,
+        phone: moneyDelivery.receiver.phone,
+        createdAt: moneyDelivery.receiver.createdAt,
+        updatedAt: moneyDelivery.receiver.updatedAt
+      },
+      fromRoute: {
+        id: moneyDelivery.fromRoute._id,
+        code: moneyDelivery.fromRoute.code,
+        name: moneyDelivery.fromRoute.name,
+        createdAt: moneyDelivery.fromRoute.createdAt,
+        updatedAt: moneyDelivery.fromRoute.updatedAt
+      },
+      toRoute: {
+        id: moneyDelivery.toRoute._id,
+        code: moneyDelivery.toRoute.code,
+        name: moneyDelivery.toRoute.name,
+        createdAt: moneyDelivery.toRoute.createdAt,
+        updatedAt: moneyDelivery.toRoute.updatedAt
+      },
+      sendMoneyAmount: moneyDelivery.sendMoneyAmount,
+      sendCost: moneyDelivery.sendCost,
+      notes: moneyDelivery.notes,
+      createdByUser: moneyDelivery.createdByUser.username,
+      createdAt: moneyDelivery.createdAt,
+      updatedAt: moneyDelivery.updatedAt
+    };
+  }
+
+  /**
+   * Create a new money delivery
+   */
+  async createMoneyDelivery(data: IMoneyDeliveryCreateRequest, userId: string): Promise<IMoneyDeliveryResponse> {
+    try {
+      // Find or create sender and receiver
+      const sender = await this.customerService.findOrCreateCustomer(data.senderName, data.senderPhone);
+      const receiver = await this.customerService.findOrCreateCustomer(data.receiverName, data.receiverPhone);
+
+      // Validate fromRoute and toRoute exist
+      const fromRoute = await Route.findById(data.fromRouteId);
+      if (!fromRoute) {
+        throw new Error('From route not found');
+      }
+
+      const toRoute = await Route.findById(data.toRouteId);
+      if (!toRoute) {
+        throw new Error('To route not found');
+      }
+
+      // Generate money delivery code
+      const moneyDeliveryCode = await CodeGeneratorService.generateNextMoneyDeliveryCode();
+
+      // Create money delivery
+      const moneyDelivery = new MoneyDelivery({
+        code: moneyDeliveryCode,
+        sender: sender.id,
+        receiver: receiver.id,
+        fromRoute: data.fromRouteId,
+        toRoute: data.toRouteId,
+        sendMoneyAmount: data.sendMoneyAmount,
+        sendCost: data.sendCost,
+        notes: data.notes,
+        createdByUser: userId
+      });
+
+      await moneyDelivery.save();
+      return this.transformMoneyDeliveryToResponse(moneyDelivery);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Update money delivery by ID
+   */
+  async updateMoneyDelivery(id: string, data: IMoneyDeliveryUpdateRequest): Promise<IMoneyDeliveryResponse> {
+    try {
+      const moneyDelivery = await MoneyDelivery.findById(id);
+      if (!moneyDelivery) {
+        throw new Error('Money delivery not found');
+      }
+
+      const updateData: Record<string, any> = {};
+
+      // Handle sender update
+      if (data.senderName || data.senderPhone) {
+        const senderName = data.senderName || moneyDelivery.sender.toString();
+        const senderPhone = data.senderPhone || moneyDelivery.sender.toString();
+        const sender = await this.customerService.findOrCreateCustomer(senderName, senderPhone);
+        updateData.sender = sender.id;
+      } else {
+        updateData.sender = moneyDelivery.sender;
+      }
+
+      // Handle receiver update
+      if (data.receiverName || data.receiverPhone) {
+        const receiverName = data.receiverName || moneyDelivery.receiver.toString();
+        const receiverPhone = data.receiverPhone || moneyDelivery.receiver.toString();
+        const receiver = await this.customerService.findOrCreateCustomer(receiverName, receiverPhone);
+        updateData.receiver = receiver.id;
+      } else {
+        updateData.receiver = moneyDelivery.receiver;
+      }
+
+      // Handle route updates
+      if (data.fromRouteId !== undefined) {
+        const fromRoute = await Route.findById(data.fromRouteId);
+        if (!fromRoute) {
+          throw new Error('From route not found');
+        }
+        updateData.fromRoute = data.fromRouteId;
+      }
+
+      if (data.toRouteId !== undefined) {
+        const toRoute = await Route.findById(data.toRouteId);
+        if (!toRoute) {
+          throw new Error('To route not found');
+        }
+        updateData.toRoute = data.toRouteId;
+      }
+
+      if (data.sendMoneyAmount !== undefined) updateData.sendMoneyAmount = data.sendMoneyAmount;
+      if (data.sendCost !== undefined) updateData.sendCost = data.sendCost;
+      if (data.notes !== undefined) updateData.notes = data.notes;
+
+      // Update money delivery
+      const updatedMoneyDelivery = await MoneyDelivery.findByIdAndUpdate(
+        id,
+        { $set: updateData },
+        { new: true, runValidators: true }
+      );
+
+      if (!updatedMoneyDelivery) {
+        throw new Error('Failed to update money delivery');
+      }
+
+      return this.transformMoneyDeliveryToResponse(updatedMoneyDelivery);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Get money delivery by ID
+   */
+  async getMoneyDeliveryById(id: string): Promise<IMoneyDeliveryResponse | null> {
+    try {
+      const moneyDelivery = await MoneyDelivery.findById(id)
+        .populate([
+          { path: 'sender', select: '_id name phone createdAt updatedAt' },
+          { path: 'receiver', select: '_id name phone createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name createdAt updatedAt' },
+          { path: 'createdByUser', select: '_id username' }
+        ])
+        .lean();
+
+      if (!moneyDelivery) {
+        return null;
+      }
+
+      return this.transformMoneyDeliveryToResponseOptimized(this.toPopulatedMoneyDeliveryLean(moneyDelivery));
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Get all money deliveries
+   */
+  async getAllMoneyDeliveries(): Promise<IMoneyDeliveryResponse[]> {
+    try {
+      const moneyDeliveries = await MoneyDelivery.find({})
+        .populate([
+          { path: 'sender', select: '_id name phone createdAt updatedAt' },
+          { path: 'receiver', select: '_id name phone createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name createdAt updatedAt' },
+          { path: 'createdByUser', select: '_id username' }
+        ])
+        .sort({ createdAt: -1 })
+        .lean();
+
+      return moneyDeliveries.map(moneyDelivery => this.transformMoneyDeliveryToResponseOptimized(this.toPopulatedMoneyDeliveryLean(moneyDelivery)));
+    } catch (error) {
+      throw new Error('Failed to fetch money deliveries');
+    }
+  }
+
+  /**
+   * Delete money delivery by ID
+   */
+  async deleteMoneyDelivery(id: string): Promise<void> {
+    try {
+      const moneyDelivery = await MoneyDelivery.findById(id);
+      if (!moneyDelivery) {
+        throw new Error('Money delivery not found');
+      }
+
+      await MoneyDelivery.findByIdAndDelete(id);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Get next money delivery code for a specific route
+   */
+  async getNextCode(toRouteId: string): Promise<INextMoneyDeliveryCodeResponse> {
+    try {
+      // Validate toRoute exists
+      const toRoute = await Route.findById(toRouteId);
+      if (!toRoute) {
+        throw new Error('To route not found');
+      }
+
+      // Generate next code
+      const nextCode = await CodeGeneratorService.generateNextMoneyDeliveryCode();
+
+      return {
+        nextCode,
+        toRoute: {
+          id: toRoute._id,
+          code: toRoute.code,
+          name: toRoute.name,
+          createdAt: toRoute.createdAt,
+          updatedAt: toRoute.updatedAt
+        }
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Get money delivery by code
+   */
+  async getMoneyDeliveryByCode(deliveryIdentifier: string): Promise<IMoneyDeliveryResponse | null> {
+    try {
+      const parsed = this.parseDeliveryIdentifier(deliveryIdentifier);
+      if (!parsed) {
+        return null;
+      }
+
+      const { code, fromRouteCode, toRouteCode } = parsed;
+
+      // Find fromRoute and toRoute by codes
+      const fromRoute = await Route.findOne({ code: fromRouteCode });
+      const toRoute = await Route.findOne({ code: toRouteCode });
+
+      if (!fromRoute || !toRoute) {
+        return null;
+      }
+
+      // Find money delivery by code and routes
+      const moneyDelivery = await MoneyDelivery.findOne({
+        code,
+        fromRoute: fromRoute._id,
+        toRoute: toRoute._id
+      })
+        .populate([
+          { path: 'sender', select: '_id name phone createdAt updatedAt' },
+          { path: 'receiver', select: '_id name phone createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name createdAt updatedAt' },
+          { path: 'createdByUser', select: '_id username' }
+        ])
+        .lean();
+
+      if (!moneyDelivery) {
+        return null;
+      }
+
+      return this.transformMoneyDeliveryToResponseOptimized(this.toPopulatedMoneyDeliveryLean(moneyDelivery));
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Parse delivery identifier (e.g., "2401250001T1T2" -> { code: "2401250001", fromRouteCode: "T1", toRouteCode: "T2" })
+   */
+  private parseDeliveryIdentifier(deliveryIdentifier: string): { code: string; fromRouteCode: string; toRouteCode: string } | null {
+    // Expected format: 10 digits + route code + route code (e.g., 2401250001T1T2)
+    const match = deliveryIdentifier.match(/^(\d{10})([A-Z]\d+)([A-Z]\d+)$/);
+    if (!match) {
+      return null;
+    }
+
+    const [, code, fromRouteCode, toRouteCode] = match;
+    return { code, fromRouteCode, toRouteCode };
+  }
+}

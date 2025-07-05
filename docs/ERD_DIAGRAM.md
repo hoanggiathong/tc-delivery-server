@@ -5,12 +5,17 @@
 ```mermaid
 erDiagram
     USERS ||--o{ DELIVERIES : creates
+    USERS ||--o{ MONEY_DELIVERIES : creates
     USERS ||--o{ USER_ROUTES : "assigned to"
     ROUTES ||--o{ USER_ROUTES : "contains"
     ROUTES ||--o{ DELIVERIES : "from route"
     ROUTES ||--o{ DELIVERIES : "to route"
+    ROUTES ||--o{ MONEY_DELIVERIES : "from route"
+    ROUTES ||--o{ MONEY_DELIVERIES : "to route"
     CUSTOMERS ||--o{ DELIVERIES : "sender"
     CUSTOMERS ||--o{ DELIVERIES : "receiver"
+    CUSTOMERS ||--o{ MONEY_DELIVERIES : "sender"
+    CUSTOMERS ||--o{ MONEY_DELIVERIES : "receiver"
 
     USERS {
         ObjectId _id PK
@@ -48,6 +53,7 @@ erDiagram
 
     DELIVERIES {
         ObjectId _id PK
+        string code UK "unique, 10 digits format"
         ObjectId sender FK "ref: CUSTOMERS"
         ObjectId receiver FK "ref: CUSTOMERS"
         ObjectId fromRoute FK "ref: ROUTES"
@@ -62,36 +68,24 @@ erDiagram
         number collectForCustomer "min 0, default 0"
         number collectForCustomerCost "min 0"
         string collectForCustomerNote "optional"
+        string notes "optional"
+        ObjectId createdByUser FK "ref: USERS"
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    MONEY_DELIVERIES {
+        ObjectId _id PK
+        string code UK "unique, 10 digits format"
+        ObjectId sender FK "ref: CUSTOMERS"
+        ObjectId receiver FK "ref: CUSTOMERS"
+        ObjectId fromRoute FK "ref: ROUTES"
+        ObjectId toRoute FK "ref: ROUTES"
+        number sendMoneyAmount "amount to send, min 0"
+        number sendCost "service cost, min 0"
+        string notes "optional"
         ObjectId createdByUser FK "ref: USERS"
         datetime createdAt
         datetime updatedAt
     }
 ```
-
-## Quick Reference
-
-### Relationships
-- **1 User** → **Many Deliveries** (creates)
-- **1 Customer** → **Many Deliveries** (as sender)
-- **1 Customer** → **Many Deliveries** (as receiver)
-- **1 Route** → **Many Deliveries** (as from route)
-- **1 Route** → **Many Deliveries** (as to route)
-- **Many Users** ↔ **Many Routes** (through USER_ROUTES junction table)
-- **1 User** → **Many User-Route Assignments** (assigned by manager+)
-
-### Key Constraints
-- Users: `username` is unique
-- Routes: `code` is unique (format: T1, T2, etc.)
-- Customers: `(name + phone)` combination is unique
-- User_Routes: `(userId + routeId)` combination is unique
-- Deliveries: All foreign keys are required (sender, receiver, fromRoute, toRoute, createdByUser)
-
-### Business Rules
-- Only users with role `manager`, `admin`, or `superadmin` can assign routes to users
-- Users with role `user` can only view routes they are assigned to
-- Route assignments are tracked with `assignedBy` field for audit purposes
-
-### Legend
-- **PK**: Primary Key
-- **FK**: Foreign Key
-- **UK**: Unique Key
