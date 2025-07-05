@@ -1,17 +1,15 @@
-export const mockCustomerService = {
-  createCustomer: jest.fn(),
-  updateCustomer: jest.fn(),
-  getCustomerById: jest.fn(),
-  getAllCustomers: jest.fn(),
-  findOrCreateCustomer: jest.fn(),
-  findCustomersByName: jest.fn(),
-};
+// Import mock from utils
+import { mockCustomerService } from '../utils/mock-services';
 
+// Export class for Jest mock
 export class CustomerService {
   createCustomer = mockCustomerService.createCustomer;
   updateCustomer = mockCustomerService.updateCustomer;
   getCustomerById = mockCustomerService.getCustomerById;
   getAllCustomers = mockCustomerService.getAllCustomers;
   findOrCreateCustomer = mockCustomerService.findOrCreateCustomer;
-  findCustomersByName = mockCustomerService.findCustomersByName;
+  deleteCustomer = mockCustomerService.deleteCustomer;
 }
+
+// Export default for compatibility
+export default CustomerService;

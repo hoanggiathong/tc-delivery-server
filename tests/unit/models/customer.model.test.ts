@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { Customer, ICustomer } from '@/models/customer.model';
+import { Customer } from '@/models/customer.model';
 
 describe('Customer Model', () => {
   describe('Schema Validation', () => {

@@ -1,6 +1,6 @@
-import { Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { requireRole, canViewUsers, canCreateUser } from '@/middlewares/role.middleware';
-import { AuthRequest, UserRole, JWTPayload } from '@/types';
+import { AuthRequest, UserRole } from '@/types';
 
 describe('Role Middleware', () => {
   let mockRequest: Partial<AuthRequest>;

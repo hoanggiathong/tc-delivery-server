@@ -1,4 +1,3 @@
-import { BaseEntity } from '.';
 import { Document } from 'mongoose';
 
 // Role enum

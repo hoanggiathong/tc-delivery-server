@@ -1,10 +1,9 @@
 import { DeliveryService } from "@/services/delivery.service";
 import { Delivery } from "@/models/delivery.model";
 import { Route } from "@/models/route.model";
-import { CustomerService } from "@/services/customer.service";
 import { CodeGeneratorService } from "@/services/code-generator.service";
 import { IDeliveryResponse } from "@/types/delivery.type";
-import { mockCustomerService } from "../../mocks/customer.service";
+import { mockCustomerService } from "../../utils";
 
 // Mock the Delivery and Route models
 jest.mock("@/models/delivery.model");

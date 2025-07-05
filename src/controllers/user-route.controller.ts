@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { UserRouteService } from '@/services/user-route.service';
 import {
   CreateUserRouteRequest,

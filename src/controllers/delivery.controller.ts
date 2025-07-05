@@ -626,7 +626,16 @@ export class DeliveryController {
       });
 
       const message = error instanceof Error ? error.message : 'Failed to get delivery by code';
-      const statusCode = error instanceof Error && error.message.includes('Invalid') ? 400 : 500;
+
+      // Determine proper status code based on error type
+      let statusCode = 500; // Default to server error
+      if (error instanceof Error) {
+        if (error.message.includes('Invalid') ||
+            error.message.includes('not found') ||
+            error.message.includes('route with code')) {
+          statusCode = 400; // Bad Request for validation/client errors
+        }
+      }
 
       const response: ApiResponse = {
         success: false,

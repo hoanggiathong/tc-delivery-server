@@ -3,7 +3,6 @@ import { User } from '@/models/user.model';
 import { Route } from '@/models/route.model';
 import {
   IUserRouteResponse,
-  IUserRouteLean,
   IUserRouteLeanPopulated,
   IUserRouteCreateRequest,
   IAssignMultipleRoutesRequest,

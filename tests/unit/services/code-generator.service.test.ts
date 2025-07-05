@@ -1,58 +1,45 @@
 import { CodeGeneratorService } from '@/services/code-generator.service';
-import { Delivery } from '@/models/delivery.model';
+import {
+  mockDeliveryModel,
+  setupCodeGeneratorMocks,
+  resetDeliveryMocks,
+  MockDelivery
+} from '../../utils';
 
 // Mock the Delivery model
-jest.mock('@/models/delivery.model', () => ({
-  Delivery: {
-    find: jest.fn(),
-    findOne: jest.fn(),
-    countDocuments: jest.fn()
-  }
-}));
-
-const mockDelivery = jest.mocked(Delivery);
+jest.mock('@/models/delivery.model', () => {
+  const { MockDelivery } = require('../../utils');
+  return {
+    Delivery: MockDelivery
+  };
+});
 
 describe('CodeGeneratorService', () => {
+  let mocks: ReturnType<typeof setupCodeGeneratorMocks>;
+
   beforeEach(() => {
-    jest.clearAllMocks();
+    resetDeliveryMocks();
+    mocks = setupCodeGeneratorMocks();
   });
 
   describe('generateNextCode', () => {
     it('should generate first code for a new day', async () => {
-      const mockQuery = {
-        sort: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        lean: jest.fn().mockResolvedValue([])
-      };
-      (mockDelivery.find as any).mockReturnValue(mockQuery);
-
-      const mockFindOneQuery = {
-        lean: jest.fn().mockResolvedValue(null)
-      };
-      (mockDelivery.findOne as any).mockReturnValue(mockFindOneQuery);
+      (mockDeliveryModel.find as any).mockReturnValue(mocks.mockEmptyQuery);
+      (mockDeliveryModel.findOne as any).mockReturnValue(mocks.mockNullFindOneQuery);
 
       const testDate = new Date('2024-01-25');
       const result = await CodeGeneratorService.generateNextCode(testDate);
 
       expect(result).toBe('2501240001'); // 25/01/24 + 0001
-      expect(mockDelivery.find).toHaveBeenCalledWith(
+      expect(mockDeliveryModel.find).toHaveBeenCalledWith(
         { code: { $regex: /^250124\d{4}$/ } },
         { code: 1 }
       );
     });
 
     it('should generate next code in sequence', async () => {
-      const mockQuery = {
-        sort: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        lean: jest.fn().mockResolvedValue([{ code: '2501240005' }])
-      };
-      (mockDelivery.find as any).mockReturnValue(mockQuery);
-
-      const mockFindOneQuery = {
-        lean: jest.fn().mockResolvedValue(null)
-      };
-      (mockDelivery.findOne as any).mockReturnValue(mockFindOneQuery);
+      (mockDeliveryModel.find as any).mockReturnValue(mocks.mockSequenceQuery);
+      (mockDeliveryModel.findOne as any).mockReturnValue(mocks.mockNullFindOneQuery);
 
       const testDate = new Date('2024-01-25');
       const result = await CodeGeneratorService.generateNextCode(testDate);
@@ -61,22 +48,10 @@ describe('CodeGeneratorService', () => {
     });
 
     it('should handle existing code collision', async () => {
-      const mockQuery = {
-        sort: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        lean: jest.fn().mockResolvedValue([{ code: '2501240005' }])
-      };
-      (mockDelivery.find as any).mockReturnValue(mockQuery);
-
-      const mockFindOneQuery1 = {
-        lean: jest.fn().mockResolvedValue({ code: '2501240006' })
-      };
-      const mockFindOneQuery2 = {
-        lean: jest.fn().mockResolvedValue(null)
-      };
-      (mockDelivery.findOne as any)
-        .mockReturnValueOnce(mockFindOneQuery1)
-        .mockReturnValueOnce(mockFindOneQuery2);
+      (mockDeliveryModel.find as any).mockReturnValue(mocks.mockCollisionQuery);
+      (mockDeliveryModel.findOne as any)
+        .mockReturnValueOnce(mocks.mockCollisionFindOneQuery)
+        .mockReturnValueOnce(mocks.mockNoCollisionFindOneQuery);
 
       const testDate = new Date('2024-01-25');
       const result = await CodeGeneratorService.generateNextCode(testDate);
@@ -85,12 +60,7 @@ describe('CodeGeneratorService', () => {
     });
 
     it('should throw error when maximum sequence reached', async () => {
-      const mockQuery = {
-        sort: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        lean: jest.fn().mockResolvedValue([{ code: '2501249999' }])
-      };
-      (mockDelivery.find as any).mockReturnValue(mockQuery);
+      (mockDeliveryModel.find as any).mockReturnValue(mocks.mockMaxSequenceQuery);
 
       const testDate = new Date('2024-01-25');
 
@@ -99,17 +69,8 @@ describe('CodeGeneratorService', () => {
     });
 
     it('should generate code with today\'s date by default', async () => {
-      const mockQuery = {
-        sort: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        lean: jest.fn().mockResolvedValue([])
-      };
-      (mockDelivery.find as any).mockReturnValue(mockQuery);
-
-      const mockFindOneQuery = {
-        lean: jest.fn().mockResolvedValue(null)
-      };
-      (mockDelivery.findOne as any).mockReturnValue(mockFindOneQuery);
+      (mockDeliveryModel.find as any).mockReturnValue(mocks.mockEmptyQuery);
+      (mockDeliveryModel.findOne as any).mockReturnValue(mocks.mockNullFindOneQuery);
 
       const today = new Date();
       const day = String(today.getDate()).padStart(2, '0');
@@ -125,17 +86,8 @@ describe('CodeGeneratorService', () => {
 
   describe('getNextCodePreview', () => {
     it('should return next code preview', async () => {
-      const mockQuery = {
-        sort: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        lean: jest.fn().mockResolvedValue([])
-      };
-      (mockDelivery.find as any).mockReturnValue(mockQuery);
-
-      const mockFindOneQuery = {
-        lean: jest.fn().mockResolvedValue(null)
-      };
-      (mockDelivery.findOne as any).mockReturnValue(mockFindOneQuery);
+      (mockDeliveryModel.find as any).mockReturnValue(mocks.mockEmptyQuery);
+      (mockDeliveryModel.findOne as any).mockReturnValue(mocks.mockNullFindOneQuery);
 
       const testDate = new Date('2024-01-25');
       const result = await CodeGeneratorService.getNextCodePreview(testDate);
@@ -195,19 +147,19 @@ describe('CodeGeneratorService', () => {
 
   describe('getDeliveryCountForDate', () => {
     it('should return delivery count for date', async () => {
-      mockDelivery.countDocuments.mockResolvedValueOnce(5);
+      mockDeliveryModel.countDocuments.mockResolvedValueOnce(5);
 
       const testDate = new Date('2024-01-25');
       const result = await CodeGeneratorService.getDeliveryCountForDate(testDate);
 
       expect(result).toBe(5);
-      expect(mockDelivery.countDocuments).toHaveBeenCalledWith({
+      expect(mockDeliveryModel.countDocuments).toHaveBeenCalledWith({
         code: { $regex: /^250124\d{4}$/ } // 25/01/24
       });
     });
 
     it('should return 0 for date with no deliveries', async () => {
-      mockDelivery.countDocuments.mockResolvedValueOnce(0);
+      mockDeliveryModel.countDocuments.mockResolvedValueOnce(0);
 
       const testDate = new Date('2024-01-25');
       const result = await CodeGeneratorService.getDeliveryCountForDate(testDate);
@@ -218,7 +170,7 @@ describe('CodeGeneratorService', () => {
 
   describe('isMaxDeliveriesReached', () => {
     it('should return false when under limit', async () => {
-      mockDelivery.countDocuments.mockResolvedValueOnce(5000);
+      mockDeliveryModel.countDocuments.mockResolvedValueOnce(5000);
 
       const testDate = new Date('2024-01-25');
       const result = await CodeGeneratorService.isMaxDeliveriesReached(testDate);
@@ -227,7 +179,7 @@ describe('CodeGeneratorService', () => {
     });
 
     it('should return true when at limit', async () => {
-      mockDelivery.countDocuments.mockResolvedValueOnce(9999);
+      mockDeliveryModel.countDocuments.mockResolvedValueOnce(9999);
 
       const testDate = new Date('2024-01-25');
       const result = await CodeGeneratorService.isMaxDeliveriesReached(testDate);
@@ -236,7 +188,7 @@ describe('CodeGeneratorService', () => {
     });
 
     it('should return true when over limit', async () => {
-      mockDelivery.countDocuments.mockResolvedValueOnce(10000);
+      mockDeliveryModel.countDocuments.mockResolvedValueOnce(10000);
 
       const testDate = new Date('2024-01-25');
       const result = await CodeGeneratorService.isMaxDeliveriesReached(testDate);
@@ -247,19 +199,14 @@ describe('CodeGeneratorService', () => {
 
   describe('error handling', () => {
     it('should handle database errors in generateNextCode', async () => {
-      const mockQuery = {
-        sort: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        lean: jest.fn().mockRejectedValue(new Error('Database error'))
-      };
-      (mockDelivery.find as any).mockReturnValue(mockQuery);
+      (mockDeliveryModel.find as any).mockReturnValue(mocks.mockErrorQuery);
 
       await expect(CodeGeneratorService.generateNextCode())
         .rejects.toThrow('Database error');
     });
 
     it('should handle database errors in getDeliveryCountForDate', async () => {
-      mockDelivery.countDocuments.mockRejectedValueOnce(new Error('Database error'));
+      mockDeliveryModel.countDocuments.mockRejectedValueOnce(new Error('Database error'));
 
       await expect(CodeGeneratorService.getDeliveryCountForDate(new Date()))
         .rejects.toThrow('Database error');

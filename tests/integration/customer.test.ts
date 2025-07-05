@@ -2,8 +2,8 @@ import request from 'supertest';
 import app from '../../src/app';
 import jwt from 'jsonwebtoken';
 import { UserRole } from '../../src/types/user.type';
-import { mockCustomerService } from '../mocks/customer.service';
-import { createMockCustomer } from '../helpers/test-helpers';
+import { mockCustomerService } from '../utils';
+import { createMockCustomer } from '../utils';
 
 // Mock CustomerService
 jest.mock('../../src/services/customer.service', () => require('../mocks/customer.service'));

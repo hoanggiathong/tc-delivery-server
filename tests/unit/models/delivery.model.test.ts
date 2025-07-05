@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { Delivery, IDelivery } from '@/models/delivery.model';
+import { Delivery } from '@/models/delivery.model';
 
 describe('Delivery Model', () => {
   const validDeliveryData = {

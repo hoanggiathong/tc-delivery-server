@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { User, IUser } from '@/models/user.model';
+import { User } from '@/models/user.model';
 import {
   JWTPayload,
   IUserResponse,

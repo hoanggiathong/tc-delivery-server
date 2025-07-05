@@ -17,6 +17,8 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": false,
     "noImplicitOverride": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "allowUnusedLabels": false,
     "allowUnreachableCode": false,
     "skipLibCheck": true,

@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
-import { User, IUser } from '@/models/user.model';
+import { User } from '@/models/user.model';
 import { UserRole } from '@/types/user.type';
 
 // Mock bcrypt

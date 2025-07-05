@@ -1,14 +1,7 @@
-export const mockDeliveryService = {
-  createDelivery: jest.fn(),
-  updateDelivery: jest.fn(),
-  getDeliveryById: jest.fn(),
-  getAllDeliveries: jest.fn(),
-  deleteDelivery: jest.fn(),
-  getRelatedDeliveriesBySender: jest.fn(),
-  getNextCode: jest.fn(),
-  getDeliveryByCode: jest.fn()
-};
+// Import mock from utils
+import { mockDeliveryService } from '../utils/mock-services';
 
+// Export class for Jest mock
 export class DeliveryService {
   createDelivery = mockDeliveryService.createDelivery;
   updateDelivery = mockDeliveryService.updateDelivery;
@@ -19,3 +12,6 @@ export class DeliveryService {
   getNextCode = mockDeliveryService.getNextCode;
   getDeliveryByCode = mockDeliveryService.getDeliveryByCode;
 }
+
+// Export default for compatibility
+export default DeliveryService;

@@ -1,12 +1,7 @@
-export const mockAuthService = {
-  register: jest.fn(),
-  login: jest.fn(),
-  createUser: jest.fn(),
-  getUserById: jest.fn(),
-  getAllUsers: jest.fn(),
-  getUsersByRoles: jest.fn(),
-};
+// Import mock from utils
+import { mockAuthService } from '../utils/mock-services';
 
+// Export class for Jest mock
 export class AuthService {
   register = mockAuthService.register;
   login = mockAuthService.login;
@@ -15,3 +10,6 @@ export class AuthService {
   getAllUsers = mockAuthService.getAllUsers;
   getUsersByRoles = mockAuthService.getUsersByRoles;
 }
+
+// Export default for compatibility
+export default AuthService;

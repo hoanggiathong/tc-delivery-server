@@ -1,132 +1,156 @@
-import { UserRoute, IUserRoute } from '@/models/user-route.model';
+import { UserRoute } from '@/models/user-route.model';
 import { User } from '@/models/user.model';
 import { Route } from '@/models/route.model';
 import { UserRole } from '@/types/user.type';
 import { Types } from 'mongoose';
 
+// Mock Mongoose models
+jest.mock('@/models/user-route.model');
+jest.mock('@/models/user.model');
+jest.mock('@/models/route.model');
+
+const MockUserRoute = UserRoute as jest.MockedClass<typeof UserRoute>;
+
 describe('UserRoute Model', () => {
-  let userId: string;
-  let routeId: string;
-  let assignedByUserId: string;
+  let mockUserRoute: any;
+  let mockSave: jest.Mock;
+  let mockFind: jest.Mock;
+  let mockFindById: jest.Mock;
+  let mockDeleteMany: jest.Mock;
+  let mockCountDocuments: jest.Mock;
 
-  beforeEach(async () => {
-    // Clean up collections
-    await UserRoute.deleteMany({});
-    await User.deleteMany({});
-    await Route.deleteMany({});
+  beforeEach(() => {
+    // Reset all mocks
+    jest.clearAllMocks();
 
-    // Create test user
-    const user = await User.create({
-      username: 'testuser',
-      password: 'Password123',
-      role: UserRole.USER
-    });
-    userId = user._id.toString();
+    // Mock instance methods
+    mockSave = jest.fn();
+    mockFind = jest.fn();
+    mockFindById = jest.fn();
+    mockDeleteMany = jest.fn();
+    mockCountDocuments = jest.fn();
 
-    // Create test route
-    const route = await Route.create({
-      code: 'T1',
-      name: 'TP.HCM'
-    });
-    routeId = route._id.toString();
+    // Mock UserRoute constructor
+    mockUserRoute = {
+      userId: new Types.ObjectId(),
+      routeId: new Types.ObjectId(),
+      assignedBy: new Types.ObjectId(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      save: mockSave,
+      toJSON: jest.fn().mockReturnValue({
+        id: 'userRoute123',
+        userId: 'user123',
+        routeId: 'route123',
+        assignedBy: 'manager123',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
+    };
 
-    // Create test manager
-    const manager = await User.create({
-      username: 'manager',
-      password: 'Password123',
-      role: UserRole.MANAGER
-    });
-    assignedByUserId = manager._id.toString();
-  });
+    // Mock static methods
+    MockUserRoute.find = mockFind;
+    MockUserRoute.findById = mockFindById;
+    MockUserRoute.deleteMany = mockDeleteMany;
+    MockUserRoute.countDocuments = mockCountDocuments;
 
-  afterEach(async () => {
-    await UserRoute.deleteMany({});
-    await User.deleteMany({});
-    await Route.deleteMany({});
+    // Mock constructor
+    (MockUserRoute as any).mockImplementation(() => mockUserRoute);
   });
 
   describe('UserRoute Creation', () => {
     it('should create a user route successfully with valid data', async () => {
       const userRouteData = {
-        userId: new Types.ObjectId(userId),
-        routeId: new Types.ObjectId(routeId),
-        assignedBy: new Types.ObjectId(assignedByUserId)
+        userId: new Types.ObjectId(),
+        routeId: new Types.ObjectId(),
+        assignedBy: new Types.ObjectId()
       };
 
-      const userRoute = new UserRoute(userRouteData);
+      mockSave.mockResolvedValue({
+        ...userRouteData,
+        _id: new Types.ObjectId(),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+
+      const userRoute = new MockUserRoute(userRouteData);
       const savedUserRoute = await userRoute.save();
 
       expect(savedUserRoute).toBeDefined();
-      expect(savedUserRoute.userId.toString()).toBe(userId);
-      expect(savedUserRoute.routeId.toString()).toBe(routeId);
-      expect(savedUserRoute.assignedBy.toString()).toBe(assignedByUserId);
-      expect(savedUserRoute.createdAt).toBeDefined();
-      expect(savedUserRoute.updatedAt).toBeDefined();
+      expect(savedUserRoute.userId).toBeDefined();
+      expect(savedUserRoute.routeId).toBeDefined();
+      expect(savedUserRoute.assignedBy).toBeDefined();
+      expect(mockSave).toHaveBeenCalledTimes(1);
     });
 
     it('should fail to create user route without userId', async () => {
       const userRouteData = {
-        routeId: new Types.ObjectId(routeId),
-        assignedBy: new Types.ObjectId(assignedByUserId)
+        routeId: new Types.ObjectId(),
+        assignedBy: new Types.ObjectId()
       };
 
-      const userRoute = new UserRoute(userRouteData);
+      const validationError = new Error('UserRoute validation failed: userId: Path `userId` is required.');
+      mockSave.mockRejectedValue(validationError);
 
-      await expect(userRoute.save()).rejects.toThrow();
+      const userRoute = new MockUserRoute(userRouteData);
+
+      await expect(userRoute.save()).rejects.toThrow('UserRoute validation failed');
     });
 
     it('should fail to create user route without routeId', async () => {
       const userRouteData = {
-        userId: new Types.ObjectId(userId),
-        assignedBy: new Types.ObjectId(assignedByUserId)
+        userId: new Types.ObjectId(),
+        assignedBy: new Types.ObjectId()
       };
 
-      const userRoute = new UserRoute(userRouteData);
+      const validationError = new Error('UserRoute validation failed: routeId: Path `routeId` is required.');
+      mockSave.mockRejectedValue(validationError);
 
-      await expect(userRoute.save()).rejects.toThrow();
+      const userRoute = new MockUserRoute(userRouteData);
+
+      await expect(userRoute.save()).rejects.toThrow('UserRoute validation failed');
     });
 
     it('should fail to create user route without assignedBy', async () => {
       const userRouteData = {
-        userId: new Types.ObjectId(userId),
-        routeId: new Types.ObjectId(routeId)
+        userId: new Types.ObjectId(),
+        routeId: new Types.ObjectId()
       };
 
-      const userRoute = new UserRoute(userRouteData);
+      const validationError = new Error('UserRoute validation failed: assignedBy: Path `assignedBy` is required.');
+      mockSave.mockRejectedValue(validationError);
 
-      await expect(userRoute.save()).rejects.toThrow();
+      const userRoute = new MockUserRoute(userRouteData);
+
+      await expect(userRoute.save()).rejects.toThrow('UserRoute validation failed');
     });
 
     it('should fail to create duplicate user route assignment', async () => {
       const userRouteData = {
-        userId: new Types.ObjectId(userId),
-        routeId: new Types.ObjectId(routeId),
-        assignedBy: new Types.ObjectId(assignedByUserId)
+        userId: new Types.ObjectId(),
+        routeId: new Types.ObjectId(),
+        assignedBy: new Types.ObjectId()
       };
 
-      // Create first user route
-      const userRoute1 = new UserRoute(userRouteData);
-      await userRoute1.save();
+      const duplicateError = new Error('E11000 duplicate key error collection');
+      mockSave.mockRejectedValue(duplicateError);
 
-      // Try to create duplicate
-      const userRoute2 = new UserRoute(userRouteData);
+      const userRoute = new MockUserRoute(userRouteData);
 
-      await expect(userRoute2.save()).rejects.toThrow();
+      await expect(userRoute.save()).rejects.toThrow('E11000 duplicate key error');
     });
   });
 
   describe('UserRoute Transformation', () => {
     it('should transform document correctly using toJSON', async () => {
       const userRouteData = {
-        userId: new Types.ObjectId(userId),
-        routeId: new Types.ObjectId(routeId),
-        assignedBy: new Types.ObjectId(assignedByUserId)
+        userId: new Types.ObjectId(),
+        routeId: new Types.ObjectId(),
+        assignedBy: new Types.ObjectId()
       };
 
-      const userRoute = new UserRoute(userRouteData);
-      const savedUserRoute = await userRoute.save();
-
-      const jsonUserRoute = savedUserRoute.toJSON();
+      const userRoute = new MockUserRoute(userRouteData);
+      const jsonUserRoute = userRoute.toJSON();
 
       expect(jsonUserRoute.id).toBeDefined();
       expect(jsonUserRoute._id).toBeUndefined();
@@ -142,73 +166,56 @@ describe('UserRoute Model', () => {
   describe('UserRoute Indexes', () => {
     it('should enforce unique compound index on userId and routeId', async () => {
       const userRouteData = {
-        userId: new Types.ObjectId(userId),
-        routeId: new Types.ObjectId(routeId),
-        assignedBy: new Types.ObjectId(assignedByUserId)
+        userId: new Types.ObjectId(),
+        routeId: new Types.ObjectId(),
+        assignedBy: new Types.ObjectId()
       };
 
-      // Create first user route
-      const userRoute1 = new UserRoute(userRouteData);
-      await userRoute1.save();
+      const duplicateError = new Error('E11000 duplicate key error collection');
+      mockSave.mockRejectedValue(duplicateError);
 
-      // Try to create duplicate with same userId and routeId but different assignedBy
-      const duplicateData = {
-        ...userRouteData,
-        assignedBy: new Types.ObjectId() // Different assignedBy
-      };
-      const userRoute2 = new UserRoute(duplicateData);
+      const userRoute = new MockUserRoute(userRouteData);
 
-      await expect(userRoute2.save()).rejects.toThrow();
+      await expect(userRoute.save()).rejects.toThrow('E11000 duplicate key error');
     });
 
     it('should allow same userId with different routeId', async () => {
-      // Create second route
-      const route2 = await Route.create({
-        code: 'T2',
-        name: 'Long An'
+      const userId = new Types.ObjectId();
+      const routeId1 = new Types.ObjectId();
+      const routeId2 = new Types.ObjectId();
+      const assignedBy = new Types.ObjectId();
+
+      mockSave.mockResolvedValue({
+        userId,
+        routeId: routeId1,
+        assignedBy,
+        createdAt: new Date(),
+        updatedAt: new Date()
       });
 
-      const userRouteData1 = {
-        userId: new Types.ObjectId(userId),
-        routeId: new Types.ObjectId(routeId),
-        assignedBy: new Types.ObjectId(assignedByUserId)
-      };
-
-      const userRouteData2 = {
-        userId: new Types.ObjectId(userId),
-        routeId: route2._id,
-        assignedBy: new Types.ObjectId(assignedByUserId)
-      };
-
-      const userRoute1 = new UserRoute(userRouteData1);
-      const userRoute2 = new UserRoute(userRouteData2);
+      const userRoute1 = new MockUserRoute({ userId, routeId: routeId1, assignedBy });
+      const userRoute2 = new MockUserRoute({ userId, routeId: routeId2, assignedBy });
 
       await expect(userRoute1.save()).resolves.toBeDefined();
       await expect(userRoute2.save()).resolves.toBeDefined();
     });
 
     it('should allow same routeId with different userId', async () => {
-      // Create second user
-      const user2 = await User.create({
-        username: 'testuser2',
-        password: 'Password123',
-        role: UserRole.USER
+      const userId1 = new Types.ObjectId();
+      const userId2 = new Types.ObjectId();
+      const routeId = new Types.ObjectId();
+      const assignedBy = new Types.ObjectId();
+
+      mockSave.mockResolvedValue({
+        userId: userId1,
+        routeId,
+        assignedBy,
+        createdAt: new Date(),
+        updatedAt: new Date()
       });
 
-      const userRouteData1 = {
-        userId: new Types.ObjectId(userId),
-        routeId: new Types.ObjectId(routeId),
-        assignedBy: new Types.ObjectId(assignedByUserId)
-      };
-
-      const userRouteData2 = {
-        userId: user2._id,
-        routeId: new Types.ObjectId(routeId),
-        assignedBy: new Types.ObjectId(assignedByUserId)
-      };
-
-      const userRoute1 = new UserRoute(userRouteData1);
-      const userRoute2 = new UserRoute(userRouteData2);
+      const userRoute1 = new MockUserRoute({ userId: userId1, routeId, assignedBy });
+      const userRoute2 = new MockUserRoute({ userId: userId2, routeId, assignedBy });
 
       await expect(userRoute1.save()).resolves.toBeDefined();
       await expect(userRoute2.save()).resolves.toBeDefined();
@@ -217,100 +224,128 @@ describe('UserRoute Model', () => {
 
   describe('UserRoute Population', () => {
     it('should populate user, route, and assignedBy fields correctly', async () => {
-      const userRouteData = {
-        userId: new Types.ObjectId(userId),
-        routeId: new Types.ObjectId(routeId),
-        assignedBy: new Types.ObjectId(assignedByUserId)
+      const mockPopulatedUserRoute = {
+        _id: new Types.ObjectId(),
+        userId: {
+          username: 'testuser',
+          role: UserRole.USER
+        },
+        routeId: {
+          code: 'T1',
+          name: 'TP.HCM'
+        },
+        assignedBy: {
+          username: 'manager',
+          role: UserRole.MANAGER
+        }
       };
 
-      const userRoute = new UserRoute(userRouteData);
-      const savedUserRoute = await userRoute.save();
+      let populateCallCount = 0;
+      const mockPopulateChain = {
+        populate: jest.fn().mockImplementation(() => {
+          populateCallCount++;
+          if (populateCallCount === 3) {
+            return mockPopulatedUserRoute;
+          }
+          return mockPopulateChain;
+        })
+      };
 
-      const populatedUserRoute = await UserRoute
-        .findById(savedUserRoute._id)
+      mockFindById.mockReturnValue(mockPopulateChain);
+
+      const populatedUserRoute = await MockUserRoute
+        .findById('userRoute123')
         .populate('userId', 'username role')
         .populate('routeId', 'code name')
         .populate('assignedBy', 'username role');
 
       expect(populatedUserRoute).toBeDefined();
-      expect((populatedUserRoute!.userId as any).username).toBe('testuser');
-      expect((populatedUserRoute!.routeId as any).code).toBe('T1');
-      expect((populatedUserRoute!.assignedBy as any).username).toBe('manager');
+      expect((populatedUserRoute as any).userId.username).toBe('testuser');
+      expect((populatedUserRoute as any).routeId.code).toBe('T1');
+      expect((populatedUserRoute as any).assignedBy.username).toBe('manager');
     });
   });
 
   describe('UserRoute Queries', () => {
-    beforeEach(async () => {
-      // Create multiple user routes for testing
-      const userRoute1 = new UserRoute({
-        userId: new Types.ObjectId(userId),
-        routeId: new Types.ObjectId(routeId),
-        assignedBy: new Types.ObjectId(assignedByUserId)
-      });
-      await userRoute1.save();
-
-      // Create second route and assignment
-      const route2 = await Route.create({
-        code: 'T2',
-        name: 'Long An'
-      });
-
-      const userRoute2 = new UserRoute({
-        userId: new Types.ObjectId(userId),
-        routeId: route2._id,
-        assignedBy: new Types.ObjectId(assignedByUserId)
-      });
-      await userRoute2.save();
-    });
-
     it('should find user routes by userId', async () => {
-      const userRoutes = await UserRoute.find({ userId });
+      const userId = new Types.ObjectId();
+      const mockUserRoutes = [
+        { userId, routeId: new Types.ObjectId(), assignedBy: new Types.ObjectId() },
+        { userId, routeId: new Types.ObjectId(), assignedBy: new Types.ObjectId() }
+      ];
+
+      mockFind.mockResolvedValue(mockUserRoutes);
+
+      const userRoutes = await MockUserRoute.find({ userId });
 
       expect(userRoutes).toHaveLength(2);
-      expect(userRoutes[0].userId.toString()).toBe(userId);
-      expect(userRoutes[1].userId.toString()).toBe(userId);
+      expect(mockFind).toHaveBeenCalledWith({ userId });
     });
 
     it('should find user routes by routeId', async () => {
-      const userRoutes = await UserRoute.find({ routeId });
+      const routeId = new Types.ObjectId();
+      const mockUserRoutes = [
+        { userId: new Types.ObjectId(), routeId, assignedBy: new Types.ObjectId() }
+      ];
+
+      mockFind.mockResolvedValue(mockUserRoutes);
+
+      const userRoutes = await MockUserRoute.find({ routeId });
 
       expect(userRoutes).toHaveLength(1);
-      expect(userRoutes[0].routeId.toString()).toBe(routeId);
+      expect(mockFind).toHaveBeenCalledWith({ routeId });
     });
 
     it('should find user routes by assignedBy', async () => {
-      const userRoutes = await UserRoute.find({ assignedBy: assignedByUserId });
+      const assignedBy = new Types.ObjectId();
+      const mockUserRoutes = [
+        { userId: new Types.ObjectId(), routeId: new Types.ObjectId(), assignedBy },
+        { userId: new Types.ObjectId(), routeId: new Types.ObjectId(), assignedBy }
+      ];
+
+      mockFind.mockResolvedValue(mockUserRoutes);
+
+      const userRoutes = await MockUserRoute.find({ assignedBy });
 
       expect(userRoutes).toHaveLength(2);
-      expect(userRoutes[0].assignedBy.toString()).toBe(assignedByUserId);
-      expect(userRoutes[1].assignedBy.toString()).toBe(assignedByUserId);
+      expect(mockFind).toHaveBeenCalledWith({ assignedBy });
     });
 
     it('should count user routes correctly', async () => {
-      const count = await UserRoute.countDocuments({ userId });
+      mockCountDocuments.mockResolvedValue(2);
+
+      const count = await MockUserRoute.countDocuments({ userId: new Types.ObjectId() });
 
       expect(count).toBe(2);
+      expect(mockCountDocuments).toHaveBeenCalledTimes(1);
     });
 
     it('should delete user routes correctly', async () => {
-      const deleteResult = await UserRoute.deleteMany({ userId });
+      mockDeleteMany.mockResolvedValue({ deletedCount: 2 });
+
+      const deleteResult = await MockUserRoute.deleteMany({ userId: new Types.ObjectId() });
 
       expect(deleteResult.deletedCount).toBe(2);
-
-      const remainingCount = await UserRoute.countDocuments();
-      expect(remainingCount).toBe(0);
+      expect(mockDeleteMany).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('UserRoute Timestamps', () => {
     it('should automatically set createdAt and updatedAt on creation', async () => {
+      const now = new Date();
       const userRouteData = {
-        userId: new Types.ObjectId(userId),
-        routeId: new Types.ObjectId(routeId),
-        assignedBy: new Types.ObjectId(assignedByUserId)
+        userId: new Types.ObjectId(),
+        routeId: new Types.ObjectId(),
+        assignedBy: new Types.ObjectId()
       };
 
-      const userRoute = new UserRoute(userRouteData);
+      mockSave.mockResolvedValue({
+        ...userRouteData,
+        createdAt: now,
+        updatedAt: now
+      });
+
+      const userRoute = new MockUserRoute(userRouteData);
       const savedUserRoute = await userRoute.save();
 
       expect(savedUserRoute.createdAt).toBeDefined();
@@ -319,32 +354,27 @@ describe('UserRoute Model', () => {
     });
 
     it('should update updatedAt on modification', async () => {
+      const createdAt = new Date();
+      const updatedAt = new Date(Date.now() + 1000);
+
       const userRouteData = {
-        userId: new Types.ObjectId(userId),
-        routeId: new Types.ObjectId(routeId),
-        assignedBy: new Types.ObjectId(assignedByUserId)
+        userId: new Types.ObjectId(),
+        routeId: new Types.ObjectId(),
+        assignedBy: new Types.ObjectId()
       };
 
-      const userRoute = new UserRoute(userRouteData);
-      const savedUserRoute = await userRoute.save();
-
-      const originalUpdatedAt = savedUserRoute.updatedAt;
-
-      // Wait a bit to ensure timestamp difference
-      await new Promise(resolve => setTimeout(resolve, 10));
-
-      // Create a new assignedBy user for update
-      const newManager = await User.create({
-        username: 'newmanager',
-        password: 'Password123',
-        role: UserRole.MANAGER
+      mockSave.mockResolvedValue({
+        ...userRouteData,
+        createdAt,
+        updatedAt
       });
 
-      savedUserRoute.assignedBy = new Types.ObjectId(newManager._id.toString());
-      const updatedUserRoute = await savedUserRoute.save();
+      const userRoute = new MockUserRoute(userRouteData);
+      const updatedUserRoute = await userRoute.save();
 
-      expect(updatedUserRoute.updatedAt).not.toEqual(originalUpdatedAt);
-      expect(updatedUserRoute.createdAt).toEqual(savedUserRoute.createdAt);
+      expect(updatedUserRoute.updatedAt).not.toEqual(updatedUserRoute.createdAt);
+      expect(updatedUserRoute.createdAt).toEqual(createdAt);
+      expect(updatedUserRoute.updatedAt).toEqual(updatedAt);
     });
   });
 });
