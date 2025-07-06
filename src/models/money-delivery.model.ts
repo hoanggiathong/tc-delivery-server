@@ -79,7 +79,6 @@ const moneyDeliverySchema = new Schema<IMoneyDelivery>({
 // =========================================
 
 // 1. Most common query patterns - Single field indexes
-moneyDeliverySchema.index({ code: 1 }); // High priority for code lookup
 moneyDeliverySchema.index({ sender: 1 });
 moneyDeliverySchema.index({ receiver: 1 });
 moneyDeliverySchema.index({ fromRoute: 1 });

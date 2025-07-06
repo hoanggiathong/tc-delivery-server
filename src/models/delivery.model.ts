@@ -127,7 +127,6 @@ const deliverySchema = new Schema<IDelivery>({
 // =========================================
 
 // 1. Most common query patterns - Single field indexes
-deliverySchema.index({ code: 1 }); // High priority for code lookup
 deliverySchema.index({ sender: 1 });
 deliverySchema.index({ receiver: 1 });
 deliverySchema.index({ fromRoute: 1 });
