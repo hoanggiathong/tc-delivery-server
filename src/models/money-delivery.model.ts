@@ -84,27 +84,12 @@ moneyDeliverySchema.index({ receiver: 1 });
 moneyDeliverySchema.index({ fromRoute: 1 });
 moneyDeliverySchema.index({ toRoute: 1 });
 moneyDeliverySchema.index({ createdByUser: 1 });
-
-// 2. Time-based queries (very important for large datasets)
 moneyDeliverySchema.index({ createdAt: -1 }); // Recent first
-moneyDeliverySchema.index({ updatedAt: -1 });
 
 // 3. Compound indexes for common filter combinations
 moneyDeliverySchema.index({ fromRoute: 1, toRoute: 1, createdAt: -1 }); // Route analysis
 moneyDeliverySchema.index({ sender: 1, createdAt: -1 }); // Sender history
 moneyDeliverySchema.index({ receiver: 1, createdAt: -1 }); // Receiver history
-moneyDeliverySchema.index({ createdByUser: 1, createdAt: -1 }); // User activity
-
-// 4. Money amount analysis indexes
-moneyDeliverySchema.index({ sendMoneyAmount: 1 });
-moneyDeliverySchema.index({ sendCost: 1 });
-
-// 5. Route pair analysis (for business intelligence)
-moneyDeliverySchema.index({ fromRoute: 1, toRoute: 1 });
-
-// 6. Date range queries optimization
-moneyDeliverySchema.index({ createdAt: -1, fromRoute: 1 });
-moneyDeliverySchema.index({ createdAt: -1, toRoute: 1 });
 
 // 7. Code-based queries optimization
 moneyDeliverySchema.index({ code: 1, fromRoute: 1, toRoute: 1 }); // For code + route lookup

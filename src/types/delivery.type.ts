@@ -176,3 +176,38 @@ export interface IDeliveryLeanPopulated {
   createdAt: Date;
   updatedAt: Date;
 }
+
+// Frequent customers interfaces
+export interface IFrequentCustomer {
+  receiverName: string;
+  receiverPhone: string;
+  toRoute: {
+    id: string;
+    code: string;
+    name: string;
+  };
+  deliveryCount: number;
+  totalCost: number;
+  totalItemValue: number;
+  lastDeliveryDate: Date;
+  firstDeliveryDate: Date;
+}
+
+export interface IFrequentCustomersPagination {
+  currentPage: number;
+  totalPages: number;
+  totalRecords: number;
+  limit: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
+
+export interface IFrequentCustomersResponse {
+  senderIdentifier: string;
+  senderInfo: {
+    name: string;
+    phone: string;
+  } | null;
+  frequentCustomers: IFrequentCustomer[];
+  pagination: IFrequentCustomersPagination;
+}

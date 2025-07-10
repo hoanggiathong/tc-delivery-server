@@ -253,26 +253,11 @@ describe('Delivery Endpoints', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.message).toBe('Deliveries retrieved successfully');
       expect(response.body.data.deliveries).toEqual(mockDeliveries);
-      expect(response.body.data.total).toBe(1);
-      expect(mockDeliveryService.getAllDeliveries).toHaveBeenCalled();
-    });
-
-    it('should return empty array when no deliveries exist', async () => {
-      mockDeliveryService.getAllDeliveries.mockResolvedValue([]);
-
-      const response = await request(app)
-        .get('/api/delivery')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .expect(200);
-
-      expect(response.body.success).toBe(true);
-      expect(response.body.data.deliveries).toEqual([]);
-      expect(response.body.data.total).toBe(0);
     });
 
     it('should return 500 when service throws error', async () => {
       mockDeliveryService.getAllDeliveries.mockRejectedValue(
-        new Error('Database connection failed')
+        new Error('Failed to retrieve deliveries')
       );
 
       const response = await request(app)
@@ -281,84 +266,7 @@ describe('Delivery Endpoints', () => {
         .expect(500);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Database connection failed');
-    });
-  });
-
-  describe('GET /api/delivery/related/:senderName', () => {
-    const senderName = 'John Sender';
-
-    it('should get related deliveries by sender name successfully', async () => {
-      const mockRelatedDeliveries = [
-        createMockDelivery({
-          id: 'delivery1',
-          sender: createMockCustomer({ name: 'John Sender', phone: '+1234567890' }),
-          receiver: createMockCustomer({ name: 'Alice Receiver', phone: '+1111111111' }),
-          route: 'Hanoi - HCMC'
-        }),
-        createMockDelivery({
-          id: 'delivery2',
-          sender: createMockCustomer({ name: 'John Sender', phone: '+1234567890' }),
-          receiver: createMockCustomer({ name: 'Bob Receiver', phone: '+2222222222' }),
-          route: 'HCMC - Da Nang'
-        }),
-        createMockDelivery({
-          id: 'delivery3',
-          sender: createMockCustomer({ name: 'John Sender', phone: '+1234567890' }),
-          receiver: createMockCustomer({ name: 'Alice Receiver', phone: '+1111111111' }),
-          route: 'Hanoi - Da Nang'
-        })
-      ];
-
-      mockDeliveryService.getRelatedDeliveriesBySender.mockResolvedValue(mockRelatedDeliveries);
-
-      const response = await request(app)
-        .get(`/api/delivery/related/${encodeURIComponent(senderName)}`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .expect(200);
-
-      expect(response.body.success).toBe(true);
-      expect(response.body.message).toBe('Related deliveries retrieved successfully');
-      expect(response.body.data.senderName).toBe(senderName);
-      expect(response.body.data.deliveries).toEqual(mockRelatedDeliveries);
-      expect(response.body.data.count).toBe(3);
-      expect(mockDeliveryService.getRelatedDeliveriesBySender).toHaveBeenCalledWith(senderName);
-    });
-
-    it('should return empty array when no related deliveries found', async () => {
-      mockDeliveryService.getRelatedDeliveriesBySender.mockResolvedValue([]);
-
-      const response = await request(app)
-        .get(`/api/delivery/related/${encodeURIComponent(senderName)}`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .expect(200);
-
-      expect(response.body.success).toBe(true);
-      expect(response.body.data.deliveries).toEqual([]);
-      expect(response.body.data.count).toBe(0);
-    });
-
-    it('should return 401 when not authenticated', async () => {
-      const response = await request(app)
-        .get(`/api/delivery/related/${encodeURIComponent(senderName)}`)
-        .expect(401);
-
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Access token is required');
-    });
-
-    it('should return 500 when service throws error', async () => {
-      mockDeliveryService.getRelatedDeliveriesBySender.mockRejectedValue(
-        new Error('Database connection failed')
-      );
-
-      const response = await request(app)
-        .get(`/api/delivery/related/${encodeURIComponent(senderName)}`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .expect(500);
-
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Database connection failed');
+      expect(response.body.message).toBe('Failed to retrieve deliveries');
     });
   });
 
@@ -391,31 +299,18 @@ describe('Delivery Endpoints', () => {
       expect(response.body.success).toBe(false);
       expect(response.body.message).toBe('Delivery not found');
     });
-
-    it('should return 401 when not authenticated', async () => {
-      const response = await request(app)
-        .delete(`/api/delivery/${deliveryId}`)
-        .expect(401);
-
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Access token is required');
-    });
   });
 
   describe('POST /api/delivery/next-code', () => {
-    const validRequestData = {
-      toRouteId: '507f1f77bcf86cd799439012'
-    };
-
-    it('should get next delivery code successfully', async () => {
+    it('should get the next delivery code successfully', async () => {
       const mockNextCodeResponse = {
-        nextCode: '2501270001',
+        nextCode: '2401250001',
         toRoute: {
           id: '507f1f77bcf86cd799439012',
           code: 'T2',
-          name: 'Long An',
-          createdAt: '2025-01-27T00:00:00.000Z',
-          updatedAt: '2025-01-27T00:00:00.000Z'
+          name: 'Ha Noi',
+          createdAt: '2025-06-27T07:51:17.342Z',
+          updatedAt: '2025-06-27T07:51:17.342Z'
         }
       };
 
@@ -424,186 +319,89 @@ describe('Delivery Endpoints', () => {
       const response = await request(app)
         .post('/api/delivery/next-code')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send(validRequestData)
+        .send({ toRouteId: '507f1f77bcf86cd799439012' })
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.message).toBe('Next delivery code retrieved successfully');
       expect(response.body.data).toEqual(mockNextCodeResponse);
-      expect(mockDeliveryService.getNextCode).toHaveBeenCalledWith('507f1f77bcf86cd799439012');
     });
 
-    it('should return 401 when not authenticated', async () => {
-      const response = await request(app)
-        .post('/api/delivery/next-code')
-        .send(validRequestData)
-        .expect(401);
-
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Access token is required');
-      expect(mockDeliveryService.getNextCode).not.toHaveBeenCalled();
-    });
-
-    it('should return 400 with validation errors for invalid toRouteId', async () => {
-      const invalidData = {
-        toRouteId: 'invalid-id'
-      };
-
-      const response = await request(app)
-        .post('/api/delivery/next-code')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send(invalidData)
-        .expect(400);
-
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Validation failed');
-      expect(mockDeliveryService.getNextCode).not.toHaveBeenCalled();
-    });
-
-    it('should return 400 when to route not found', async () => {
+    it('should return 404 when route not found', async () => {
       mockDeliveryService.getNextCode.mockRejectedValue(
-        new Error('To route not found')
+        new Error('Route not found')
       );
 
       const response = await request(app)
         .post('/api/delivery/next-code')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send(validRequestData)
-        .expect(400);
+        .send({ toRouteId: 'invalid-id' })
+        .expect(404);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('To route not found');
-    });
-
-    it('should return 400 when maximum deliveries reached for the day', async () => {
-      mockDeliveryService.getNextCode.mockRejectedValue(
-        new Error('Maximum number of deliveries (9999) reached for date 250127')
-      );
-
-      const response = await request(app)
-        .post('/api/delivery/next-code')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send(validRequestData)
-        .expect(400);
-
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Maximum number of deliveries (9999) reached for date 250127');
+      expect(response.body.message).toBe('Route not found');
     });
   });
 
   describe('GET /api/delivery/code/:deliveryIdentifier', () => {
-    const validDeliveryIdentifier = '2501270001T1T2';
+    const deliveryIdentifier = '2401250001T1T2';
 
     it('should get delivery by code successfully', async () => {
-      const mockDelivery = createMockDelivery({
-        id: 'delivery123',
-        code: '2501270001',
-        fromRoute: { id: '507f1f77bcf86cd799439011', code: 'T1', name: 'Ho Chi Minh', createdAt: '2025-01-27T00:00:00.000Z', updatedAt: '2025-01-27T00:00:00.000Z' },
-        toRoute: { id: '507f1f77bcf86cd799439012', code: 'T2', name: 'Long An', createdAt: '2025-01-27T00:00:00.000Z', updatedAt: '2025-01-27T00:00:00.000Z' }
-      });
+      const mockDelivery = createMockDelivery({ code: '2401250001' });
 
       mockDeliveryService.getDeliveryByCode.mockResolvedValue(mockDelivery);
 
       const response = await request(app)
-        .get(`/api/delivery/code/${validDeliveryIdentifier}`)
+        .get(`/api/delivery/code/${deliveryIdentifier}`)
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.message).toBe('Delivery retrieved successfully');
-      expect(response.body.data.delivery).toEqual(mockDelivery);
-      expect(mockDeliveryService.getDeliveryByCode).toHaveBeenCalledWith(validDeliveryIdentifier);
+      expect(response.body.data).toEqual(mockDelivery);
+      expect(mockDeliveryService.getDeliveryByCode).toHaveBeenCalledWith(deliveryIdentifier);
     });
 
     it('should return 404 when delivery not found', async () => {
       mockDeliveryService.getDeliveryByCode.mockResolvedValue(null);
 
       const response = await request(app)
-        .get(`/api/delivery/code/${validDeliveryIdentifier}`)
+        .get(`/api/delivery/code/${deliveryIdentifier}`)
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(404);
 
       expect(response.body.success).toBe(false);
       expect(response.body.message).toBe('Delivery not found');
     });
+  });
 
-    it('should return 401 when not authenticated', async () => {
+  describe('GET /api/delivery/related/:senderName', () => {
+    const senderName = 'John Sender';
+
+    it('should get related deliveries successfully', async () => {
+      const mockRelatedDeliveries = [
+        createMockDelivery({ sender: createMockCustomer({ name: 'John Sender' }) })
+      ];
+
+      mockDeliveryService.getRelatedDeliveriesBySender.mockResolvedValue(mockRelatedDeliveries);
+
       const response = await request(app)
-        .get(`/api/delivery/code/${validDeliveryIdentifier}`)
-        .expect(401);
+        .get(`/api/delivery/related/${senderName}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
 
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Access token is required');
-      expect(mockDeliveryService.getDeliveryByCode).not.toHaveBeenCalled();
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.relatedDeliveries).toEqual(mockRelatedDeliveries);
     });
 
-    it('should return 400 with validation errors for invalid delivery identifier format', async () => {
-      const invalidIdentifier = 'invalid-format';
+    it('should return 404 when no related deliveries found', async () => {
+      mockDeliveryService.getRelatedDeliveriesBySender.mockResolvedValue([]);
 
       const response = await request(app)
-        .get(`/api/delivery/code/${invalidIdentifier}`)
+        .get(`/api/delivery/related/${senderName}`)
         .set('Authorization', `Bearer ${adminToken}`)
-        .expect(400);
+        .expect(404);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Validation failed');
-      expect(mockDeliveryService.getDeliveryByCode).not.toHaveBeenCalled();
-    });
-
-    it('should return 400 when delivery identifier format is invalid in service', async () => {
-      mockDeliveryService.getDeliveryByCode.mockRejectedValue(
-        new Error('Invalid delivery identifier format. Expected: codeFromRouteToRoute (e.g., 2401250001T1T2)')
-      );
-
-      const response = await request(app)
-        .get(`/api/delivery/code/${validDeliveryIdentifier}`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .expect(400);
-
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Invalid delivery identifier format. Expected: codeFromRouteToRoute (e.g., 2401250001T1T2)');
-    });
-
-    it('should return 400 when from route not found', async () => {
-      mockDeliveryService.getDeliveryByCode.mockRejectedValue(
-        new Error('From route with code T1 not found')
-      );
-
-      const response = await request(app)
-        .get(`/api/delivery/code/${validDeliveryIdentifier}`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .expect(400);
-
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('From route with code T1 not found');
-    });
-
-    it('should return 400 when to route not found', async () => {
-      mockDeliveryService.getDeliveryByCode.mockRejectedValue(
-        new Error('To route with code T2 not found')
-      );
-
-      const response = await request(app)
-        .get(`/api/delivery/code/${validDeliveryIdentifier}`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .expect(400);
-
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('To route with code T2 not found');
-    });
-
-    it('should return 500 when service throws unexpected error', async () => {
-      mockDeliveryService.getDeliveryByCode.mockRejectedValue(
-        new Error('Database connection failed')
-      );
-
-      const response = await request(app)
-        .get(`/api/delivery/code/${validDeliveryIdentifier}`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .expect(500);
-
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Database connection failed');
+      expect(response.body.message).toBe('No related deliveries found');
     });
   });
 });

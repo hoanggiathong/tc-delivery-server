@@ -2,13 +2,16 @@ import { MoneyDelivery, IMoneyDelivery } from '@/models/money-delivery.model';
 import { Route } from '@/models/route.model';
 import { CustomerService } from '@/services/customer.service';
 import { CodeGeneratorService } from '@/services/code-generator.service';
+import Logger from '@/utils/logger';
 import {
   IMoneyDeliveryCreateRequest,
   IMoneyDeliveryUpdateRequest,
   IMoneyDeliveryResponse,
   IMoneyDeliveryWithPopulatedRefs,
   IMoneyDeliveryLeanPopulated,
-  INextMoneyDeliveryCodeResponse
+  INextMoneyDeliveryCodeResponse,
+  IFrequentMoneyCustomersResponse,
+  IFrequentMoneyCustomer
 } from '@/types/money-delivery.type';
 import { ICustomerResponse } from '@/types/customer.type';
 
@@ -394,5 +397,148 @@ export class MoneyDeliveryService {
 
     const [, code, fromRouteCode, toRouteCode] = match;
     return { code, fromRouteCode, toRouteCode };
+  }
+
+  /**
+   * Get frequent customers for a sender with pagination
+   * Groups by receiver name, phone, and route to avoid duplicates
+   */
+  async getFrequentCustomers(senderIdentifier: string, page: number = 1, limit: number = 10): Promise<IFrequentMoneyCustomersResponse> {
+    try {
+      const skip = (page - 1) * limit;
+
+      // Build query to match sender by name or phone
+      const senderQuery = {
+        $or: [
+          { 'sender.name': { $regex: senderIdentifier, $options: 'i' } },
+          { 'sender.phone': senderIdentifier }
+        ]
+      };
+
+      // Aggregation pipeline to group and paginate
+      const pipeline = [
+        // Populate references
+        {
+          $lookup: {
+            from: 'customers',
+            localField: 'sender',
+            foreignField: '_id',
+            as: 'sender'
+          }
+        },
+        {
+          $lookup: {
+            from: 'customers',
+            localField: 'receiver',
+            foreignField: '_id',
+            as: 'receiver'
+          }
+        },
+        {
+          $lookup: {
+            from: 'routes',
+            localField: 'toRoute',
+            foreignField: '_id',
+            as: 'toRoute'
+          }
+        },
+        // Unwind arrays
+        { $unwind: '$sender' },
+        { $unwind: '$receiver' },
+        { $unwind: '$toRoute' },
+        // Match sender
+        { $match: senderQuery },
+        // Group by receiver name, phone, and route to avoid duplicates
+        {
+          $group: {
+            _id: {
+              receiverName: '$receiver.name',
+              receiverPhone: '$receiver.phone',
+              toRouteId: '$toRoute._id',
+              toRouteCode: '$toRoute.code',
+              toRouteName: '$toRoute.name'
+            },
+            deliveryCount: { $sum: 1 },
+            totalSendMoneyAmount: { $sum: '$sendMoneyAmount' },
+            totalSendCost: { $sum: '$sendCost' },
+            lastDeliveryDate: { $max: '$createdAt' },
+            firstDeliveryDate: { $min: '$createdAt' },
+            senderInfo: { $first: '$sender' }
+          }
+        },
+        // Sort by delivery count (most frequent first) and then by last delivery date
+        {
+          $sort: {
+            deliveryCount: -1,
+            lastDeliveryDate: -1
+          }
+        },
+        // Add pagination fields
+        {
+          $facet: {
+            data: [
+              { $skip: skip },
+              { $limit: limit }
+            ],
+            totalCount: [
+              { $count: 'count' }
+            ]
+          }
+        }
+      ];
+
+      const result = await MoneyDelivery.aggregate(pipeline as any);
+      const data = result[0]?.data || [];
+      const total = result[0]?.totalCount[0]?.count || 0;
+
+      // Transform the data to match the response interface
+      const frequentCustomers: IFrequentMoneyCustomer[] = data.map((item: any) => ({
+        receiverName: item._id.receiverName,
+        receiverPhone: item._id.receiverPhone,
+        toRoute: {
+          id: item._id.toRouteId.toString(),
+          code: item._id.toRouteCode,
+          name: item._id.toRouteName
+        },
+        deliveryCount: item.deliveryCount,
+        totalSendMoneyAmount: item.totalSendMoneyAmount,
+        totalSendCost: item.totalSendCost,
+        lastDeliveryDate: item.lastDeliveryDate,
+        firstDeliveryDate: item.firstDeliveryDate
+      }));
+
+      // Get sender info from the first record if available
+      const senderInfo = data.length > 0 ? data[0].senderInfo : null;
+
+      const totalPages = Math.ceil(total / limit);
+      const hasNextPage = page < totalPages;
+      const hasPrevPage = page > 1;
+
+      return {
+        senderIdentifier,
+        senderInfo: senderInfo ? {
+          name: senderInfo.name,
+          phone: senderInfo.phone
+        } : null,
+        frequentCustomers,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalRecords: total,
+          limit,
+          hasNextPage,
+          hasPrevPage
+        }
+      };
+
+    } catch (error) {
+      Logger.error('Failed to get frequent money customers', {
+        error: error instanceof Error ? error.message : error,
+        senderIdentifier,
+        page,
+        limit
+      });
+      throw new Error('Failed to get frequent money customers');
+    }
   }
 }

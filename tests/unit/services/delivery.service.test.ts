@@ -1024,4 +1024,105 @@ describe("DeliveryService", () => {
       expect(result).toBeNull();
     });
   });
+
+  describe('getFrequentCustomers', () => {
+    it('should return frequent customers for a sender', async () => {
+      // Mock data
+      const mockAggregationResult = [{
+        data: [{
+          _id: {
+            receiverName: 'John Doe',
+            receiverPhone: '1234567890',
+            toRouteId: 'route1',
+            toRouteCode: 'T1',
+            toRouteName: 'Route 1'
+          },
+          deliveryCount: 5,
+          totalCost: 1000,
+          totalItemValue: 2000,
+          lastDeliveryDate: new Date('2024-01-15'),
+          firstDeliveryDate: new Date('2024-01-01'),
+          senderInfo: {
+            name: 'Sender Name',
+            phone: '0987654321'
+          }
+        }],
+        totalCount: [{ count: 1 }]
+      }];
+
+      // Mock the aggregate method
+      const mockAggregate = jest.fn().mockReturnValue({
+        aggregate: jest.fn().mockResolvedValue(mockAggregationResult)
+      });
+
+      // Mock the Delivery model
+      jest.spyOn(Delivery, 'aggregate').mockResolvedValue(mockAggregationResult as any);
+
+      const result = await deliveryService.getFrequentCustomers('Sender Name', 1, 10);
+
+      expect(result).toEqual({
+        senderIdentifier: 'Sender Name',
+        senderInfo: {
+          name: 'Sender Name',
+          phone: '0987654321'
+        },
+        frequentCustomers: [{
+          receiverName: 'John Doe',
+          receiverPhone: '1234567890',
+          toRoute: {
+            id: 'route1',
+            code: 'T1',
+            name: 'Route 1'
+          },
+          deliveryCount: 5,
+          totalCost: 1000,
+          totalItemValue: 2000,
+          lastDeliveryDate: new Date('2024-01-15'),
+          firstDeliveryDate: new Date('2024-01-01')
+        }],
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalRecords: 1,
+          limit: 10,
+          hasNextPage: false,
+          hasPrevPage: false
+        }
+      });
+
+      expect(Delivery.aggregate).toHaveBeenCalled();
+    });
+
+    it('should handle empty results', async () => {
+      const mockAggregationResult = [{
+        data: [],
+        totalCount: [{ count: 0 }]
+      }];
+
+      jest.spyOn(Delivery, 'aggregate').mockResolvedValue(mockAggregationResult as any);
+
+      const result = await deliveryService.getFrequentCustomers('NonExistentSender', 1, 10);
+
+      expect(result).toEqual({
+        senderIdentifier: 'NonExistentSender',
+        senderInfo: null,
+        frequentCustomers: [],
+        pagination: {
+          currentPage: 1,
+          totalPages: 0,
+          totalRecords: 0,
+          limit: 10,
+          hasNextPage: false,
+          hasPrevPage: false
+        }
+      });
+    });
+
+    it('should handle aggregation errors', async () => {
+      jest.spyOn(Delivery, 'aggregate').mockRejectedValue(new Error('Database error'));
+
+      await expect(deliveryService.getFrequentCustomers('Sender Name', 1, 10))
+        .rejects.toThrow('Failed to get frequent customers');
+    });
+  });
 });

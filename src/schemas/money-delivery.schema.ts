@@ -108,6 +108,30 @@ export const moneyDeliveryCodeValidationSchema = z.string()
   .length(10, 'Money delivery code must be exactly 10 digits')
   .regex(/^\d{10}$/, 'Money delivery code must contain only digits in format DDMMYY + sequence (0001-9999)');
 
+// Schema for frequent money customers
+export const frequentMoneyCustomersSchema = z.object({
+  params: z.object({
+    senderIdentifier: z.string()
+      .min(1, 'Sender identifier is required')
+      .max(100, 'Sender identifier must not exceed 100 characters')
+      .trim()
+  }),
+  query: z.object({
+    page: z.string()
+      .regex(/^\d+$/, 'Page must be a positive integer')
+      .transform(val => parseInt(val, 10))
+      .refine(val => val >= 1, 'Page must be at least 1')
+      .optional()
+      .default('1'),
+    limit: z.string()
+      .regex(/^\d+$/, 'Limit must be a positive integer')
+      .transform(val => parseInt(val, 10))
+      .refine(val => val >= 1 && val <= 100, 'Limit must be between 1 and 100')
+      .optional()
+      .default('10')
+  })
+});
+
 export type CreateMoneyDeliveryRequest = z.infer<typeof createMoneyDeliverySchema>['body'];
 export type UpdateMoneyDeliveryRequest = z.infer<typeof updateMoneyDeliverySchema>['body'];
 export type GetNextMoneyDeliveryCodeRequest = z.infer<typeof getNextMoneyDeliveryCodeSchema>['body'];

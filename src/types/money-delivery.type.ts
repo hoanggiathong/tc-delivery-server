@@ -137,6 +137,40 @@ export interface IMoneyDeliveryLeanPopulated {
   updatedAt: Date;
 }
 
+// Interface for frequent money customers
+export interface IFrequentMoneyCustomer {
+  receiverName: string;
+  receiverPhone: string;
+  toRoute: {
+    id: string;
+    code: string;
+    name: string;
+  };
+  deliveryCount: number;
+  totalSendMoneyAmount: number;
+  totalSendCost: number;
+  lastDeliveryDate: Date;
+  firstDeliveryDate: Date;
+}
+
+// Interface for frequent money customers response
+export interface IFrequentMoneyCustomersResponse {
+  senderIdentifier: string;
+  senderInfo: {
+    name: string;
+    phone: string;
+  } | null;
+  frequentCustomers: IFrequentMoneyCustomer[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalRecords: number;
+    limit: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+}
+
 export interface CreateMoneyDeliveryRequest {
   senderName: string;
   senderPhone: string;

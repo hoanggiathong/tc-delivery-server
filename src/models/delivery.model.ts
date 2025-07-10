@@ -132,34 +132,10 @@ deliverySchema.index({ receiver: 1 });
 deliverySchema.index({ fromRoute: 1 });
 deliverySchema.index({ toRoute: 1 });
 deliverySchema.index({ createdByUser: 1 });
-
-// 2. Time-based queries (very important for large datasets)
 deliverySchema.index({ createdAt: -1 }); // Recent first
-deliverySchema.index({ updatedAt: -1 });
-
-// 3. Compound indexes for common filter combinations
 deliverySchema.index({ fromRoute: 1, toRoute: 1, createdAt: -1 }); // Route analysis
 deliverySchema.index({ sender: 1, createdAt: -1 }); // Sender history
 deliverySchema.index({ receiver: 1, createdAt: -1 }); // Receiver history
-deliverySchema.index({ createdByUser: 1, createdAt: -1 }); // User activity
-
-// 4. Cost and value analysis indexes
-deliverySchema.index({ cost: 1 });
-deliverySchema.index({ itemValue: 1 });
-deliverySchema.index({ collectForCustomer: 1 });
-
-// 5. Route pair analysis (for business intelligence)
-deliverySchema.index({ fromRoute: 1, toRoute: 1 });
-
-// 6. Date range queries optimization
-deliverySchema.index({ createdAt: -1, fromRoute: 1 });
-deliverySchema.index({ createdAt: -1, toRoute: 1 });
-
-// 7. Code-based queries optimization
 deliverySchema.index({ code: 1, fromRoute: 1, toRoute: 1 }); // For code + route lookup
-
-// 8. Text search on item names (if needed)
-// Uncomment if you need text search functionality
-// deliverySchema.index({ name: 'text' });
 
 export const Delivery = mongoose.model<IDelivery>('Delivery', deliverySchema);

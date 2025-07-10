@@ -645,4 +645,91 @@ export class DeliveryController {
       res.status(statusCode).json(response);
     }
   };
+
+  /**
+   * @swagger
+   * /api/delivery/frequent-customers/{senderIdentifier}:
+   *   get:
+   *     summary: Get frequent customers for a sender with pagination
+   *     tags: [Delivery]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: senderIdentifier
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Sender name or phone number to search for
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           default: 1
+   *         description: Page number for pagination
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 10
+   *         description: Number of records per page
+   *     responses:
+   *       200:
+   *         description: Frequent customers retrieved successfully
+   *       400:
+   *         description: Validation error
+   *       401:
+   *         description: Unauthorized
+   */
+  getFrequentCustomers = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized'
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { senderIdentifier } = req.params;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+
+      const frequentCustomers = await this.deliveryService.getFrequentCustomers(senderIdentifier, page, limit);
+
+      Logger.info('Frequent customers retrieved successfully', {
+        senderIdentifier,
+        page,
+        limit,
+        count: frequentCustomers.frequentCustomers.length,
+        userId: req.user.userId
+      });
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Frequent customers retrieved successfully',
+        data: frequentCustomers
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Failed to get frequent customers', {
+        error: error instanceof Error ? error.message : error,
+        senderIdentifier: req.params.senderIdentifier,
+        page: req.query.page,
+        limit: req.query.limit,
+        userId: req.user?.userId
+      });
+
+      const message = error instanceof Error ? error.message : 'Failed to get frequent customers';
+
+      const response: ApiResponse = {
+        success: false,
+        message
+      };
+
+      res.status(500).json(response);
+    }
+  };
 }

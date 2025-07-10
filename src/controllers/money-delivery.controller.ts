@@ -570,4 +570,79 @@ export class MoneyDeliveryController {
       res.status(statusCode).json(response);
     }
   };
+
+  /**
+   * @swagger
+   * /api/money-deliveries/frequent-customers/{senderIdentifier}:
+   *   get:
+   *     summary: Get frequent customers for a sender with pagination
+   *     tags: [MoneyDelivery]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: senderIdentifier
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Sender name or phone number to search for
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           default: 1
+   *         description: Page number for pagination
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 10
+   *         description: Number of records per page
+   *     responses:
+   *       200:
+   *         description: Frequent customers retrieved successfully
+   *       400:
+   *         description: Validation error
+   *       401:
+   *         description: Unauthorized
+   */
+  getFrequentCustomers = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'User not authenticated'
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { senderIdentifier } = req.params;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+
+      const frequentCustomers = await this.moneyDeliveryService.getFrequentCustomers(senderIdentifier, page, limit);
+
+      logger.info(`Frequent money customers retrieved for sender: ${senderIdentifier}, count: ${frequentCustomers.frequentCustomers.length}`);
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Frequent customers retrieved successfully',
+        data: frequentCustomers
+      };
+
+      res.status(200).json(response);
+
+    } catch (error) {
+      logger.error('Error retrieving frequent money customers:', error);
+      const message = error instanceof Error ? error.message : 'Failed to get frequent customers';
+
+      const response: ApiResponse = {
+        success: false,
+        message
+      };
+
+      res.status(500).json(response);
+    }
+  };
 }

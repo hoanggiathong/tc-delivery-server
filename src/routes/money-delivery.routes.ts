@@ -7,7 +7,8 @@ import {
   updateMoneyDeliverySchema,
   moneyDeliveryParamsSchema,
   getNextMoneyDeliveryCodeSchema,
-  moneyDeliveryCodeSchema
+  moneyDeliveryCodeSchema,
+  frequentMoneyCustomersSchema
 } from '@/schemas/money-delivery.schema';
 
 const router = Router();
@@ -117,6 +118,9 @@ const moneyDeliveryController = new MoneyDeliveryController();
 
 // All money delivery routes require authentication (any role)
 router.use(authenticateToken);
+
+// Frequent customers route (must be before /:id to avoid conflicts)
+router.get('/frequent-customers/:senderIdentifier', validate(frequentMoneyCustomersSchema), moneyDeliveryController.getFrequentCustomers);
 
 // Money delivery routes
 router.post('/', validate(createMoneyDeliverySchema), moneyDeliveryController.createMoneyDelivery);

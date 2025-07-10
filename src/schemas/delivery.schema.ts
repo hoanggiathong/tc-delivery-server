@@ -157,7 +157,29 @@ export const deliveryCodeValidationSchema = z.string()
   .length(10, 'Delivery code must be exactly 10 digits')
   .regex(/^\d{10}$/, 'Delivery code must contain only digits in format DDMMYY + sequence (0001-9999)');
 
+// Schema for frequent customers lookup
+export const frequentCustomersSchema = z.object({
+  params: z.object({
+    senderIdentifier: z.string()
+      .min(1, 'Sender identifier is required')
+      .max(100, 'Sender identifier must not exceed 100 characters')
+      .trim()
+  }),
+  query: z.object({
+    page: z.string()
+      .optional()
+      .transform((val) => val ? parseInt(val) : 1)
+      .refine((val) => val >= 1, 'Page must be greater than 0'),
+    limit: z.string()
+      .optional()
+      .transform((val) => val ? parseInt(val) : 10)
+      .refine((val) => val >= 1 && val <= 100, 'Limit must be between 1 and 100')
+  })
+});
+
 export type CreateDeliveryRequest = z.infer<typeof createDeliverySchema>['body'];
 export type UpdateDeliveryRequest = z.infer<typeof updateDeliverySchema>['body'];
 export type GetNextCodeRequest = z.infer<typeof getNextCodeSchema>['body'];
 export type DeliveryCodeParams = z.infer<typeof deliveryCodeSchema>['params'];
+export type FrequentCustomersParams = z.infer<typeof frequentCustomersSchema>['params'];
+export type FrequentCustomersQuery = z.infer<typeof frequentCustomersSchema>['query'];

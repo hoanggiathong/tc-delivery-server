@@ -44,6 +44,5 @@ userRouteSchema.index({ userId: 1, routeId: 1 }, { unique: true });
 // Create index for better query performance
 userRouteSchema.index({ userId: 1 });
 userRouteSchema.index({ routeId: 1 });
-userRouteSchema.index({ assignedBy: 1 });
 
 export const UserRoute = mongoose.model<IUserRoute>('UserRoute', userRouteSchema);
