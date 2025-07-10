@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Express TypeScript API server with JWT authentication",
   "main": "dist/index.js",
+  "license": "UNLICENSED",
   "scripts": {
     "dev": "npx tsx watch src/index.ts",
     "dev:debug": "npx tsx watch --inspect src/index.ts",
