@@ -303,8 +303,31 @@ export class UserRouteService {
     }
   }
 
+
+
   /**
-   * Get all users assigned to a route
+   * Get all user routes
+   */
+  async getAllUserRoutes(): Promise<IUserRouteResponse[]> {
+    try {
+      const userRoutes = await UserRoute.find({})
+        .populate([
+          { path: 'userId', select: '_id username role' },
+          { path: 'routeId', select: '_id code name' },
+          { path: 'assignedBy', select: '_id username' }
+        ])
+        .sort({ createdAt: -1 })
+        .lean();
+
+      return userRoutes.map(userRoute => this.transformUserRouteLeanToResponse(this.toPopulatedUserRoute(userRoute)));
+    } catch (error) {
+      console.error('Error getting all user routes:', error);
+      throw new Error('Failed to get all user routes');
+    }
+  }
+
+  /**
+   * Get users assigned to a specific route
    */
   async getUsersForRoute(routeId: string): Promise<IUserRouteResponse[]> {
     try {
@@ -323,29 +346,6 @@ export class UserRouteService {
     } catch (error) {
       console.error('Error getting users for route:', error);
       throw new Error('Failed to get users for route');
-    }
-  }
-
-  /**
-   * Get all user route assignments
-   */
-  async getAllUserRoutes(): Promise<IUserRouteResponse[]> {
-    try {
-      const userRoutes = await UserRoute.find({})
-        .populate([
-          { path: 'userId', select: '_id username role' },
-          { path: 'routeId', select: '_id code name' },
-          { path: 'assignedBy', select: '_id username role' }
-        ])
-        .sort({ createdAt: -1 })
-        .lean();
-
-      return userRoutes.map(userRoute =>
-        this.transformUserRouteLeanToResponse(this.toPopulatedUserRoute(userRoute))
-      );
-    } catch (error) {
-      console.error('Error getting all user routes:', error);
-      throw new Error('Failed to get all user routes');
     }
   }
 }

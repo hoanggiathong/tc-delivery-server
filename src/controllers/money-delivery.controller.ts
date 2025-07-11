@@ -169,12 +169,20 @@ export class MoneyDeliveryController {
       logger.error('Error retrieving money deliveries:', error);
       const message = error instanceof Error ? error.message : 'Failed to retrieve money deliveries';
 
+      // Determine appropriate status code based on error message
+      let statusCode = 500;
+      if (message.includes('not found')) {
+        statusCode = 404;
+      } else if (message.includes('validation') || message.includes('invalid')) {
+        statusCode = 400;
+      }
+
       const response: ApiResponse = {
         success: false,
         message
       };
 
-      res.status(500).json(response);
+      res.status(statusCode).json(response);
     }
   };
 
@@ -241,12 +249,20 @@ export class MoneyDeliveryController {
       logger.error('Error retrieving money delivery:', error);
       const message = error instanceof Error ? error.message : 'Failed to retrieve money delivery';
 
+      // Determine appropriate status code based on error message
+      let statusCode = 500;
+      if (message.includes('not found')) {
+        statusCode = 404;
+      } else if (message.includes('validation') || message.includes('invalid')) {
+        statusCode = 400;
+      }
+
       const response: ApiResponse = {
         success: false,
         message
       };
 
-      res.status(500).json(response);
+      res.status(statusCode).json(response);
     }
   };
 
@@ -627,7 +643,7 @@ export class MoneyDeliveryController {
 
       const response: ApiResponse = {
         success: true,
-        message: 'Frequent customers retrieved successfully',
+        message: 'Frequent money customers retrieved successfully',
         data: frequentCustomers
       };
 
@@ -637,12 +653,20 @@ export class MoneyDeliveryController {
       logger.error('Error retrieving frequent money customers:', error);
       const message = error instanceof Error ? error.message : 'Failed to get frequent customers';
 
+      // Determine appropriate status code based on error message
+      let statusCode = 500;
+      if (message.includes('not found')) {
+        statusCode = 404;
+      } else if (message.includes('validation') || message.includes('invalid')) {
+        statusCode = 400;
+      }
+
       const response: ApiResponse = {
         success: false,
         message
       };
 
-      res.status(500).json(response);
+      res.status(statusCode).json(response);
     }
   };
 }

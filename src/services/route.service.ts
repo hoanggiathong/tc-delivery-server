@@ -55,6 +55,55 @@ export class RouteService {
     }
   }
 
+
+
+  /**
+   * Get route by ID
+   */
+  async getRouteById(id: string): Promise<IRouteResponse | null> {
+    try {
+      const route = await Route.findById(id).lean();
+      if (!route) {
+        return null;
+      }
+      return this.transformRouteLeanToResponse(route as IRouteLean);
+    } catch (error) {
+      console.error('Error getting route by ID:', error);
+      throw new Error('Failed to get route by ID');
+    }
+  }
+
+  /**
+   * Get all routes
+   */
+  async getAllRoutes(): Promise<IRouteResponse[]> {
+    try {
+      const routes = await Route.find({}).sort({ createdAt: -1 }).lean();
+      return routes.map(route => this.transformRouteLeanToResponse(route as IRouteLean));
+    } catch (error) {
+      console.error('Error getting all routes:', error);
+      throw new Error('Failed to fetch routes');
+    }
+  }
+
+
+
+  /**
+   * Get route by code
+   */
+  async getRouteByCode(code: string): Promise<IRouteResponse | null> {
+    try {
+      const route = await Route.findOne({ code: code.toUpperCase() }).lean();
+      if (!route) {
+        return null;
+      }
+      return this.transformRouteLeanToResponse(route as IRouteLean);
+    } catch (error) {
+      console.error('Error getting route by code:', error);
+      throw new Error('Failed to get route by code');
+    }
+  }
+
   /**
    * Update route by ID
    */
@@ -65,67 +114,32 @@ export class RouteService {
         throw new Error('Route not found');
       }
 
-      // Check if updating will create a duplicate code
+      // Check if another route with the same code exists
       if (data.code) {
         const existingRoute = await Route.findOne({
-          _id: { $ne: id },
-          code: data.code.toUpperCase()
+          code: data.code.toUpperCase(),
+          _id: { $ne: id }
         });
-
         if (existingRoute) {
           throw new Error('Route with this code already exists');
         }
       }
 
-      // Prepare update data
-      const updateData: any = {};
-      if (data.code) updateData.code = data.code.toUpperCase();
-      if (data.name) updateData.name = data.name;
-
-      const updatedRoute = await Route.findByIdAndUpdate(
-        id,
-        { $set: updateData },
-        { new: true, runValidators: true }
-      );
-
-      if (!updatedRoute) {
-        throw new Error('Failed to update route');
+      // Update fields
+      if (data.code !== undefined) {
+        route.code = data.code.toUpperCase();
+      }
+      if (data.name !== undefined) {
+        route.name = data.name;
       }
 
-      return this.transformRouteToResponse(updatedRoute);
+      await route.save();
+      return this.transformRouteToResponse(route);
     } catch (error) {
       if (error instanceof Error) {
         throw error;
       }
       throw new Error('Failed to update route');
-    }
-  }
-
-  /**
-   * Get route by ID
-   */
-  async getRouteById(id: string): Promise<IRouteResponse | null> {
-    try {
-      const route = await Route.findById(id).lean();
-      if (!route) return null;
-
-      return this.transformRouteLeanToResponse(route as IRouteLean);
-    } catch (error) {
-      console.error('Error getting route by ID:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Get all routes
-   */
-  async getAllRoutes(): Promise<IRouteResponse[]> {
-    try {
-      const routes = await Route.find({}).sort({ code: 1 }).lean();
-      return routes.map(route => this.transformRouteLeanToResponse(route as IRouteLean));
-    } catch (error) {
-      console.error('Error getting all routes:', error);
-      throw new Error('Failed to fetch routes');
     }
   }
 
@@ -145,21 +159,6 @@ export class RouteService {
         throw error;
       }
       throw new Error('Failed to delete route');
-    }
-  }
-
-  /**
-   * Get route by code
-   */
-  async getRouteByCode(code: string): Promise<IRouteResponse | null> {
-    try {
-      const route = await Route.findOne({ code: code.toUpperCase() }).lean();
-      if (!route) return null;
-
-      return this.transformRouteLeanToResponse(route as IRouteLean);
-    } catch (error) {
-      console.error('Error getting route by code:', error);
-      return null;
     }
   }
 }

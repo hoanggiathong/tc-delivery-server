@@ -97,79 +97,46 @@ export class CodeGeneratorService {
     }
   }
 
-  /**
-   * Generate next code for preview (doesn't reserve the code)
-   * @param date - Date for the delivery (default: today)
-   * @returns Promise<string> - Next available code for preview
-   */
-  static async getNextCodePreview(date: Date = new Date()): Promise<string> {
-    return this.generateNextCode(date);
-  }
+
 
   /**
-   * Generate next money delivery code for preview (doesn't reserve the code)
-   * @param date - Date for the money delivery (default: today)
-   * @returns Promise<string> - Next available code for preview
-   */
-  static async getNextMoneyDeliveryCodePreview(date: Date = new Date()): Promise<string> {
-    return this.generateNextMoneyDeliveryCode(date);
-  }
-
-    /**
-   * Find the last code for a specific date prefix
-   * @param datePrefix - Date prefix in DDMMYY format
-   * @returns Promise<string | null> - Last code or null if none found
+   * Find the last delivery code for a specific date
    */
   private static async findLastCodeForDate(datePrefix: string): Promise<string | null> {
     try {
       const regex = new RegExp(`^${datePrefix}\\d{4}$`);
+      const lastCode = await Delivery.findOne({ code: regex })
+        .sort({ code: -1 })
+        .select('code')
+        .lean();
 
-      const deliveries = await Delivery.find(
-        { code: { $regex: regex } },
-        { code: 1 }
-      )
-      .sort({ code: -1 })
-      .limit(1)
-      .lean();
-
-      return deliveries.length > 0 ? deliveries[0].code : null;
-
+      return lastCode ? lastCode.code : null;
     } catch (error) {
       logger.error('Error finding last code for date:', error);
-      throw error;
+      return null;
     }
   }
 
   /**
-   * Find the last money delivery code for a specific date prefix
-   * @param datePrefix - Date prefix in DDMMYY format
-   * @returns Promise<string | null> - Last code or null if none found
+   * Find the last money delivery code for a specific date
    */
   private static async findLastMoneyDeliveryCodeForDate(datePrefix: string): Promise<string | null> {
     try {
       const regex = new RegExp(`^${datePrefix}\\d{4}$`);
+      const lastCode = await MoneyDelivery.findOne({ code: regex })
+        .sort({ code: -1 })
+        .select('code')
+        .lean();
 
-      const moneyDeliveries = await MoneyDelivery.find(
-        { code: { $regex: regex } },
-        { code: 1 }
-      )
-      .sort({ code: -1 })
-      .limit(1)
-      .lean();
-
-      return moneyDeliveries.length > 0 ? moneyDeliveries[0].code : null;
-
+      return lastCode ? lastCode.code : null;
     } catch (error) {
       logger.error('Error finding last money delivery code for date:', error);
-      throw error;
+      return null;
     }
   }
 
   /**
    * Generate code with specific sequence number
-   * @param datePrefix - Date prefix in DDMMYY format
-   * @param sequence - Sequence number
-   * @returns Promise<string> - Generated code
    */
   private static async generateNextCodeWithSequence(datePrefix: string, sequence: number): Promise<string> {
     if (sequence > 9999) {
@@ -191,9 +158,6 @@ export class CodeGeneratorService {
 
   /**
    * Generate money delivery code with specific sequence number
-   * @param datePrefix - Date prefix in DDMMYY format
-   * @param sequence - Sequence number
-   * @returns Promise<string> - Generated code
    */
   private static async generateNextMoneyDeliveryCodeWithSequence(datePrefix: string, sequence: number): Promise<string> {
     if (sequence > 9999) {
@@ -267,8 +231,6 @@ export class CodeGeneratorService {
 
   /**
    * Get delivery count for a specific date
-   * @param date - Date to check
-   * @returns Promise<number> - Number of deliveries for the date
    */
   static async getDeliveryCountForDate(date: Date): Promise<number> {
     try {
@@ -278,9 +240,9 @@ export class CodeGeneratorService {
       const datePrefix = `${day}${month}${year}`;
 
       const regex = new RegExp(`^${datePrefix}\\d{4}$`);
+      const count = await Delivery.countDocuments({ code: regex });
 
-      return await Delivery.countDocuments({ code: { $regex: regex } });
-
+      return count;
     } catch (error) {
       logger.error('Error getting delivery count for date:', error);
       throw error;
@@ -289,8 +251,6 @@ export class CodeGeneratorService {
 
   /**
    * Get money delivery count for a specific date
-   * @param date - Date to check
-   * @returns Promise<number> - Number of money deliveries for the date
    */
   static async getMoneyDeliveryCountForDate(date: Date): Promise<number> {
     try {
@@ -300,9 +260,9 @@ export class CodeGeneratorService {
       const datePrefix = `${day}${month}${year}`;
 
       const regex = new RegExp(`^${datePrefix}\\d{4}$`);
+      const count = await MoneyDelivery.countDocuments({ code: regex });
 
-      return await MoneyDelivery.countDocuments({ code: { $regex: regex } });
-
+      return count;
     } catch (error) {
       logger.error('Error getting money delivery count for date:', error);
       throw error;
@@ -311,21 +271,66 @@ export class CodeGeneratorService {
 
   /**
    * Check if maximum deliveries reached for a date
-   * @param date - Date to check
-   * @returns Promise<boolean> - True if maximum reached
    */
   static async isMaxDeliveriesReached(date: Date): Promise<boolean> {
-    const count = await this.getDeliveryCountForDate(date);
-    return count >= 9999;
+    try {
+      const count = await this.getDeliveryCountForDate(date);
+      return count >= 9999;
+    } catch (error) {
+      logger.error('Error checking max deliveries reached:', error);
+      throw error;
+    }
   }
 
   /**
    * Check if maximum money deliveries reached for a date
-   * @param date - Date to check
-   * @returns Promise<boolean> - True if maximum reached
    */
   static async isMaxMoneyDeliveriesReached(date: Date): Promise<boolean> {
-    const count = await this.getMoneyDeliveryCountForDate(date);
-    return count >= 9999;
+    try {
+      const count = await this.getMoneyDeliveryCountForDate(date);
+      return count >= 9999;
+    } catch (error) {
+      logger.error('Error checking max money deliveries reached:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get next code preview without actually generating it
+   * @param date - Date for the delivery (default: today)
+   * @returns Promise<string> - Next available code preview
+   */
+  static async getNextCodePreview(date: Date = new Date()): Promise<string> {
+    try {
+      // Format date as DDMMYY
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = String(date.getFullYear()).slice(-2);
+      const datePrefix = `${day}${month}${year}`;
+
+      // Find the highest sequence number for today
+      const lastCode = await this.findLastCodeForDate(datePrefix);
+
+      let nextSequence = 1;
+      if (lastCode) {
+        const lastSequence = parseInt(lastCode.slice(-4)); // Get last 4 digits
+        nextSequence = lastSequence + 1;
+      }
+
+      // Check if we've reached the maximum sequence number for the day
+      if (nextSequence > 9999) {
+        throw new Error(`Maximum number of deliveries (9999) reached for date ${datePrefix}`);
+      }
+
+      // Format sequence number as 4-digit string with leading zeros
+      const sequenceStr = String(nextSequence).padStart(4, '0');
+      const newCode = `${datePrefix}${sequenceStr}`;
+
+      return newCode;
+
+    } catch (error) {
+      logger.error('Error getting next code preview:', error);
+      throw error;
+    }
   }
 }

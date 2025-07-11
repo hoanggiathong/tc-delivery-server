@@ -334,7 +334,7 @@ describe('Delivery Endpoints', () => {
       const response = await request(app)
         .post('/api/delivery/next-code')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ toRouteId: 'invalid-id' })
+        .send({ toRouteId: '507f1f77bcf86cd799439011' })
         .expect(404);
 
       expect(response.body.success).toBe(false);
@@ -356,7 +356,7 @@ describe('Delivery Endpoints', () => {
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.data).toEqual(mockDelivery);
+      expect(response.body.data.delivery).toEqual(mockDelivery);
       expect(mockDeliveryService.getDeliveryByCode).toHaveBeenCalledWith(deliveryIdentifier);
     });
 

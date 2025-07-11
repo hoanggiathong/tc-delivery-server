@@ -77,15 +77,9 @@ const mockPopulatedUserRoute = {
 
 describe('UserRouteService', () => {
   let userRouteService: UserRouteService;
-  let mockUserRouteModel: jest.Mocked<typeof UserRoute>;
-  let mockUserModel: jest.Mocked<typeof User>;
-  let mockRouteModel: jest.Mocked<typeof Route>;
 
   beforeEach(() => {
     userRouteService = new UserRouteService();
-    mockUserRouteModel = UserRoute as jest.Mocked<typeof UserRoute>;
-    mockUserModel = User as jest.Mocked<typeof User>;
-    mockRouteModel = Route as jest.Mocked<typeof Route>;
 
     // Clear all mocks before each test
     jest.clearAllMocks();
@@ -98,17 +92,24 @@ describe('UserRouteService', () => {
     };
 
     it('should successfully assign a route to a user', async () => {
-      mockUserModel.findById.mockResolvedValue(mockUser as any);
-      mockRouteModel.findById.mockResolvedValue(mockRoute as any);
-      mockUserRouteModel.findOne.mockResolvedValue(null);
-      mockUserRouteModel.prototype.save = jest.fn().mockResolvedValue(mockUserRoute);
-      mockUserRouteModel.prototype.populate = jest.fn().mockResolvedValue(mockPopulatedUserRoute as any);
+      // Mock the static methods
+      (User.findById as jest.Mock).mockResolvedValue(mockUser);
+      (Route.findById as jest.Mock).mockResolvedValue(mockRoute);
+      (UserRoute.findOne as jest.Mock).mockResolvedValue(null);
+
+      // Mock constructor
+      const mockUserRouteInstance = {
+        ...mockUserRoute,
+        save: jest.fn().mockResolvedValue(mockUserRoute),
+        populate: jest.fn().mockResolvedValue(mockPopulatedUserRoute)
+      };
+      (UserRoute as unknown as jest.Mock).mockImplementation(() => mockUserRouteInstance);
 
       const result = await userRouteService.assignRouteToUser(assignData, mockAssignedByUserId);
 
-      expect(mockUserModel.findById).toHaveBeenCalledWith(mockUserId);
-      expect(mockRouteModel.findById).toHaveBeenCalledWith(mockRouteId);
-      expect(mockUserRouteModel.findOne).toHaveBeenCalledWith({
+      expect(User.findById).toHaveBeenCalledWith(mockUserId);
+      expect(Route.findById).toHaveBeenCalledWith(mockRouteId);
+      expect(UserRoute.findOne).toHaveBeenCalledWith({
         userId: mockUserId,
         routeId: mockRouteId
       });
@@ -118,7 +119,7 @@ describe('UserRouteService', () => {
     });
 
     it('should throw error when user not found', async () => {
-      mockUserModel.findById.mockResolvedValue(null);
+      (User.findById as jest.Mock).mockResolvedValue(null);
 
       await expect(
         userRouteService.assignRouteToUser(assignData, mockAssignedByUserId)
@@ -126,8 +127,8 @@ describe('UserRouteService', () => {
     });
 
     it('should throw error when route not found', async () => {
-      mockUserModel.findById.mockResolvedValue(mockUser as any);
-      mockRouteModel.findById.mockResolvedValue(null);
+      (User.findById as jest.Mock).mockResolvedValue(mockUser);
+      (Route.findById as jest.Mock).mockResolvedValue(null);
 
       await expect(
         userRouteService.assignRouteToUser(assignData, mockAssignedByUserId)
@@ -135,9 +136,9 @@ describe('UserRouteService', () => {
     });
 
     it('should throw error when route already assigned', async () => {
-      mockUserModel.findById.mockResolvedValue(mockUser as any);
-      mockRouteModel.findById.mockResolvedValue(mockRoute as any);
-      mockUserRouteModel.findOne.mockResolvedValue(mockUserRoute as any);
+      (User.findById as jest.Mock).mockResolvedValue(mockUser);
+      (Route.findById as jest.Mock).mockResolvedValue(mockRoute);
+      (UserRoute.findOne as jest.Mock).mockResolvedValue(mockUserRoute);
 
       await expect(
         userRouteService.assignRouteToUser(assignData, mockAssignedByUserId)
@@ -157,30 +158,30 @@ describe('UserRouteService', () => {
         { _id: multipleAssignData.routeIds[1], code: 'T2', name: 'Long An' }
       ];
 
-      mockUserModel.findById.mockResolvedValue(mockUser as any);
-      mockRouteModel.find.mockResolvedValue(mockRoutes as any);
+      (User.findById as jest.Mock).mockResolvedValue(mockUser);
+      (Route.find as jest.Mock).mockResolvedValue(mockRoutes);
 
       // Mock first call to find existing assignments - return empty array
       // Mock second call to find created assignments - return populated data
-      mockUserRouteModel.find
+      (UserRoute.find as jest.Mock)
         .mockResolvedValueOnce([])
         .mockReturnValueOnce({
           populate: jest.fn().mockReturnThis(),
           sort: jest.fn().mockReturnThis(),
           lean: jest.fn().mockResolvedValue([mockPopulatedUserRoute, mockPopulatedUserRoute])
-        } as any);
+        });
 
-      mockUserRouteModel.insertMany.mockResolvedValue([mockUserRoute, mockUserRoute] as any);
+      (UserRoute.insertMany as jest.Mock).mockResolvedValue([mockUserRoute, mockUserRoute]);
 
       const result = await userRouteService.assignMultipleRoutesToUser(multipleAssignData, mockAssignedByUserId);
 
-      expect(mockUserModel.findById).toHaveBeenCalledWith(mockUserId);
-      expect(mockRouteModel.find).toHaveBeenCalledWith({ _id: { $in: multipleAssignData.routeIds } });
+      expect(User.findById).toHaveBeenCalledWith(mockUserId);
+      expect(Route.find).toHaveBeenCalledWith({ _id: { $in: multipleAssignData.routeIds } });
       expect(result).toHaveLength(2);
     });
 
     it('should throw error when user not found', async () => {
-      mockUserModel.findById.mockResolvedValue(null);
+      (User.findById as jest.Mock).mockResolvedValue(null);
 
       await expect(
         userRouteService.assignMultipleRoutesToUser(multipleAssignData, mockAssignedByUserId)
@@ -188,8 +189,8 @@ describe('UserRouteService', () => {
     });
 
     it('should throw error when routes not found', async () => {
-      mockUserModel.findById.mockResolvedValue(mockUser as any);
-      mockRouteModel.find.mockResolvedValue([mockRoute] as any); // Only one route found
+      (User.findById as jest.Mock).mockResolvedValue(mockUser);
+      (Route.find as jest.Mock).mockResolvedValue([mockRoute]); // Only one route found
 
       await expect(
         userRouteService.assignMultipleRoutesToUser(multipleAssignData, mockAssignedByUserId)
@@ -202,9 +203,9 @@ describe('UserRouteService', () => {
         { _id: multipleAssignData.routeIds[1], code: 'T2', name: 'Long An' }
       ];
 
-      mockUserModel.findById.mockResolvedValue(mockUser as any);
-      mockRouteModel.find.mockResolvedValue(mockRoutes as any);
-      mockUserRouteModel.find.mockResolvedValue([mockUserRoute] as any); // Existing assignment
+      (User.findById as jest.Mock).mockResolvedValue(mockUser);
+      (Route.find as jest.Mock).mockResolvedValue(mockRoutes);
+      (UserRoute.find as jest.Mock).mockResolvedValue([mockUserRoute]); // Existing assignment
 
       await expect(
         userRouteService.assignMultipleRoutesToUser(multipleAssignData, mockAssignedByUserId)
@@ -214,19 +215,19 @@ describe('UserRouteService', () => {
 
   describe('removeRouteFromUser', () => {
     it('should successfully remove a route from user', async () => {
-      mockUserRouteModel.findById.mockResolvedValue(mockUserRoute as any);
-      mockUserRouteModel.findByIdAndDelete.mockResolvedValue(mockUserRoute as any);
+      (UserRoute.findById as jest.Mock).mockResolvedValue(mockUserRoute);
+      (UserRoute.findByIdAndDelete as jest.Mock).mockResolvedValue(mockUserRoute);
 
       await expect(
         userRouteService.removeRouteFromUser(mockUserRouteId)
       ).resolves.not.toThrow();
 
-      expect(mockUserRouteModel.findById).toHaveBeenCalledWith(mockUserRouteId);
-      expect(mockUserRouteModel.findByIdAndDelete).toHaveBeenCalledWith(mockUserRouteId);
+      expect(UserRoute.findById).toHaveBeenCalledWith(mockUserRouteId);
+      expect(UserRoute.findByIdAndDelete).toHaveBeenCalledWith(mockUserRouteId);
     });
 
     it('should throw error when user route not found', async () => {
-      mockUserRouteModel.findById.mockResolvedValue(null);
+      (UserRoute.findById as jest.Mock).mockResolvedValue(null);
 
       await expect(
         userRouteService.removeRouteFromUser(mockUserRouteId)
@@ -241,20 +242,20 @@ describe('UserRouteService', () => {
     };
 
     it('should successfully remove multiple routes from user', async () => {
-      mockUserRouteModel.deleteMany.mockResolvedValue({ deletedCount: 1 } as any);
+      (UserRoute.deleteMany as jest.Mock).mockResolvedValue({ deletedCount: 1 });
 
       await expect(
         userRouteService.removeMultipleRoutesFromUser(removeData)
       ).resolves.not.toThrow();
 
-      expect(mockUserRouteModel.deleteMany).toHaveBeenCalledWith({
+      expect(UserRoute.deleteMany).toHaveBeenCalledWith({
         userId: mockUserId,
         routeId: { $in: removeData.routeIds }
       });
     });
 
     it('should throw error when no assignments found to remove', async () => {
-      mockUserRouteModel.deleteMany.mockResolvedValue({ deletedCount: 0 } as any);
+      (UserRoute.deleteMany as jest.Mock).mockResolvedValue({ deletedCount: 0 });
 
       await expect(
         userRouteService.removeMultipleRoutesFromUser(removeData)
@@ -265,25 +266,25 @@ describe('UserRouteService', () => {
   describe('getUserRoutes', () => {
     it('should successfully get user routes', async () => {
       const mockUserRoutes = [mockPopulatedUserRoute];
-      mockUserRouteModel.find.mockReturnValue({
+      (UserRoute.find as jest.Mock).mockReturnValue({
         populate: jest.fn().mockReturnThis(),
         sort: jest.fn().mockReturnThis(),
         lean: jest.fn().mockResolvedValue(mockUserRoutes)
-      } as any);
+      });
 
       const result = await userRouteService.getUserRoutes(mockUserId);
 
-      expect(mockUserRouteModel.find).toHaveBeenCalledWith({ userId: mockUserId });
+      expect(UserRoute.find).toHaveBeenCalledWith({ userId: mockUserId });
       expect(result).toHaveLength(1);
       expect(result[0].userId).toBe(mockUserId);
     });
 
     it('should handle error when getting user routes', async () => {
-      mockUserRouteModel.find.mockReturnValue({
+      (UserRoute.find as jest.Mock).mockReturnValue({
         populate: jest.fn().mockReturnThis(),
         sort: jest.fn().mockReturnThis(),
         lean: jest.fn().mockRejectedValue(new Error('Database error'))
-      } as any);
+      });
 
       await expect(
         userRouteService.getUserRoutes(mockUserId)
@@ -297,25 +298,25 @@ describe('UserRouteService', () => {
         routeId: mockRoute
       }];
 
-      mockUserRouteModel.find.mockReturnValue({
+      (UserRoute.find as jest.Mock).mockReturnValue({
         populate: jest.fn().mockReturnThis(),
         sort: jest.fn().mockReturnThis(),
         lean: jest.fn().mockResolvedValue(mockUserRoutes)
-      } as any);
+      });
 
       const result = await userRouteService.getRoutesForUser(mockUserId);
 
-      expect(mockUserRouteModel.find).toHaveBeenCalledWith({ userId: mockUserId });
+      expect(UserRoute.find).toHaveBeenCalledWith({ userId: mockUserId });
       expect(result).toHaveLength(1);
       expect(result[0].code).toBe('T1');
     });
 
     it('should handle error when getting routes for user', async () => {
-      mockUserRouteModel.find.mockReturnValue({
+      (UserRoute.find as jest.Mock).mockReturnValue({
         populate: jest.fn().mockReturnThis(),
         sort: jest.fn().mockReturnThis(),
         lean: jest.fn().mockRejectedValue(new Error('Database error'))
-      } as any);
+      });
 
       await expect(
         userRouteService.getRoutesForUser(mockUserId)
@@ -326,25 +327,25 @@ describe('UserRouteService', () => {
   describe('getUsersForRoute', () => {
     it('should successfully get users for route', async () => {
       const mockUserRoutes = [mockPopulatedUserRoute];
-      mockUserRouteModel.find.mockReturnValue({
+      (UserRoute.find as jest.Mock).mockReturnValue({
         populate: jest.fn().mockReturnThis(),
         sort: jest.fn().mockReturnThis(),
         lean: jest.fn().mockResolvedValue(mockUserRoutes)
-      } as any);
+      });
 
       const result = await userRouteService.getUsersForRoute(mockRouteId);
 
-      expect(mockUserRouteModel.find).toHaveBeenCalledWith({ routeId: mockRouteId });
+      expect(UserRoute.find).toHaveBeenCalledWith({ routeId: mockRouteId });
       expect(result).toHaveLength(1);
       expect(result[0].routeId).toBe(mockRouteId);
     });
 
     it('should handle error when getting users for route', async () => {
-      mockUserRouteModel.find.mockReturnValue({
+      (UserRoute.find as jest.Mock).mockReturnValue({
         populate: jest.fn().mockReturnThis(),
         sort: jest.fn().mockReturnThis(),
         lean: jest.fn().mockRejectedValue(new Error('Database error'))
-      } as any);
+      });
 
       await expect(
         userRouteService.getUsersForRoute(mockRouteId)
@@ -355,25 +356,25 @@ describe('UserRouteService', () => {
   describe('getAllUserRoutes', () => {
     it('should successfully get all user routes', async () => {
       const mockUserRoutes = [mockPopulatedUserRoute];
-      mockUserRouteModel.find.mockReturnValue({
+      (UserRoute.find as jest.Mock).mockReturnValue({
         populate: jest.fn().mockReturnThis(),
         sort: jest.fn().mockReturnThis(),
         lean: jest.fn().mockResolvedValue(mockUserRoutes)
-      } as any);
+      });
 
       const result = await userRouteService.getAllUserRoutes();
 
-      expect(mockUserRouteModel.find).toHaveBeenCalledWith({});
+      expect(UserRoute.find).toHaveBeenCalledWith({});
       expect(result).toHaveLength(1);
       expect(result[0].userId).toBe(mockUserId);
     });
 
     it('should handle error when getting all user routes', async () => {
-      mockUserRouteModel.find.mockReturnValue({
+      (UserRoute.find as jest.Mock).mockReturnValue({
         populate: jest.fn().mockReturnThis(),
         sort: jest.fn().mockReturnThis(),
         lean: jest.fn().mockRejectedValue(new Error('Database error'))
-      } as any);
+      });
 
       await expect(
         userRouteService.getAllUserRoutes()

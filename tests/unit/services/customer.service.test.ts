@@ -102,10 +102,8 @@ describe("CustomerService", () => {
       // Mock findOne to return null (no duplicate)
       MockedCustomer.findOne = jest.fn().mockResolvedValue(null);
 
-      // Mock findByIdAndUpdate to return updated customer
-      MockedCustomer.findByIdAndUpdate = jest
-        .fn()
-        .mockResolvedValue(updatedCustomer);
+      // Mock save to return updated customer
+      mockCustomerInstance.save = jest.fn().mockResolvedValue(updatedCustomer);
 
       const result = await customerService.updateCustomer(
         customerId,
@@ -113,11 +111,7 @@ describe("CustomerService", () => {
       );
 
       expect(MockedCustomer.findById).toHaveBeenCalledWith(customerId);
-      expect(MockedCustomer.findByIdAndUpdate).toHaveBeenCalledWith(
-        customerId,
-        { $set: updateData },
-        { new: true, runValidators: true }
-      );
+      expect(mockCustomerInstance.save).toHaveBeenCalled();
       expect(result.name).toBe("Jane Doe");
     });
 

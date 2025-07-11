@@ -448,6 +448,16 @@ export class DeliveryController {
 
       const relatedDeliveries = await this.deliveryService.getRelatedDeliveriesBySender(senderName);
 
+      // Check if no related deliveries found
+      if (!relatedDeliveries || relatedDeliveries.length === 0) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'No related deliveries found'
+        };
+        res.status(404).json(response);
+        return;
+      }
+
       Logger.info('Related deliveries retrieved successfully', {
         senderName,
         count: relatedDeliveries.length,
@@ -459,7 +469,7 @@ export class DeliveryController {
         message: 'Related deliveries retrieved successfully',
         data: {
           senderName,
-          deliveries: relatedDeliveries,
+          relatedDeliveries,
           count: relatedDeliveries.length
         }
       };
@@ -547,12 +557,20 @@ export class DeliveryController {
 
       const message = error instanceof Error ? error.message : 'Failed to get next delivery code';
 
+      // Determine appropriate status code based on error message
+      let statusCode = 500;
+      if (message.includes('not found')) {
+        statusCode = 404;
+      } else if (message.includes('validation') || message.includes('invalid')) {
+        statusCode = 400;
+      }
+
       const response: ApiResponse = {
         success: false,
         message
       };
 
-      res.status(400).json(response);
+      res.status(statusCode).json(response);
     }
   };
 

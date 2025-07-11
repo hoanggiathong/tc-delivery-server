@@ -1,4 +1,3 @@
-import { AuthService } from "@/services/auth.service";
 import { User } from "@/models/user.model";
 import jwt from "jsonwebtoken";
 import { UserRole } from "@/types/user.type";
@@ -12,8 +11,14 @@ jest.mock("jsonwebtoken");
 const mockedJwt = jwt as jest.Mocked<typeof jwt>;
 
 describe("AuthService", () => {
-  let authService: AuthService;
+  let AuthService: any;
+  let authService: any;
   let mockUserInstance: any;
+
+  beforeAll(() => {
+    // Import AuthService after mocks are set up
+    AuthService = require("@/services/auth.service").AuthService;
+  });
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -30,6 +35,12 @@ describe("AuthService", () => {
       save: jest.fn(),
       comparePassword: jest.fn(),
     };
+
+    // Set up default User model mocks using jest.fn()
+    (MockedUser.findOne as any) = jest.fn();
+    (MockedUser.findById as any) = jest.fn();
+    (MockedUser.find as any) = jest.fn();
+    MockedUser.mockImplementation(() => mockUserInstance);
   });
 
   describe("register", () => {
@@ -41,14 +52,13 @@ describe("AuthService", () => {
       };
 
       // Mock findOne to return null (no existing user)
-      MockedUser.findOne = jest.fn().mockResolvedValue(null);
+      (MockedUser.findOne as any).mockResolvedValue(null);
 
       // Update mockUserInstance with userData values
       mockUserInstance.username = userData.username;
       mockUserInstance.role = userData.role;
 
-      // Mock constructor and save
-      MockedUser.mockImplementation(() => mockUserInstance);
+      // Mock save
       mockUserInstance.save.mockResolvedValue(mockUserInstance);
 
       const result = await authService.register(userData);
@@ -75,7 +85,7 @@ describe("AuthService", () => {
       };
 
       // Mock findOne to return existing user
-      MockedUser.findOne = jest.fn().mockResolvedValue(mockUserInstance);
+      (MockedUser.findOne as any).mockResolvedValue(mockUserInstance);
 
       await expect(authService.register(userData)).rejects.toThrow(
         "Username already exists"
@@ -99,7 +109,7 @@ describe("AuthService", () => {
 
       // Mock findOne to return user with password
       const mockSelect = jest.fn().mockResolvedValue(mockUserInstance);
-      MockedUser.findOne = jest.fn().mockReturnValue({ select: mockSelect });
+      (MockedUser.findOne as any).mockReturnValue({ select: mockSelect });
 
       // Mock password comparison
       mockUserInstance.comparePassword.mockResolvedValue(true);
@@ -129,7 +139,7 @@ describe("AuthService", () => {
 
       // Mock findOne to return null
       const mockSelect = jest.fn().mockResolvedValue(null);
-      MockedUser.findOne = jest.fn().mockReturnValue({ select: mockSelect });
+      (MockedUser.findOne as any).mockReturnValue({ select: mockSelect });
 
       await expect(authService.login(loginData)).rejects.toThrow(
         "Invalid credentials"
@@ -144,7 +154,7 @@ describe("AuthService", () => {
 
       // Mock findOne to return user
       const mockSelect = jest.fn().mockResolvedValue(mockUserInstance);
-      MockedUser.findOne = jest.fn().mockReturnValue({ select: mockSelect });
+      (MockedUser.findOne as any).mockReturnValue({ select: mockSelect });
 
       // Mock password comparison to return false
       mockUserInstance.comparePassword.mockResolvedValue(false);
@@ -163,15 +173,16 @@ describe("AuthService", () => {
     it("should return user when found", async () => {
       const userId = "user123";
 
-      const mockFindById = {
-        lean: jest.fn().mockResolvedValue(mockUserInstance),
-      };
-      MockedUser.findById = jest.fn().mockReturnValue(mockFindById);
+      // Mock findById to return a chainable object with all required methods
+      (MockedUser.findById as any).mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue(mockUserInstance),
+        }),
+      });
 
       const result = await authService.getUserById(userId);
 
       expect(MockedUser.findById).toHaveBeenCalledWith(userId);
-      expect(mockFindById.lean).toHaveBeenCalled();
       expect(result).toEqual({
         id: "user123",
         username: "testuser",
@@ -184,56 +195,84 @@ describe("AuthService", () => {
     it("should return null when user not found", async () => {
       const userId = "nonexistent";
 
-      const mockFindById = {
-        lean: jest.fn().mockResolvedValue(null),
-      };
-      MockedUser.findById = jest.fn().mockReturnValue(mockFindById);
+      // Mock findById to return a chainable object with all required methods
+      (MockedUser.findById as any).mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue(null),
+        }),
+      });
 
       const result = await authService.getUserById(userId);
 
       expect(MockedUser.findById).toHaveBeenCalledWith(userId);
-      expect(mockFindById.lean).toHaveBeenCalled();
       expect(result).toBeNull();
     });
   });
 
   describe("getAllUsers", () => {
     it("should return all users", async () => {
-      const mockUsers = [mockUserInstance];
-      const mockFind = {
-        sort: jest.fn().mockReturnValue({
-          lean: jest.fn().mockResolvedValue(mockUsers),
-        }),
-      };
+      const mockUsers = [
+        {
+          _id: "user1",
+          username: "user1",
+          role: UserRole.USER,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          _id: "user2",
+          username: "user2",
+          role: UserRole.ADMIN,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
 
-      MockedUser.find = jest.fn().mockReturnValue(mockFind);
+      // Mock find to return a chainable object with all required methods
+      (MockedUser.find as any).mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          sort: jest.fn().mockReturnValue({
+            lean: jest.fn().mockResolvedValue(mockUsers),
+          }),
+        }),
+      });
 
       const result = await authService.getAllUsers();
 
       expect(MockedUser.find).toHaveBeenCalledWith({});
-      expect(mockFind.sort).toHaveBeenCalledWith({ createdAt: -1 });
-      expect(result).toHaveLength(1);
-      expect(result[0].id).toBe("user123");
+      expect(result).toHaveLength(2);
+      expect(result[0].id).toBe("user1");
+      expect(result[1].id).toBe("user2");
     });
   });
 
   describe("getUsersByRoles", () => {
     it("should return users with specified roles", async () => {
-      const roles = [UserRole.USER, UserRole.MANAGER];
-      const mockUsers = [mockUserInstance];
-      const mockFind = {
-        sort: jest.fn().mockReturnValue({
-          lean: jest.fn().mockResolvedValue(mockUsers),
-        }),
-      };
+      const roles = [UserRole.ADMIN];
+      const mockUsers = [
+        {
+          _id: "admin1",
+          username: "admin1",
+          role: UserRole.ADMIN,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
 
-      MockedUser.find = jest.fn().mockReturnValue(mockFind);
+      // Mock find to return a chainable object with all required methods
+      (MockedUser.find as any).mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          sort: jest.fn().mockReturnValue({
+            lean: jest.fn().mockResolvedValue(mockUsers),
+          }),
+        }),
+      });
 
       const result = await authService.getUsersByRoles(roles);
 
       expect(MockedUser.find).toHaveBeenCalledWith({ role: { $in: roles } });
-      expect(mockFind.sort).toHaveBeenCalledWith({ createdAt: -1 });
       expect(result).toHaveLength(1);
+      expect(result[0].role).toBe(UserRole.ADMIN);
     });
   });
 });

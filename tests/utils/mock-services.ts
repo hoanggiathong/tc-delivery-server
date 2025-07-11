@@ -64,6 +64,29 @@ export class MockDeliveryService {
   getDeliveryByCode = mockDeliveryService.getDeliveryByCode;
 }
 
+// Mock Money Delivery Service
+export const mockMoneyDeliveryService = {
+  createMoneyDelivery: jest.fn(),
+  getAllMoneyDeliveries: jest.fn(),
+  getMoneyDeliveryById: jest.fn(),
+  updateMoneyDelivery: jest.fn(),
+  deleteMoneyDelivery: jest.fn(),
+  getNextCode: jest.fn(),
+  getMoneyDeliveryByCode: jest.fn(),
+  getFrequentCustomers: jest.fn()
+};
+
+export class MockMoneyDeliveryService {
+  createMoneyDelivery = mockMoneyDeliveryService.createMoneyDelivery;
+  getAllMoneyDeliveries = mockMoneyDeliveryService.getAllMoneyDeliveries;
+  getMoneyDeliveryById = mockMoneyDeliveryService.getMoneyDeliveryById;
+  updateMoneyDelivery = mockMoneyDeliveryService.updateMoneyDelivery;
+  deleteMoneyDelivery = mockMoneyDeliveryService.deleteMoneyDelivery;
+  getNextCode = mockMoneyDeliveryService.getNextCode;
+  getMoneyDeliveryByCode = mockMoneyDeliveryService.getMoneyDeliveryByCode;
+  getFrequentCustomers = mockMoneyDeliveryService.getFrequentCustomers;
+}
+
 // Mock Route Service
 export const mockRouteService = {
   createRoute: jest.fn(),
@@ -135,6 +158,7 @@ export const resetAllServiceMocks = () => {
     mockAuthService,
     mockCustomerService,
     mockDeliveryService,
+    mockMoneyDeliveryService,
     mockRouteService,
     mockUserRouteService,
     mockCodeGeneratorService
@@ -165,6 +189,14 @@ export const resetCustomerServiceMocks = () => {
 
 export const resetDeliveryServiceMocks = () => {
   Object.values(mockDeliveryService).forEach(mock => {
+    if (jest.isMockFunction(mock)) {
+      mock.mockReset();
+    }
+  });
+};
+
+export const resetMoneyDeliveryServiceMocks = () => {
+  Object.values(mockMoneyDeliveryService).forEach(mock => {
     if (jest.isMockFunction(mock)) {
       mock.mockReset();
     }

@@ -60,66 +60,6 @@ export class CustomerService {
   }
 
   /**
-   * Update customer by ID
-   */
-  async updateCustomer(id: string, data: UpdateCustomerRequest): Promise<ICustomerResponse> {
-    try {
-      const customer = await Customer.findById(id);
-      if (!customer) {
-        throw new Error('Customer not found');
-      }
-
-      // Check if updating will create a duplicate name+phone combination
-      if (data.name || data.phone) {
-        const newName = data.name || customer.name;
-        const newPhone = data.phone || customer.phone;
-
-        const existingCustomer = await Customer.findOne({
-          _id: { $ne: id },
-          name: newName,
-          phone: newPhone
-        });
-
-        if (existingCustomer) {
-          throw new Error('Customer with this name and phone already exists');
-        }
-      }
-
-      const updatedCustomer = await Customer.findByIdAndUpdate(
-        id,
-        { $set: data },
-        { new: true, runValidators: true }
-      );
-
-      if (!updatedCustomer) {
-        throw new Error('Failed to update customer');
-      }
-
-      return this.transformCustomerToResponse(updatedCustomer);
-    } catch (error) {
-      if (error instanceof Error) {
-        throw error;
-      }
-      throw new Error('Failed to update customer');
-    }
-  }
-
-  /**
-   * Get customer by ID
-   */
-  async getCustomerById(id: string): Promise<ICustomerResponse | null> {
-    try {
-      const customer = await Customer.findById(id).lean();
-      if (!customer) return null;
-
-      return this.transformCustomerLeanToResponse(customer as ICustomerLean);
-    } catch (error) {
-      console.error('Error getting customer by ID:', error);
-      return null;
-    }
-  }
-
-  /**
    * Get all customers
    */
   async getAllCustomers(): Promise<ICustomerResponse[]> {
@@ -170,6 +110,57 @@ export class CustomerService {
     } catch (error) {
       console.error('Error finding customers by name:', error);
       throw new Error('Failed to find customers by name');
+    }
+  }
+
+  /**
+   * Update customer by ID
+   */
+  async updateCustomer(customerId: string, data: UpdateCustomerRequest): Promise<ICustomerResponse> {
+    try {
+      const customer = await Customer.findById(customerId);
+      if (!customer) {
+        throw new Error('Customer not found');
+      }
+
+      // Check if another customer with the same name and phone exists
+      const existingCustomer = await Customer.findOne({
+        name: data.name,
+        phone: data.phone,
+        _id: { $ne: customerId }
+      });
+
+      if (existingCustomer) {
+        throw new Error('Customer with this name and phone already exists');
+      }
+
+      if (data.name !== undefined) {
+        customer.name = data.name;
+      }
+      if (data.phone !== undefined) {
+        customer.phone = data.phone;
+      }
+      await customer.save();
+
+      return this.transformCustomerToResponse(customer);
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to update customer');
+    }
+  }
+
+  /**
+   * Get customer by ID
+   */
+  async getCustomerById(customerId: string): Promise<ICustomerResponse | null> {
+    try {
+      const customer = await Customer.findById(customerId).lean();
+      return customer ? this.transformCustomerLeanToResponse(customer as ICustomerLean) : null;
+    } catch (error) {
+      console.error('Error getting customer by ID:', error);
+      throw new Error('Failed to get customer by ID');
     }
   }
 }

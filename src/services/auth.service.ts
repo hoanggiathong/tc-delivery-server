@@ -107,35 +107,39 @@ export class AuthService {
     }
   }
 
-  async getUserById(id: string): Promise<IUserResponse | null> {
-    try {
-      const user = await User.findById(id).lean();
-      if (!user) return null;
-
-      return transformUserLeanToResponse(user as IUserLean);
-    } catch (error) {
-      console.error('Error getting user by ID:', error);
-      return null;
-    }
-  }
-
+  /**
+   * Get all users
+   */
   async getAllUsers(): Promise<IUserResponse[]> {
     try {
-      const users = await User.find({}).sort({ createdAt: -1 }).lean();
+      const users = await User.find({}).select('-password').sort({ createdAt: -1 }).lean();
       return transformUsersLeanToResponse(users as IUserLean[]);
     } catch (error) {
-      console.error('Error getting all users:', error);
-      throw new Error('Failed to fetch users');
+      throw new Error('Failed to get all users');
     }
   }
 
+  /**
+   * Get user by ID
+   */
+  async getUserById(userId: string): Promise<IUserResponse | null> {
+    try {
+      const user = await User.findById(userId).select('-password').lean();
+      return user ? transformUserLeanToResponse(user as IUserLean) : null;
+    } catch (error) {
+      throw new Error('Failed to get user by ID');
+    }
+  }
+
+  /**
+   * Get users by roles
+   */
   async getUsersByRoles(roles: UserRole[]): Promise<IUserResponse[]> {
     try {
-      const users = await User.find({ role: { $in: roles } }).sort({ createdAt: -1 }).lean();
+      const users = await User.find({ role: { $in: roles } }).select('-password').sort({ createdAt: -1 }).lean();
       return transformUsersLeanToResponse(users as IUserLean[]);
     } catch (error) {
-      console.error('Error getting users by roles:', error);
-      throw new Error('Failed to fetch users');
+      throw new Error('Failed to get users by roles');
     }
   }
 }
