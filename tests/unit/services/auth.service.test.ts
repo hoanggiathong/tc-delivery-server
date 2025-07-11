@@ -176,7 +176,7 @@ describe("AuthService", () => {
       // Mock findById to return a chainable object with all required methods
       (MockedUser.findById as any).mockReturnValue({
         select: jest.fn().mockReturnValue({
-          lean: jest.fn().mockResolvedValue(mockUserInstance),
+        lean: jest.fn().mockResolvedValue(mockUserInstance),
         }),
       });
 
@@ -198,7 +198,7 @@ describe("AuthService", () => {
       // Mock findById to return a chainable object with all required methods
       (MockedUser.findById as any).mockReturnValue({
         select: jest.fn().mockReturnValue({
-          lean: jest.fn().mockResolvedValue(null),
+        lean: jest.fn().mockResolvedValue(null),
         }),
       });
 
@@ -231,8 +231,8 @@ describe("AuthService", () => {
       // Mock find to return a chainable object with all required methods
       (MockedUser.find as any).mockReturnValue({
         select: jest.fn().mockReturnValue({
-          sort: jest.fn().mockReturnValue({
-            lean: jest.fn().mockResolvedValue(mockUsers),
+        sort: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue(mockUsers),
           }),
         }),
       });
@@ -262,8 +262,8 @@ describe("AuthService", () => {
       // Mock find to return a chainable object with all required methods
       (MockedUser.find as any).mockReturnValue({
         select: jest.fn().mockReturnValue({
-          sort: jest.fn().mockReturnValue({
-            lean: jest.fn().mockResolvedValue(mockUsers),
+        sort: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue(mockUsers),
           }),
         }),
       });

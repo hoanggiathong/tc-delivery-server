@@ -1,7 +1,36 @@
+
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
 
 let mongoServer: MongoMemoryServer;
+
+// Custom matcher for date comparison
+expect.extend({
+  toEqualWithDateStrings(received: any, expected: any) {
+    const pass = JSON.stringify(received) === JSON.stringify(expected);
+
+    if (pass) {
+      return {
+        message: () => `expected ${received} not to equal ${expected}`,
+        pass: true,
+      };
+    } else {
+      return {
+        message: () => `expected ${JSON.stringify(received)} to equal ${JSON.stringify(expected)}`,
+        pass: false,
+      };
+    }
+  },
+});
+
+// Extend Jest matchers
+declare global {
+  namespace jest {
+    interface Matchers<R> {
+      toEqualWithDateStrings(expected: any): R;
+    }
+  }
+}
 
 beforeAll(async () => {
   try {

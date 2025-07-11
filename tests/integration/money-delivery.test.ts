@@ -6,17 +6,16 @@ import { Route } from "@/models/route.model";
 import { User } from "@/models/user.model";
 import jwt from "jsonwebtoken";
 import { UserRole } from "@/types/user.type";
+import { MoneyDeliveryService } from "../../src/services/money-delivery.service";
 import {
-  mockCreateMoneyDelivery,
-  mockGetAllMoneyDeliveries,
-  mockGetMoneyDeliveryById,
-  mockGetFrequentCustomers,
   createMockMoneyDelivery,
   createMockFrequentCustomersResult
-} from "../mocks/money-delivery.service";
+} from "../mocks";
 
 // Mock MoneyDeliveryService at module level
-jest.mock("@/services/money-delivery.service", () => require("../mocks/money-delivery.service"));
+jest.mock("@/services/money-delivery.service");
+
+const MockedMoneyDeliveryService = MoneyDeliveryService as jest.MockedClass<typeof MoneyDeliveryService>;
 
 // Mock all models
 jest.mock("@/models/money-delivery.model");
@@ -56,17 +55,17 @@ describe("Money Delivery API Integration Tests", () => {
     testCustomer1 = {
       _id: "customer123",
       name: "John Doe",
+        createdAt: new Date(),
+        updatedAt: new Date(),
       phone: "+84123456789",
-      createdAt: new Date(),
-      updatedAt: new Date(),
     };
 
     testCustomer2 = {
       _id: "customer456",
       name: "Jane Doe",
+        createdAt: new Date(),
+        updatedAt: new Date(),
       phone: "+84987654321",
-      createdAt: new Date(),
-      updatedAt: new Date(),
     };
 
     // Mock test routes
@@ -74,16 +73,16 @@ describe("Money Delivery API Integration Tests", () => {
       _id: "route123",
       code: "T1",
       name: "Test Route 1",
-      createdAt: new Date(),
-      updatedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
     };
 
     testRoute2 = {
       _id: "route456",
       code: "T2",
       name: "Test Route 2",
-      createdAt: new Date(),
-      updatedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
     };
 
     // Generate auth token
@@ -99,28 +98,36 @@ describe("Money Delivery API Integration Tests", () => {
     (MockedRoute.findById as jest.Mock).mockResolvedValue(testRoute1);
 
     // Set up default mock responses for happy path scenarios
-    mockCreateMoneyDelivery.mockResolvedValue({
+    MockedMoneyDeliveryService.prototype.createMoneyDelivery.mockResolvedValue({
       id: "moneyDelivery123",
       code: "2401250001",
       sender: {
         id: "customer123",
         name: "John Doe",
         phone: "+84123456789",
+        createdAt: new Date(),
+        updatedAt: new Date(),
       },
       receiver: {
         id: "customer456",
         name: "Jane Doe",
         phone: "+84987654321",
+        createdAt: new Date(),
+        updatedAt: new Date(),
       },
       fromRoute: {
         id: "route123",
         code: "T1",
         name: "Test Route 1",
+        createdAt: new Date(),
+        updatedAt: new Date(),
       },
       toRoute: {
         id: "route456",
         code: "T2",
         name: "Test Route 2",
+        createdAt: new Date(),
+        updatedAt: new Date(),
       },
       sendMoneyAmount: 1000000,
       sendCost: 50000,
@@ -130,7 +137,7 @@ describe("Money Delivery API Integration Tests", () => {
       updatedAt: new Date(),
     });
 
-    mockGetAllMoneyDeliveries.mockResolvedValue([
+    MockedMoneyDeliveryService.prototype.getAllMoneyDeliveries.mockResolvedValue([
       {
         id: "moneyDelivery123",
         code: "2401250001",
@@ -138,21 +145,29 @@ describe("Money Delivery API Integration Tests", () => {
           id: "customer123",
           name: "John Doe",
           phone: "+84123456789",
+          createdAt: new Date(),
+          updatedAt: new Date(),
         },
         receiver: {
           id: "customer456",
           name: "Jane Doe",
           phone: "+84987654321",
+          createdAt: new Date(),
+          updatedAt: new Date(),
         },
         fromRoute: {
           id: "route123",
           code: "T1",
           name: "Test Route 1",
+          createdAt: new Date(),
+          updatedAt: new Date(),
         },
         toRoute: {
           id: "route456",
           code: "T2",
           name: "Test Route 2",
+          createdAt: new Date(),
+          updatedAt: new Date(),
         },
         sendMoneyAmount: 1000000,
         sendCost: 50000,
@@ -167,21 +182,29 @@ describe("Money Delivery API Integration Tests", () => {
           id: "customer456",
           name: "Jane Doe",
           phone: "+84987654321",
+          createdAt: new Date(),
+          updatedAt: new Date(),
         },
         receiver: {
           id: "customer123",
           name: "John Doe",
           phone: "+84123456789",
+          createdAt: new Date(),
+          updatedAt: new Date(),
         },
         fromRoute: {
           id: "route456",
           code: "T2",
           name: "Test Route 2",
+          createdAt: new Date(),
+          updatedAt: new Date(),
         },
         toRoute: {
           id: "route123",
           code: "T1",
           name: "Test Route 1",
+          createdAt: new Date(),
+          updatedAt: new Date(),
         },
         sendMoneyAmount: 2000000,
         sendCost: 75000,
@@ -191,28 +214,36 @@ describe("Money Delivery API Integration Tests", () => {
       },
     ]);
 
-    mockGetMoneyDeliveryById.mockResolvedValue({
+    MockedMoneyDeliveryService.prototype.getMoneyDeliveryById.mockResolvedValue({
       id: "moneyDelivery123",
       code: "2401250001",
       sender: {
         id: "customer123",
         name: "John Doe",
         phone: "+84123456789",
+        createdAt: new Date(),
+        updatedAt: new Date(),
       },
       receiver: {
         id: "customer456",
         name: "Jane Doe",
         phone: "+84987654321",
+        createdAt: new Date(),
+        updatedAt: new Date(),
       },
       fromRoute: {
         id: "route123",
         code: "T1",
         name: "Test Route 1",
+        createdAt: new Date(),
+        updatedAt: new Date(),
       },
       toRoute: {
         id: "route456",
         code: "T2",
         name: "Test Route 2",
+        createdAt: new Date(),
+        updatedAt: new Date(),
       },
       sendMoneyAmount: 1000000,
       sendCost: 50000,
@@ -221,14 +252,21 @@ describe("Money Delivery API Integration Tests", () => {
       updatedAt: new Date(),
     });
 
-    mockGetFrequentCustomers.mockResolvedValue({
+    MockedMoneyDeliveryService.prototype.getFrequentCustomers.mockResolvedValue({
       senderIdentifier: "John Doe",
-      senderInfo: { name: "John Doe", phone: "+84123456789" },
+      senderInfo: {
+        name: "John Doe",
+        phone: "+84123456789"
+      },
       frequentCustomers: [
         {
           receiverName: "Jane Doe",
           receiverPhone: "+84987654321",
-          toRoute: { id: "route456", code: "T2", name: "Test Route 2" },
+          toRoute: {
+            id: "route456",
+            code: "T2",
+            name: "Test Route 2",
+          },
           deliveryCount: 5,
           totalSendMoneyAmount: 5000000,
           totalSendCost: 250000,
@@ -249,8 +287,8 @@ describe("Money Delivery API Integration Tests", () => {
 
   // In each test that expects a different result, override the mock at the start of the test
   // For example:
-  // mockMoneyDeliveryService.getMoneyDeliveryById = jest.fn().mockResolvedValue(null);
-  // mockMoneyDeliveryService.getFrequentCustomers = jest.fn().mockRejectedValue(new Error("Database error"));
+  // MockedMoneyDeliveryService.prototype.getMoneyDeliveryById = jest.fn().mockResolvedValue(null);
+  // MockedMoneyDeliveryService.prototype.getFrequentCustomers = jest.fn().mockRejectedValue(new Error("Database error"));
 
   describe("POST /api/money-deliveries", () => {
     it("should create a new money delivery", async () => {
@@ -331,7 +369,7 @@ describe("Money Delivery API Integration Tests", () => {
       };
 
       // Mock service to throw error for non-existent route with 'not found' in message
-      mockCreateMoneyDelivery.mockRejectedValue(new Error("From route not found"));
+      MockedMoneyDeliveryService.prototype.createMoneyDelivery.mockRejectedValue(new Error("From route not found"));
 
       const response = await request(app)
         .post("/api/money-deliveries")
@@ -390,7 +428,7 @@ describe("Money Delivery API Integration Tests", () => {
 
     it("should return 404 for non-existent money delivery", async () => {
       // Mock service to return null for non-existent ID
-      mockGetMoneyDeliveryById.mockResolvedValue(null);
+      MockedMoneyDeliveryService.prototype.getMoneyDeliveryById.mockResolvedValue(null);
 
       const response = await request(app)
         .get("/api/money-deliveries/nonexistent")
@@ -413,17 +451,24 @@ describe("Money Delivery API Integration Tests", () => {
       // Update mock to return ISO date strings
       const mockFrequentCustomersResult = {
         senderIdentifier: "John Doe",
-        senderInfo: { name: "John Doe", phone: "+84123456789" },
+        senderInfo: {
+          name: "John Doe",
+          phone: "+84123456789"
+        },
         frequentCustomers: [
           {
             receiverName: "Jane Doe",
             receiverPhone: "+84987654321",
-            toRoute: { id: "route456", code: "T2", name: "Test Route 2" },
+            toRoute: {
+              id: "route456",
+              code: "T2",
+              name: "Test Route 2",
+            },
             deliveryCount: 5,
             totalSendMoneyAmount: 5000000,
             totalSendCost: 250000,
-            lastDeliveryDate: "2024-01-25T00:00:00.000Z",
-            firstDeliveryDate: "2024-01-20T00:00:00.000Z",
+            lastDeliveryDate: new Date("2024-01-25"),
+            firstDeliveryDate: new Date("2024-01-20"),
           },
         ],
         pagination: {
@@ -435,7 +480,7 @@ describe("Money Delivery API Integration Tests", () => {
           hasPrevPage: false,
         },
       };
-      mockGetFrequentCustomers.mockResolvedValue(mockFrequentCustomersResult);
+      MockedMoneyDeliveryService.prototype.getFrequentCustomers.mockResolvedValue(mockFrequentCustomersResult);
 
       const response = await request(app)
         .get("/api/money-deliveries/frequent-customers/John%20Doe")
@@ -447,9 +492,9 @@ describe("Money Delivery API Integration Tests", () => {
       expect(response.body.message).toBe(
         "Frequent money customers retrieved successfully"
       );
-      expect(response.body.data).toEqual(mockFrequentCustomersResult);
+      expect(response.body.data).toEqualWithDateStrings(mockFrequentCustomersResult);
       expect(
-        mockGetFrequentCustomers
+        MockedMoneyDeliveryService.prototype.getFrequentCustomers
       ).toHaveBeenCalledWith("John Doe", 1, 10);
     });
 
@@ -465,7 +510,7 @@ describe("Money Delivery API Integration Tests", () => {
 
     it("should handle missing sender identifier", async () => {
       // Mock service to return null or throw for missing sender
-      mockGetFrequentCustomers.mockRejectedValue(new Error("Sender not found"));
+      MockedMoneyDeliveryService.prototype.getFrequentCustomers.mockRejectedValue(new Error("Sender not found"));
 
       await request(app)
         .get("/api/money-deliveries/frequent-customers/nonexistent-sender")
@@ -475,7 +520,7 @@ describe("Money Delivery API Integration Tests", () => {
     });
 
     it("should handle service error", async () => {
-      mockGetFrequentCustomers.mockRejectedValue(new Error("Database error"));
+      MockedMoneyDeliveryService.prototype.getFrequentCustomers.mockRejectedValue(new Error("Database error"));
 
       const response = await request(app)
         .get("/api/money-deliveries/frequent-customers/John%20Doe")
@@ -502,7 +547,7 @@ describe("Money Delivery API Integration Tests", () => {
         },
       };
 
-      mockGetFrequentCustomers.mockResolvedValue(mockFrequentCustomersResult);
+      MockedMoneyDeliveryService.prototype.getFrequentCustomers.mockResolvedValue(mockFrequentCustomersResult);
 
       const response = await request(app)
         .get("/api/money-deliveries/frequent-customers/John%20Doe")
@@ -510,7 +555,7 @@ describe("Money Delivery API Integration Tests", () => {
         .expect(200);
 
       expect(
-        mockGetFrequentCustomers
+        MockedMoneyDeliveryService.prototype.getFrequentCustomers
       ).toHaveBeenCalledWith("John Doe", 1, 10);
     });
 
@@ -529,7 +574,7 @@ describe("Money Delivery API Integration Tests", () => {
         },
       };
 
-      mockGetFrequentCustomers.mockResolvedValue(mockFrequentCustomersResult);
+      MockedMoneyDeliveryService.prototype.getFrequentCustomers.mockResolvedValue(mockFrequentCustomersResult);
 
       const response = await request(app)
         .get("/api/money-deliveries/frequent-customers/John%20Doe")
@@ -538,7 +583,7 @@ describe("Money Delivery API Integration Tests", () => {
         .expect(200);
 
       expect(
-        mockGetFrequentCustomers
+        MockedMoneyDeliveryService.prototype.getFrequentCustomers
       ).toHaveBeenCalledWith("John Doe", 2, 5);
     });
   });

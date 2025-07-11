@@ -3,14 +3,14 @@ import { Delivery } from "@/models/delivery.model";
 import { Route } from "@/models/route.model";
 import { CodeGeneratorService } from "@/services/code-generator.service";
 import { IDeliveryResponse } from "@/types/delivery.type";
-import { mockCustomerService } from "../../utils";
+import { CustomerService } from "@/services/customer.service";
 
 // Mock the Delivery and Route models
 jest.mock("@/models/delivery.model");
 jest.mock("@/models/route.model");
-jest.mock("@/services/customer.service", () =>
-  require("../../mocks/customer.service")
-);
+jest.mock("@/services/customer.service");
+
+const MockedCustomerService = CustomerService as jest.MockedClass<typeof CustomerService>;
 jest.mock("@/services/code-generator.service", () => ({
   CodeGeneratorService: {
     generateNextCode: jest.fn(),
@@ -142,7 +142,7 @@ describe("DeliveryService", () => {
 
     it("should create a delivery successfully", async () => {
       // Mock customer service methods
-      mockCustomerService.findOrCreateCustomer
+      MockedCustomerService.prototype.findOrCreateCustomer
         .mockResolvedValueOnce(mockSender)
         .mockResolvedValueOnce(mockReceiver);
 
@@ -167,11 +167,11 @@ describe("DeliveryService", () => {
         "user123"
       );
 
-      expect(mockCustomerService.findOrCreateCustomer).toHaveBeenCalledWith(
+      expect(MockedCustomerService.prototype.findOrCreateCustomer).toHaveBeenCalledWith(
         "John Sender",
         "+1234567890"
       );
-      expect(mockCustomerService.findOrCreateCustomer).toHaveBeenCalledWith(
+      expect(MockedCustomerService.prototype.findOrCreateCustomer).toHaveBeenCalledWith(
         "Jane Receiver",
         "+1987654321"
       );
@@ -201,7 +201,7 @@ describe("DeliveryService", () => {
     });
 
     it("should throw error when from route not found", async () => {
-      mockCustomerService.findOrCreateCustomer
+      MockedCustomerService.prototype.findOrCreateCustomer
         .mockResolvedValueOnce(mockSender)
         .mockResolvedValueOnce(mockReceiver);
 
@@ -214,7 +214,7 @@ describe("DeliveryService", () => {
     });
 
     it("should throw error when to route not found", async () => {
-      mockCustomerService.findOrCreateCustomer
+      MockedCustomerService.prototype.findOrCreateCustomer
         .mockResolvedValueOnce(mockSender)
         .mockResolvedValueOnce(mockReceiver);
 
@@ -228,7 +228,7 @@ describe("DeliveryService", () => {
     });
 
     it("should throw error when sender creation fails", async () => {
-      mockCustomerService.findOrCreateCustomer.mockRejectedValue(
+      MockedCustomerService.prototype.findOrCreateCustomer.mockRejectedValue(
         new Error("Failed to create sender")
       );
 
@@ -238,7 +238,7 @@ describe("DeliveryService", () => {
     });
 
     it("should throw error when receiver creation fails", async () => {
-      mockCustomerService.findOrCreateCustomer
+      MockedCustomerService.prototype.findOrCreateCustomer
         .mockResolvedValueOnce(mockSender)
         .mockRejectedValue(new Error("Failed to create receiver"));
 
@@ -248,7 +248,7 @@ describe("DeliveryService", () => {
     });
 
     it("should throw error when delivery save fails", async () => {
-      mockCustomerService.findOrCreateCustomer
+      MockedCustomerService.prototype.findOrCreateCustomer
         .mockResolvedValueOnce(mockSender)
         .mockResolvedValueOnce(mockReceiver);
 
@@ -377,7 +377,7 @@ describe("DeliveryService", () => {
       MockedDelivery.findById = jest.fn().mockResolvedValue(mockExistingDelivery);
 
       // Mock customer service
-      mockCustomerService.findOrCreateCustomer.mockResolvedValue(mockUpdatedSender);
+      MockedCustomerService.prototype.findOrCreateCustomer.mockResolvedValue(mockUpdatedSender);
 
       // Mock Route.findById
       MockedRoute.findById = jest.fn()
@@ -395,7 +395,7 @@ describe("DeliveryService", () => {
       const result = await deliveryService.updateDelivery("delivery123", mockUpdateData);
 
       expect(MockedDelivery.findById).toHaveBeenCalledWith("delivery123");
-      expect(mockCustomerService.findOrCreateCustomer).toHaveBeenCalledWith(
+      expect(MockedCustomerService.prototype.findOrCreateCustomer).toHaveBeenCalledWith(
         "Updated Sender",
         "+1111111111"
       );
@@ -450,7 +450,7 @@ describe("DeliveryService", () => {
 
     it("should throw error when update fails", async () => {
       MockedDelivery.findById = jest.fn().mockResolvedValue(mockExistingDelivery);
-      mockCustomerService.findOrCreateCustomer.mockResolvedValue(mockUpdatedSender);
+      MockedCustomerService.prototype.findOrCreateCustomer.mockResolvedValue(mockUpdatedSender);
       MockedRoute.findById = jest.fn()
         .mockResolvedValueOnce(mockNewFromRoute)
         .mockResolvedValueOnce(mockNewToRoute);

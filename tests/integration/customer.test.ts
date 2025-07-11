@@ -2,11 +2,13 @@ import request from 'supertest';
 import app from '../../src/app';
 import jwt from 'jsonwebtoken';
 import { UserRole } from '../../src/types/user.type';
-import { mockCustomerService } from '../utils';
-import { createMockCustomer } from '../utils';
+import { CustomerService } from '../../src/services/customer.service';
+import { createMockCustomer } from '../mocks';
 
 // Mock CustomerService
-jest.mock('../../src/services/customer.service', () => require('../mocks/customer.service'));
+jest.mock('../../src/services/customer.service');
+
+const MockedCustomerService = CustomerService as jest.MockedClass<typeof CustomerService>;
 
 describe('Customer Endpoints', () => {
   let adminToken: string;
@@ -37,7 +39,7 @@ describe('Customer Endpoints', () => {
     it('should create a new customer when authenticated as admin', async () => {
       const mockCustomer = createMockCustomer();
 
-      mockCustomerService.createCustomer.mockResolvedValue(mockCustomer);
+      MockedCustomerService.prototype.createCustomer.mockResolvedValue(mockCustomer);
 
       const response = await request(app)
         .post('/api/customer')
@@ -47,11 +49,11 @@ describe('Customer Endpoints', () => {
 
       expect(response.body.success).toBe(true);
       expect(response.body.message).toBe('Customer created successfully');
-      expect(response.body.data.customer).toEqual(mockCustomer);
+      expect(response.body.data.customer).toEqualWithDateStrings(mockCustomer);
     });
 
     it('should return 409 when customer already exists', async () => {
-      mockCustomerService.createCustomer.mockRejectedValue(
+      MockedCustomerService.prototype.createCustomer.mockRejectedValue(
         new Error('Customer with this name and phone already exists')
       );
 
@@ -66,7 +68,7 @@ describe('Customer Endpoints', () => {
     });
 
     it('should return 400 for other service errors', async () => {
-      mockCustomerService.createCustomer.mockRejectedValue(
+      MockedCustomerService.prototype.createCustomer.mockRejectedValue(
         new Error('Database connection failed')
       );
 
@@ -130,11 +132,11 @@ describe('Customer Endpoints', () => {
         id: customerId,
         name: 'Jane Doe',
         phone: '+1987654321',
-        createdAt: '2025-06-27T07:51:17.342Z',
-        updatedAt: '2025-06-27T07:51:17.342Z'
+        createdAt: new Date('2025-06-27T07:51:17.342Z'),
+        updatedAt: new Date('2025-06-27T07:51:17.342Z')
       };
 
-      mockCustomerService.updateCustomer.mockResolvedValue(mockUpdatedCustomer);
+      MockedCustomerService.prototype.updateCustomer.mockResolvedValue(mockUpdatedCustomer);
 
       const response = await request(app)
         .put(`/api/customer/${customerId}`)
@@ -144,11 +146,11 @@ describe('Customer Endpoints', () => {
 
       expect(response.body.success).toBe(true);
       expect(response.body.message).toBe('Customer updated successfully');
-      expect(response.body.data.customer).toEqual(mockUpdatedCustomer);
+      expect(response.body.data.customer).toEqualWithDateStrings(mockUpdatedCustomer);
     });
 
     it('should return 404 when customer not found', async () => {
-      mockCustomerService.updateCustomer.mockRejectedValue(
+      MockedCustomerService.prototype.updateCustomer.mockRejectedValue(
         new Error('Customer not found')
       );
 
@@ -163,7 +165,7 @@ describe('Customer Endpoints', () => {
     });
 
     it('should return 409 when update creates duplicate', async () => {
-      mockCustomerService.updateCustomer.mockRejectedValue(
+      MockedCustomerService.prototype.updateCustomer.mockRejectedValue(
         new Error('Customer with this name and phone already exists')
       );
 
@@ -186,11 +188,11 @@ describe('Customer Endpoints', () => {
         id: customerId,
         name: 'John Doe',
         phone: '+1234567890',
-        createdAt: '2025-06-27T07:51:17.342Z',
-        updatedAt: '2025-06-27T07:51:17.342Z'
+        createdAt: new Date('2025-06-27T07:51:17.342Z'),
+        updatedAt: new Date('2025-06-27T07:51:17.342Z')
       };
 
-      mockCustomerService.getCustomerById.mockResolvedValue(mockCustomer);
+      MockedCustomerService.prototype.getCustomerById.mockResolvedValue(mockCustomer);
 
       const response = await request(app)
         .get(`/api/customer/${customerId}`)
@@ -199,11 +201,11 @@ describe('Customer Endpoints', () => {
 
       expect(response.body.success).toBe(true);
       expect(response.body.message).toBe('Customer retrieved successfully');
-      expect(response.body.data.customer).toEqual(mockCustomer);
+      expect(response.body.data.customer).toEqualWithDateStrings(mockCustomer);
     });
 
     it('should return 404 when customer not found', async () => {
-      mockCustomerService.getCustomerById.mockResolvedValue(null);
+      MockedCustomerService.prototype.getCustomerById.mockResolvedValue(null);
 
       const response = await request(app)
         .get(`/api/customer/${customerId}`)
@@ -215,7 +217,7 @@ describe('Customer Endpoints', () => {
     });
 
     it('should return 500 when service throws error', async () => {
-      mockCustomerService.getCustomerById.mockRejectedValue(
+      MockedCustomerService.prototype.getCustomerById.mockRejectedValue(
         new Error('Database error')
       );
 
@@ -235,7 +237,7 @@ describe('Customer Endpoints', () => {
         createMockCustomer({ id: 'customer1' })
       ];
 
-      mockCustomerService.getAllCustomers.mockResolvedValue(mockCustomers);
+      MockedCustomerService.prototype.getAllCustomers.mockResolvedValue(mockCustomers);
 
       const response = await request(app)
         .get('/api/customer')
@@ -244,12 +246,12 @@ describe('Customer Endpoints', () => {
 
       expect(response.body.success).toBe(true);
       expect(response.body.message).toBe('Customers retrieved successfully');
-      expect(response.body.data.customers).toEqual(mockCustomers);
+      expect(response.body.data.customers).toEqualWithDateStrings(mockCustomers);
       expect(response.body.data.total).toBe(1);
     });
 
     it('should return empty array when no customers exist', async () => {
-      mockCustomerService.getAllCustomers.mockResolvedValue([]);
+      MockedCustomerService.prototype.getAllCustomers.mockResolvedValue([]);
 
       const response = await request(app)
         .get('/api/customer')
@@ -257,12 +259,12 @@ describe('Customer Endpoints', () => {
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.data.customers).toEqual([]);
+      expect(response.body.data.customers).toEqualWithDateStrings([]);
       expect(response.body.data.total).toBe(0);
     });
 
     it('should return 500 when service throws error', async () => {
-      mockCustomerService.getAllCustomers.mockRejectedValue(
+      MockedCustomerService.prototype.getAllCustomers.mockRejectedValue(
         new Error('Database connection failed')
       );
 

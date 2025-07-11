@@ -1,42 +1,5 @@
 import { IMoneyDeliveryResponse } from '@/types/money-delivery.type';
 
-// Create mock functions
-const mockCreateMoneyDelivery = jest.fn();
-const mockGetAllMoneyDeliveries = jest.fn();
-const mockGetMoneyDeliveryById = jest.fn();
-const mockUpdateMoneyDelivery = jest.fn();
-const mockDeleteMoneyDelivery = jest.fn();
-const mockGetNextCode = jest.fn();
-const mockGetMoneyDeliveryByCode = jest.fn();
-const mockGetFrequentCustomers = jest.fn();
-
-// Export class for Jest mock
-export class MoneyDeliveryService {
-  createMoneyDelivery = mockCreateMoneyDelivery;
-  getAllMoneyDeliveries = mockGetAllMoneyDeliveries;
-  getMoneyDeliveryById = mockGetMoneyDeliveryById;
-  updateMoneyDelivery = mockUpdateMoneyDelivery;
-  deleteMoneyDelivery = mockDeleteMoneyDelivery;
-  getNextCode = mockGetNextCode;
-  getMoneyDeliveryByCode = mockGetMoneyDeliveryByCode;
-  getFrequentCustomers = mockGetFrequentCustomers;
-}
-
-// Export default for compatibility
-export default MoneyDeliveryService;
-
-// Export mock functions for test setup
-export {
-  mockCreateMoneyDelivery,
-  mockGetAllMoneyDeliveries,
-  mockGetMoneyDeliveryById,
-  mockUpdateMoneyDelivery,
-  mockDeleteMoneyDelivery,
-  mockGetNextCode,
-  mockGetMoneyDeliveryByCode,
-  mockGetFrequentCustomers
-};
-
 export const createMockMoneyDelivery = (overrides: Partial<IMoneyDeliveryResponse> = {}): IMoneyDeliveryResponse => {
   return {
     id: 'money-delivery-id-1',
@@ -74,6 +37,18 @@ export const createMockMoneyDelivery = (overrides: Partial<IMoneyDeliveryRespons
     createdByUser: 'testuser',
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2023-01-01'),
+    ...overrides
+  };
+};
+
+export const createMockMoneyDeliveryRequest = (overrides: any = {}) => {
+  return {
+    senderId: 'customer-id-1',
+    receiverId: 'customer-id-2',
+    fromRouteId: 'route-id-1',
+    toRouteId: 'route-id-2',
+    sendMoneyAmount: 1000000,
+    sendCost: 50000,
     ...overrides
   };
 };
@@ -118,4 +93,15 @@ export const createMockFrequentCustomersResult = (overrides: any = {}) => {
     },
     ...overrides
   };
+};
+
+export const createMockMoneyDeliveryList = (count: number = 3): IMoneyDeliveryResponse[] => {
+  return Array.from({ length: count }, (_, index) =>
+    createMockMoneyDelivery({
+      id: `money-delivery-id-${index + 1}`,
+      code: `240125000${index + 1}`,
+      sendMoneyAmount: 500000 + (index * 100000),
+      sendCost: 25000 + (index * 5000)
+    })
+  );
 };
