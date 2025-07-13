@@ -9,7 +9,7 @@ export interface IDelivery extends Document {
   toRoute: mongoose.Types.ObjectId;
   name: string;
   cost: number;
-  homeDelivery: string;
+  homeDelivery?: string;
   homeDeliveryCost: number;
   itemValue: number;
   itemCost: number;
@@ -18,6 +18,7 @@ export interface IDelivery extends Document {
   collectForCustomerCost: number;
   collectForCustomerNote?: string;
   notes?: string;
+  totalCost: number;
   createdByUser: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -63,13 +64,14 @@ const deliverySchema = new Schema<IDelivery>({
   },
   homeDelivery: {
     type: String,
-    required: [true, 'Home delivery address is required'],
+    required: false,
     trim: true
   },
   homeDeliveryCost: {
     type: Number,
     required: [true, 'Home delivery cost is required'],
-    min: [0, 'Home delivery cost must be positive']
+    min: [0, 'Home delivery cost must be positive'],
+    default: 0
   },
   itemValue: {
     type: Number,
@@ -97,6 +99,12 @@ const deliverySchema = new Schema<IDelivery>({
     required: [true, 'Collect for customer cost is required'],
     min: [0, 'Collect for customer cost must be positive']
   },
+  totalCost: {
+    type: Number,
+    required: false, // Will be calculated by pre-save middleware
+    min: [0, 'Total cost must be positive'],
+    default: 0
+  },
   collectForCustomerNote: {
     type: String,
     trim: true
@@ -120,6 +128,38 @@ const deliverySchema = new Schema<IDelivery>({
       return ret;
     }
   }
+});
+
+// Pre-save middleware to calculate totalCost
+deliverySchema.pre('save', function(next) {
+  // Calculate totalCost = cost + homeDeliveryCost + itemCost + collectCost + collectForCustomerCost
+  this.totalCost = this.cost + this.homeDeliveryCost + this.itemCost + this.collectCost + this.collectForCustomerCost;
+  next();
+});
+
+// Pre-update middleware to calculate totalCost
+deliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function(next) {
+  const update = this.getUpdate() as any;
+  if (update) {
+    // Only calculate if at least one cost field is being updated
+    if (update.cost !== undefined || update.homeDeliveryCost !== undefined || 
+        update.itemCost !== undefined || update.collectCost !== undefined || 
+        update.collectForCustomerCost !== undefined) {
+      
+      // Get current document to merge with updates
+      const currentDoc = await this.model.findOne(this.getQuery());
+      if (currentDoc) {
+        const cost = update.cost !== undefined ? update.cost : currentDoc.cost;
+        const homeDeliveryCost = update.homeDeliveryCost !== undefined ? update.homeDeliveryCost : currentDoc.homeDeliveryCost;
+        const itemCost = update.itemCost !== undefined ? update.itemCost : currentDoc.itemCost;
+        const collectCost = update.collectCost !== undefined ? update.collectCost : currentDoc.collectCost;
+        const collectForCustomerCost = update.collectForCustomerCost !== undefined ? update.collectForCustomerCost : currentDoc.collectForCustomerCost;
+        
+        update.totalCost = cost + homeDeliveryCost + itemCost + collectCost + collectForCustomerCost;
+      }
+    }
+  }
+  next();
 });
 
 // =========================================

@@ -30,6 +30,7 @@ export {
   // Delivery mocks
   createMockDelivery,
   createMockDeliveryRequest,
+  createMockDeliveryRequestWithoutHome,
   createMockDeliveryList
 } from './deliveries';
 

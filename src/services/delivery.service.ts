@@ -92,6 +92,7 @@ export class DeliveryService {
       collectForCustomerCost: populated.collectForCustomerCost,
       collectForCustomerNote: populated.collectForCustomerNote,
       notes: populated.notes,
+      totalCost: populated.totalCost,
       createdByUser: populated.createdByUser.username,
       createdAt: populated.createdAt,
       updatedAt: populated.updatedAt
@@ -144,6 +145,7 @@ export class DeliveryService {
       collectForCustomerCost: delivery.collectForCustomerCost,
       collectForCustomerNote: delivery.collectForCustomerNote,
       notes: delivery.notes,
+      totalCost: delivery.totalCost,
       createdByUser: delivery.createdByUser.username,
       createdAt: delivery.createdAt,
       updatedAt: delivery.updatedAt

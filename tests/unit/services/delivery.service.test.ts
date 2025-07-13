@@ -100,6 +100,7 @@ describe("DeliveryService", () => {
       collectForCustomer: 25000,
       collectForCustomerCost: 40,
       collectForCustomerNote: "Test note",
+      totalCost: 240, // 100 + 20 + 50 + 30 + 40
       createdByUser: "user123",
       createdAt: new Date("2023-01-01"),
       updatedAt: new Date("2023-01-01"),
@@ -135,6 +136,7 @@ describe("DeliveryService", () => {
       collectForCustomer: 25000,
       collectForCustomerCost: 40,
       collectForCustomerNote: "Test note",
+      totalCost: 240, // 100 + 20 + 50 + 30 + 40
       createdByUser: "testuser",
       createdAt: new Date("2023-01-01"),
       updatedAt: new Date("2023-01-01"),
@@ -199,6 +201,7 @@ describe("DeliveryService", () => {
       expect(mockDelivery.save).toHaveBeenCalled();
       expect(result).toEqual(mockExpectedResponse);
     });
+
 
     it("should throw error when from route not found", async () => {
       MockedCustomerService.prototype.findOrCreateCustomer
@@ -367,6 +370,7 @@ describe("DeliveryService", () => {
       collectForCustomer: 25000,
       collectForCustomerCost: 40,
       collectForCustomerNote: "Test note",
+      totalCost: 240, // 100 + 20 + 50 + 30 + 40
       createdByUser: "testuser",
       createdAt: new Date("2023-01-01"),
       updatedAt: new Date("2023-01-01"),
@@ -554,6 +558,7 @@ describe("DeliveryService", () => {
       collectForCustomer: 25000,
       collectForCustomerCost: 40,
       collectForCustomerNote: "Test note",
+      totalCost: 240, // 100 + 20 + 50 + 30 + 40
       createdByUser: "testuser",
       createdAt: new Date("2023-01-01"),
       updatedAt: new Date("2023-01-01"),
@@ -703,6 +708,7 @@ describe("DeliveryService", () => {
         collectForCustomer: 25000,
         collectForCustomerCost: 40,
         collectForCustomerNote: "Test note",
+        totalCost: 240, // 100 + 20 + 50 + 30 + 40
         createdByUser: "testuser",
         createdAt: new Date("2023-01-01"),
         updatedAt: new Date("2023-01-01"),
@@ -932,6 +938,7 @@ describe("DeliveryService", () => {
       collectForCustomer: 25000,
       collectForCustomerCost: 40,
       collectForCustomerNote: "Test note",
+      totalCost: 240, // 100 + 20 + 50 + 30 + 40
       createdByUser: "testuser",
       createdAt: new Date("2023-01-01"),
       updatedAt: new Date("2023-01-01"),

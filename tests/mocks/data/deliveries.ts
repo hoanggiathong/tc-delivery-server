@@ -34,7 +34,7 @@ export const createMockDelivery = (overrides: Partial<IDeliveryResponse> = {}): 
     },
     name: 'Test Package',
     cost: 50000,
-    homeDelivery: 'Yes',
+    homeDelivery: 'Test Home Address',
     homeDeliveryCost: 10000,
     itemValue: 100000,
     itemCost: 5000,
@@ -43,6 +43,7 @@ export const createMockDelivery = (overrides: Partial<IDeliveryResponse> = {}): 
     collectForCustomerCost: 3000,
     collectForCustomerNote: 'Test note',
     notes: 'Test delivery notes',
+    totalCost: 70000, // 50000 + 10000 + 5000 + 2000 + 3000
     createdByUser: 'testuser',
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2023-01-01'),
@@ -60,7 +61,7 @@ export const createMockDeliveryRequest = (overrides: any = {}) => {
     toRouteId: 'route-id-2',
     name: 'Test Package',
     cost: 50000,
-    homeDelivery: 'Yes',
+    homeDelivery: 'Test Home Address',
     homeDeliveryCost: 10000,
     itemValue: 100000,
     itemCost: 5000,
@@ -68,6 +69,27 @@ export const createMockDeliveryRequest = (overrides: any = {}) => {
     collectForCustomer: 50000,
     collectForCustomerCost: 3000,
     collectForCustomerNote: 'Test note',
+    notes: 'Test delivery notes',
+    ...overrides
+  };
+};
+
+export const createMockDeliveryRequestWithoutHome = (overrides: any = {}) => {
+  return {
+    senderName: 'John Doe',
+    senderPhone: '+1234567890',
+    receiverName: 'Jane Doe',
+    receiverPhone: '+1987654321',
+    fromRouteId: '507f1f77bcf86cd799439011',
+    toRouteId: '507f1f77bcf86cd799439012',
+    name: 'Test Package',
+    cost: 50000,
+    // homeDeliveryCost omitted to use default value of 0
+    itemValue: 100000,
+    itemCost: 5000,
+    collectCost: 2000,
+    collectForCustomer: 50000,
+    collectForCustomerCost: 3000,
     notes: 'Test delivery notes',
     ...overrides
   };

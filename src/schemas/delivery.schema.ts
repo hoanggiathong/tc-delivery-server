@@ -32,10 +32,11 @@ export const createDeliverySchema = z.object({
     cost: z.number()
       .min(0, 'Cost must be positive'),
     homeDelivery: z.string()
-      .min(1, 'Home delivery address is required')
-      .trim(),
+      .trim()
+      .optional(),
     homeDeliveryCost: z.number()
-      .min(0, 'Home delivery cost must be positive'),
+      .min(0, 'Home delivery cost must be positive')
+      .default(0),
     itemValue: z.number()
       .min(0, 'Item value must be positive'),
     itemCost: z.number()
@@ -95,11 +96,11 @@ export const updateDeliverySchema = z.object({
       .min(0, 'Cost must be positive')
       .optional(),
     homeDelivery: z.string()
-      .min(1, 'Home delivery address is required')
       .trim()
       .optional(),
     homeDeliveryCost: z.number()
       .min(0, 'Home delivery cost must be positive')
+      .default(0)
       .optional(),
     itemValue: z.number()
       .min(0, 'Item value must be positive')

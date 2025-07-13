@@ -3,7 +3,7 @@ import app from '../../src/app';
 import jwt from 'jsonwebtoken';
 import { UserRole } from '../../src/types/user.type';
 import { DeliveryService } from '../../src/services/delivery.service';
-import { createMockDelivery, createMockCustomer } from '../mocks';
+import { createMockDelivery, createMockCustomer, createMockDeliveryRequestWithoutHome } from '../mocks';
 
 // Mock DeliveryService
 jest.mock('../../src/services/delivery.service');
@@ -50,6 +50,7 @@ describe('Delivery Endpoints', () => {
       collectForCustomerNote: 'Handle with care'
     };
 
+
     it('should create a new delivery when authenticated as admin', async () => {
       const mockDelivery = createMockDelivery();
 
@@ -82,6 +83,28 @@ describe('Delivery Endpoints', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.message).toBe('Delivery created successfully');
       expect(MockedDeliveryService.prototype.createDelivery).toHaveBeenCalledWith(validDeliveryData, 'user123');
+    });
+
+    it('should create a new delivery without homeDelivery', async () => {
+      const mockDelivery = createMockDelivery({
+        homeDelivery: undefined,
+        homeDeliveryCost: 0,
+        totalCost: 115000 // Auto-calculated: 50000 + 0 + 30000 + 15000 + 20000
+      });
+
+      MockedDeliveryService.prototype.createDelivery.mockResolvedValue(mockDelivery);
+
+      const requestData = createMockDeliveryRequestWithoutHome();
+
+      const response = await request(app)
+        .post('/api/delivery')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send(requestData)
+        .expect(201);
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('Delivery created successfully');
+      expect(response.body.data.delivery).toEqualWithDateStrings(mockDelivery);
+      expect(MockedDeliveryService.prototype.createDelivery).toHaveBeenCalledWith(requestData, 'admin123');
     });
 
     it('should return 401 when not authenticated', async () => {
