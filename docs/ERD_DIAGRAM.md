@@ -7,6 +7,7 @@ erDiagram
     USERS ||--o{ DELIVERIES : creates
     USERS ||--o{ MONEY_DELIVERIES : creates
     USERS ||--o{ USER_ROUTES : "assigned to"
+    USERS }o--|| ROUTES : "has selected route"
     ROUTES ||--o{ USER_ROUTES : "contains"
     ROUTES ||--o{ DELIVERIES : "from route"
     ROUTES ||--o{ DELIVERIES : "to route"
@@ -22,6 +23,7 @@ erDiagram
         string username UK "unique, 3-50 chars"
         string password "hashed, min 6 chars"
         enum role "superadmin|admin|manager|user"
+        ObjectId selectedRouteId FK "ref: ROUTES, optional"
         datetime createdAt
         datetime updatedAt
     }

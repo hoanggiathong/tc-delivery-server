@@ -134,7 +134,7 @@ export const deliveryParamsSchema = z.object({
 
 // Schema for getting next delivery code
 export const getNextCodeSchema = z.object({
-  body: z.object({
+  query: z.object({
     toRouteId: z.string()
       .min(1, 'To route ID is required')
       .regex(/^[0-9a-fA-F]{24}$/, 'Please provide a valid to route ID')
@@ -180,7 +180,7 @@ export const frequentCustomersSchema = z.object({
 
 export type CreateDeliveryRequest = z.infer<typeof createDeliverySchema>['body'];
 export type UpdateDeliveryRequest = z.infer<typeof updateDeliverySchema>['body'];
-export type GetNextCodeRequest = z.infer<typeof getNextCodeSchema>['body'];
+export type GetNextCodeRequest = z.infer<typeof getNextCodeSchema>['query'];
 export type DeliveryCodeParams = z.infer<typeof deliveryCodeSchema>['params'];
 export type FrequentCustomersParams = z.infer<typeof frequentCustomersSchema>['params'];
 export type FrequentCustomersQuery = z.infer<typeof frequentCustomersSchema>['query'];

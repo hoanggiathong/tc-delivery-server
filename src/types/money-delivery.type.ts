@@ -15,6 +15,7 @@ export interface IMoneyDeliveryResponse extends BaseEntity {
   toRoute: IRouteResponse;
   sendMoneyAmount: number;
   sendCost: number;
+  totalCost: number;
   notes?: string;
   createdByUser: string;
 }
@@ -64,6 +65,7 @@ export interface IMoneyDeliveryWithPopulatedRefs {
   toRoute: IRoute;
   sendMoneyAmount: number;
   sendCost: number;
+  totalCost: number;
   notes?: string;
   createdByUser: {
     _id: string;
@@ -128,6 +130,7 @@ export interface IMoneyDeliveryLeanPopulated {
   };
   sendMoneyAmount: number;
   sendCost: number;
+  totalCost: number;
   notes?: string;
   createdByUser: {
     _id: string;
@@ -149,6 +152,7 @@ export interface IFrequentMoneyCustomer {
   deliveryCount: number;
   totalSendMoneyAmount: number;
   totalSendCost: number;
+  totalCost: number;
   lastDeliveryDate: Date;
   firstDeliveryDate: Date;
 }

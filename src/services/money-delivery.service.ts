@@ -84,6 +84,7 @@ export class MoneyDeliveryService {
       },
       sendMoneyAmount: populated.sendMoneyAmount,
       sendCost: populated.sendCost,
+      totalCost: populated.totalCost,
       notes: populated.notes,
       createdByUser: populated.createdByUser.username,
       createdAt: populated.createdAt,
@@ -128,6 +129,7 @@ export class MoneyDeliveryService {
       },
       sendMoneyAmount: moneyDelivery.sendMoneyAmount,
       sendCost: moneyDelivery.sendCost,
+      totalCost: moneyDelivery.totalCost,
       notes: moneyDelivery.notes,
       createdByUser: moneyDelivery.createdByUser.username,
       createdAt: moneyDelivery.createdAt,
@@ -461,6 +463,7 @@ export class MoneyDeliveryService {
             deliveryCount: { $sum: 1 },
             totalSendMoneyAmount: { $sum: '$sendMoneyAmount' },
             totalSendCost: { $sum: '$sendCost' },
+            totalCost: { $sum: '$totalCost' },
             lastDeliveryDate: { $max: '$createdAt' },
             firstDeliveryDate: { $min: '$createdAt' },
             senderInfo: { $first: '$sender' }
@@ -503,6 +506,7 @@ export class MoneyDeliveryService {
         deliveryCount: item.deliveryCount,
         totalSendMoneyAmount: item.totalSendMoneyAmount,
         totalSendCost: item.totalSendCost,
+        totalCost: item.totalCost,
         lastDeliveryDate: item.lastDeliveryDate,
         firstDeliveryDate: item.firstDeliveryDate
       }));

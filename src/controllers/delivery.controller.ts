@@ -496,30 +496,65 @@ export class DeliveryController {
   /**
    * @swagger
    * /api/delivery/next-code:
-   *   post:
+   *   get:
    *     summary: Get next available delivery code
    *     tags: [Delivery]
    *     security:
    *       - bearerAuth: []
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             required:
-   *               - toRouteId
-   *             properties:
-   *               toRouteId:
-   *                 type: string
-   *                 description: ObjectId of the destination route
+   *     parameters:
+   *       - in: query
+   *         name: toRouteId
+   *         required: true
+   *         schema:
+   *           type: string
+   *           pattern: '^[0-9a-fA-F]{24}$'
+   *         description: ObjectId of the destination route
+   *         example: "507f1f77bcf86cd799439011"
    *     responses:
    *       200:
    *         description: Next code retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Next delivery code retrieved successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     nextCode:
+   *                       type: string
+   *                       example: "2401250001"
+   *                       description: The next available delivery code
+   *                     toRoute:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           example: "507f1f77bcf86cd799439011"
+   *                         code:
+   *                           type: string
+   *                           example: "T1"
+   *                         name:
+   *                           type: string
+   *                           example: "Ha Noi"
+   *                         createdAt:
+   *                           type: string
+   *                           format: date-time
+   *                         updatedAt:
+   *                           type: string
+   *                           format: date-time
    *       400:
    *         description: Validation error
    *       401:
    *         description: Unauthorized
+   *       404:
+   *         description: Route not found
    */
   getNextCode = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
@@ -532,8 +567,8 @@ export class DeliveryController {
         return;
       }
 
-      const { toRouteId } = req.body;
-      const nextCodeData = await this.deliveryService.getNextCode(toRouteId);
+      const { toRouteId } = req.query;
+      const nextCodeData = await this.deliveryService.getNextCode(toRouteId as string);
 
       Logger.info('Next delivery code retrieved successfully', {
         nextCode: nextCodeData.nextCode,

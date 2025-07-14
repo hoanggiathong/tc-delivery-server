@@ -7,6 +7,7 @@ export interface IUser extends Document {
   username: string;
   password: string;
   role: UserRole;
+  selectedRouteId?: string;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -33,6 +34,12 @@ const userSchema = new Schema<IUser>({
     enum: Object.values(UserRole),
     default: UserRole.USER,
     required: true
+  },
+  selectedRouteId: {
+    type: String,
+    ref: 'Route',
+    required: false,
+    default: null
   }
 }, {
   timestamps: true,

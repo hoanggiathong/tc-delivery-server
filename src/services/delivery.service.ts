@@ -559,7 +559,7 @@ export class DeliveryService {
               toRouteName: '$toRoute.name'
             },
             deliveryCount: { $sum: 1 },
-            totalCost: { $sum: '$cost' },
+            totalCost: { $sum: '$totalCost' },
             totalItemValue: { $sum: '$itemValue' },
             lastDeliveryDate: { $max: '$createdAt' },
             firstDeliveryDate: { $min: '$createdAt' },

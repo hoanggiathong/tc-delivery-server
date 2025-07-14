@@ -39,6 +39,7 @@ describe("AuthService", () => {
     // Set up default User model mocks using jest.fn()
     (MockedUser.findOne as any) = jest.fn();
     (MockedUser.findById as any) = jest.fn();
+    (MockedUser.findByIdAndUpdate as any) = jest.fn();
     (MockedUser.find as any) = jest.fn();
     MockedUser.mockImplementation(() => mockUserInstance);
   });
@@ -273,6 +274,104 @@ describe("AuthService", () => {
       expect(MockedUser.find).toHaveBeenCalledWith({ role: { $in: roles } });
       expect(result).toHaveLength(1);
       expect(result[0].role).toBe(UserRole.ADMIN);
+    });
+  });
+
+  describe("updateSelectedRoute", () => {
+    it("should update selected route successfully", async () => {
+      const userId = "user123";
+      const updateData = { selectedRouteId: "route456" };
+      const updatedUser = {
+        ...mockUserInstance,
+        selectedRouteId: "route456",
+      };
+
+      // Mock findByIdAndUpdate to return a chainable object with select method
+      (MockedUser.findByIdAndUpdate as any).mockReturnValue({
+        select: jest.fn().mockResolvedValue(updatedUser),
+      });
+
+      const result = await authService.updateSelectedRoute(userId, updateData);
+
+      expect(MockedUser.findByIdAndUpdate).toHaveBeenCalledWith(
+        userId,
+        { selectedRouteId: updateData.selectedRouteId },
+        { new: true }
+      );
+      expect(result.user).toEqual({
+        id: "user123",
+        username: "testuser",
+        role: UserRole.USER,
+        selectedRouteId: "route456",
+        createdAt: mockUserInstance.createdAt,
+        updatedAt: mockUserInstance.updatedAt,
+      });
+    });
+
+    it("should throw error when user not found", async () => {
+      const userId = "nonexistent";
+      const updateData = { selectedRouteId: "route456" };
+
+      // Mock findByIdAndUpdate to return null
+      (MockedUser.findByIdAndUpdate as any).mockReturnValue({
+        select: jest.fn().mockResolvedValue(null),
+      });
+
+      await expect(
+        authService.updateSelectedRoute(userId, updateData)
+      ).rejects.toThrow("User not found");
+
+      expect(MockedUser.findByIdAndUpdate).toHaveBeenCalledWith(
+        userId,
+        { selectedRouteId: updateData.selectedRouteId },
+        { new: true }
+      );
+    });
+
+    it("should clear selected route when selectedRouteId is null", async () => {
+      const userId = "user123";
+      const updateData = { selectedRouteId: null };
+      const updatedUser = {
+        ...mockUserInstance,
+        selectedRouteId: null,
+      };
+
+      // Mock findByIdAndUpdate to return a chainable object with select method
+      (MockedUser.findByIdAndUpdate as any).mockReturnValue({
+        select: jest.fn().mockResolvedValue(updatedUser),
+      });
+
+      const result = await authService.updateSelectedRoute(userId, updateData);
+
+      expect(MockedUser.findByIdAndUpdate).toHaveBeenCalledWith(
+        userId,
+        { selectedRouteId: null },
+        { new: true }
+      );
+      expect(result.user.selectedRouteId).toBeNull();
+    });
+
+    it("should handle undefined selectedRouteId", async () => {
+      const userId = "user123";
+      const updateData = { selectedRouteId: undefined };
+      const updatedUser = {
+        ...mockUserInstance,
+        selectedRouteId: undefined,
+      };
+
+      // Mock findByIdAndUpdate to return a chainable object with select method
+      (MockedUser.findByIdAndUpdate as any).mockReturnValue({
+        select: jest.fn().mockResolvedValue(updatedUser),
+      });
+
+      const result = await authService.updateSelectedRoute(userId, updateData);
+
+      expect(MockedUser.findByIdAndUpdate).toHaveBeenCalledWith(
+        userId,
+        { selectedRouteId: undefined },
+        { new: true }
+      );
+      expect(result.user.selectedRouteId).toBeUndefined();
     });
   });
 });

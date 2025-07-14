@@ -273,4 +273,159 @@ describe('Auth Endpoints', () => {
       expect(response.body.message).toBe('Database connection failed');
     });
   });
+
+  describe('PUT /api/auth/update-selected-route', () => {
+    it('should update selected route successfully', async () => {
+      const updateData = { selectedRouteId: 'route123' };
+      const mockUser = {
+        id: 'user123',
+        username: 'testuser',
+        role: UserRole.USER,
+        selectedRouteId: 'route123',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      MockedAuthService.prototype.updateSelectedRoute.mockResolvedValue({ user: mockUser });
+
+      const response = await request(app)
+        .put('/api/auth/update-selected-route')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send(updateData)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('Selected route updated successfully');
+      expect(response.body.data.user).toEqualWithDateStrings(mockUser);
+      expect(MockedAuthService.prototype.updateSelectedRoute).toHaveBeenCalledWith('user123', updateData);
+    });
+
+    it('should clear selected route when selectedRouteId is null', async () => {
+      const updateData = { selectedRouteId: null };
+      const mockUser = {
+        id: 'user123',
+        username: 'testuser',
+        role: UserRole.USER,
+        selectedRouteId: null,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      MockedAuthService.prototype.updateSelectedRoute.mockResolvedValue({ user: mockUser });
+
+      const response = await request(app)
+        .put('/api/auth/update-selected-route')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send(updateData)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('Selected route updated successfully');
+      expect(response.body.data.user.selectedRouteId).toBeNull();
+    });
+
+    it('should return 401 when not authenticated', async () => {
+      const updateData = { selectedRouteId: 'route123' };
+
+      const response = await request(app)
+        .put('/api/auth/update-selected-route')
+        .send(updateData)
+        .expect(401);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Access token is required');
+    });
+
+    it('should return 404 when user not found', async () => {
+      const updateData = { selectedRouteId: 'route123' };
+
+      MockedAuthService.prototype.updateSelectedRoute.mockRejectedValue(
+        new Error('User not found')
+      );
+
+      const response = await request(app)
+        .put('/api/auth/update-selected-route')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send(updateData)
+        .expect(404);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('User not found');
+    });
+
+    it('should return 500 when service throws error', async () => {
+      const updateData = { selectedRouteId: 'route123' };
+
+      MockedAuthService.prototype.updateSelectedRoute.mockRejectedValue(
+        new Error('Database error')
+      );
+
+      const response = await request(app)
+        .put('/api/auth/update-selected-route')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send(updateData)
+        .expect(500);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Database error');
+    });
+
+    it('should return 400 for validation errors', async () => {
+      const invalidData = { selectedRouteId: '' }; // Empty string should fail validation
+
+      const response = await request(app)
+        .put('/api/auth/update-selected-route')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send(invalidData)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Validation failed');
+    });
+
+    it('should accept null value for selectedRouteId without validation error', async () => {
+      const nullData = { selectedRouteId: null };
+      const mockUser = {
+        id: 'user123',
+        username: 'testuser',
+        role: UserRole.USER,
+        selectedRouteId: null,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      MockedAuthService.prototype.updateSelectedRoute.mockResolvedValue({ user: mockUser });
+
+      const response = await request(app)
+        .put('/api/auth/update-selected-route')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send(nullData)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.user.selectedRouteId).toBeNull();
+    });
+
+    it('should accept undefined selectedRouteId as optional field', async () => {
+      const undefinedData = {}; // No selectedRouteId field
+      const mockUser = {
+        id: 'user123',
+        username: 'testuser',
+        role: UserRole.USER,
+        selectedRouteId: undefined,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      MockedAuthService.prototype.updateSelectedRoute.mockResolvedValue({ user: mockUser });
+
+      const response = await request(app)
+        .put('/api/auth/update-selected-route')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send(undefinedData)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+    });
+  });
 });

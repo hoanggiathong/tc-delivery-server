@@ -326,7 +326,7 @@ describe('Delivery Endpoints', () => {
     });
   });
 
-  describe('POST /api/delivery/next-code', () => {
+  describe('GET /api/delivery/next-code', () => {
     it('should get the next delivery code successfully', async () => {
       const mockNextCodeResponse = {
         nextCode: '2401250001',
@@ -342,9 +342,9 @@ describe('Delivery Endpoints', () => {
       MockedDeliveryService.prototype.getNextCode.mockResolvedValue(mockNextCodeResponse);
 
       const response = await request(app)
-        .post('/api/delivery/next-code')
+        .get('/api/delivery/next-code')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ toRouteId: '507f1f77bcf86cd799439012' })
+        .query({ toRouteId: '507f1f77bcf86cd799439012' })
         .expect(200);
 
       expect(response.body.success).toBe(true);
@@ -357,9 +357,9 @@ describe('Delivery Endpoints', () => {
       );
 
       const response = await request(app)
-        .post('/api/delivery/next-code')
+        .get('/api/delivery/next-code')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ toRouteId: '507f1f77bcf86cd799439011' })
+        .query({ toRouteId: '507f1f77bcf86cd799439011' })
         .expect(404);
 
       expect(response.body.success).toBe(false);

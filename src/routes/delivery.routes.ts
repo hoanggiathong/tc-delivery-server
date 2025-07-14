@@ -212,7 +212,7 @@ router.post('/', validate(createDeliverySchema), deliveryController.createDelive
 router.get('/', deliveryController.getAllDeliveries);
 
 // Next code route (must be before /:id to avoid conflicts)
-router.post('/next-code', validate(getNextCodeSchema), deliveryController.getNextCode);
+router.get('/next-code', validate(getNextCodeSchema), deliveryController.getNextCode);
 
 // Get delivery by code route (must be before /:id to avoid conflicts)
 router.get('/code/:deliveryIdentifier', validate(deliveryCodeSchema), deliveryController.getDeliveryByCode);

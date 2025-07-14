@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { AuthService } from '@/services/auth.service';
-import { LoginRequest, RegisterRequest, CreateUserRequest } from '@/schemas/auth.schema';
+import { LoginRequest, RegisterRequest, CreateUserRequest, UpdateSelectedRouteRequest } from '@/schemas/auth.schema';
 import { AuthRequest, ApiResponse, UserRole } from '@/types';
 import { IUserResponse } from '@/types/user.type';
 
@@ -297,6 +297,71 @@ export class AuthController {
       };
 
       res.status(500).json(response);
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/auth/update-selected-route:
+   *   put:
+   *     summary: Update user's selected route
+   *     tags: [Auth]
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               selectedRouteId:
+   *                 type: string
+   *                 nullable: true
+   *                 description: Route ID to set as selected (null to clear)
+   *     responses:
+   *       200:
+   *         description: Selected route updated successfully
+   *       401:
+   *         description: Unauthorized
+   *       404:
+   *         description: User not found
+   *       500:
+   *         description: Internal server error
+   */
+  updateSelectedRoute = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const data: UpdateSelectedRouteRequest = req.body;
+      const result = await this.authService.updateSelectedRoute(req.user.userId, data);
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Selected route updated successfully',
+        data: result,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      console.error('Update selected route error:', error);
+
+      const message = error instanceof Error ? error.message : 'Failed to update selected route';
+      const statusCode = message === 'User not found' ? 404 : 500;
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(statusCode).json(response);
     }
   };
 }

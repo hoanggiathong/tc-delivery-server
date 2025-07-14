@@ -9,7 +9,7 @@ import {
   transformUsersLeanToResponse,
   UserRole
 } from '@/types';
-import { LoginRequest, RegisterRequest, CreateUserRequest } from '@/schemas/auth.schema';
+import { LoginRequest, RegisterRequest, CreateUserRequest, UpdateSelectedRouteRequest } from '@/schemas/auth.schema';
 
 export class AuthService {
   async register(data: RegisterRequest): Promise<{ user: IUserResponse }> {
@@ -140,6 +140,30 @@ export class AuthService {
       return transformUsersLeanToResponse(users as IUserLean[]);
     } catch (error) {
       throw new Error('Failed to get users by roles');
+    }
+  }
+
+  /**
+   * Update selected route for user
+   */
+  async updateSelectedRoute(userId: string, data: UpdateSelectedRouteRequest): Promise<{ user: IUserResponse }> {
+    try {
+      const user = await User.findByIdAndUpdate(
+        userId,
+        { selectedRouteId: data.selectedRouteId },
+        { new: true }
+      ).select('-password');
+
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      return { user: transformUserToResponse(user) };
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to update selected route');
     }
   }
 }

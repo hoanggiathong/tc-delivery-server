@@ -34,6 +34,7 @@ export const createMockMoneyDelivery = (overrides: Partial<IMoneyDeliveryRespons
     },
     sendMoneyAmount: 1000000,
     sendCost: 50000,
+    totalCost: 50000, // sendCost only
     createdByUser: 'testuser',
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2023-01-01'),
@@ -79,6 +80,7 @@ export const createMockFrequentCustomersResult = (overrides: any = {}) => {
         deliveryCount: 5,
         totalSendMoneyAmount: 5000000,
         totalSendCost: 250000,
+        totalCost: 250000, // totalSendCost only
         lastDeliveryDate: new Date('2024-01-25'),
         firstDeliveryDate: new Date('2024-01-20'),
       },
@@ -96,12 +98,15 @@ export const createMockFrequentCustomersResult = (overrides: any = {}) => {
 };
 
 export const createMockMoneyDeliveryList = (count: number = 3): IMoneyDeliveryResponse[] => {
-  return Array.from({ length: count }, (_, index) =>
-    createMockMoneyDelivery({
+  return Array.from({ length: count }, (_, index) => {
+    const sendMoneyAmount = 500000 + (index * 100000);
+    const sendCost = 25000 + (index * 5000);
+    return createMockMoneyDelivery({
       id: `money-delivery-id-${index + 1}`,
       code: `240125000${index + 1}`,
-      sendMoneyAmount: 500000 + (index * 100000),
-      sendCost: 25000 + (index * 5000)
-    })
-  );
+      sendMoneyAmount,
+      sendCost,
+      totalCost: sendCost
+    });
+  });
 };

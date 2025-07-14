@@ -40,6 +40,16 @@ export const createUserSchema = z.object({
   })
 });
 
+export const updateSelectedRouteSchema = z.object({
+  body: z.object({
+    selectedRouteId: z.string()
+      .min(1, 'Route ID is required')
+      .optional()
+      .or(z.null())
+  })
+});
+
 export type LoginRequest = z.infer<typeof loginSchema>['body'];
 export type RegisterRequest = z.infer<typeof registerSchema>['body'];
 export type CreateUserRequest = z.infer<typeof createUserSchema>['body'];
+export type UpdateSelectedRouteRequest = z.infer<typeof updateSelectedRouteSchema>['body'];

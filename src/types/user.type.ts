@@ -41,6 +41,7 @@ export interface IUserBase {
   _id: string;
   username: string;
   role: UserRole;
+  selectedRouteId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -51,6 +52,7 @@ export interface IUser extends Document {
   username: string;
   password: string;
   role: UserRole;
+  selectedRouteId?: string | null;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -61,6 +63,7 @@ export interface IUserResponse {
   id: string;
   username: string;
   role: UserRole;
+  selectedRouteId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -77,6 +80,7 @@ export interface IUserLean {
   _id: string;
   username: string;
   role: UserRole;
+  selectedRouteId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -98,6 +102,7 @@ export const transformUserToResponse = (user: IUser): IUserResponse => {
     id: user._id.toString(),
     username: user.username,
     role: user.role,
+    selectedRouteId: user.selectedRouteId,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt
   };
@@ -112,6 +117,7 @@ export const transformUserLeanToResponse = (user: IUserLean): IUserResponse => {
     id: user._id.toString(),
     username: user.username,
     role: user.role,
+    selectedRouteId: user.selectedRouteId,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt
   };
