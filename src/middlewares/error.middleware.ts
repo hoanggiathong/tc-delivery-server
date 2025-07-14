@@ -34,8 +34,7 @@ const handleValidationErrorDB = (err: any) => {
   return new AppError(message, 400);
 };
 
-const handleJWTError = () =>
-  new AppError('Invalid token. Please log in again!', 401);
+const handleJWTError = () => new AppError('Invalid token. Please log in again!', 401);
 
 const handleJWTExpiredError = () =>
   new AppError('Your token has expired! Please log in again.', 401);
@@ -47,11 +46,13 @@ const sendErrorDev = (err: any, res: Response) => {
   const response: ApiResponse = {
     success: false,
     message: err.message,
-    errors: [{
-      error: err,
-      message: err.message,
-      stack: err.stack
-    }]
+    errors: [
+      {
+        error: err,
+        message: err.message,
+        stack: err.stack,
+      },
+    ],
   };
 
   res.status(err.statusCode || 500).json(response);
@@ -62,7 +63,7 @@ const sendErrorProd = (err: any, res: Response) => {
   if (err.isOperational) {
     const response: ApiResponse = {
       success: false,
-      message: err.message
+      message: err.message,
     };
 
     res.status(err.statusCode).json(response);
@@ -72,7 +73,7 @@ const sendErrorProd = (err: any, res: Response) => {
 
     const response: ApiResponse = {
       success: false,
-      message: 'Something went wrong!'
+      message: 'Something went wrong!',
     };
 
     res.status(500).json(response);
@@ -94,11 +95,21 @@ export const globalErrorHandler = (
     let error = { ...err };
     error.message = err.message;
 
-    if (error.name === 'CastError') error = handleCastErrorDB(error);
-    if (error.code === 11000) error = handleDuplicateFieldsDB(error);
-    if (error.name === 'ValidationError') error = handleValidationErrorDB(error);
-    if (error.name === 'JsonWebTokenError') error = handleJWTError();
-    if (error.name === 'TokenExpiredError') error = handleJWTExpiredError();
+    if (error.name === 'CastError') {
+      error = handleCastErrorDB(error);
+    }
+    if (error.code === 11000) {
+      error = handleDuplicateFieldsDB(error);
+    }
+    if (error.name === 'ValidationError') {
+      error = handleValidationErrorDB(error);
+    }
+    if (error.name === 'JsonWebTokenError') {
+      error = handleJWTError();
+    }
+    if (error.name === 'TokenExpiredError') {
+      error = handleJWTExpiredError();
+    }
 
     sendErrorProd(error, res);
   }

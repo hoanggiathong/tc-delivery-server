@@ -1,4 +1,4 @@
-import { BaseEntity } from ".";
+import { BaseEntity } from '.';
 import { IUserResponse } from './user.type';
 import { IRouteResponse } from './route.type';
 

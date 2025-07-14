@@ -71,7 +71,8 @@ export interface IDeliveryUpdateRequest {
 }
 
 // Interface for populated delivery (when sender, receiver, fromRoute, toRoute, createdByUser are populated)
-export interface IDeliveryPopulated extends Omit<IDelivery, 'sender' | 'receiver' | 'fromRoute' | 'toRoute' | 'createdByUser'> {
+export interface IDeliveryPopulated
+  extends Omit<IDelivery, 'sender' | 'receiver' | 'fromRoute' | 'toRoute' | 'createdByUser'> {
   sender: ICustomer;
   receiver: ICustomer;
   fromRoute: IRoute;

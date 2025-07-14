@@ -3,7 +3,11 @@ import app from '../../src/app';
 import jwt from 'jsonwebtoken';
 import { UserRole } from '../../src/types/user.type';
 import { DeliveryService } from '../../src/services/delivery.service';
-import { createMockDelivery, createMockCustomer, createMockDeliveryRequestWithoutHome } from '../mocks';
+import {
+  createMockDelivery,
+  createMockCustomer,
+  createMockDeliveryRequestWithoutHome,
+} from '../mocks';
 
 // Mock DeliveryService
 jest.mock('../../src/services/delivery.service');
@@ -47,9 +51,8 @@ describe('Delivery Endpoints', () => {
       collectCost: 15000,
       collectForCustomer: 25000,
       collectForCustomerCost: 20000,
-      collectForCustomerNote: 'Handle with care'
+      collectForCustomerNote: 'Handle with care',
     };
-
 
     it('should create a new delivery when authenticated as admin', async () => {
       const mockDelivery = createMockDelivery();
@@ -64,12 +67,15 @@ describe('Delivery Endpoints', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.message).toBe('Delivery created successfully');
       expect(response.body.data.delivery).toEqualWithDateStrings(mockDelivery);
-      expect(MockedDeliveryService.prototype.createDelivery).toHaveBeenCalledWith(validDeliveryData, 'admin123');
+      expect(MockedDeliveryService.prototype.createDelivery).toHaveBeenCalledWith(
+        validDeliveryData,
+        'admin123'
+      );
     });
 
     it('should create a new delivery when authenticated as regular user', async () => {
       const mockDelivery = createMockDelivery({
-        createdByUser: 'testuser'
+        createdByUser: 'testuser',
       });
 
       MockedDeliveryService.prototype.createDelivery.mockResolvedValue(mockDelivery);
@@ -82,14 +88,17 @@ describe('Delivery Endpoints', () => {
 
       expect(response.body.success).toBe(true);
       expect(response.body.message).toBe('Delivery created successfully');
-      expect(MockedDeliveryService.prototype.createDelivery).toHaveBeenCalledWith(validDeliveryData, 'user123');
+      expect(MockedDeliveryService.prototype.createDelivery).toHaveBeenCalledWith(
+        validDeliveryData,
+        'user123'
+      );
     });
 
     it('should create a new delivery without homeDelivery', async () => {
       const mockDelivery = createMockDelivery({
         homeDelivery: undefined,
         homeDeliveryCost: 0,
-        totalCost: 115000 // Auto-calculated: 50000 + 0 + 30000 + 15000 + 20000
+        totalCost: 115000, // Auto-calculated: 50000 + 0 + 30000 + 15000 + 20000
       });
 
       MockedDeliveryService.prototype.createDelivery.mockResolvedValue(mockDelivery);
@@ -104,14 +113,14 @@ describe('Delivery Endpoints', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.message).toBe('Delivery created successfully');
       expect(response.body.data.delivery).toEqualWithDateStrings(mockDelivery);
-      expect(MockedDeliveryService.prototype.createDelivery).toHaveBeenCalledWith(requestData, 'admin123');
+      expect(MockedDeliveryService.prototype.createDelivery).toHaveBeenCalledWith(
+        requestData,
+        'admin123'
+      );
     });
 
     it('should return 401 when not authenticated', async () => {
-      const response = await request(app)
-        .post('/api/delivery')
-        .send(validDeliveryData)
-        .expect(401);
+      const response = await request(app).post('/api/delivery').send(validDeliveryData).expect(401);
 
       expect(response.body.success).toBe(false);
       expect(response.body.message).toBe('Access token is required');
@@ -159,16 +168,28 @@ describe('Delivery Endpoints', () => {
       senderPhone: '+1111111111',
       fromRouteId: '507f1f77bcf86cd799439013',
       toRouteId: '507f1f77bcf86cd799439014',
-      cost: 75000
+      cost: 75000,
     };
 
     it('should update delivery successfully', async () => {
       const mockUpdatedDelivery = createMockDelivery({
         id: deliveryId,
         sender: createMockCustomer({ name: 'Updated Sender', phone: '+1111111111' }),
-        fromRoute: { id: '507f1f77bcf86cd799439013', code: 'T3', name: 'Can Tho', createdAt: new Date('2025-06-27T07:51:17.342Z'), updatedAt: new Date('2025-06-27T07:51:17.342Z') },
-        toRoute: { id: '507f1f77bcf86cd799439014', code: 'T4', name: 'An Giang', createdAt: new Date('2025-06-27T07:51:17.342Z'), updatedAt: new Date('2025-06-27T07:51:17.342Z') },
-        cost: 75000
+        fromRoute: {
+          id: '507f1f77bcf86cd799439013',
+          code: 'T3',
+          name: 'Can Tho',
+          createdAt: new Date('2025-06-27T07:51:17.342Z'),
+          updatedAt: new Date('2025-06-27T07:51:17.342Z'),
+        },
+        toRoute: {
+          id: '507f1f77bcf86cd799439014',
+          code: 'T4',
+          name: 'An Giang',
+          createdAt: new Date('2025-06-27T07:51:17.342Z'),
+          updatedAt: new Date('2025-06-27T07:51:17.342Z'),
+        },
+        cost: 75000,
       });
 
       MockedDeliveryService.prototype.updateDelivery.mockResolvedValue(mockUpdatedDelivery);
@@ -182,7 +203,10 @@ describe('Delivery Endpoints', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.message).toBe('Delivery updated successfully');
       expect(response.body.data.delivery).toEqualWithDateStrings(mockUpdatedDelivery);
-      expect(MockedDeliveryService.prototype.updateDelivery).toHaveBeenCalledWith(deliveryId, updateData);
+      expect(MockedDeliveryService.prototype.updateDelivery).toHaveBeenCalledWith(
+        deliveryId,
+        updateData
+      );
     });
 
     it('should return 404 when delivery not found', async () => {
@@ -264,8 +288,8 @@ describe('Delivery Endpoints', () => {
           id: 'delivery1',
           name: 'Package 1',
           sender: createMockCustomer({ id: 'sender1', name: 'John Sender' }),
-          receiver: createMockCustomer({ id: 'receiver1', name: 'Jane Receiver' })
-        })
+          receiver: createMockCustomer({ id: 'receiver1', name: 'Jane Receiver' }),
+        }),
       ];
 
       MockedDeliveryService.prototype.getAllDeliveries.mockResolvedValue(mockDeliveries);
@@ -334,9 +358,9 @@ describe('Delivery Endpoints', () => {
           id: '507f1f77bcf86cd799439012',
           code: 'T2',
           name: 'Ha Noi',
-          createdAt: new Date("2025-06-27"),
-          updatedAt: new Date("2025-06-27")
-        }
+          createdAt: new Date('2025-06-27'),
+          updatedAt: new Date('2025-06-27'),
+        },
       };
 
       MockedDeliveryService.prototype.getNextCode.mockResolvedValue(mockNextCodeResponse);
@@ -352,9 +376,7 @@ describe('Delivery Endpoints', () => {
     });
 
     it('should return 404 when route not found', async () => {
-      MockedDeliveryService.prototype.getNextCode.mockRejectedValue(
-        new Error('Route not found')
-      );
+      MockedDeliveryService.prototype.getNextCode.mockRejectedValue(new Error('Route not found'));
 
       const response = await request(app)
         .get('/api/delivery/next-code')
@@ -382,7 +404,9 @@ describe('Delivery Endpoints', () => {
 
       expect(response.body.success).toBe(true);
       expect(response.body.data.delivery).toEqualWithDateStrings(mockDelivery);
-      expect(MockedDeliveryService.prototype.getDeliveryByCode).toHaveBeenCalledWith(deliveryIdentifier);
+      expect(MockedDeliveryService.prototype.getDeliveryByCode).toHaveBeenCalledWith(
+        deliveryIdentifier
+      );
     });
 
     it('should return 404 when delivery not found', async () => {
@@ -403,10 +427,12 @@ describe('Delivery Endpoints', () => {
 
     it('should get related deliveries successfully', async () => {
       const mockRelatedDeliveries = [
-        createMockDelivery({ sender: createMockCustomer({ name: 'John Sender' }) })
+        createMockDelivery({ sender: createMockCustomer({ name: 'John Sender' }) }),
       ];
 
-      MockedDeliveryService.prototype.getRelatedDeliveriesBySender.mockResolvedValue(mockRelatedDeliveries);
+      MockedDeliveryService.prototype.getRelatedDeliveriesBySender.mockResolvedValue(
+        mockRelatedDeliveries
+      );
 
       const response = await request(app)
         .get(`/api/delivery/related/${senderName}`)

@@ -4,7 +4,7 @@ import Logger from '@/utils/logger';
 
 // Mock Logger
 jest.mock('@/utils/logger', () => ({
-  error: jest.fn()
+  error: jest.fn(),
 }));
 
 const mockedLogger = Logger as jest.Mocked<typeof Logger>;
@@ -20,7 +20,7 @@ describe('Error Middleware', () => {
     mockRequest = {};
     mockResponse = {
       status: jest.fn().mockReturnThis(),
-      json: jest.fn()
+      json: jest.fn(),
     };
     mockNext = jest.fn();
   });
@@ -65,12 +65,7 @@ describe('Error Middleware', () => {
       it('should send detailed error in development', () => {
         const error = new AppError('Test error', 400);
 
-        globalErrorHandler(
-          error,
-          mockRequest as Request,
-          mockResponse as Response,
-          mockNext
-        );
+        globalErrorHandler(error, mockRequest as Request, mockResponse as Response, mockNext);
 
         expect(mockedLogger.error).toHaveBeenCalledWith(`Error: ${error.message}`);
         expect(mockedLogger.error).toHaveBeenCalledWith(`Stack: ${error.stack}`);
@@ -78,23 +73,20 @@ describe('Error Middleware', () => {
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
           message: error.message,
-          errors: [{
-            error: error,
-            message: error.message,
-            stack: error.stack
-          }]
+          errors: [
+            {
+              error: error,
+              message: error.message,
+              stack: error.stack,
+            },
+          ],
         });
       });
 
       it('should use default status code 500 if not provided', () => {
         const error = new Error('Test error without status code');
 
-        globalErrorHandler(
-          error,
-          mockRequest as Request,
-          mockResponse as Response,
-          mockNext
-        );
+        globalErrorHandler(error, mockRequest as Request, mockResponse as Response, mockNext);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
       });
@@ -112,17 +104,12 @@ describe('Error Middleware', () => {
       it('should send operational error details in production', () => {
         const error = new AppError('User not found', 404);
 
-        globalErrorHandler(
-          error,
-          mockRequest as Request,
-          mockResponse as Response,
-          mockNext
-        );
+        globalErrorHandler(error, mockRequest as Request, mockResponse as Response, mockNext);
 
         expect(mockResponse.status).toHaveBeenCalledWith(404);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
-          message: error.message
+          message: error.message,
         });
       });
 
@@ -130,18 +117,13 @@ describe('Error Middleware', () => {
         const error = new Error('Database connection failed');
         (error as any).statusCode = 500;
 
-        globalErrorHandler(
-          error,
-          mockRequest as Request,
-          mockResponse as Response,
-          mockNext
-        );
+        globalErrorHandler(error, mockRequest as Request, mockResponse as Response, mockNext);
 
         expect(mockedLogger.error).toHaveBeenCalledWith('ERROR:', expect.any(Object));
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
-          message: 'Something went wrong!'
+          message: 'Something went wrong!',
         });
       });
 
@@ -150,41 +132,32 @@ describe('Error Middleware', () => {
           name: 'CastError',
           path: 'id',
           value: 'invalid-id',
-          message: 'Cast to ObjectId failed'
+          message: 'Cast to ObjectId failed',
         };
 
-        globalErrorHandler(
-          error,
-          mockRequest as Request,
-          mockResponse as Response,
-          mockNext
-        );
+        globalErrorHandler(error, mockRequest as Request, mockResponse as Response, mockNext);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
-          message: 'Invalid id: invalid-id.'
+          message: 'Invalid id: invalid-id.',
         });
       });
 
       it('should handle duplicate field error', () => {
         const error = {
           code: 11000,
-          errmsg: 'E11000 duplicate key error collection: test.users index: email_1 dup key: { email: "test@example.com" }',
-          message: 'Duplicate field value'
+          errmsg:
+            'E11000 duplicate key error collection: test.users index: email_1 dup key: { email: "test@example.com" }',
+          message: 'Duplicate field value',
         };
 
-        globalErrorHandler(
-          error,
-          mockRequest as Request,
-          mockResponse as Response,
-          mockNext
-        );
+        globalErrorHandler(error, mockRequest as Request, mockResponse as Response, mockNext);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
-          message: expect.stringContaining('Duplicate field value')
+          message: expect.stringContaining('Duplicate field value'),
         });
       });
 
@@ -193,62 +166,47 @@ describe('Error Middleware', () => {
           name: 'ValidationError',
           errors: {
             name: { message: 'Name is required' },
-            email: { message: 'Email is invalid' }
+            email: { message: 'Email is invalid' },
           },
-          message: 'Validation failed'
+          message: 'Validation failed',
         };
 
-        globalErrorHandler(
-          error,
-          mockRequest as Request,
-          mockResponse as Response,
-          mockNext
-        );
+        globalErrorHandler(error, mockRequest as Request, mockResponse as Response, mockNext);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
-          message: 'Invalid input data. Name is required. Email is invalid'
+          message: 'Invalid input data. Name is required. Email is invalid',
         });
       });
 
       it('should handle JsonWebTokenError', () => {
         const error = {
           name: 'JsonWebTokenError',
-          message: 'invalid token'
+          message: 'invalid token',
         };
 
-        globalErrorHandler(
-          error,
-          mockRequest as Request,
-          mockResponse as Response,
-          mockNext
-        );
+        globalErrorHandler(error, mockRequest as Request, mockResponse as Response, mockNext);
 
         expect(mockResponse.status).toHaveBeenCalledWith(401);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
-          message: 'Invalid token. Please log in again!'
+          message: 'Invalid token. Please log in again!',
         });
       });
 
       it('should handle TokenExpiredError', () => {
         const error = {
           name: 'TokenExpiredError',
-          message: 'jwt expired'
+          message: 'jwt expired',
         };
 
-        globalErrorHandler(
-          error,
-          mockRequest as Request,
-          mockResponse as Response,
-          mockNext
-        );
+        globalErrorHandler(error, mockRequest as Request, mockResponse as Response, mockNext);
 
         expect(mockResponse.status).toHaveBeenCalledWith(401);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
-          message: 'Your token has expired! Please log in again.'
+          message: 'Your token has expired! Please log in again.',
         });
       });
     });

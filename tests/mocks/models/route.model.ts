@@ -14,7 +14,7 @@ export const mockRouteModel = {
   findByIdAndDelete: jest.fn(),
   deleteMany: jest.fn(),
   updateMany: jest.fn(),
-  aggregate: jest.fn()
+  aggregate: jest.fn(),
 };
 
 // Mock class for Route

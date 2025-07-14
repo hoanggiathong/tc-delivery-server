@@ -1,4 +1,4 @@
-import { BaseEntity } from ".";
+import { BaseEntity } from '.';
 
 // Customer response interface
 export interface ICustomerResponse extends BaseEntity {

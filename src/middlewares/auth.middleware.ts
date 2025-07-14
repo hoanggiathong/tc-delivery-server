@@ -2,18 +2,14 @@ import { Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { AuthRequest, JWTPayload } from '@/types';
 
-export const authenticateToken = (
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction
-): void => {
+export const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction): void => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
     res.status(401).json({
       success: false,
-      message: 'Access token is required'
+      message: 'Access token is required',
     });
     return;
   }
@@ -25,7 +21,7 @@ export const authenticateToken = (
   } catch (error) {
     res.status(403).json({
       success: false,
-      message: 'Invalid or expired token'
+      message: 'Invalid or expired token',
     });
     return;
   }

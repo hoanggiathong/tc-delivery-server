@@ -30,7 +30,7 @@ describe('Auth Endpoints', () => {
   describe('POST /api/auth/register', () => {
     const validUserData = {
       username: 'testuser',
-      password: 'TestPass123'
+      password: 'TestPass123',
     };
 
     it('should register a new user successfully', async () => {
@@ -39,7 +39,7 @@ describe('Auth Endpoints', () => {
         username: 'testuser',
         role: UserRole.USER,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
 
       MockedAuthService.prototype.register.mockResolvedValue({ user: mockUser });
@@ -55,9 +55,7 @@ describe('Auth Endpoints', () => {
     });
 
     it('should return 409 when username already exists', async () => {
-      MockedAuthService.prototype.register.mockRejectedValue(
-        new Error('Username already exists')
-      );
+      MockedAuthService.prototype.register.mockRejectedValue(new Error('Username already exists'));
 
       const response = await request(app)
         .post('/api/auth/register')
@@ -85,13 +83,10 @@ describe('Auth Endpoints', () => {
     it('should return 400 with validation errors for invalid data', async () => {
       const invalidData = {
         username: 'ab', // Too short
-        password: '123' // Too short and doesn't meet requirements
+        password: '123', // Too short and doesn't meet requirements
       };
 
-      const response = await request(app)
-        .post('/api/auth/register')
-        .send(invalidData)
-        .expect(400);
+      const response = await request(app).post('/api/auth/register').send(invalidData).expect(400);
 
       expect(response.body.success).toBe(false);
       expect(response.body.message).toBe('Validation failed');
@@ -101,7 +96,7 @@ describe('Auth Endpoints', () => {
   describe('POST /api/auth/login', () => {
     const validLoginData = {
       username: 'testuser',
-      password: 'TestPass123'
+      password: 'TestPass123',
     };
 
     it('should login with valid credentials', async () => {
@@ -110,20 +105,17 @@ describe('Auth Endpoints', () => {
         username: 'testuser',
         role: UserRole.USER,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
 
       const mockToken = 'valid-jwt-token';
 
       MockedAuthService.prototype.login.mockResolvedValue({
         user: mockUser,
-        token: mockToken
+        token: mockToken,
       });
 
-      const response = await request(app)
-        .post('/api/auth/login')
-        .send(validLoginData)
-        .expect(200);
+      const response = await request(app).post('/api/auth/login').send(validLoginData).expect(200);
 
       expect(response.body.success).toBe(true);
       expect(response.body.message).toBe('Login successful');
@@ -132,28 +124,18 @@ describe('Auth Endpoints', () => {
     });
 
     it('should return 401 with invalid credentials', async () => {
-      MockedAuthService.prototype.login.mockRejectedValue(
-        new Error('Invalid credentials')
-      );
+      MockedAuthService.prototype.login.mockRejectedValue(new Error('Invalid credentials'));
 
-      const response = await request(app)
-        .post('/api/auth/login')
-        .send(validLoginData)
-        .expect(401);
+      const response = await request(app).post('/api/auth/login').send(validLoginData).expect(401);
 
       expect(response.body.success).toBe(false);
       expect(response.body.message).toBe('Invalid credentials');
     });
 
     it('should return 401 for other login errors', async () => {
-      MockedAuthService.prototype.login.mockRejectedValue(
-        new Error('Database error')
-      );
+      MockedAuthService.prototype.login.mockRejectedValue(new Error('Database error'));
 
-      const response = await request(app)
-        .post('/api/auth/login')
-        .send(validLoginData)
-        .expect(401);
+      const response = await request(app).post('/api/auth/login').send(validLoginData).expect(401);
 
       expect(response.body.success).toBe(false);
       expect(response.body.message).toBe('Database error');
@@ -167,7 +149,7 @@ describe('Auth Endpoints', () => {
         username: 'testuser',
         role: UserRole.USER,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
 
       MockedAuthService.prototype.getUserById.mockResolvedValue(mockUser);
@@ -183,9 +165,7 @@ describe('Auth Endpoints', () => {
     });
 
     it('should return 401 when not authenticated', async () => {
-      const response = await request(app)
-        .get('/api/auth/profile')
-        .expect(401);
+      const response = await request(app).get('/api/auth/profile').expect(401);
 
       expect(response.body.success).toBe(false);
       expect(response.body.message).toBe('Access token is required');
@@ -204,9 +184,7 @@ describe('Auth Endpoints', () => {
     });
 
     it('should return 500 when service throws error', async () => {
-      MockedAuthService.prototype.getUserById.mockRejectedValue(
-        new Error('Database error')
-      );
+      MockedAuthService.prototype.getUserById.mockRejectedValue(new Error('Database error'));
 
       const response = await request(app)
         .get('/api/auth/profile')
@@ -226,15 +204,15 @@ describe('Auth Endpoints', () => {
           username: 'user1',
           role: UserRole.USER,
           createdAt: new Date(),
-          updatedAt: new Date()
+          updatedAt: new Date(),
         },
         {
           id: 'user2',
           username: 'user2',
           role: UserRole.MANAGER,
           createdAt: new Date(),
-          updatedAt: new Date()
-        }
+          updatedAt: new Date(),
+        },
       ];
 
       MockedAuthService.prototype.getUsersByRoles.mockResolvedValue(mockUsers);
@@ -251,9 +229,7 @@ describe('Auth Endpoints', () => {
     });
 
     it('should return 401 when not authenticated', async () => {
-      const response = await request(app)
-        .get('/api/auth/users')
-        .expect(401);
+      const response = await request(app).get('/api/auth/users').expect(401);
 
       expect(response.body.success).toBe(false);
       expect(response.body.message).toBe('Access token is required');
@@ -283,7 +259,7 @@ describe('Auth Endpoints', () => {
         role: UserRole.USER,
         selectedRouteId: 'route123',
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
 
       MockedAuthService.prototype.updateSelectedRoute.mockResolvedValue({ user: mockUser });
@@ -297,7 +273,10 @@ describe('Auth Endpoints', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.message).toBe('Selected route updated successfully');
       expect(response.body.data.user).toEqualWithDateStrings(mockUser);
-      expect(MockedAuthService.prototype.updateSelectedRoute).toHaveBeenCalledWith('user123', updateData);
+      expect(MockedAuthService.prototype.updateSelectedRoute).toHaveBeenCalledWith(
+        'user123',
+        updateData
+      );
     });
 
     it('should clear selected route when selectedRouteId is null', async () => {
@@ -308,7 +287,7 @@ describe('Auth Endpoints', () => {
         role: UserRole.USER,
         selectedRouteId: null,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
 
       MockedAuthService.prototype.updateSelectedRoute.mockResolvedValue({ user: mockUser });
@@ -391,7 +370,7 @@ describe('Auth Endpoints', () => {
         role: UserRole.USER,
         selectedRouteId: null,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
 
       MockedAuthService.prototype.updateSelectedRoute.mockResolvedValue({ user: mockUser });
@@ -414,7 +393,7 @@ describe('Auth Endpoints', () => {
         role: UserRole.USER,
         selectedRouteId: undefined,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
 
       MockedAuthService.prototype.updateSelectedRoute.mockResolvedValue({ user: mockUser });

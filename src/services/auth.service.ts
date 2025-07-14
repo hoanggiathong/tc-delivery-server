@@ -7,9 +7,14 @@ import {
   transformUserToResponse,
   transformUserLeanToResponse,
   transformUsersLeanToResponse,
-  UserRole
+  UserRole,
 } from '@/types';
-import { LoginRequest, RegisterRequest, CreateUserRequest, UpdateSelectedRouteRequest } from '@/schemas/auth.schema';
+import {
+  LoginRequest,
+  RegisterRequest,
+  CreateUserRequest,
+  UpdateSelectedRouteRequest,
+} from '@/schemas/auth.schema';
 
 export class AuthService {
   async register(data: RegisterRequest): Promise<{ user: IUserResponse }> {
@@ -24,7 +29,7 @@ export class AuthService {
       const newUser = new User({
         username: data.username,
         password: data.password,
-        role: data.role || UserRole.USER
+        role: data.role || UserRole.USER,
       });
 
       await newUser.save();
@@ -50,7 +55,7 @@ export class AuthService {
       const newUser = new User({
         username: data.username,
         password: data.password,
-        role: data.role
+        role: data.role,
       });
 
       await newUser.save();
@@ -64,7 +69,7 @@ export class AuthService {
     }
   }
 
-  async login(data: LoginRequest): Promise<{ user: IUserResponse, token: string }> {
+  async login(data: LoginRequest): Promise<{ user: IUserResponse; token: string }> {
     try {
       // Find user and include password to verify
       const user = await User.findOne({ username: data.username }).select('+password');
@@ -136,7 +141,10 @@ export class AuthService {
    */
   async getUsersByRoles(roles: UserRole[]): Promise<IUserResponse[]> {
     try {
-      const users = await User.find({ role: { $in: roles } }).select('-password').sort({ createdAt: -1 }).lean();
+      const users = await User.find({ role: { $in: roles } })
+        .select('-password')
+        .sort({ createdAt: -1 })
+        .lean();
       return transformUsersLeanToResponse(users as IUserLean[]);
     } catch (error) {
       throw new Error('Failed to get users by roles');
@@ -146,7 +154,10 @@ export class AuthService {
   /**
    * Update selected route for user
    */
-  async updateSelectedRoute(userId: string, data: UpdateSelectedRouteRequest): Promise<{ user: IUserResponse }> {
+  async updateSelectedRoute(
+    userId: string,
+    data: UpdateSelectedRouteRequest
+  ): Promise<{ user: IUserResponse }> {
     try {
       const user = await User.findByIdAndUpdate(
         userId,

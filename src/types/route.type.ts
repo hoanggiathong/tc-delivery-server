@@ -1,4 +1,4 @@
-import { BaseEntity } from ".";
+import { BaseEntity } from '.';
 
 // Route response interface
 export interface IRouteResponse extends BaseEntity {

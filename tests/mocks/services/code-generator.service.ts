@@ -10,7 +10,7 @@ export const mockCodeGeneratorService = {
   validateCodeFormat: jest.fn(),
   parseCode: jest.fn(),
   getDeliveryCountForDate: jest.fn(),
-  isMaxDeliveriesReached: jest.fn()
+  isMaxDeliveriesReached: jest.fn(),
 };
 
 // Mock Code Generator Service class

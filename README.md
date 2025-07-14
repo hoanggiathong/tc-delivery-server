@@ -67,6 +67,7 @@ tc-delivery-server/
 ## 🚀 Features
 
 ### Core Features
+
 - **TypeScript** - Full TypeScript support for type safety
 - **MongoDB & Mongoose** - NoSQL database with ODM for data modeling
 - **JWT Authentication** - Secure token-based authentication with role-based access control
@@ -79,12 +80,14 @@ tc-delivery-server/
 - **Environment Configuration** - Dotenv for environment management
 
 ### Business Features
+
 - **User Management** - Multi-role user system (superadmin, admin, manager, user)
 - **Customer Management** - Customer information with validation
 - **Delivery System** - Complete delivery management with cost breakdown
 - **Audit Trail** - Track who created what and when
 
 ### Developer Experience
+
 - **Advanced Logging** - Winston with daily rotation and organized file structure
 - **Comprehensive Testing** - Jest with unit and integration tests
 - **Database Documentation** - Complete schema documentation with ERD diagrams
@@ -93,19 +96,21 @@ tc-delivery-server/
 ## 📚 Documentation
 
 ### API Documentation
+
 Once the server is running, you can access the interactive Swagger documentation at:
 
 **🌐 [http://localhost:3000/api-docs](http://localhost:3000/api-docs)**
 
 ### Project Documentation
 
-| Document | Description |
-|----------|-------------|
+| Document                                          | Description                                                        |
+| ------------------------------------------------- | ------------------------------------------------------------------ |
 | 📊 **[Database Schema](docs/DATABASE_SCHEMA.md)** | Complete database schema with relationships and field descriptions |
-| 🔗 **[ERD Diagram](docs/ERD_DIAGRAM.md)** | Entity Relationship Diagram for quick reference |
-| 📝 **[Logging System](docs/LOGGING.md)** | Logging configuration, usage examples, and debugging guide |
+| 🔗 **[ERD Diagram](docs/ERD_DIAGRAM.md)**         | Entity Relationship Diagram for quick reference                    |
+| 📝 **[Logging System](docs/LOGGING.md)**          | Logging configuration, usage examples, and debugging guide         |
 
 ### Quick Links
+
 - **[Database Overview](docs/DATABASE_SCHEMA.md#overview)** - Collections and relationships
 - **[ERD Visualization](docs/ERD_DIAGRAM.md)** - Visual database structure
 - **[Logging Usage](docs/LOGGING.md#usage-examples)** - How to use the logging system
@@ -157,54 +162,55 @@ The server will start at `http://localhost:3000`
 
 ## 📝 Available Scripts
 
-| Script | Description |
-|--------|-------------|
-| `npm run dev` | Start development server with hot reload |
-| `npm run build` | Build the project for production |
-| `npm start` | Start production server |
-| `npm run lint` | Run ESLint to check code quality |
-| `npm run lint:fix` | Fix ESLint issues automatically |
-| `npm test` | Run tests (Jest) |
+| Script             | Description                              |
+| ------------------ | ---------------------------------------- |
+| `npm run dev`      | Start development server with hot reload |
+| `npm run build`    | Build the project for production         |
+| `npm start`        | Start production server                  |
+| `npm run lint`     | Run ESLint to check code quality         |
+| `npm run lint:fix` | Fix ESLint issues automatically          |
+| `npm test`         | Run tests (Jest)                         |
 
 ## 🔗 API Endpoints
 
 ### Authentication
 
-| Method | Endpoint | Description | Authentication | Roles |
-|--------|----------|-------------|----------------|-------|
-| `POST` | `/api/auth/register` | Register a new user | None | - |
-| `POST` | `/api/auth/login` | Login user | None | - |
-| `GET` | `/api/auth/profile` | Get user profile | Bearer Token | All |
-| `GET` | `/api/auth/users` | Get all users | Bearer Token | Admin+ |
-| `GET` | `/api/auth/users/by-roles` | Get users by roles | Bearer Token | Admin+ |
+| Method | Endpoint                   | Description         | Authentication | Roles  |
+| ------ | -------------------------- | ------------------- | -------------- | ------ |
+| `POST` | `/api/auth/register`       | Register a new user | None           | -      |
+| `POST` | `/api/auth/login`          | Login user          | None           | -      |
+| `GET`  | `/api/auth/profile`        | Get user profile    | Bearer Token   | All    |
+| `GET`  | `/api/auth/users`          | Get all users       | Bearer Token   | Admin+ |
+| `GET`  | `/api/auth/users/by-roles` | Get users by roles  | Bearer Token   | Admin+ |
 
 ### Customer Management
 
-| Method | Endpoint | Description | Authentication | Roles |
-|--------|----------|-------------|----------------|-------|
-| `POST` | `/api/customers` | Create new customer | Bearer Token | User+ |
-| `GET` | `/api/customers` | Get all customers | Bearer Token | User+ |
-| `GET` | `/api/customers/:id` | Get customer by ID | Bearer Token | User+ |
-| `PUT` | `/api/customers/:id` | Update customer | Bearer Token | User+ |
-| `DELETE` | `/api/customers/:id` | Delete customer | Bearer Token | Manager+ |
+| Method   | Endpoint             | Description         | Authentication | Roles    |
+| -------- | -------------------- | ------------------- | -------------- | -------- |
+| `POST`   | `/api/customers`     | Create new customer | Bearer Token   | User+    |
+| `GET`    | `/api/customers`     | Get all customers   | Bearer Token   | User+    |
+| `GET`    | `/api/customers/:id` | Get customer by ID  | Bearer Token   | User+    |
+| `PUT`    | `/api/customers/:id` | Update customer     | Bearer Token   | User+    |
+| `DELETE` | `/api/customers/:id` | Delete customer     | Bearer Token   | Manager+ |
 
 ### Delivery Management
 
-| Method | Endpoint | Description | Authentication | Roles |
-|--------|----------|-------------|----------------|-------|
-| `POST` | `/api/deliveries` | Create new delivery | Bearer Token | User+ |
-| `GET` | `/api/deliveries` | Get all deliveries | Bearer Token | User+ |
-| `GET` | `/api/deliveries/:id` | Get delivery by ID | Bearer Token | User+ |
-| `PUT` | `/api/deliveries/:id` | Update delivery | Bearer Token | User+ |
-| `DELETE` | `/api/deliveries/:id` | Delete delivery | Bearer Token | Manager+ |
+| Method   | Endpoint              | Description         | Authentication | Roles    |
+| -------- | --------------------- | ------------------- | -------------- | -------- |
+| `POST`   | `/api/deliveries`     | Create new delivery | Bearer Token   | User+    |
+| `GET`    | `/api/deliveries`     | Get all deliveries  | Bearer Token   | User+    |
+| `GET`    | `/api/deliveries/:id` | Get delivery by ID  | Bearer Token   | User+    |
+| `PUT`    | `/api/deliveries/:id` | Update delivery     | Bearer Token   | User+    |
+| `DELETE` | `/api/deliveries/:id` | Delete delivery     | Bearer Token   | Manager+ |
 
 ### Health Check
 
-| Method | Endpoint | Description | Authentication |
-|--------|----------|-------------|----------------|
-| `GET` | `/health` | Server health status | None |
+| Method | Endpoint  | Description          | Authentication |
+| ------ | --------- | -------------------- | -------------- |
+| `GET`  | `/health` | Server health status | None           |
 
 ### Role Hierarchy
+
 - **User** (Level 1): Basic CRUD operations
 - **Manager** (Level 2): Can delete records + User permissions
 - **Admin** (Level 3): User management + Manager permissions
@@ -305,5 +311,5 @@ Request validation is handled by Zod schemas with middleware:
 username: z.string()
   .min(3, 'Username must be at least 3 characters')
   .max(50, 'Username must not exceed 50 characters')
-  .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers and underscores')
+  .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers and underscores');
 ```

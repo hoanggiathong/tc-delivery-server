@@ -1,11 +1,11 @@
-import { CustomerService } from "@/services/customer.service";
-import { Customer } from "@/models/customer.model";
+import { CustomerService } from '@/services/customer.service';
+import { Customer } from '@/models/customer.model';
 
 // Mock Customer model
-jest.mock("@/models/customer.model");
+jest.mock('@/models/customer.model');
 const MockedCustomer = Customer as jest.MockedClass<typeof Customer>;
 
-describe("CustomerService", () => {
+describe('CustomerService', () => {
   let customerService: CustomerService;
   let mockCustomerInstance: any;
 
@@ -15,20 +15,20 @@ describe("CustomerService", () => {
 
     // Mock customer instance
     mockCustomerInstance = {
-      _id: "customer123",
-      name: "John Doe",
-      phone: "+1234567890",
+      _id: 'customer123',
+      name: 'John Doe',
+      phone: '+1234567890',
       createdAt: new Date(),
       updatedAt: new Date(),
       save: jest.fn(),
     };
   });
 
-  describe("createCustomer", () => {
-    it("should create a new customer successfully", async () => {
+  describe('createCustomer', () => {
+    it('should create a new customer successfully', async () => {
       const customerData = {
-        name: "John Doe",
-        phone: "+1234567890",
+        name: 'John Doe',
+        phone: '+1234567890',
       };
 
       // Mock findOne to return null (no existing customer)
@@ -51,7 +51,7 @@ describe("CustomerService", () => {
       expect(MockedCustomer).toHaveBeenCalledWith(customerData);
       expect(mockCustomerInstance.save).toHaveBeenCalled();
       expect(result).toEqual({
-        id: "customer123",
+        id: 'customer123',
         name: customerData.name,
         phone: customerData.phone,
         createdAt: mockCustomerInstance.createdAt,
@@ -59,20 +59,18 @@ describe("CustomerService", () => {
       });
     });
 
-    it("should throw error when customer already exists", async () => {
+    it('should throw error when customer already exists', async () => {
       const customerData = {
-        name: "John Doe",
-        phone: "+1234567890",
+        name: 'John Doe',
+        phone: '+1234567890',
       };
 
       // Mock findOne to return existing customer
-      MockedCustomer.findOne = jest
-        .fn()
-        .mockResolvedValue(mockCustomerInstance);
+      MockedCustomer.findOne = jest.fn().mockResolvedValue(mockCustomerInstance);
 
-      await expect(
-        customerService.createCustomer(customerData)
-      ).rejects.toThrow("Customer with this name and phone already exists");
+      await expect(customerService.createCustomer(customerData)).rejects.toThrow(
+        'Customer with this name and phone already exists'
+      );
 
       expect(MockedCustomer.findOne).toHaveBeenCalledWith({
         name: customerData.name,
@@ -82,22 +80,20 @@ describe("CustomerService", () => {
     });
   });
 
-  describe("updateCustomer", () => {
-    it("should update customer successfully", async () => {
-      const customerId = "customer123";
+  describe('updateCustomer', () => {
+    it('should update customer successfully', async () => {
+      const customerId = 'customer123';
       const updateData = {
-        name: "Jane Doe",
+        name: 'Jane Doe',
       };
 
       const updatedCustomer = {
         ...mockCustomerInstance,
-        name: "Jane Doe",
+        name: 'Jane Doe',
       };
 
       // Mock findById to return existing customer
-      MockedCustomer.findById = jest
-        .fn()
-        .mockResolvedValue(mockCustomerInstance);
+      MockedCustomer.findById = jest.fn().mockResolvedValue(mockCustomerInstance);
 
       // Mock findOne to return null (no duplicate)
       MockedCustomer.findOne = jest.fn().mockResolvedValue(null);
@@ -105,34 +101,31 @@ describe("CustomerService", () => {
       // Mock save to return updated customer
       mockCustomerInstance.save = jest.fn().mockResolvedValue(updatedCustomer);
 
-      const result = await customerService.updateCustomer(
-        customerId,
-        updateData
-      );
+      const result = await customerService.updateCustomer(customerId, updateData);
 
       expect(MockedCustomer.findById).toHaveBeenCalledWith(customerId);
       expect(mockCustomerInstance.save).toHaveBeenCalled();
-      expect(result.name).toBe("Jane Doe");
+      expect(result.name).toBe('Jane Doe');
     });
 
-    it("should throw error when customer not found", async () => {
-      const customerId = "nonexistent";
-      const updateData = { name: "Jane Doe" };
+    it('should throw error when customer not found', async () => {
+      const customerId = 'nonexistent';
+      const updateData = { name: 'Jane Doe' };
 
       // Mock findById to return null
       MockedCustomer.findById = jest.fn().mockResolvedValue(null);
 
-      await expect(
-        customerService.updateCustomer(customerId, updateData)
-      ).rejects.toThrow("Customer not found");
+      await expect(customerService.updateCustomer(customerId, updateData)).rejects.toThrow(
+        'Customer not found'
+      );
 
       expect(MockedCustomer.findById).toHaveBeenCalledWith(customerId);
     });
   });
 
-  describe("getCustomerById", () => {
-    it("should return customer when found", async () => {
-      const customerId = "customer123";
+  describe('getCustomerById', () => {
+    it('should return customer when found', async () => {
+      const customerId = 'customer123';
 
       const mockFindById = {
         lean: jest.fn().mockResolvedValue(mockCustomerInstance),
@@ -144,16 +137,16 @@ describe("CustomerService", () => {
       expect(MockedCustomer.findById).toHaveBeenCalledWith(customerId);
       expect(mockFindById.lean).toHaveBeenCalled();
       expect(result).toEqual({
-        id: "customer123",
-        name: "John Doe",
-        phone: "+1234567890",
+        id: 'customer123',
+        name: 'John Doe',
+        phone: '+1234567890',
         createdAt: mockCustomerInstance.createdAt,
         updatedAt: mockCustomerInstance.updatedAt,
       });
     });
 
-    it("should return null when customer not found", async () => {
-      const customerId = "nonexistent";
+    it('should return null when customer not found', async () => {
+      const customerId = 'nonexistent';
 
       const mockFindById = {
         lean: jest.fn().mockResolvedValue(null),
@@ -168,8 +161,8 @@ describe("CustomerService", () => {
     });
   });
 
-  describe("getAllCustomers", () => {
-    it("should return all customers", async () => {
+  describe('getAllCustomers', () => {
+    it('should return all customers', async () => {
       const mockCustomers = [mockCustomerInstance];
       const mockFind = {
         sort: jest.fn().mockReturnValue({
@@ -184,14 +177,14 @@ describe("CustomerService", () => {
       expect(MockedCustomer.find).toHaveBeenCalledWith({});
       expect(mockFind.sort).toHaveBeenCalledWith({ createdAt: -1 });
       expect(result).toHaveLength(1);
-      expect(result[0].id).toBe("customer123");
+      expect(result[0].id).toBe('customer123');
     });
   });
 
-  describe("findOrCreateCustomer", () => {
-    it("should return existing customer if found", async () => {
-      const name = "John Doe";
-      const phone = "+1234567890";
+  describe('findOrCreateCustomer', () => {
+    it('should return existing customer if found', async () => {
+      const name = 'John Doe';
+      const phone = '+1234567890';
 
       const mockFindOne = {
         lean: jest.fn().mockResolvedValue(mockCustomerInstance),
@@ -203,17 +196,17 @@ describe("CustomerService", () => {
       expect(MockedCustomer.findOne).toHaveBeenCalledWith({ name, phone });
       expect(mockFindOne.lean).toHaveBeenCalled();
       expect(result).toEqual({
-        id: "customer123",
-        name: "John Doe",
-        phone: "+1234567890",
+        id: 'customer123',
+        name: 'John Doe',
+        phone: '+1234567890',
         createdAt: mockCustomerInstance.createdAt,
         updatedAt: mockCustomerInstance.updatedAt,
       });
     });
 
-    it("should create new customer if not found", async () => {
-      const name = "Jane Doe";
-      const phone = "+0987654321";
+    it('should create new customer if not found', async () => {
+      const name = 'Jane Doe';
+      const phone = '+0987654321';
 
       // Mock findOne to return null (not found)
       const mockFindOne = {
@@ -235,7 +228,7 @@ describe("CustomerService", () => {
       expect(mockFindOne.lean).toHaveBeenCalled();
       expect(MockedCustomer).toHaveBeenCalledWith({ name, phone });
       expect(mockCustomerInstance.save).toHaveBeenCalled();
-      expect(result.id).toBe("customer123");
+      expect(result.id).toBe('customer123');
       expect(result.name).toBe(name);
       expect(result.phone).toBe(phone);
     });

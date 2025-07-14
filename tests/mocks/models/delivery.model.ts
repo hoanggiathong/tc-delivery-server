@@ -15,7 +15,7 @@ export const mockDeliveryModel = {
   deleteMany: jest.fn(),
   updateMany: jest.fn(),
   aggregate: jest.fn(),
-  insertMany: jest.fn()
+  insertMany: jest.fn(),
 };
 
 // Mock class for Delivery

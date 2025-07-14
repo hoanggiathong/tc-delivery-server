@@ -47,7 +47,8 @@ export interface IMoneyDeliveryUpdateRequest {
 }
 
 // Interface for populated money delivery (when sender, receiver, fromRoute, toRoute, createdByUser are populated)
-export interface IMoneyDeliveryPopulated extends Omit<IMoneyDelivery, 'sender' | 'receiver' | 'fromRoute' | 'toRoute' | 'createdByUser'> {
+export interface IMoneyDeliveryPopulated
+  extends Omit<IMoneyDelivery, 'sender' | 'receiver' | 'fromRoute' | 'toRoute' | 'createdByUser'> {
   sender: ICustomer;
   receiver: ICustomer;
   fromRoute: IRoute;

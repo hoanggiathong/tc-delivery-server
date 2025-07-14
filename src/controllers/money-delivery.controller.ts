@@ -4,7 +4,7 @@ import {
   CreateMoneyDeliveryRequest,
   UpdateMoneyDeliveryRequest,
   GetNextMoneyDeliveryCodeRequest,
-  MoneyDeliveryCodeParams
+  MoneyDeliveryCodeParams,
 } from '@/schemas/money-delivery.schema';
 import { AuthRequest, ApiResponse } from '@/types';
 import logger from '@/utils/logger';
@@ -84,7 +84,7 @@ export class MoneyDeliveryController {
       if (!req.user) {
         const response: ApiResponse = {
           success: false,
-          message: 'User not authenticated'
+          message: 'User not authenticated',
         };
         res.status(401).json(response);
         return;
@@ -93,18 +93,20 @@ export class MoneyDeliveryController {
       const moneyDeliveryData: CreateMoneyDeliveryRequest = req.body;
       const userId = req.user.userId;
 
-      const moneyDelivery = await this.moneyDeliveryService.createMoneyDelivery(moneyDeliveryData, userId);
+      const moneyDelivery = await this.moneyDeliveryService.createMoneyDelivery(
+        moneyDeliveryData,
+        userId
+      );
 
       logger.info(`Money delivery created: ${moneyDelivery.code} by user: ${userId}`);
 
       const response: ApiResponse = {
         success: true,
         message: 'Money delivery created successfully',
-        data: moneyDelivery
+        data: moneyDelivery,
       };
 
       res.status(201).json(response);
-
     } catch (error) {
       logger.error('Error creating money delivery:', error);
       const message = error instanceof Error ? error.message : 'Failed to create money delivery';
@@ -119,7 +121,7 @@ export class MoneyDeliveryController {
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(statusCode).json(response);
@@ -147,7 +149,7 @@ export class MoneyDeliveryController {
       if (!req.user) {
         const response: ApiResponse = {
           success: false,
-          message: 'User not authenticated'
+          message: 'User not authenticated',
         };
         res.status(401).json(response);
         return;
@@ -160,14 +162,14 @@ export class MoneyDeliveryController {
       const response: ApiResponse = {
         success: true,
         message: 'Money deliveries retrieved successfully',
-        data: { moneyDeliveries, count: moneyDeliveries.length }
+        data: { moneyDeliveries, count: moneyDeliveries.length },
       };
 
       res.status(200).json(response);
-
     } catch (error) {
       logger.error('Error retrieving money deliveries:', error);
-      const message = error instanceof Error ? error.message : 'Failed to retrieve money deliveries';
+      const message =
+        error instanceof Error ? error.message : 'Failed to retrieve money deliveries';
 
       // Determine appropriate status code based on error message
       let statusCode = 500;
@@ -179,7 +181,7 @@ export class MoneyDeliveryController {
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(statusCode).json(response);
@@ -216,7 +218,7 @@ export class MoneyDeliveryController {
       if (!req.user) {
         const response: ApiResponse = {
           success: false,
-          message: 'User not authenticated'
+          message: 'User not authenticated',
         };
         res.status(401).json(response);
         return;
@@ -229,7 +231,7 @@ export class MoneyDeliveryController {
       if (!moneyDelivery) {
         const response: ApiResponse = {
           success: false,
-          message: 'Money delivery not found'
+          message: 'Money delivery not found',
         };
         res.status(404).json(response);
         return;
@@ -240,11 +242,10 @@ export class MoneyDeliveryController {
       const response: ApiResponse = {
         success: true,
         message: 'Money delivery retrieved successfully',
-        data: moneyDelivery
+        data: moneyDelivery,
       };
 
       res.status(200).json(response);
-
     } catch (error) {
       logger.error('Error retrieving money delivery:', error);
       const message = error instanceof Error ? error.message : 'Failed to retrieve money delivery';
@@ -259,7 +260,7 @@ export class MoneyDeliveryController {
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(statusCode).json(response);
@@ -332,7 +333,7 @@ export class MoneyDeliveryController {
       if (!req.user) {
         const response: ApiResponse = {
           success: false,
-          message: 'User not authenticated'
+          message: 'User not authenticated',
         };
         res.status(401).json(response);
         return;
@@ -341,18 +342,20 @@ export class MoneyDeliveryController {
       const { id } = req.params;
       const updateData: UpdateMoneyDeliveryRequest = req.body;
 
-      const updatedMoneyDelivery = await this.moneyDeliveryService.updateMoneyDelivery(id, updateData);
+      const updatedMoneyDelivery = await this.moneyDeliveryService.updateMoneyDelivery(
+        id,
+        updateData
+      );
 
       logger.info(`Money delivery updated: ${updatedMoneyDelivery.code}`);
 
       const response: ApiResponse = {
         success: true,
         message: 'Money delivery updated successfully',
-        data: updatedMoneyDelivery
+        data: updatedMoneyDelivery,
       };
 
       res.status(200).json(response);
-
     } catch (error) {
       logger.error('Error updating money delivery:', error);
 
@@ -361,7 +364,7 @@ export class MoneyDeliveryController {
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(statusCode).json(response);
@@ -398,7 +401,7 @@ export class MoneyDeliveryController {
       if (!req.user) {
         const response: ApiResponse = {
           success: false,
-          message: 'User not authenticated'
+          message: 'User not authenticated',
         };
         res.status(401).json(response);
         return;
@@ -412,11 +415,10 @@ export class MoneyDeliveryController {
 
       const response: ApiResponse = {
         success: true,
-        message: 'Money delivery deleted successfully'
+        message: 'Money delivery deleted successfully',
       };
 
       res.status(200).json(response);
-
     } catch (error) {
       logger.error('Error deleting money delivery:', error);
 
@@ -425,7 +427,7 @@ export class MoneyDeliveryController {
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(statusCode).json(response);
@@ -469,7 +471,7 @@ export class MoneyDeliveryController {
       if (!req.user) {
         const response: ApiResponse = {
           success: false,
-          message: 'User not authenticated'
+          message: 'User not authenticated',
         };
         res.status(401).json(response);
         return;
@@ -479,25 +481,27 @@ export class MoneyDeliveryController {
 
       const result = await this.moneyDeliveryService.getNextCode(toRouteId);
 
-      logger.info(`Generated next money delivery code: ${result.nextCode} for route: ${result.toRoute.code}`);
+      logger.info(
+        `Generated next money delivery code: ${result.nextCode} for route: ${result.toRoute.code}`
+      );
 
       const response: ApiResponse = {
         success: true,
         message: 'Next money delivery code generated successfully',
-        data: result
+        data: result,
       };
 
       res.status(200).json(response);
-
     } catch (error) {
       logger.error('Error generating next money delivery code:', error);
 
-      const message = error instanceof Error ? error.message : 'Failed to generate next money delivery code';
+      const message =
+        error instanceof Error ? error.message : 'Failed to generate next money delivery code';
       const statusCode = message.includes('not found') ? 404 : 500;
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(statusCode).json(response);
@@ -537,7 +541,7 @@ export class MoneyDeliveryController {
       if (!req.user) {
         const response: ApiResponse = {
           success: false,
-          message: 'User not authenticated'
+          message: 'User not authenticated',
         };
         res.status(401).json(response);
         return;
@@ -545,12 +549,13 @@ export class MoneyDeliveryController {
 
       const { deliveryIdentifier } = req.params;
 
-      const moneyDelivery = await this.moneyDeliveryService.getMoneyDeliveryByCode(deliveryIdentifier);
+      const moneyDelivery =
+        await this.moneyDeliveryService.getMoneyDeliveryByCode(deliveryIdentifier);
 
       if (!moneyDelivery) {
         const response: ApiResponse = {
           success: false,
-          message: 'Money delivery not found'
+          message: 'Money delivery not found',
         };
         res.status(404).json(response);
         return;
@@ -561,14 +566,14 @@ export class MoneyDeliveryController {
       const response: ApiResponse = {
         success: true,
         message: 'Money delivery retrieved successfully',
-        data: moneyDelivery
+        data: moneyDelivery,
       };
 
       res.status(200).json(response);
-
     } catch (error) {
       logger.error('Error retrieving money delivery by code:', error);
-      const message = error instanceof Error ? error.message : 'Failed to retrieve money delivery by code';
+      const message =
+        error instanceof Error ? error.message : 'Failed to retrieve money delivery by code';
 
       // Determine appropriate status code based on error message
       let statusCode = 500;
@@ -580,7 +585,7 @@ export class MoneyDeliveryController {
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(statusCode).json(response);
@@ -627,7 +632,7 @@ export class MoneyDeliveryController {
       if (!req.user) {
         const response: ApiResponse = {
           success: false,
-          message: 'User not authenticated'
+          message: 'User not authenticated',
         };
         res.status(401).json(response);
         return;
@@ -637,18 +642,23 @@ export class MoneyDeliveryController {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
 
-      const frequentCustomers = await this.moneyDeliveryService.getFrequentCustomers(senderIdentifier, page, limit);
+      const frequentCustomers = await this.moneyDeliveryService.getFrequentCustomers(
+        senderIdentifier,
+        page,
+        limit
+      );
 
-      logger.info(`Frequent money customers retrieved for sender: ${senderIdentifier}, count: ${frequentCustomers.frequentCustomers.length}`);
+      logger.info(
+        `Frequent money customers retrieved for sender: ${senderIdentifier}, count: ${frequentCustomers.frequentCustomers.length}`
+      );
 
       const response: ApiResponse = {
         success: true,
         message: 'Frequent money customers retrieved successfully',
-        data: frequentCustomers
+        data: frequentCustomers,
       };
 
       res.status(200).json(response);
-
     } catch (error) {
       logger.error('Error retrieving frequent money customers:', error);
       const message = error instanceof Error ? error.message : 'Failed to get frequent customers';
@@ -663,7 +673,7 @@ export class MoneyDeliveryController {
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(statusCode).json(response);

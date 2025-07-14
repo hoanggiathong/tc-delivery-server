@@ -12,7 +12,7 @@ export const mockDeliveryService = {
   deleteDelivery: jest.fn(),
   getRelatedDeliveriesBySender: jest.fn(),
   getNextCode: jest.fn(),
-  getDeliveryByCode: jest.fn()
+  getDeliveryByCode: jest.fn(),
 };
 
 // Mock Delivery Service class

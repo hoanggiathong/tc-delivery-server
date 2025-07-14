@@ -6,7 +6,7 @@ import { UserRole } from '@/types/user.type';
 // Mock bcrypt
 jest.mock('bcryptjs', () => ({
   hash: jest.fn(),
-  compare: jest.fn()
+  compare: jest.fn(),
 }));
 const mockedBcrypt = bcrypt as any;
 
@@ -26,7 +26,7 @@ describe('User Model', () => {
       updatedAt: new Date(),
       isModified: jest.fn(),
       comparePassword: jest.fn(),
-      save: jest.fn()
+      save: jest.fn(),
     };
   });
 
@@ -35,7 +35,7 @@ describe('User Model', () => {
       const userData = {
         username: 'validuser',
         password: 'validpass123',
-        role: UserRole.USER
+        role: UserRole.USER,
       };
 
       const user = new User(userData);
@@ -47,7 +47,7 @@ describe('User Model', () => {
       const userData = {
         username: 'ab', // Too short
         password: 'validpass123',
-        role: UserRole.USER
+        role: UserRole.USER,
       };
 
       const user = new User(userData);
@@ -59,7 +59,7 @@ describe('User Model', () => {
       const userData = {
         username: 'invalid-user!', // Contains invalid characters
         password: 'validpass123',
-        role: UserRole.USER
+        role: UserRole.USER,
       };
 
       const user = new User(userData);
@@ -70,7 +70,7 @@ describe('User Model', () => {
     it('should fail validation without username', () => {
       const userData = {
         password: 'validpass123',
-        role: UserRole.USER
+        role: UserRole.USER,
       };
 
       const user = new User(userData);
@@ -81,7 +81,7 @@ describe('User Model', () => {
     it('should fail validation without password', () => {
       const userData = {
         username: 'validuser',
-        role: UserRole.USER
+        role: UserRole.USER,
       };
 
       const user = new User(userData);
@@ -93,7 +93,7 @@ describe('User Model', () => {
       const userData = {
         username: 'validuser',
         password: '123', // Too short
-        role: UserRole.USER
+        role: UserRole.USER,
       };
 
       const user = new User(userData);
@@ -104,7 +104,7 @@ describe('User Model', () => {
     it('should set default role to USER', () => {
       const userData = {
         username: 'validuser',
-        password: 'validpass123'
+        password: 'validpass123',
       };
 
       const user = new User(userData);
@@ -168,7 +168,7 @@ describe('User Model', () => {
       const user = new User({
         username: 'testuser',
         password: hashedPassword,
-        role: UserRole.USER
+        role: UserRole.USER,
       });
 
       const result = await user.comparePassword(candidatePassword);
@@ -186,7 +186,7 @@ describe('User Model', () => {
       const user = new User({
         username: 'testuser',
         password: hashedPassword,
-        role: UserRole.USER
+        role: UserRole.USER,
       });
 
       const result = await user.comparePassword(candidatePassword);
@@ -205,7 +205,7 @@ describe('User Model', () => {
         role: UserRole.USER,
         __v: 0,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
 
       const user = new User(userData);

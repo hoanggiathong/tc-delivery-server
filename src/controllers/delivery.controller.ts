@@ -90,7 +90,7 @@ export class DeliveryController {
       if (!req.user) {
         const response: ApiResponse = {
           success: false,
-          message: 'Unauthorized'
+          message: 'Unauthorized',
         };
         res.status(401).json(response);
         return;
@@ -102,13 +102,13 @@ export class DeliveryController {
       Logger.info('Delivery created successfully', {
         deliveryId: delivery.id,
         userId: req.user.userId,
-        senderName: data.senderName
+        senderName: data.senderName,
       });
 
       const response: ApiResponse = {
         success: true,
         message: 'Delivery created successfully',
-        data: { delivery }
+        data: { delivery },
       };
 
       res.status(201).json(response);
@@ -116,14 +116,14 @@ export class DeliveryController {
       Logger.error('Failed to create delivery', {
         error: error instanceof Error ? error.message : error,
         userId: req.user?.userId,
-        requestBody: req.body
+        requestBody: req.body,
       });
 
       const message = error instanceof Error ? error.message : 'Failed to create delivery';
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(400).json(response);
@@ -200,7 +200,7 @@ export class DeliveryController {
       if (!req.user) {
         const response: ApiResponse = {
           success: false,
-          message: 'Unauthorized'
+          message: 'Unauthorized',
         };
         res.status(401).json(response);
         return;
@@ -213,13 +213,13 @@ export class DeliveryController {
 
       Logger.info('Delivery updated successfully', {
         deliveryId: id,
-        userId: req.user.userId
+        userId: req.user.userId,
       });
 
       const response: ApiResponse = {
         success: true,
         message: 'Delivery updated successfully',
-        data: { delivery }
+        data: { delivery },
       };
 
       res.status(200).json(response);
@@ -227,7 +227,7 @@ export class DeliveryController {
       Logger.error('Failed to update delivery', {
         error: error instanceof Error ? error.message : error,
         deliveryId: req.params.id,
-        userId: req.user?.userId
+        userId: req.user?.userId,
       });
 
       const message = error instanceof Error ? error.message : 'Failed to update delivery';
@@ -235,7 +235,7 @@ export class DeliveryController {
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(statusCode).json(response);
@@ -269,7 +269,7 @@ export class DeliveryController {
       if (!req.user) {
         const response: ApiResponse = {
           success: false,
-          message: 'Unauthorized'
+          message: 'Unauthorized',
         };
         res.status(401).json(response);
         return;
@@ -281,12 +281,12 @@ export class DeliveryController {
       if (!delivery) {
         Logger.warn('Delivery not found', {
           deliveryId: id,
-          userId: req.user.userId
+          userId: req.user.userId,
         });
 
         const response: ApiResponse = {
           success: false,
-          message: 'Delivery not found'
+          message: 'Delivery not found',
         };
         res.status(404).json(response);
         return;
@@ -294,13 +294,13 @@ export class DeliveryController {
 
       Logger.info('Delivery retrieved successfully', {
         deliveryId: id,
-        userId: req.user.userId
+        userId: req.user.userId,
       });
 
       const response: ApiResponse = {
         success: true,
         message: 'Delivery retrieved successfully',
-        data: { delivery }
+        data: { delivery },
       };
 
       res.status(200).json(response);
@@ -308,14 +308,14 @@ export class DeliveryController {
       Logger.error('Failed to get delivery', {
         error: error instanceof Error ? error.message : error,
         deliveryId: req.params.id,
-        userId: req.user?.userId
+        userId: req.user?.userId,
       });
 
       const message = error instanceof Error ? error.message : 'Failed to get delivery';
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(500).json(response);
@@ -341,50 +341,50 @@ export class DeliveryController {
       if (!req.user) {
         const response: ApiResponse = {
           success: false,
-          message: 'Unauthorized'
+          message: 'Unauthorized',
         };
         res.status(401).json(response);
         return;
       }
 
-      const deliveries = await this.deliveryService.getAllDeliveries() || [];
+      const deliveries = (await this.deliveryService.getAllDeliveries()) || [];
 
       Logger.info('All deliveries retrieved successfully', {
         count: deliveries.length,
-        userId: req.user.userId
+        userId: req.user.userId,
       });
 
       const response: ApiResponse = {
         success: true,
         message: 'Deliveries retrieved successfully',
-        data: { deliveries, total: deliveries.length }
+        data: { deliveries, total: deliveries.length },
       };
 
       res.status(200).json(response);
     } catch (error) {
       Logger.error('Failed to get deliveries', {
         error: error instanceof Error ? error.message : error,
-        userId: req.user?.userId
+        userId: req.user?.userId,
       });
 
       const message = error instanceof Error ? error.message : 'Failed to get deliveries';
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(500).json(response);
     }
   };
 
-    // Delete delivery
+  // Delete delivery
   deleteDelivery = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       if (!req.user) {
         const response: ApiResponse = {
           success: false,
-          message: 'Unauthorized'
+          message: 'Unauthorized',
         };
         res.status(401).json(response);
         return;
@@ -395,12 +395,12 @@ export class DeliveryController {
 
       Logger.info('Delivery deleted successfully', {
         deliveryId: id,
-        userId: req.user.userId
+        userId: req.user.userId,
       });
 
       const response: ApiResponse = {
         success: true,
-        message: 'Delivery deleted successfully'
+        message: 'Delivery deleted successfully',
       };
 
       res.status(200).json(response);
@@ -408,28 +408,29 @@ export class DeliveryController {
       Logger.error('Failed to delete delivery', {
         error: error instanceof Error ? error.message : error,
         deliveryId: req.params.id,
-        userId: req.user?.userId
+        userId: req.user?.userId,
       });
 
       const message = error instanceof Error ? error.message : 'Failed to delete delivery';
-      const statusCode = error instanceof Error && error.message === 'Delivery not found' ? 404 : 400;
+      const statusCode =
+        error instanceof Error && error.message === 'Delivery not found' ? 404 : 400;
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(statusCode).json(response);
     }
   };
 
-    // Get related deliveries by sender name
+  // Get related deliveries by sender name
   getRelatedDeliveriesBySender = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       if (!req.user) {
         const response: ApiResponse = {
           success: false,
-          message: 'Unauthorized'
+          message: 'Unauthorized',
         };
         res.status(401).json(response);
         return;
@@ -440,7 +441,7 @@ export class DeliveryController {
       if (!senderName) {
         const response: ApiResponse = {
           success: false,
-          message: 'Sender name is required'
+          message: 'Sender name is required',
         };
         res.status(400).json(response);
         return;
@@ -452,7 +453,7 @@ export class DeliveryController {
       if (!relatedDeliveries || relatedDeliveries.length === 0) {
         const response: ApiResponse = {
           success: false,
-          message: 'No related deliveries found'
+          message: 'No related deliveries found',
         };
         res.status(404).json(response);
         return;
@@ -461,7 +462,7 @@ export class DeliveryController {
       Logger.info('Related deliveries retrieved successfully', {
         senderName,
         count: relatedDeliveries.length,
-        userId: req.user.userId
+        userId: req.user.userId,
       });
 
       const response: ApiResponse = {
@@ -470,8 +471,8 @@ export class DeliveryController {
         data: {
           senderName,
           relatedDeliveries,
-          count: relatedDeliveries.length
-        }
+          count: relatedDeliveries.length,
+        },
       };
 
       res.status(200).json(response);
@@ -479,14 +480,14 @@ export class DeliveryController {
       Logger.error('Failed to get related deliveries', {
         error: error instanceof Error ? error.message : error,
         senderName: req.params.senderName,
-        userId: req.user?.userId
+        userId: req.user?.userId,
       });
 
       const message = error instanceof Error ? error.message : 'Failed to get related deliveries';
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(500).json(response);
@@ -561,7 +562,7 @@ export class DeliveryController {
       if (!req.user) {
         const response: ApiResponse = {
           success: false,
-          message: 'Unauthorized'
+          message: 'Unauthorized',
         };
         res.status(401).json(response);
         return;
@@ -573,13 +574,13 @@ export class DeliveryController {
       Logger.info('Next delivery code retrieved successfully', {
         nextCode: nextCodeData.nextCode,
         toRouteId,
-        userId: req.user.userId
+        userId: req.user.userId,
       });
 
       const response: ApiResponse = {
         success: true,
         message: 'Next delivery code retrieved successfully',
-        data: nextCodeData
+        data: nextCodeData,
       };
 
       res.status(200).json(response);
@@ -587,7 +588,7 @@ export class DeliveryController {
       Logger.error('Failed to get next delivery code', {
         error: error instanceof Error ? error.message : error,
         toRouteId: req.body.toRouteId,
-        userId: req.user?.userId
+        userId: req.user?.userId,
       });
 
       const message = error instanceof Error ? error.message : 'Failed to get next delivery code';
@@ -602,7 +603,7 @@ export class DeliveryController {
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(statusCode).json(response);
@@ -640,7 +641,7 @@ export class DeliveryController {
       if (!req.user) {
         const response: ApiResponse = {
           success: false,
-          message: 'Unauthorized'
+          message: 'Unauthorized',
         };
         res.status(401).json(response);
         return;
@@ -652,7 +653,7 @@ export class DeliveryController {
       if (!delivery) {
         const response: ApiResponse = {
           success: false,
-          message: 'Delivery not found'
+          message: 'Delivery not found',
         };
         res.status(404).json(response);
         return;
@@ -661,13 +662,13 @@ export class DeliveryController {
       Logger.info('Delivery retrieved by code successfully', {
         deliveryIdentifier,
         deliveryId: delivery.id,
-        userId: req.user.userId
+        userId: req.user.userId,
       });
 
       const response: ApiResponse = {
         success: true,
         message: 'Delivery retrieved successfully',
-        data: { delivery }
+        data: { delivery },
       };
 
       res.status(200).json(response);
@@ -675,7 +676,7 @@ export class DeliveryController {
       Logger.error('Failed to get delivery by code', {
         error: error instanceof Error ? error.message : error,
         deliveryIdentifier: req.params.deliveryIdentifier,
-        userId: req.user?.userId
+        userId: req.user?.userId,
       });
 
       const message = error instanceof Error ? error.message : 'Failed to get delivery by code';
@@ -683,16 +684,18 @@ export class DeliveryController {
       // Determine proper status code based on error type
       let statusCode = 500; // Default to server error
       if (error instanceof Error) {
-        if (error.message.includes('Invalid') ||
-            error.message.includes('not found') ||
-            error.message.includes('route with code')) {
+        if (
+          error.message.includes('Invalid') ||
+          error.message.includes('not found') ||
+          error.message.includes('route with code')
+        ) {
           statusCode = 400; // Bad Request for validation/client errors
         }
       }
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(statusCode).json(response);
@@ -739,7 +742,7 @@ export class DeliveryController {
       if (!req.user) {
         const response: ApiResponse = {
           success: false,
-          message: 'Unauthorized'
+          message: 'Unauthorized',
         };
         res.status(401).json(response);
         return;
@@ -749,20 +752,24 @@ export class DeliveryController {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
 
-      const frequentCustomers = await this.deliveryService.getFrequentCustomers(senderIdentifier, page, limit);
+      const frequentCustomers = await this.deliveryService.getFrequentCustomers(
+        senderIdentifier,
+        page,
+        limit
+      );
 
       Logger.info('Frequent customers retrieved successfully', {
         senderIdentifier,
         page,
         limit,
         count: frequentCustomers.frequentCustomers.length,
-        userId: req.user.userId
+        userId: req.user.userId,
       });
 
       const response: ApiResponse = {
         success: true,
         message: 'Frequent customers retrieved successfully',
-        data: frequentCustomers
+        data: frequentCustomers,
       };
 
       res.status(200).json(response);
@@ -772,14 +779,14 @@ export class DeliveryController {
         senderIdentifier: req.params.senderIdentifier,
         page: req.query.page,
         limit: req.query.limit,
-        userId: req.user?.userId
+        userId: req.user?.userId,
       });
 
       const message = error instanceof Error ? error.message : 'Failed to get frequent customers';
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(500).json(response);

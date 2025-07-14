@@ -12,7 +12,7 @@ export class CustomerService {
       name: customer.name,
       phone: customer.phone,
       createdAt: customer.createdAt,
-      updatedAt: customer.updatedAt
+      updatedAt: customer.updatedAt,
     };
   }
 
@@ -25,7 +25,7 @@ export class CustomerService {
       name: customer.name,
       phone: customer.phone,
       createdAt: customer.createdAt,
-      updatedAt: customer.updatedAt
+      updatedAt: customer.updatedAt,
     };
   }
 
@@ -37,7 +37,7 @@ export class CustomerService {
       // Check if customer with both name and phone already exists
       const existingCustomer = await Customer.findOne({
         name: data.name,
-        phone: data.phone
+        phone: data.phone,
       });
 
       if (existingCustomer) {
@@ -46,7 +46,7 @@ export class CustomerService {
 
       const newCustomer = new Customer({
         name: data.name,
-        phone: data.phone
+        phone: data.phone,
       });
 
       await newCustomer.save();
@@ -65,7 +65,9 @@ export class CustomerService {
   async getAllCustomers(): Promise<ICustomerResponse[]> {
     try {
       const customers = await Customer.find({}).sort({ createdAt: -1 }).lean();
-      return customers.map(customer => this.transformCustomerLeanToResponse(customer as ICustomerLean));
+      return customers.map(customer =>
+        this.transformCustomerLeanToResponse(customer as ICustomerLean)
+      );
     } catch (error) {
       console.error('Error getting all customers:', error);
       throw new Error('Failed to fetch customers');
@@ -103,10 +105,14 @@ export class CustomerService {
   async findCustomersByName(name: string): Promise<ICustomerResponse[]> {
     try {
       const customers = await Customer.find({
-        name: { $regex: name, $options: 'i' }
-      }).sort({ createdAt: -1 }).lean();
+        name: { $regex: name, $options: 'i' },
+      })
+        .sort({ createdAt: -1 })
+        .lean();
 
-      return customers.map(customer => this.transformCustomerLeanToResponse(customer as ICustomerLean));
+      return customers.map(customer =>
+        this.transformCustomerLeanToResponse(customer as ICustomerLean)
+      );
     } catch (error) {
       console.error('Error finding customers by name:', error);
       throw new Error('Failed to find customers by name');
@@ -116,7 +122,10 @@ export class CustomerService {
   /**
    * Update customer by ID
    */
-  async updateCustomer(customerId: string, data: UpdateCustomerRequest): Promise<ICustomerResponse> {
+  async updateCustomer(
+    customerId: string,
+    data: UpdateCustomerRequest
+  ): Promise<ICustomerResponse> {
     try {
       const customer = await Customer.findById(customerId);
       if (!customer) {
@@ -127,7 +136,7 @@ export class CustomerService {
       const existingCustomer = await Customer.findOne({
         name: data.name,
         phone: data.phone,
-        _id: { $ne: customerId }
+        _id: { $ne: customerId },
       });
 
       if (existingCustomer) {

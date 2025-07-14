@@ -7,7 +7,7 @@ import { UserRole } from '@/types/user.type';
 import {
   createCustomerSchema,
   updateCustomerSchema,
-  customerParamsSchema
+  customerParamsSchema,
 } from '@/schemas/customer.schema';
 
 const router = Router();
@@ -73,7 +73,12 @@ router.use(requireRole([UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]))
 
 // Customer routes
 router.post('/', validate(createCustomerSchema), customerController.createCustomer);
-router.put('/:id', validate(customerParamsSchema), validate(updateCustomerSchema), customerController.updateCustomer);
+router.put(
+  '/:id',
+  validate(customerParamsSchema),
+  validate(updateCustomerSchema),
+  customerController.updateCustomer
+);
 router.get('/:id', validate(customerParamsSchema), customerController.getCustomerById);
 router.get('/', customerController.getAllCustomers);
 

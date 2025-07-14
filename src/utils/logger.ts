@@ -25,7 +25,7 @@ const colors = {
 winston.addColors(colors);
 
 // Custom format to remove quotes and format properly
-const customFormat = winston.format.printf((info) => {
+const customFormat = winston.format.printf(info => {
   // Remove quotes from message if it's a string
   let message: string = String(info.message);
   if (typeof info.message === 'string') {
@@ -73,7 +73,7 @@ const allLogsTransport = new DailyRotateFile({
   maxFiles: '14d', // Keep logs for 14 days
   format: fileFormat,
   createSymlink: true,
-  symlinkName: 'logs/current.log'
+  symlinkName: 'logs/current.log',
 });
 
 // Create daily rotate file transport for error logs
@@ -86,16 +86,16 @@ const errorLogsTransport = new DailyRotateFile({
   maxFiles: '30d', // Keep error logs for 30 days
   format: fileFormat,
   createSymlink: true,
-  symlinkName: 'logs/current-error.log'
+  symlinkName: 'logs/current-error.log',
 });
 
 // Define transports
 const transports = [
   new winston.transports.Console({
-    format: consoleFormat
+    format: consoleFormat,
   }),
   allLogsTransport,
-  errorLogsTransport
+  errorLogsTransport,
 ];
 
 // Create the logger
@@ -113,8 +113,8 @@ const Logger = winston.createLogger({
       maxFiles: '30d',
       format: fileFormat,
       createSymlink: true,
-      symlinkName: 'logs/current-exceptions.log'
-    })
+      symlinkName: 'logs/current-exceptions.log',
+    }),
   ],
   rejectionHandlers: [
     new DailyRotateFile({
@@ -125,9 +125,9 @@ const Logger = winston.createLogger({
       maxFiles: '30d',
       format: fileFormat,
       createSymlink: true,
-      symlinkName: 'logs/current-rejections.log'
-    })
-  ]
+      symlinkName: 'logs/current-rejections.log',
+    }),
+  ],
 });
 
 // Log rotation events
@@ -140,7 +140,7 @@ errorLogsTransport.on('rotate', (oldFilename, newFilename) => {
 });
 
 // Log when new log files are created
-allLogsTransport.on('new', (newFilename) => {
+allLogsTransport.on('new', newFilename => {
   Logger.info(`New log file created: ${newFilename}`);
 });
 

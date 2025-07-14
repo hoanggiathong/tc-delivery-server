@@ -5,7 +5,7 @@ export enum UserRole {
   SUPERADMIN = 'superadmin',
   ADMIN = 'admin',
   MANAGER = 'manager',
-  USER = 'user'
+  USER = 'user',
 }
 
 // Role hierarchy for permissions
@@ -13,27 +13,27 @@ export const ROLE_HIERARCHY: Record<UserRole, number> = {
   [UserRole.SUPERADMIN]: 4,
   [UserRole.ADMIN]: 3,
   [UserRole.MANAGER]: 2,
-  [UserRole.USER]: 1
+  [UserRole.USER]: 1,
 };
 
 // Fix: Add explicit typing for ROLE_PERMISSIONS
 export const ROLE_PERMISSIONS: Record<UserRole, { canView: UserRole[]; canCreate: UserRole[] }> = {
   [UserRole.SUPERADMIN]: {
     canView: [UserRole.ADMIN, UserRole.MANAGER, UserRole.USER],
-    canCreate: [UserRole.ADMIN, UserRole.MANAGER, UserRole.USER]
+    canCreate: [UserRole.ADMIN, UserRole.MANAGER, UserRole.USER],
   },
   [UserRole.ADMIN]: {
     canView: [UserRole.MANAGER, UserRole.USER],
-    canCreate: [UserRole.MANAGER, UserRole.USER]
+    canCreate: [UserRole.MANAGER, UserRole.USER],
   },
   [UserRole.MANAGER]: {
     canView: [UserRole.USER],
-    canCreate: []
+    canCreate: [],
   },
   [UserRole.USER]: {
     canView: [],
-    canCreate: []
-  }
+    canCreate: [],
+  },
 } as const;
 
 // Base user interface (without password)
@@ -104,7 +104,7 @@ export const transformUserToResponse = (user: IUser): IUserResponse => {
     role: user.role,
     selectedRouteId: user.selectedRouteId,
     createdAt: user.createdAt,
-    updatedAt: user.updatedAt
+    updatedAt: user.updatedAt,
   };
 };
 
@@ -119,7 +119,7 @@ export const transformUserLeanToResponse = (user: IUserLean): IUserResponse => {
     role: user.role,
     selectedRouteId: user.selectedRouteId,
     createdAt: user.createdAt,
-    updatedAt: user.updatedAt
+    updatedAt: user.updatedAt,
   };
 };
 

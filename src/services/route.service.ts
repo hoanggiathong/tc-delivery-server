@@ -12,7 +12,7 @@ export class RouteService {
       code: route.code,
       name: route.name,
       createdAt: route.createdAt,
-      updatedAt: route.updatedAt
+      updatedAt: route.updatedAt,
     };
   }
 
@@ -25,7 +25,7 @@ export class RouteService {
       code: route.code,
       name: route.name,
       createdAt: route.createdAt,
-      updatedAt: route.updatedAt
+      updatedAt: route.updatedAt,
     };
   }
 
@@ -42,7 +42,7 @@ export class RouteService {
 
       const newRoute = new Route({
         code: data.code.toUpperCase(),
-        name: data.name
+        name: data.name,
       });
 
       await newRoute.save();
@@ -54,8 +54,6 @@ export class RouteService {
       throw new Error('Failed to create route');
     }
   }
-
-
 
   /**
    * Get route by ID
@@ -85,8 +83,6 @@ export class RouteService {
       throw new Error('Failed to fetch routes');
     }
   }
-
-
 
   /**
    * Get route by code
@@ -118,7 +114,7 @@ export class RouteService {
       if (data.code) {
         const existingRoute = await Route.findOne({
           code: data.code.toUpperCase(),
-          _id: { $ne: id }
+          _id: { $ne: id },
         });
         if (existingRoute) {
           throw new Error('Route with this code already exists');

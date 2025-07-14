@@ -8,7 +8,7 @@ import {
   moneyDeliveryParamsSchema,
   getNextMoneyDeliveryCodeSchema,
   moneyDeliveryCodeSchema,
-  frequentMoneyCustomersSchema
+  frequentMoneyCustomersSchema,
 } from '@/schemas/money-delivery.schema';
 
 const router = Router();
@@ -120,20 +120,45 @@ const moneyDeliveryController = new MoneyDeliveryController();
 router.use(authenticateToken);
 
 // Frequent customers route (must be before /:id to avoid conflicts)
-router.get('/frequent-customers/:senderIdentifier', validate(frequentMoneyCustomersSchema), moneyDeliveryController.getFrequentCustomers);
+router.get(
+  '/frequent-customers/:senderIdentifier',
+  validate(frequentMoneyCustomersSchema),
+  moneyDeliveryController.getFrequentCustomers
+);
 
 // Money delivery routes
 router.post('/', validate(createMoneyDeliverySchema), moneyDeliveryController.createMoneyDelivery);
 router.get('/', moneyDeliveryController.getAllMoneyDeliveries);
 
 // Next code route (must be before /:id to avoid conflicts)
-router.post('/next-code', validate(getNextMoneyDeliveryCodeSchema), moneyDeliveryController.getNextCode);
+router.post(
+  '/next-code',
+  validate(getNextMoneyDeliveryCodeSchema),
+  moneyDeliveryController.getNextCode
+);
 
 // Get money delivery by code route (must be before /:id to avoid conflicts)
-router.get('/code/:deliveryIdentifier', validate(moneyDeliveryCodeSchema), moneyDeliveryController.getMoneyDeliveryByCode);
+router.get(
+  '/code/:deliveryIdentifier',
+  validate(moneyDeliveryCodeSchema),
+  moneyDeliveryController.getMoneyDeliveryByCode
+);
 
-router.get('/:id', validate(moneyDeliveryParamsSchema), moneyDeliveryController.getMoneyDeliveryById);
-router.put('/:id', validate(moneyDeliveryParamsSchema), validate(updateMoneyDeliverySchema), moneyDeliveryController.updateMoneyDelivery);
-router.delete('/:id', validate(moneyDeliveryParamsSchema), moneyDeliveryController.deleteMoneyDelivery);
+router.get(
+  '/:id',
+  validate(moneyDeliveryParamsSchema),
+  moneyDeliveryController.getMoneyDeliveryById
+);
+router.put(
+  '/:id',
+  validate(moneyDeliveryParamsSchema),
+  validate(updateMoneyDeliverySchema),
+  moneyDeliveryController.updateMoneyDelivery
+);
+router.delete(
+  '/:id',
+  validate(moneyDeliveryParamsSchema),
+  moneyDeliveryController.deleteMoneyDelivery
+);
 
 export default router;

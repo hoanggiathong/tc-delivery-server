@@ -18,49 +18,49 @@ export {
   // Auth Service
   mockAuthService,
   MockAuthService,
-  resetAuthServiceMocks
+  resetAuthServiceMocks,
 } from './auth.service';
 
 export {
   // Customer Service
   mockCustomerService,
   MockCustomerService,
-  resetCustomerServiceMocks
+  resetCustomerServiceMocks,
 } from './customer.service';
 
 export {
   // Delivery Service
   mockDeliveryService,
   MockDeliveryService,
-  resetDeliveryServiceMocks
+  resetDeliveryServiceMocks,
 } from './delivery.service';
 
 export {
   // Money Delivery Service
   mockMoneyDeliveryService,
   MockMoneyDeliveryService,
-  resetMoneyDeliveryServiceMocks
+  resetMoneyDeliveryServiceMocks,
 } from './money-delivery.service';
 
 export {
   // User Route Service
   mockUserRouteService,
   MockUserRouteService,
-  resetUserRouteServiceMocks
+  resetUserRouteServiceMocks,
 } from './user-route.service';
 
 export {
   // Route Service
   mockRouteService,
   MockRouteService,
-  resetRouteServiceMocks
+  resetRouteServiceMocks,
 } from './route.service';
 
 export {
   // Code Generator Service
   mockCodeGeneratorService,
   MockCodeGeneratorService,
-  resetCodeGeneratorServiceMocks
+  resetCodeGeneratorServiceMocks,
 } from './code-generator.service';
 
 // Global reset function for all service mocks

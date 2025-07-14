@@ -1,6 +1,8 @@
 import { IMoneyDeliveryResponse } from '@/types/money-delivery.type';
 
-export const createMockMoneyDelivery = (overrides: Partial<IMoneyDeliveryResponse> = {}): IMoneyDeliveryResponse => {
+export const createMockMoneyDelivery = (
+  overrides: Partial<IMoneyDeliveryResponse> = {}
+): IMoneyDeliveryResponse => {
   return {
     id: 'money-delivery-id-1',
     code: '2401250001',
@@ -9,28 +11,28 @@ export const createMockMoneyDelivery = (overrides: Partial<IMoneyDeliveryRespons
       name: 'John Doe',
       phone: '1234567890',
       createdAt: new Date('2023-01-01'),
-      updatedAt: new Date('2023-01-01')
+      updatedAt: new Date('2023-01-01'),
     },
     receiver: {
       id: 'customer-id-2',
       name: 'Jane Doe',
       phone: '0987654321',
       createdAt: new Date('2023-01-01'),
-      updatedAt: new Date('2023-01-01')
+      updatedAt: new Date('2023-01-01'),
     },
     fromRoute: {
       id: 'route-id-1',
       code: 'T1',
       name: 'Test Route 1',
       createdAt: new Date('2023-01-01'),
-      updatedAt: new Date('2023-01-01')
+      updatedAt: new Date('2023-01-01'),
     },
     toRoute: {
       id: 'route-id-2',
       code: 'T2',
       name: 'Test Route 2',
       createdAt: new Date('2023-01-01'),
-      updatedAt: new Date('2023-01-01')
+      updatedAt: new Date('2023-01-01'),
     },
     sendMoneyAmount: 1000000,
     sendCost: 50000,
@@ -38,7 +40,7 @@ export const createMockMoneyDelivery = (overrides: Partial<IMoneyDeliveryRespons
     createdByUser: 'testuser',
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2023-01-01'),
-    ...overrides
+    ...overrides,
   };
 };
 
@@ -50,7 +52,7 @@ export const createMockMoneyDeliveryRequest = (overrides: any = {}) => {
     toRouteId: 'route-id-2',
     sendMoneyAmount: 1000000,
     sendCost: 50000,
-    ...overrides
+    ...overrides,
   };
 };
 
@@ -62,9 +64,9 @@ export const createMockNextCodeResult = (overrides: any = {}) => {
       code: 'T1',
       name: 'Test Route 1',
       createdAt: new Date('2023-01-01'),
-      updatedAt: new Date('2023-01-01')
+      updatedAt: new Date('2023-01-01'),
     },
-    ...overrides
+    ...overrides,
   };
 };
 
@@ -93,20 +95,20 @@ export const createMockFrequentCustomersResult = (overrides: any = {}) => {
       hasNextPage: false,
       hasPrevPage: false,
     },
-    ...overrides
+    ...overrides,
   };
 };
 
 export const createMockMoneyDeliveryList = (count: number = 3): IMoneyDeliveryResponse[] => {
   return Array.from({ length: count }, (_, index) => {
-    const sendMoneyAmount = 500000 + (index * 100000);
-    const sendCost = 25000 + (index * 5000);
+    const sendMoneyAmount = 500000 + index * 100000;
+    const sendCost = 25000 + index * 5000;
     return createMockMoneyDelivery({
       id: `money-delivery-id-${index + 1}`,
       code: `240125000${index + 1}`,
       sendMoneyAmount,
       sendCost,
-      totalCost: sendCost
+      totalCost: sendCost,
     });
   });
 };

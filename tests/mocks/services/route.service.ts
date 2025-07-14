@@ -10,7 +10,7 @@ export const mockRouteService = {
   getRouteById: jest.fn(),
   getAllRoutes: jest.fn(),
   deleteRoute: jest.fn(),
-  getRouteByCode: jest.fn()
+  getRouteByCode: jest.fn(),
 };
 
 // Mock Route Service class

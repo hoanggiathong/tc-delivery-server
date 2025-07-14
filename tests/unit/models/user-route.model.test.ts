@@ -44,8 +44,8 @@ describe('UserRoute Model', () => {
         routeId: 'route123',
         assignedBy: 'manager123',
         createdAt: new Date(),
-        updatedAt: new Date()
-      })
+        updatedAt: new Date(),
+      }),
     };
 
     // Mock static methods
@@ -63,14 +63,14 @@ describe('UserRoute Model', () => {
       const userRouteData = {
         userId: new Types.ObjectId(),
         routeId: new Types.ObjectId(),
-        assignedBy: new Types.ObjectId()
+        assignedBy: new Types.ObjectId(),
       };
 
       mockSave.mockResolvedValue({
         ...userRouteData,
         _id: new Types.ObjectId(),
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       });
 
       const userRoute = new MockUserRoute(userRouteData);
@@ -86,10 +86,12 @@ describe('UserRoute Model', () => {
     it('should fail to create user route without userId', async () => {
       const userRouteData = {
         routeId: new Types.ObjectId(),
-        assignedBy: new Types.ObjectId()
+        assignedBy: new Types.ObjectId(),
       };
 
-      const validationError = new Error('UserRoute validation failed: userId: Path `userId` is required.');
+      const validationError = new Error(
+        'UserRoute validation failed: userId: Path `userId` is required.'
+      );
       mockSave.mockRejectedValue(validationError);
 
       const userRoute = new MockUserRoute(userRouteData);
@@ -100,10 +102,12 @@ describe('UserRoute Model', () => {
     it('should fail to create user route without routeId', async () => {
       const userRouteData = {
         userId: new Types.ObjectId(),
-        assignedBy: new Types.ObjectId()
+        assignedBy: new Types.ObjectId(),
       };
 
-      const validationError = new Error('UserRoute validation failed: routeId: Path `routeId` is required.');
+      const validationError = new Error(
+        'UserRoute validation failed: routeId: Path `routeId` is required.'
+      );
       mockSave.mockRejectedValue(validationError);
 
       const userRoute = new MockUserRoute(userRouteData);
@@ -114,10 +118,12 @@ describe('UserRoute Model', () => {
     it('should fail to create user route without assignedBy', async () => {
       const userRouteData = {
         userId: new Types.ObjectId(),
-        routeId: new Types.ObjectId()
+        routeId: new Types.ObjectId(),
       };
 
-      const validationError = new Error('UserRoute validation failed: assignedBy: Path `assignedBy` is required.');
+      const validationError = new Error(
+        'UserRoute validation failed: assignedBy: Path `assignedBy` is required.'
+      );
       mockSave.mockRejectedValue(validationError);
 
       const userRoute = new MockUserRoute(userRouteData);
@@ -129,7 +135,7 @@ describe('UserRoute Model', () => {
       const userRouteData = {
         userId: new Types.ObjectId(),
         routeId: new Types.ObjectId(),
-        assignedBy: new Types.ObjectId()
+        assignedBy: new Types.ObjectId(),
       };
 
       const duplicateError = new Error('E11000 duplicate key error collection');
@@ -146,7 +152,7 @@ describe('UserRoute Model', () => {
       const userRouteData = {
         userId: new Types.ObjectId(),
         routeId: new Types.ObjectId(),
-        assignedBy: new Types.ObjectId()
+        assignedBy: new Types.ObjectId(),
       };
 
       const userRoute = new MockUserRoute(userRouteData);
@@ -168,7 +174,7 @@ describe('UserRoute Model', () => {
       const userRouteData = {
         userId: new Types.ObjectId(),
         routeId: new Types.ObjectId(),
-        assignedBy: new Types.ObjectId()
+        assignedBy: new Types.ObjectId(),
       };
 
       const duplicateError = new Error('E11000 duplicate key error collection');
@@ -190,7 +196,7 @@ describe('UserRoute Model', () => {
         routeId: routeId1,
         assignedBy,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       });
 
       const userRoute1 = new MockUserRoute({ userId, routeId: routeId1, assignedBy });
@@ -211,7 +217,7 @@ describe('UserRoute Model', () => {
         routeId,
         assignedBy,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       });
 
       const userRoute1 = new MockUserRoute({ userId: userId1, routeId, assignedBy });
@@ -228,16 +234,16 @@ describe('UserRoute Model', () => {
         _id: new Types.ObjectId(),
         userId: {
           username: 'testuser',
-          role: UserRole.USER
+          role: UserRole.USER,
         },
         routeId: {
           code: 'T1',
-          name: 'TP.HCM'
+          name: 'TP.HCM',
         },
         assignedBy: {
           username: 'manager',
-          role: UserRole.MANAGER
-        }
+          role: UserRole.MANAGER,
+        },
       };
 
       let populateCallCount = 0;
@@ -248,13 +254,12 @@ describe('UserRoute Model', () => {
             return mockPopulatedUserRoute;
           }
           return mockPopulateChain;
-        })
+        }),
       };
 
       mockFindById.mockReturnValue(mockPopulateChain);
 
-      const populatedUserRoute = await MockUserRoute
-        .findById('userRoute123')
+      const populatedUserRoute = await MockUserRoute.findById('userRoute123')
         .populate('userId', 'username role')
         .populate('routeId', 'code name')
         .populate('assignedBy', 'username role');
@@ -271,7 +276,7 @@ describe('UserRoute Model', () => {
       const userId = new Types.ObjectId();
       const mockUserRoutes = [
         { userId, routeId: new Types.ObjectId(), assignedBy: new Types.ObjectId() },
-        { userId, routeId: new Types.ObjectId(), assignedBy: new Types.ObjectId() }
+        { userId, routeId: new Types.ObjectId(), assignedBy: new Types.ObjectId() },
       ];
 
       mockFind.mockResolvedValue(mockUserRoutes);
@@ -285,7 +290,7 @@ describe('UserRoute Model', () => {
     it('should find user routes by routeId', async () => {
       const routeId = new Types.ObjectId();
       const mockUserRoutes = [
-        { userId: new Types.ObjectId(), routeId, assignedBy: new Types.ObjectId() }
+        { userId: new Types.ObjectId(), routeId, assignedBy: new Types.ObjectId() },
       ];
 
       mockFind.mockResolvedValue(mockUserRoutes);
@@ -300,7 +305,7 @@ describe('UserRoute Model', () => {
       const assignedBy = new Types.ObjectId();
       const mockUserRoutes = [
         { userId: new Types.ObjectId(), routeId: new Types.ObjectId(), assignedBy },
-        { userId: new Types.ObjectId(), routeId: new Types.ObjectId(), assignedBy }
+        { userId: new Types.ObjectId(), routeId: new Types.ObjectId(), assignedBy },
       ];
 
       mockFind.mockResolvedValue(mockUserRoutes);
@@ -336,13 +341,13 @@ describe('UserRoute Model', () => {
       const userRouteData = {
         userId: new Types.ObjectId(),
         routeId: new Types.ObjectId(),
-        assignedBy: new Types.ObjectId()
+        assignedBy: new Types.ObjectId(),
       };
 
       mockSave.mockResolvedValue({
         ...userRouteData,
         createdAt: now,
-        updatedAt: now
+        updatedAt: now,
       });
 
       const userRoute = new MockUserRoute(userRouteData);
@@ -360,13 +365,13 @@ describe('UserRoute Model', () => {
       const userRouteData = {
         userId: new Types.ObjectId(),
         routeId: new Types.ObjectId(),
-        assignedBy: new Types.ObjectId()
+        assignedBy: new Types.ObjectId(),
       };
 
       mockSave.mockResolvedValue({
         ...userRouteData,
         createdAt,
-        updatedAt
+        updatedAt,
       });
 
       const userRoute = new MockUserRoute(userRouteData);

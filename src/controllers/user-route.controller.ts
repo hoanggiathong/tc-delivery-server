@@ -3,7 +3,7 @@ import { UserRouteService } from '@/services/user-route.service';
 import {
   CreateUserRouteRequest,
   AssignMultipleRoutesRequest,
-  RemoveMultipleRoutesRequest
+  RemoveMultipleRoutesRequest,
 } from '@/schemas/user-route.schema';
 import { AuthRequest, ApiResponse } from '@/types';
 
@@ -53,7 +53,7 @@ export class UserRouteController {
       if (!req.user) {
         const response: ApiResponse = {
           success: false,
-          message: 'Unauthorized'
+          message: 'Unauthorized',
         };
         res.status(401).json(response);
         return;
@@ -65,7 +65,7 @@ export class UserRouteController {
       const response: ApiResponse = {
         success: true,
         message: 'Route assigned to user successfully',
-        data: { userRoute }
+        data: { userRoute },
       };
 
       res.status(201).json(response);
@@ -83,7 +83,7 @@ export class UserRouteController {
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(statusCode).json(response);
@@ -131,26 +131,30 @@ export class UserRouteController {
       if (!req.user) {
         const response: ApiResponse = {
           success: false,
-          message: 'Unauthorized'
+          message: 'Unauthorized',
         };
         res.status(401).json(response);
         return;
       }
 
       const data: AssignMultipleRoutesRequest = req.body;
-      const userRoutes = await this.userRouteService.assignMultipleRoutesToUser(data, req.user.userId);
+      const userRoutes = await this.userRouteService.assignMultipleRoutesToUser(
+        data,
+        req.user.userId
+      );
 
       const response: ApiResponse = {
         success: true,
         message: `${userRoutes.length} routes assigned to user successfully`,
-        data: { userRoutes, count: userRoutes.length }
+        data: { userRoutes, count: userRoutes.length },
       };
 
       res.status(201).json(response);
     } catch (error) {
       console.error('Assign multiple routes to user error:', error);
 
-      const message = error instanceof Error ? error.message : 'Failed to assign multiple routes to user';
+      const message =
+        error instanceof Error ? error.message : 'Failed to assign multiple routes to user';
       let statusCode = 400;
 
       if (message.includes('not found')) {
@@ -161,7 +165,7 @@ export class UserRouteController {
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(statusCode).json(response);
@@ -196,7 +200,7 @@ export class UserRouteController {
       if (!req.user) {
         const response: ApiResponse = {
           success: false,
-          message: 'Unauthorized'
+          message: 'Unauthorized',
         };
         res.status(401).json(response);
         return;
@@ -207,7 +211,7 @@ export class UserRouteController {
 
       const response: ApiResponse = {
         success: true,
-        message: 'Route assignment removed successfully'
+        message: 'Route assignment removed successfully',
       };
 
       res.status(200).json(response);
@@ -219,7 +223,7 @@ export class UserRouteController {
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(statusCode).json(response);
@@ -265,7 +269,7 @@ export class UserRouteController {
       if (!req.user) {
         const response: ApiResponse = {
           success: false,
-          message: 'Unauthorized'
+          message: 'Unauthorized',
         };
         res.status(401).json(response);
         return;
@@ -276,18 +280,19 @@ export class UserRouteController {
 
       const response: ApiResponse = {
         success: true,
-        message: 'Route assignments removed successfully'
+        message: 'Route assignments removed successfully',
       };
 
       res.status(200).json(response);
     } catch (error) {
       console.error('Remove multiple routes from user error:', error);
 
-      const message = error instanceof Error ? error.message : 'Failed to remove multiple routes from user';
+      const message =
+        error instanceof Error ? error.message : 'Failed to remove multiple routes from user';
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(400).json(response);
@@ -322,7 +327,7 @@ export class UserRouteController {
       if (!req.user) {
         const response: ApiResponse = {
           success: false,
-          message: 'Unauthorized'
+          message: 'Unauthorized',
         };
         res.status(401).json(response);
         return;
@@ -334,7 +339,7 @@ export class UserRouteController {
       const response: ApiResponse = {
         success: true,
         message: 'User route assignments retrieved successfully',
-        data: { userRoutes, count: userRoutes.length }
+        data: { userRoutes, count: userRoutes.length },
       };
 
       res.status(200).json(response);
@@ -345,7 +350,7 @@ export class UserRouteController {
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(500).json(response);
@@ -378,7 +383,7 @@ export class UserRouteController {
       if (!req.user) {
         const response: ApiResponse = {
           success: false,
-          message: 'Unauthorized'
+          message: 'Unauthorized',
         };
         res.status(401).json(response);
         return;
@@ -390,7 +395,7 @@ export class UserRouteController {
       const response: ApiResponse = {
         success: true,
         message: 'User routes retrieved successfully',
-        data: { routes, count: routes.length }
+        data: { routes, count: routes.length },
       };
 
       res.status(200).json(response);
@@ -401,7 +406,7 @@ export class UserRouteController {
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(500).json(response);
@@ -434,7 +439,7 @@ export class UserRouteController {
       if (!req.user) {
         const response: ApiResponse = {
           success: false,
-          message: 'Unauthorized'
+          message: 'Unauthorized',
         };
         res.status(401).json(response);
         return;
@@ -446,7 +451,7 @@ export class UserRouteController {
       const response: ApiResponse = {
         success: true,
         message: 'Users for route retrieved successfully',
-        data: { userRoutes, count: userRoutes.length }
+        data: { userRoutes, count: userRoutes.length },
       };
 
       res.status(200).json(response);
@@ -457,7 +462,7 @@ export class UserRouteController {
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(500).json(response);
@@ -483,7 +488,7 @@ export class UserRouteController {
       if (!req.user) {
         const response: ApiResponse = {
           success: false,
-          message: 'Unauthorized'
+          message: 'Unauthorized',
         };
         res.status(401).json(response);
         return;
@@ -494,7 +499,7 @@ export class UserRouteController {
       const response: ApiResponse = {
         success: true,
         message: 'All user route assignments retrieved successfully',
-        data: { userRoutes, count: userRoutes.length }
+        data: { userRoutes, count: userRoutes.length },
       };
 
       res.status(200).json(response);
@@ -505,7 +510,7 @@ export class UserRouteController {
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(500).json(response);

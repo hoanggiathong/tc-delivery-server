@@ -11,7 +11,7 @@ import {
   IMoneyDeliveryLeanPopulated,
   INextMoneyDeliveryCodeResponse,
   IFrequentMoneyCustomersResponse,
-  IFrequentMoneyCustomer
+  IFrequentMoneyCustomer,
 } from '@/types/money-delivery.type';
 import { ICustomerResponse } from '@/types/customer.type';
 
@@ -39,14 +39,16 @@ export class MoneyDeliveryService {
   /**
    * Transform IMoneyDelivery to IMoneyDeliveryResponse
    */
-  private async transformMoneyDeliveryToResponse(moneyDelivery: IMoneyDelivery): Promise<IMoneyDeliveryResponse> {
+  private async transformMoneyDeliveryToResponse(
+    moneyDelivery: IMoneyDelivery
+  ): Promise<IMoneyDeliveryResponse> {
     // Populate sender, receiver, fromRoute, toRoute and createdByUser
     const populatedMoneyDelivery = await moneyDelivery.populate([
       { path: 'sender', select: '_id name phone createdAt updatedAt' },
       { path: 'receiver', select: '_id name phone createdAt updatedAt' },
       { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
       { path: 'toRoute', select: '_id code name createdAt updatedAt' },
-      { path: 'createdByUser', select: '_id username' }
+      { path: 'createdByUser', select: '_id username' },
     ]);
 
     const populated = this.toPopulatedMoneyDelivery(populatedMoneyDelivery);
@@ -59,28 +61,28 @@ export class MoneyDeliveryService {
         name: populated.sender.name,
         phone: populated.sender.phone,
         createdAt: populated.sender.createdAt,
-        updatedAt: populated.sender.updatedAt
+        updatedAt: populated.sender.updatedAt,
       },
       receiver: {
         id: populated.receiver._id,
         name: populated.receiver.name,
         phone: populated.receiver.phone,
         createdAt: populated.receiver.createdAt,
-        updatedAt: populated.receiver.updatedAt
+        updatedAt: populated.receiver.updatedAt,
       },
       fromRoute: {
         id: populated.fromRoute._id,
         code: populated.fromRoute.code,
         name: populated.fromRoute.name,
         createdAt: populated.fromRoute.createdAt,
-        updatedAt: populated.fromRoute.updatedAt
+        updatedAt: populated.fromRoute.updatedAt,
       },
       toRoute: {
         id: populated.toRoute._id,
         code: populated.toRoute.code,
         name: populated.toRoute.name,
         createdAt: populated.toRoute.createdAt,
-        updatedAt: populated.toRoute.updatedAt
+        updatedAt: populated.toRoute.updatedAt,
       },
       sendMoneyAmount: populated.sendMoneyAmount,
       sendCost: populated.sendCost,
@@ -88,14 +90,16 @@ export class MoneyDeliveryService {
       notes: populated.notes,
       createdByUser: populated.createdByUser.username,
       createdAt: populated.createdAt,
-      updatedAt: populated.updatedAt
+      updatedAt: populated.updatedAt,
     };
   }
 
   /**
    * Transform pre-populated lean money delivery to IMoneyDeliveryResponse (optimized)
    */
-  private transformMoneyDeliveryToResponseOptimized(moneyDelivery: IMoneyDeliveryLeanPopulated): IMoneyDeliveryResponse {
+  private transformMoneyDeliveryToResponseOptimized(
+    moneyDelivery: IMoneyDeliveryLeanPopulated
+  ): IMoneyDeliveryResponse {
     return {
       id: moneyDelivery._id,
       code: moneyDelivery.code,
@@ -104,28 +108,28 @@ export class MoneyDeliveryService {
         name: moneyDelivery.sender.name,
         phone: moneyDelivery.sender.phone,
         createdAt: moneyDelivery.sender.createdAt,
-        updatedAt: moneyDelivery.sender.updatedAt
+        updatedAt: moneyDelivery.sender.updatedAt,
       },
       receiver: {
         id: moneyDelivery.receiver._id,
         name: moneyDelivery.receiver.name,
         phone: moneyDelivery.receiver.phone,
         createdAt: moneyDelivery.receiver.createdAt,
-        updatedAt: moneyDelivery.receiver.updatedAt
+        updatedAt: moneyDelivery.receiver.updatedAt,
       },
       fromRoute: {
         id: moneyDelivery.fromRoute._id,
         code: moneyDelivery.fromRoute.code,
         name: moneyDelivery.fromRoute.name,
         createdAt: moneyDelivery.fromRoute.createdAt,
-        updatedAt: moneyDelivery.fromRoute.updatedAt
+        updatedAt: moneyDelivery.fromRoute.updatedAt,
       },
       toRoute: {
         id: moneyDelivery.toRoute._id,
         code: moneyDelivery.toRoute.code,
         name: moneyDelivery.toRoute.name,
         createdAt: moneyDelivery.toRoute.createdAt,
-        updatedAt: moneyDelivery.toRoute.updatedAt
+        updatedAt: moneyDelivery.toRoute.updatedAt,
       },
       sendMoneyAmount: moneyDelivery.sendMoneyAmount,
       sendCost: moneyDelivery.sendCost,
@@ -133,18 +137,27 @@ export class MoneyDeliveryService {
       notes: moneyDelivery.notes,
       createdByUser: moneyDelivery.createdByUser.username,
       createdAt: moneyDelivery.createdAt,
-      updatedAt: moneyDelivery.updatedAt
+      updatedAt: moneyDelivery.updatedAt,
     };
   }
 
   /**
    * Create a new money delivery
    */
-  async createMoneyDelivery(data: IMoneyDeliveryCreateRequest, userId: string): Promise<IMoneyDeliveryResponse> {
+  async createMoneyDelivery(
+    data: IMoneyDeliveryCreateRequest,
+    userId: string
+  ): Promise<IMoneyDeliveryResponse> {
     try {
       // Find or create sender and receiver
-      const sender = await this.customerService.findOrCreateCustomer(data.senderName, data.senderPhone);
-      const receiver = await this.customerService.findOrCreateCustomer(data.receiverName, data.receiverPhone);
+      const sender = await this.customerService.findOrCreateCustomer(
+        data.senderName,
+        data.senderPhone
+      );
+      const receiver = await this.customerService.findOrCreateCustomer(
+        data.receiverName,
+        data.receiverPhone
+      );
 
       // Validate fromRoute and toRoute exist
       const fromRoute = await Route.findById(data.fromRouteId);
@@ -170,7 +183,7 @@ export class MoneyDeliveryService {
         sendMoneyAmount: data.sendMoneyAmount,
         sendCost: data.sendCost,
         notes: data.notes,
-        createdByUser: userId
+        createdByUser: userId,
       });
 
       await moneyDelivery.save();
@@ -183,7 +196,10 @@ export class MoneyDeliveryService {
   /**
    * Update money delivery by ID
    */
-  async updateMoneyDelivery(id: string, data: IMoneyDeliveryUpdateRequest): Promise<IMoneyDeliveryResponse> {
+  async updateMoneyDelivery(
+    id: string,
+    data: IMoneyDeliveryUpdateRequest
+  ): Promise<IMoneyDeliveryResponse> {
     try {
       const moneyDelivery = await MoneyDelivery.findById(id);
       if (!moneyDelivery) {
@@ -206,7 +222,10 @@ export class MoneyDeliveryService {
       if (data.receiverName || data.receiverPhone) {
         const receiverName = data.receiverName || moneyDelivery.receiver.toString();
         const receiverPhone = data.receiverPhone || moneyDelivery.receiver.toString();
-        const receiver = await this.customerService.findOrCreateCustomer(receiverName, receiverPhone);
+        const receiver = await this.customerService.findOrCreateCustomer(
+          receiverName,
+          receiverPhone
+        );
         updateData.receiver = receiver.id;
       } else {
         updateData.receiver = moneyDelivery.receiver;
@@ -229,9 +248,15 @@ export class MoneyDeliveryService {
         updateData.toRoute = data.toRouteId;
       }
 
-      if (data.sendMoneyAmount !== undefined) updateData.sendMoneyAmount = data.sendMoneyAmount;
-      if (data.sendCost !== undefined) updateData.sendCost = data.sendCost;
-      if (data.notes !== undefined) updateData.notes = data.notes;
+      if (data.sendMoneyAmount !== undefined) {
+        updateData.sendMoneyAmount = data.sendMoneyAmount;
+      }
+      if (data.sendCost !== undefined) {
+        updateData.sendCost = data.sendCost;
+      }
+      if (data.notes !== undefined) {
+        updateData.notes = data.notes;
+      }
 
       // Update money delivery
       const updatedMoneyDelivery = await MoneyDelivery.findByIdAndUpdate(
@@ -261,7 +286,7 @@ export class MoneyDeliveryService {
           { path: 'receiver', select: '_id name phone createdAt updatedAt' },
           { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
           { path: 'toRoute', select: '_id code name createdAt updatedAt' },
-          { path: 'createdByUser', select: '_id username' }
+          { path: 'createdByUser', select: '_id username' },
         ])
         .lean();
 
@@ -269,7 +294,9 @@ export class MoneyDeliveryService {
         return null;
       }
 
-      return this.transformMoneyDeliveryToResponseOptimized(this.toPopulatedMoneyDeliveryLean(moneyDelivery));
+      return this.transformMoneyDeliveryToResponseOptimized(
+        this.toPopulatedMoneyDeliveryLean(moneyDelivery)
+      );
     } catch (error) {
       return null;
     }
@@ -286,12 +313,16 @@ export class MoneyDeliveryService {
           { path: 'receiver', select: '_id name phone createdAt updatedAt' },
           { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
           { path: 'toRoute', select: '_id code name createdAt updatedAt' },
-          { path: 'createdByUser', select: '_id username' }
+          { path: 'createdByUser', select: '_id username' },
         ])
         .sort({ createdAt: -1 })
         .lean();
 
-      return moneyDeliveries.map(moneyDelivery => this.transformMoneyDeliveryToResponseOptimized(this.toPopulatedMoneyDeliveryLean(moneyDelivery)));
+      return moneyDeliveries.map(moneyDelivery =>
+        this.transformMoneyDeliveryToResponseOptimized(
+          this.toPopulatedMoneyDeliveryLean(moneyDelivery)
+        )
+      );
     } catch (error) {
       throw new Error('Failed to fetch money deliveries');
     }
@@ -334,8 +365,8 @@ export class MoneyDeliveryService {
           code: toRoute.code,
           name: toRoute.name,
           createdAt: toRoute.createdAt,
-          updatedAt: toRoute.updatedAt
-        }
+          updatedAt: toRoute.updatedAt,
+        },
       };
     } catch (error) {
       throw error;
@@ -366,14 +397,14 @@ export class MoneyDeliveryService {
       const moneyDelivery = await MoneyDelivery.findOne({
         code,
         fromRoute: fromRoute._id,
-        toRoute: toRoute._id
+        toRoute: toRoute._id,
       })
         .populate([
           { path: 'sender', select: '_id name phone createdAt updatedAt' },
           { path: 'receiver', select: '_id name phone createdAt updatedAt' },
           { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
           { path: 'toRoute', select: '_id code name createdAt updatedAt' },
-          { path: 'createdByUser', select: '_id username' }
+          { path: 'createdByUser', select: '_id username' },
         ])
         .lean();
 
@@ -381,7 +412,9 @@ export class MoneyDeliveryService {
         return null;
       }
 
-      return this.transformMoneyDeliveryToResponseOptimized(this.toPopulatedMoneyDeliveryLean(moneyDelivery));
+      return this.transformMoneyDeliveryToResponseOptimized(
+        this.toPopulatedMoneyDeliveryLean(moneyDelivery)
+      );
     } catch (error) {
       return null;
     }
@@ -390,7 +423,9 @@ export class MoneyDeliveryService {
   /**
    * Parse delivery identifier (e.g., "2401250001T1T2" -> { code: "2401250001", fromRouteCode: "T1", toRouteCode: "T2" })
    */
-  private parseDeliveryIdentifier(deliveryIdentifier: string): { code: string; fromRouteCode: string; toRouteCode: string } | null {
+  private parseDeliveryIdentifier(
+    deliveryIdentifier: string
+  ): { code: string; fromRouteCode: string; toRouteCode: string } | null {
     // Expected format: 10 digits + route code + route code (e.g., 2401250001T1T2)
     const match = deliveryIdentifier.match(/^(\d{10})([A-Z]\d+)([A-Z]\d+)$/);
     if (!match) {
@@ -405,7 +440,11 @@ export class MoneyDeliveryService {
    * Get frequent customers for a sender with pagination
    * Groups by receiver name, phone, and route to avoid duplicates
    */
-  async getFrequentCustomers(senderIdentifier: string, page: number = 1, limit: number = 10): Promise<IFrequentMoneyCustomersResponse> {
+  async getFrequentCustomers(
+    senderIdentifier: string,
+    page: number = 1,
+    limit: number = 10
+  ): Promise<IFrequentMoneyCustomersResponse> {
     try {
       const skip = (page - 1) * limit;
 
@@ -413,8 +452,8 @@ export class MoneyDeliveryService {
       const senderQuery = {
         $or: [
           { 'sender.name': { $regex: senderIdentifier, $options: 'i' } },
-          { 'sender.phone': senderIdentifier }
-        ]
+          { 'sender.phone': senderIdentifier },
+        ],
       };
 
       // Aggregation pipeline to group and paginate
@@ -425,24 +464,24 @@ export class MoneyDeliveryService {
             from: 'customers',
             localField: 'sender',
             foreignField: '_id',
-            as: 'sender'
-          }
+            as: 'sender',
+          },
         },
         {
           $lookup: {
             from: 'customers',
             localField: 'receiver',
             foreignField: '_id',
-            as: 'receiver'
-          }
+            as: 'receiver',
+          },
         },
         {
           $lookup: {
             from: 'routes',
             localField: 'toRoute',
             foreignField: '_id',
-            as: 'toRoute'
-          }
+            as: 'toRoute',
+          },
         },
         // Unwind arrays
         { $unwind: '$sender' },
@@ -458,7 +497,7 @@ export class MoneyDeliveryService {
               receiverPhone: '$receiver.phone',
               toRouteId: '$toRoute._id',
               toRouteCode: '$toRoute.code',
-              toRouteName: '$toRoute.name'
+              toRouteName: '$toRoute.name',
             },
             deliveryCount: { $sum: 1 },
             totalSendMoneyAmount: { $sum: '$sendMoneyAmount' },
@@ -466,28 +505,23 @@ export class MoneyDeliveryService {
             totalCost: { $sum: '$totalCost' },
             lastDeliveryDate: { $max: '$createdAt' },
             firstDeliveryDate: { $min: '$createdAt' },
-            senderInfo: { $first: '$sender' }
-          }
+            senderInfo: { $first: '$sender' },
+          },
         },
         // Sort by delivery count (most frequent first) and then by last delivery date
         {
           $sort: {
             deliveryCount: -1,
-            lastDeliveryDate: -1
-          }
+            lastDeliveryDate: -1,
+          },
         },
         // Add pagination fields
         {
           $facet: {
-            data: [
-              { $skip: skip },
-              { $limit: limit }
-            ],
-            totalCount: [
-              { $count: 'count' }
-            ]
-          }
-        }
+            data: [{ $skip: skip }, { $limit: limit }],
+            totalCount: [{ $count: 'count' }],
+          },
+        },
       ];
 
       const result = await MoneyDelivery.aggregate(pipeline as any);
@@ -501,14 +535,14 @@ export class MoneyDeliveryService {
         toRoute: {
           id: item._id.toRouteId.toString(),
           code: item._id.toRouteCode,
-          name: item._id.toRouteName
+          name: item._id.toRouteName,
         },
         deliveryCount: item.deliveryCount,
         totalSendMoneyAmount: item.totalSendMoneyAmount,
         totalSendCost: item.totalSendCost,
         totalCost: item.totalCost,
         lastDeliveryDate: item.lastDeliveryDate,
-        firstDeliveryDate: item.firstDeliveryDate
+        firstDeliveryDate: item.firstDeliveryDate,
       }));
 
       // Get sender info from the first record if available
@@ -520,10 +554,12 @@ export class MoneyDeliveryService {
 
       return {
         senderIdentifier,
-        senderInfo: senderInfo ? {
-          name: senderInfo.name,
-          phone: senderInfo.phone
-        } : null,
+        senderInfo: senderInfo
+          ? {
+              name: senderInfo.name,
+              phone: senderInfo.phone,
+            }
+          : null,
         frequentCustomers,
         pagination: {
           currentPage: page,
@@ -531,16 +567,15 @@ export class MoneyDeliveryService {
           totalRecords: total,
           limit,
           hasNextPage,
-          hasPrevPage
-        }
+          hasPrevPage,
+        },
       };
-
     } catch (error) {
       Logger.error('Failed to get frequent money customers', {
         error: error instanceof Error ? error.message : error,
         senderIdentifier,
         page,
-        limit
+        limit,
       });
       throw new Error('Failed to get frequent money customers');
     }

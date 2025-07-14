@@ -1,23 +1,23 @@
-import { User } from "@/models/user.model";
-import jwt from "jsonwebtoken";
-import { UserRole } from "@/types/user.type";
+import { User } from '@/models/user.model';
+import jwt from 'jsonwebtoken';
+import { UserRole } from '@/types/user.type';
 
 // Mock User model
-jest.mock("@/models/user.model");
+jest.mock('@/models/user.model');
 const MockedUser = User as jest.MockedClass<typeof User>;
 
 // Mock jwt
-jest.mock("jsonwebtoken");
+jest.mock('jsonwebtoken');
 const mockedJwt = jwt as jest.Mocked<typeof jwt>;
 
-describe("AuthService", () => {
+describe('AuthService', () => {
   let AuthService: any;
   let authService: any;
   let mockUserInstance: any;
 
   beforeAll(() => {
     // Import AuthService after mocks are set up
-    AuthService = require("@/services/auth.service").AuthService;
+    AuthService = require('@/services/auth.service').AuthService;
   });
 
   beforeEach(() => {
@@ -26,9 +26,9 @@ describe("AuthService", () => {
 
     // Mock user instance
     mockUserInstance = {
-      _id: "user123",
-      username: "testuser",
-      password: "hashedPassword",
+      _id: 'user123',
+      username: 'testuser',
+      password: 'hashedPassword',
       role: UserRole.USER,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -44,11 +44,11 @@ describe("AuthService", () => {
     MockedUser.mockImplementation(() => mockUserInstance);
   });
 
-  describe("register", () => {
-    it("should register a new user successfully", async () => {
+  describe('register', () => {
+    it('should register a new user successfully', async () => {
       const userData = {
-        username: "testuser",
-        password: "TestPass123",
+        username: 'testuser',
+        password: 'TestPass123',
         role: UserRole.USER,
       };
 
@@ -70,7 +70,7 @@ describe("AuthService", () => {
       expect(MockedUser).toHaveBeenCalledWith(userData);
       expect(mockUserInstance.save).toHaveBeenCalled();
       expect(result.user).toEqual({
-        id: "user123",
+        id: 'user123',
         username: userData.username,
         role: userData.role,
         createdAt: mockUserInstance.createdAt,
@@ -78,19 +78,17 @@ describe("AuthService", () => {
       });
     });
 
-    it("should throw error when username already exists", async () => {
+    it('should throw error when username already exists', async () => {
       const userData = {
-        username: "testuser",
-        password: "TestPass123",
+        username: 'testuser',
+        password: 'TestPass123',
         role: UserRole.USER,
       };
 
       // Mock findOne to return existing user
       (MockedUser.findOne as any).mockResolvedValue(mockUserInstance);
 
-      await expect(authService.register(userData)).rejects.toThrow(
-        "Username already exists"
-      );
+      await expect(authService.register(userData)).rejects.toThrow('Username already exists');
 
       expect(MockedUser.findOne).toHaveBeenCalledWith({
         username: userData.username,
@@ -99,14 +97,14 @@ describe("AuthService", () => {
     });
   });
 
-  describe("login", () => {
-    it("should login successfully with valid credentials", async () => {
+  describe('login', () => {
+    it('should login successfully with valid credentials', async () => {
       const loginData = {
-        username: "testuser",
-        password: "TestPass123",
+        username: 'testuser',
+        password: 'TestPass123',
       };
 
-      const mockToken = "valid-jwt-token";
+      const mockToken = 'valid-jwt-token';
 
       // Mock findOne to return user with password
       const mockSelect = jest.fn().mockResolvedValue(mockUserInstance);
@@ -123,34 +121,30 @@ describe("AuthService", () => {
       expect(MockedUser.findOne).toHaveBeenCalledWith({
         username: loginData.username,
       });
-      expect(mockSelect).toHaveBeenCalledWith("+password");
-      expect(mockUserInstance.comparePassword).toHaveBeenCalledWith(
-        loginData.password
-      );
+      expect(mockSelect).toHaveBeenCalledWith('+password');
+      expect(mockUserInstance.comparePassword).toHaveBeenCalledWith(loginData.password);
       expect(mockedJwt.sign).toHaveBeenCalled();
       expect(result.token).toBe(mockToken);
-      expect(result.user.username).toBe("testuser");
+      expect(result.user.username).toBe('testuser');
     });
 
-    it("should throw error when user not found", async () => {
+    it('should throw error when user not found', async () => {
       const loginData = {
-        username: "nonexistent",
-        password: "TestPass123",
+        username: 'nonexistent',
+        password: 'TestPass123',
       };
 
       // Mock findOne to return null
       const mockSelect = jest.fn().mockResolvedValue(null);
       (MockedUser.findOne as any).mockReturnValue({ select: mockSelect });
 
-      await expect(authService.login(loginData)).rejects.toThrow(
-        "Invalid credentials"
-      );
+      await expect(authService.login(loginData)).rejects.toThrow('Invalid credentials');
     });
 
-    it("should throw error when password is invalid", async () => {
+    it('should throw error when password is invalid', async () => {
       const loginData = {
-        username: "testuser",
-        password: "wrongpassword",
+        username: 'testuser',
+        password: 'wrongpassword',
       };
 
       // Mock findOne to return user
@@ -160,24 +154,20 @@ describe("AuthService", () => {
       // Mock password comparison to return false
       mockUserInstance.comparePassword.mockResolvedValue(false);
 
-      await expect(authService.login(loginData)).rejects.toThrow(
-        "Invalid credentials"
-      );
+      await expect(authService.login(loginData)).rejects.toThrow('Invalid credentials');
 
-      expect(mockUserInstance.comparePassword).toHaveBeenCalledWith(
-        loginData.password
-      );
+      expect(mockUserInstance.comparePassword).toHaveBeenCalledWith(loginData.password);
     });
   });
 
-  describe("getUserById", () => {
-    it("should return user when found", async () => {
-      const userId = "user123";
+  describe('getUserById', () => {
+    it('should return user when found', async () => {
+      const userId = 'user123';
 
       // Mock findById to return a chainable object with all required methods
       (MockedUser.findById as any).mockReturnValue({
         select: jest.fn().mockReturnValue({
-        lean: jest.fn().mockResolvedValue(mockUserInstance),
+          lean: jest.fn().mockResolvedValue(mockUserInstance),
         }),
       });
 
@@ -185,21 +175,21 @@ describe("AuthService", () => {
 
       expect(MockedUser.findById).toHaveBeenCalledWith(userId);
       expect(result).toEqual({
-        id: "user123",
-        username: "testuser",
+        id: 'user123',
+        username: 'testuser',
         role: UserRole.USER,
         createdAt: mockUserInstance.createdAt,
         updatedAt: mockUserInstance.updatedAt,
       });
     });
 
-    it("should return null when user not found", async () => {
-      const userId = "nonexistent";
+    it('should return null when user not found', async () => {
+      const userId = 'nonexistent';
 
       // Mock findById to return a chainable object with all required methods
       (MockedUser.findById as any).mockReturnValue({
         select: jest.fn().mockReturnValue({
-        lean: jest.fn().mockResolvedValue(null),
+          lean: jest.fn().mockResolvedValue(null),
         }),
       });
 
@@ -210,19 +200,19 @@ describe("AuthService", () => {
     });
   });
 
-  describe("getAllUsers", () => {
-    it("should return all users", async () => {
+  describe('getAllUsers', () => {
+    it('should return all users', async () => {
       const mockUsers = [
         {
-          _id: "user1",
-          username: "user1",
+          _id: 'user1',
+          username: 'user1',
           role: UserRole.USER,
           createdAt: new Date(),
           updatedAt: new Date(),
         },
         {
-          _id: "user2",
-          username: "user2",
+          _id: 'user2',
+          username: 'user2',
           role: UserRole.ADMIN,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -232,8 +222,8 @@ describe("AuthService", () => {
       // Mock find to return a chainable object with all required methods
       (MockedUser.find as any).mockReturnValue({
         select: jest.fn().mockReturnValue({
-        sort: jest.fn().mockReturnValue({
-          lean: jest.fn().mockResolvedValue(mockUsers),
+          sort: jest.fn().mockReturnValue({
+            lean: jest.fn().mockResolvedValue(mockUsers),
           }),
         }),
       });
@@ -242,18 +232,18 @@ describe("AuthService", () => {
 
       expect(MockedUser.find).toHaveBeenCalledWith({});
       expect(result).toHaveLength(2);
-      expect(result[0].id).toBe("user1");
-      expect(result[1].id).toBe("user2");
+      expect(result[0].id).toBe('user1');
+      expect(result[1].id).toBe('user2');
     });
   });
 
-  describe("getUsersByRoles", () => {
-    it("should return users with specified roles", async () => {
+  describe('getUsersByRoles', () => {
+    it('should return users with specified roles', async () => {
       const roles = [UserRole.ADMIN];
       const mockUsers = [
         {
-          _id: "admin1",
-          username: "admin1",
+          _id: 'admin1',
+          username: 'admin1',
           role: UserRole.ADMIN,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -263,8 +253,8 @@ describe("AuthService", () => {
       // Mock find to return a chainable object with all required methods
       (MockedUser.find as any).mockReturnValue({
         select: jest.fn().mockReturnValue({
-        sort: jest.fn().mockReturnValue({
-          lean: jest.fn().mockResolvedValue(mockUsers),
+          sort: jest.fn().mockReturnValue({
+            lean: jest.fn().mockResolvedValue(mockUsers),
           }),
         }),
       });
@@ -277,13 +267,13 @@ describe("AuthService", () => {
     });
   });
 
-  describe("updateSelectedRoute", () => {
-    it("should update selected route successfully", async () => {
-      const userId = "user123";
-      const updateData = { selectedRouteId: "route456" };
+  describe('updateSelectedRoute', () => {
+    it('should update selected route successfully', async () => {
+      const userId = 'user123';
+      const updateData = { selectedRouteId: 'route456' };
       const updatedUser = {
         ...mockUserInstance,
-        selectedRouteId: "route456",
+        selectedRouteId: 'route456',
       };
 
       // Mock findByIdAndUpdate to return a chainable object with select method
@@ -299,27 +289,27 @@ describe("AuthService", () => {
         { new: true }
       );
       expect(result.user).toEqual({
-        id: "user123",
-        username: "testuser",
+        id: 'user123',
+        username: 'testuser',
         role: UserRole.USER,
-        selectedRouteId: "route456",
+        selectedRouteId: 'route456',
         createdAt: mockUserInstance.createdAt,
         updatedAt: mockUserInstance.updatedAt,
       });
     });
 
-    it("should throw error when user not found", async () => {
-      const userId = "nonexistent";
-      const updateData = { selectedRouteId: "route456" };
+    it('should throw error when user not found', async () => {
+      const userId = 'nonexistent';
+      const updateData = { selectedRouteId: 'route456' };
 
       // Mock findByIdAndUpdate to return null
       (MockedUser.findByIdAndUpdate as any).mockReturnValue({
         select: jest.fn().mockResolvedValue(null),
       });
 
-      await expect(
-        authService.updateSelectedRoute(userId, updateData)
-      ).rejects.toThrow("User not found");
+      await expect(authService.updateSelectedRoute(userId, updateData)).rejects.toThrow(
+        'User not found'
+      );
 
       expect(MockedUser.findByIdAndUpdate).toHaveBeenCalledWith(
         userId,
@@ -328,8 +318,8 @@ describe("AuthService", () => {
       );
     });
 
-    it("should clear selected route when selectedRouteId is null", async () => {
-      const userId = "user123";
+    it('should clear selected route when selectedRouteId is null', async () => {
+      const userId = 'user123';
       const updateData = { selectedRouteId: null };
       const updatedUser = {
         ...mockUserInstance,
@@ -351,8 +341,8 @@ describe("AuthService", () => {
       expect(result.user.selectedRouteId).toBeNull();
     });
 
-    it("should handle undefined selectedRouteId", async () => {
-      const userId = "user123";
+    it('should handle undefined selectedRouteId', async () => {
+      const userId = 'user123';
       const updateData = { selectedRouteId: undefined };
       const updatedUser = {
         ...mockUserInstance,

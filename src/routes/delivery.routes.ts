@@ -8,7 +8,7 @@ import {
   deliveryParamsSchema,
   getNextCodeSchema,
   deliveryCodeSchema,
-  frequentCustomersSchema
+  frequentCustomersSchema,
 } from '@/schemas/delivery.schema';
 
 const router = Router();
@@ -215,16 +215,29 @@ router.get('/', deliveryController.getAllDeliveries);
 router.get('/next-code', validate(getNextCodeSchema), deliveryController.getNextCode);
 
 // Get delivery by code route (must be before /:id to avoid conflicts)
-router.get('/code/:deliveryIdentifier', validate(deliveryCodeSchema), deliveryController.getDeliveryByCode);
+router.get(
+  '/code/:deliveryIdentifier',
+  validate(deliveryCodeSchema),
+  deliveryController.getDeliveryByCode
+);
 
 // Related deliveries route (must be before /:id to avoid conflicts)
 router.get('/related/:senderName', deliveryController.getRelatedDeliveriesBySender);
 
 // Frequent customers route (must be before /:id to avoid conflicts)
-router.get('/frequent-customers/:senderIdentifier', validate(frequentCustomersSchema), deliveryController.getFrequentCustomers);
+router.get(
+  '/frequent-customers/:senderIdentifier',
+  validate(frequentCustomersSchema),
+  deliveryController.getFrequentCustomers
+);
 
 router.get('/:id', validate(deliveryParamsSchema), deliveryController.getDeliveryById);
-router.put('/:id', validate(deliveryParamsSchema), validate(updateDeliverySchema), deliveryController.updateDelivery);
+router.put(
+  '/:id',
+  validate(deliveryParamsSchema),
+  validate(updateDeliverySchema),
+  deliveryController.updateDelivery
+);
 router.delete('/:id', validate(deliveryParamsSchema), deliveryController.deleteDelivery);
 
 export default router;

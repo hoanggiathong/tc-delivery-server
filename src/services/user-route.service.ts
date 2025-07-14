@@ -6,7 +6,7 @@ import {
   IUserRouteLeanPopulated,
   IUserRouteCreateRequest,
   IAssignMultipleRoutesRequest,
-  IRemoveMultipleRoutesRequest
+  IRemoveMultipleRoutesRequest,
 } from '@/types/user-route.type';
 import { UserRole } from '@/types/user.type';
 import { IRouteResponse } from '@/types/route.type';
@@ -23,7 +23,13 @@ export class UserRouteService {
   /**
    * Type assertion helper for populated route objects
    */
-  private toPopulatedRoute(route: any): { _id: string; code: string; name: string; createdAt: Date; updatedAt: Date } {
+  private toPopulatedRoute(route: any): {
+    _id: string;
+    code: string;
+    name: string;
+    createdAt: Date;
+    updatedAt: Date;
+  } {
     return route;
   }
 
@@ -34,7 +40,7 @@ export class UserRouteService {
     const populated = await userRoute.populate([
       { path: 'userId', select: '_id username role' },
       { path: 'routeId', select: '_id code name' },
-      { path: 'assignedBy', select: '_id username role' }
+      { path: 'assignedBy', select: '_id username role' },
     ]);
 
     const populatedUserRoute = populated as any;
@@ -49,24 +55,24 @@ export class UserRouteService {
         username: populatedUserRoute.userId.username,
         role: populatedUserRoute.userId.role,
         createdAt: populatedUserRoute.userId.createdAt,
-        updatedAt: populatedUserRoute.userId.updatedAt
+        updatedAt: populatedUserRoute.userId.updatedAt,
       },
       route: {
         id: populatedUserRoute.routeId._id,
         code: populatedUserRoute.routeId.code,
         name: populatedUserRoute.routeId.name,
         createdAt: populatedUserRoute.routeId.createdAt,
-        updatedAt: populatedUserRoute.routeId.updatedAt
+        updatedAt: populatedUserRoute.routeId.updatedAt,
       },
       assignedByUser: {
         id: populatedUserRoute.assignedBy._id,
         username: populatedUserRoute.assignedBy.username,
         role: populatedUserRoute.assignedBy.role,
         createdAt: populatedUserRoute.assignedBy.createdAt,
-        updatedAt: populatedUserRoute.assignedBy.updatedAt
+        updatedAt: populatedUserRoute.assignedBy.updatedAt,
       },
       createdAt: populatedUserRoute.createdAt,
-      updatedAt: populatedUserRoute.updatedAt
+      updatedAt: populatedUserRoute.updatedAt,
     };
   }
 
@@ -89,31 +95,34 @@ export class UserRouteService {
         username: userRoute.userId.username,
         role: userRoute.userId.role as UserRole,
         createdAt: userRoute.createdAt,
-        updatedAt: userRoute.updatedAt
+        updatedAt: userRoute.updatedAt,
       },
       route: {
         id: userRoute.routeId._id,
         code: userRoute.routeId.code,
         name: userRoute.routeId.name,
         createdAt: userRoute.createdAt,
-        updatedAt: userRoute.updatedAt
+        updatedAt: userRoute.updatedAt,
       },
       assignedByUser: {
         id: userRoute.assignedBy._id,
         username: userRoute.assignedBy.username,
         role: userRoute.assignedBy.role as UserRole,
         createdAt: userRoute.createdAt,
-        updatedAt: userRoute.updatedAt
+        updatedAt: userRoute.updatedAt,
       },
       createdAt: userRoute.createdAt,
-      updatedAt: userRoute.updatedAt
+      updatedAt: userRoute.updatedAt,
     };
   }
 
   /**
    * Assign a route to a user
    */
-  async assignRouteToUser(data: IUserRouteCreateRequest, assignedByUserId: string): Promise<IUserRouteResponse> {
+  async assignRouteToUser(
+    data: IUserRouteCreateRequest,
+    assignedByUserId: string
+  ): Promise<IUserRouteResponse> {
     try {
       // Check if user exists
       const user = await User.findById(data.userId);
@@ -130,7 +139,7 @@ export class UserRouteService {
       // Check if assignment already exists
       const existingAssignment = await UserRoute.findOne({
         userId: data.userId,
-        routeId: data.routeId
+        routeId: data.routeId,
       });
 
       if (existingAssignment) {
@@ -141,7 +150,7 @@ export class UserRouteService {
       const userRoute = new UserRoute({
         userId: data.userId,
         routeId: data.routeId,
-        assignedBy: assignedByUserId
+        assignedBy: assignedByUserId,
       });
 
       await userRoute.save();
@@ -157,7 +166,10 @@ export class UserRouteService {
   /**
    * Assign multiple routes to a user
    */
-  async assignMultipleRoutesToUser(data: IAssignMultipleRoutesRequest, assignedByUserId: string): Promise<IUserRouteResponse[]> {
+  async assignMultipleRoutesToUser(
+    data: IAssignMultipleRoutesRequest,
+    assignedByUserId: string
+  ): Promise<IUserRouteResponse[]> {
     try {
       // Check if user exists
       const user = await User.findById(data.userId);
@@ -174,7 +186,7 @@ export class UserRouteService {
       // Check for existing assignments
       const existingAssignments = await UserRoute.find({
         userId: data.userId,
-        routeId: { $in: data.routeIds }
+        routeId: { $in: data.routeIds },
       });
 
       if (existingAssignments.length > 0) {
@@ -188,10 +200,10 @@ export class UserRouteService {
       const userRoutes = data.routeIds.map(routeId => ({
         userId: data.userId,
         routeId: routeId,
-        assignedBy: assignedByUserId
+        assignedBy: assignedByUserId,
       }));
 
-            const createdUserRoutes = await UserRoute.insertMany(userRoutes);
+      const createdUserRoutes = await UserRoute.insertMany(userRoutes);
 
       // Get the created user routes with proper typing
       const userRouteIds = createdUserRoutes.map(ur => ur._id);
@@ -199,7 +211,7 @@ export class UserRouteService {
         .populate([
           { path: 'userId', select: '_id username role' },
           { path: 'routeId', select: '_id code name' },
-          { path: 'assignedBy', select: '_id username role' }
+          { path: 'assignedBy', select: '_id username role' },
         ])
         .lean();
 
@@ -240,7 +252,7 @@ export class UserRouteService {
     try {
       const result = await UserRoute.deleteMany({
         userId: data.userId,
-        routeId: { $in: data.routeIds }
+        routeId: { $in: data.routeIds },
       });
 
       if (result.deletedCount === 0) {
@@ -263,7 +275,7 @@ export class UserRouteService {
         .populate([
           { path: 'userId', select: '_id username role' },
           { path: 'routeId', select: '_id code name' },
-          { path: 'assignedBy', select: '_id username role' }
+          { path: 'assignedBy', select: '_id username role' },
         ])
         .sort({ createdAt: -1 })
         .lean();
@@ -294,7 +306,7 @@ export class UserRouteService {
           code: route.code,
           name: route.name,
           createdAt: route.createdAt,
-          updatedAt: route.updatedAt
+          updatedAt: route.updatedAt,
         };
       });
     } catch (error) {
@@ -302,8 +314,6 @@ export class UserRouteService {
       throw new Error('Failed to get routes for user');
     }
   }
-
-
 
   /**
    * Get all user routes
@@ -314,12 +324,14 @@ export class UserRouteService {
         .populate([
           { path: 'userId', select: '_id username role' },
           { path: 'routeId', select: '_id code name' },
-          { path: 'assignedBy', select: '_id username' }
+          { path: 'assignedBy', select: '_id username' },
         ])
         .sort({ createdAt: -1 })
         .lean();
 
-      return userRoutes.map(userRoute => this.transformUserRouteLeanToResponse(this.toPopulatedUserRoute(userRoute)));
+      return userRoutes.map(userRoute =>
+        this.transformUserRouteLeanToResponse(this.toPopulatedUserRoute(userRoute))
+      );
     } catch (error) {
       console.error('Error getting all user routes:', error);
       throw new Error('Failed to get all user routes');
@@ -335,7 +347,7 @@ export class UserRouteService {
         .populate([
           { path: 'userId', select: '_id username role' },
           { path: 'routeId', select: '_id code name' },
-          { path: 'assignedBy', select: '_id username role' }
+          { path: 'assignedBy', select: '_id username role' },
         ])
         .sort({ createdAt: -1 })
         .lean();

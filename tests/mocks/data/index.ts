@@ -16,14 +16,14 @@ export {
   // Customer mocks
   createMockCustomer,
   createMockCustomerRequest,
-  createMockCustomerList
+  createMockCustomerList,
 } from './customers';
 
 export {
   // User mocks
   createMockUser,
   createMockUserRequest,
-  createMockUserList
+  createMockUserList,
 } from './users';
 
 export {
@@ -31,14 +31,14 @@ export {
   createMockDelivery,
   createMockDeliveryRequest,
   createMockDeliveryRequestWithoutHome,
-  createMockDeliveryList
+  createMockDeliveryList,
 } from './deliveries';
 
 export {
   // Route mocks
   createMockRoute,
   createMockRouteRequest,
-  createMockRouteList
+  createMockRouteList,
 } from './routes';
 
 export {
@@ -47,5 +47,5 @@ export {
   createMockMoneyDeliveryRequest,
   createMockNextCodeResult,
   createMockFrequentCustomersResult,
-  createMockMoneyDeliveryList
+  createMockMoneyDeliveryList,
 } from './money-deliveries';

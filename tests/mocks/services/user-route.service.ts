@@ -14,7 +14,7 @@ export const mockUserRouteService = {
   getUsersForRoute: jest.fn(),
   getAllUserRoutes: jest.fn(),
   updateUserRoute: jest.fn(),
-  getUserRouteById: jest.fn()
+  getUserRouteById: jest.fn(),
 };
 
 // Mock User Route Service class

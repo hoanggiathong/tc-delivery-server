@@ -52,7 +52,7 @@ export class CustomerController {
       const response: ApiResponse = {
         success: true,
         message: 'Customer created successfully',
-        data: { customer }
+        data: { customer },
       };
 
       res.status(201).json(response);
@@ -64,7 +64,7 @@ export class CustomerController {
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(statusCode).json(response);
@@ -120,7 +120,7 @@ export class CustomerController {
       const response: ApiResponse = {
         success: true,
         message: 'Customer updated successfully',
-        data: { customer }
+        data: { customer },
       };
 
       res.status(200).json(response);
@@ -138,7 +138,7 @@ export class CustomerController {
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(statusCode).json(response);
@@ -175,7 +175,7 @@ export class CustomerController {
       if (!customer) {
         const response: ApiResponse = {
           success: false,
-          message: 'Customer not found'
+          message: 'Customer not found',
         };
         res.status(404).json(response);
         return;
@@ -184,7 +184,7 @@ export class CustomerController {
       const response: ApiResponse = {
         success: true,
         message: 'Customer retrieved successfully',
-        data: { customer }
+        data: { customer },
       };
 
       res.status(200).json(response);
@@ -195,7 +195,7 @@ export class CustomerController {
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(500).json(response);
@@ -225,7 +225,7 @@ export class CustomerController {
       const response: ApiResponse = {
         success: true,
         message: 'Customers retrieved successfully',
-        data: { customers: customersArray, total: customersArray.length }
+        data: { customers: customersArray, total: customersArray.length },
       };
 
       res.status(200).json(response);
@@ -236,7 +236,7 @@ export class CustomerController {
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(500).json(response);

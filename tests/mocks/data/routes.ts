@@ -7,7 +7,7 @@ export const createMockRoute = (overrides: Partial<IRouteResponse> = {}): IRoute
     name: 'Test Route 1',
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2023-01-01'),
-    ...overrides
+    ...overrides,
   };
 };
 
@@ -15,7 +15,7 @@ export const createMockRouteRequest = (overrides: any = {}) => {
   return {
     code: 'T1',
     name: 'Test Route 1',
-    ...overrides
+    ...overrides,
   };
 };
 
@@ -24,7 +24,7 @@ export const createMockRouteList = (count: number = 3): IRouteResponse[] => {
     createMockRoute({
       id: `route-id-${index + 1}`,
       code: `T${index + 1}`,
-      name: `Test Route ${index + 1}`
+      name: `Test Route ${index + 1}`,
     })
   );
 };

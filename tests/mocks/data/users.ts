@@ -7,7 +7,7 @@ export const createMockUser = (overrides: Partial<IUserResponse> = {}): IUserRes
     role: UserRole.ADMIN,
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2023-01-01'),
-    ...overrides
+    ...overrides,
   };
 };
 
@@ -16,7 +16,7 @@ export const createMockUserRequest = (overrides: any = {}) => {
     username: 'testuser',
     password: 'password123',
     role: UserRole.ADMIN,
-    ...overrides
+    ...overrides,
   };
 };
 
@@ -25,7 +25,7 @@ export const createMockUserList = (count: number = 3): IUserResponse[] => {
     createMockUser({
       id: `user-id-${index + 1}`,
       username: `user${index + 1}`,
-      role: index === 0 ? UserRole.ADMIN : UserRole.USER
+      role: index === 0 ? UserRole.ADMIN : UserRole.USER,
     })
   );
 };

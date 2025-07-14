@@ -16,35 +16,35 @@ export {
   // Delivery Model
   mockDeliveryModel,
   MockDelivery,
-  resetDeliveryMocks
+  resetDeliveryMocks,
 } from './delivery.model';
 
 export {
   // User Model
   mockUserModel,
   MockUser,
-  resetUserMocks
+  resetUserMocks,
 } from './user.model';
 
 export {
   // Customer Model
   mockCustomerModel,
   MockCustomer,
-  resetCustomerMocks
+  resetCustomerMocks,
 } from './customer.model';
 
 export {
   // Route Model
   mockRouteModel,
   MockRoute,
-  resetRouteMocks
+  resetRouteMocks,
 } from './route.model';
 
 export {
   // User Route Model
   mockUserRouteModel,
   MockUserRoute,
-  resetUserRouteMocks
+  resetUserRouteMocks,
 } from './user-route.model';
 
 // Mock helper functions
@@ -54,14 +54,14 @@ export const createMockQuery = (resolvedValue: any) => ({
   lean: jest.fn().mockResolvedValue(resolvedValue),
   populate: jest.fn().mockReturnThis(),
   select: jest.fn().mockReturnThis(),
-  exec: jest.fn().mockResolvedValue(resolvedValue)
+  exec: jest.fn().mockResolvedValue(resolvedValue),
 });
 
 export const createMockFindOneQuery = (resolvedValue: any) => ({
   lean: jest.fn().mockResolvedValue(resolvedValue),
   populate: jest.fn().mockReturnThis(),
   select: jest.fn().mockReturnThis(),
-  exec: jest.fn().mockResolvedValue(resolvedValue)
+  exec: jest.fn().mockResolvedValue(resolvedValue),
 });
 
 export const createMockErrorQuery = () => ({
@@ -70,7 +70,7 @@ export const createMockErrorQuery = () => ({
   lean: jest.fn().mockRejectedValue(new Error('Database error')),
   populate: jest.fn().mockReturnThis(),
   select: jest.fn().mockReturnThis(),
-  exec: jest.fn().mockRejectedValue(new Error('Database error'))
+  exec: jest.fn().mockRejectedValue(new Error('Database error')),
 });
 
 // Global reset function for all model mocks

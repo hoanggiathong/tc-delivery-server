@@ -17,7 +17,7 @@ describe('Delivery Model', () => {
     collectForCustomer: 75,
     collectForCustomerCost: 10,
     collectForCustomerNote: 'Handle with care',
-    createdByUser: new mongoose.Types.ObjectId()
+    createdByUser: new mongoose.Types.ObjectId(),
   };
 
   describe('Schema Validation', () => {
@@ -84,7 +84,7 @@ describe('Delivery Model', () => {
     it('should fail validation with negative cost', () => {
       const deliveryData = {
         ...validDeliveryData,
-        cost: -100
+        cost: -100,
       };
 
       const delivery = new Delivery(deliveryData);
@@ -96,7 +96,7 @@ describe('Delivery Model', () => {
     it('should fail validation with negative home delivery cost', () => {
       const deliveryData = {
         ...validDeliveryData,
-        homeDeliveryCost: -50
+        homeDeliveryCost: -50,
       };
 
       const delivery = new Delivery(deliveryData);
@@ -108,7 +108,7 @@ describe('Delivery Model', () => {
     it('should fail validation with negative item value', () => {
       const deliveryData = {
         ...validDeliveryData,
-        itemValue: -200
+        itemValue: -200,
       };
 
       const delivery = new Delivery(deliveryData);
@@ -120,7 +120,7 @@ describe('Delivery Model', () => {
     it('should fail validation with negative item cost', () => {
       const deliveryData = {
         ...validDeliveryData,
-        itemCost: -150
+        itemCost: -150,
       };
 
       const delivery = new Delivery(deliveryData);
@@ -132,7 +132,7 @@ describe('Delivery Model', () => {
     it('should fail validation with negative collect cost', () => {
       const deliveryData = {
         ...validDeliveryData,
-        collectCost: -25
+        collectCost: -25,
       };
 
       const delivery = new Delivery(deliveryData);
@@ -144,25 +144,29 @@ describe('Delivery Model', () => {
     it('should fail validation with negative collect for customer amount', () => {
       const deliveryData = {
         ...validDeliveryData,
-        collectForCustomer: -75
+        collectForCustomer: -75,
       };
 
       const delivery = new Delivery(deliveryData);
       const error = delivery.validateSync();
       expect(error?.errors.collectForCustomer).toBeDefined();
-      expect(error?.errors.collectForCustomer.message).toBe('Collect for customer amount must be positive');
+      expect(error?.errors.collectForCustomer.message).toBe(
+        'Collect for customer amount must be positive'
+      );
     });
 
     it('should fail validation with negative collect for customer cost', () => {
       const deliveryData = {
         ...validDeliveryData,
-        collectForCustomerCost: -10
+        collectForCustomerCost: -10,
       };
 
       const delivery = new Delivery(deliveryData);
       const error = delivery.validateSync();
       expect(error?.errors.collectForCustomerCost).toBeDefined();
-      expect(error?.errors.collectForCustomerCost.message).toBe('Collect for customer cost must be positive');
+      expect(error?.errors.collectForCustomerCost.message).toBe(
+        'Collect for customer cost must be positive'
+      );
     });
 
     it('should set default value for collectForCustomer', () => {
@@ -178,7 +182,7 @@ describe('Delivery Model', () => {
         ...validDeliveryData,
         name: '  Test Item  ',
         homeDelivery: '  123 Main St  ',
-        collectForCustomerNote: '  Handle with care  '
+        collectForCustomerNote: '  Handle with care  ',
       };
 
       const delivery = new Delivery(deliveryData);
@@ -204,7 +208,7 @@ describe('Delivery Model', () => {
         ...validDeliveryData,
         __v: 0,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
 
       const delivery = new Delivery(deliveryData);

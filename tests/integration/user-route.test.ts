@@ -17,7 +17,6 @@ describe('User Route Integration Tests', () => {
   let routeId2: string;
 
   beforeAll(async () => {
-
     // Clean up existing data
     await User.deleteMany({});
     await Route.deleteMany({});
@@ -27,34 +26,34 @@ describe('User Route Integration Tests', () => {
     const manager = await User.create({
       username: 'manager',
       password: 'Password123',
-      role: UserRole.MANAGER
+      role: UserRole.MANAGER,
     });
     managerId = manager._id.toString();
 
     const admin = await User.create({
       username: 'admin',
       password: 'Password123',
-      role: UserRole.ADMIN
+      role: UserRole.ADMIN,
     });
     adminId = admin._id.toString();
 
     const regularUser = await User.create({
       username: 'user',
       password: 'Password123',
-      role: UserRole.USER
+      role: UserRole.USER,
     });
     regularUserId = regularUser._id.toString();
 
     // Create test routes
     const route1 = await Route.create({
       code: 'T1',
-      name: 'TP.HCM'
+      name: 'TP.HCM',
     });
     routeId1 = route1._id.toString();
 
     const route2 = await Route.create({
       code: 'T2',
-      name: 'Long An'
+      name: 'Long An',
     });
     routeId2 = route2._id.toString();
 
@@ -92,7 +91,7 @@ describe('User Route Integration Tests', () => {
   describe('POST /api/user-route/assign', () => {
     const assignData = {
       userId: '',
-      routeId: ''
+      routeId: '',
     };
 
     beforeEach(() => {
@@ -166,7 +165,7 @@ describe('User Route Integration Tests', () => {
     it('should return 404 when user not found', async () => {
       const invalidData = {
         userId: '507f1f77bcf86cd799439011',
-        routeId: routeId1
+        routeId: routeId1,
       };
 
       const response = await request(app)
@@ -182,7 +181,7 @@ describe('User Route Integration Tests', () => {
     it('should return 404 when route not found', async () => {
       const invalidData = {
         userId: regularUserId,
-        routeId: '507f1f77bcf86cd799439011'
+        routeId: '507f1f77bcf86cd799439011',
       };
 
       const response = await request(app)
@@ -198,7 +197,7 @@ describe('User Route Integration Tests', () => {
     it('should validate request body', async () => {
       const invalidData = {
         userId: 'invalid',
-        routeId: 'invalid'
+        routeId: 'invalid',
       };
 
       const response = await request(app)
@@ -215,7 +214,7 @@ describe('User Route Integration Tests', () => {
   describe('POST /api/user-route/assign-multiple', () => {
     const assignMultipleData = {
       userId: '',
-      routeIds: ['', '']
+      routeIds: ['', ''],
     };
 
     beforeEach(() => {
@@ -251,7 +250,7 @@ describe('User Route Integration Tests', () => {
       await UserRoute.create({
         userId: regularUserId,
         routeId: routeId1,
-        assignedBy: managerId
+        assignedBy: managerId,
       });
 
       const response = await request(app)
@@ -271,7 +270,7 @@ describe('User Route Integration Tests', () => {
       await UserRoute.create({
         userId: regularUserId,
         routeId: routeId1,
-        assignedBy: managerId
+        assignedBy: managerId,
       });
     });
 
@@ -312,12 +311,12 @@ describe('User Route Integration Tests', () => {
       await UserRoute.create({
         userId: regularUserId,
         routeId: routeId1,
-        assignedBy: managerId
+        assignedBy: managerId,
       });
       await UserRoute.create({
         userId: regularUserId,
         routeId: routeId2,
-        assignedBy: managerId
+        assignedBy: managerId,
       });
     });
 
@@ -342,7 +341,7 @@ describe('User Route Integration Tests', () => {
       await UserRoute.create({
         userId: regularUserId,
         routeId: routeId1,
-        assignedBy: managerId
+        assignedBy: managerId,
       });
     });
 
@@ -374,7 +373,7 @@ describe('User Route Integration Tests', () => {
       await UserRoute.create({
         userId: regularUserId,
         routeId: routeId1,
-        assignedBy: managerId
+        assignedBy: managerId,
       });
     });
 
@@ -398,7 +397,7 @@ describe('User Route Integration Tests', () => {
       const userRoute = await UserRoute.create({
         userId: regularUserId,
         routeId: routeId1,
-        assignedBy: managerId
+        assignedBy: managerId,
       });
       userRouteId = userRoute._id.toString();
     });
@@ -443,12 +442,12 @@ describe('User Route Integration Tests', () => {
       await UserRoute.create({
         userId: regularUserId,
         routeId: routeId1,
-        assignedBy: managerId
+        assignedBy: managerId,
       });
       await UserRoute.create({
         userId: regularUserId,
         routeId: routeId2,
-        assignedBy: managerId
+        assignedBy: managerId,
       });
     });
 
@@ -458,17 +457,17 @@ describe('User Route Integration Tests', () => {
       await UserRoute.create({
         userId: regularUserId,
         routeId: routeId1,
-        assignedBy: managerId
+        assignedBy: managerId,
       });
       await UserRoute.create({
         userId: regularUserId,
         routeId: routeId2,
-        assignedBy: managerId
+        assignedBy: managerId,
       });
 
       const removeData = {
         userId: regularUserId,
-        routeIds: [routeId1, routeId2]
+        routeIds: [routeId1, routeId2],
       };
 
       const response = await request(app)
@@ -489,7 +488,7 @@ describe('User Route Integration Tests', () => {
     it('should reject with user role', async () => {
       const removeData = {
         userId: regularUserId,
-        routeIds: [routeId1]
+        routeIds: [routeId1],
       };
 
       const response = await request(app)
@@ -504,7 +503,7 @@ describe('User Route Integration Tests', () => {
     it('should return 400 when no assignments found to remove', async () => {
       const removeData = {
         userId: regularUserId,
-        routeIds: ['507f1f77bcf86cd799439011']
+        routeIds: ['507f1f77bcf86cd799439011'],
       };
 
       const response = await request(app)
@@ -520,7 +519,7 @@ describe('User Route Integration Tests', () => {
     it('should validate request body', async () => {
       const invalidData = {
         userId: 'invalid',
-        routeIds: ['invalid']
+        routeIds: ['invalid'],
       };
 
       const response = await request(app)

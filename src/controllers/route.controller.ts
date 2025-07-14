@@ -55,7 +55,7 @@ export class RouteController {
       const response: ApiResponse = {
         success: true,
         message: 'Route created successfully',
-        data: { route }
+        data: { route },
       };
 
       res.status(201).json(response);
@@ -67,7 +67,7 @@ export class RouteController {
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(statusCode).json(response);
@@ -126,7 +126,7 @@ export class RouteController {
       const response: ApiResponse = {
         success: true,
         message: 'Route updated successfully',
-        data: { route }
+        data: { route },
       };
 
       res.status(200).json(response);
@@ -144,7 +144,7 @@ export class RouteController {
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(statusCode).json(response);
@@ -181,7 +181,7 @@ export class RouteController {
       if (!route) {
         const response: ApiResponse = {
           success: false,
-          message: 'Route not found'
+          message: 'Route not found',
         };
         res.status(404).json(response);
         return;
@@ -190,7 +190,7 @@ export class RouteController {
       const response: ApiResponse = {
         success: true,
         message: 'Route retrieved successfully',
-        data: { route }
+        data: { route },
       };
 
       res.status(200).json(response);
@@ -201,7 +201,7 @@ export class RouteController {
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(500).json(response);
@@ -231,7 +231,7 @@ export class RouteController {
       const response: ApiResponse = {
         success: true,
         message: 'Routes retrieved successfully',
-        data: { routes: routesArray, total: routesArray.length }
+        data: { routes: routesArray, total: routesArray.length },
       };
 
       res.status(200).json(response);
@@ -242,7 +242,7 @@ export class RouteController {
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(500).json(response);
@@ -278,7 +278,7 @@ export class RouteController {
 
       const response: ApiResponse = {
         success: true,
-        message: 'Route deleted successfully'
+        message: 'Route deleted successfully',
       };
 
       res.status(200).json(response);
@@ -290,7 +290,7 @@ export class RouteController {
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(statusCode).json(response);
@@ -328,7 +328,7 @@ export class RouteController {
       if (!route) {
         const response: ApiResponse = {
           success: false,
-          message: 'Route not found'
+          message: 'Route not found',
         };
         res.status(404).json(response);
         return;
@@ -337,7 +337,7 @@ export class RouteController {
       const response: ApiResponse = {
         success: true,
         message: 'Route retrieved successfully',
-        data: { route }
+        data: { route },
       };
 
       res.status(200).json(response);
@@ -348,7 +348,7 @@ export class RouteController {
 
       const response: ApiResponse = {
         success: false,
-        message
+        message,
       };
 
       res.status(500).json(response);

@@ -53,8 +53,8 @@ describe('MoneyDelivery Model', () => {
         sendCost: 50000,
         createdByUser: 'user123',
         createdAt: new Date(),
-        updatedAt: new Date()
-      })
+        updatedAt: new Date(),
+      }),
     };
 
     // Mock static methods
@@ -76,14 +76,14 @@ describe('MoneyDelivery Model', () => {
         toRoute: new mongoose.Types.ObjectId(),
         sendMoneyAmount: 1000000,
         sendCost: 50000,
-        createdByUser: new mongoose.Types.ObjectId()
+        createdByUser: new mongoose.Types.ObjectId(),
       };
 
       mockSave.mockResolvedValue({
         ...validMoneyDeliveryData,
         _id: new mongoose.Types.ObjectId(),
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       });
 
       const moneyDelivery = new MockedMoneyDelivery(validMoneyDeliveryData);
@@ -106,10 +106,12 @@ describe('MoneyDelivery Model', () => {
         toRoute: new mongoose.Types.ObjectId(),
         sendMoneyAmount: 1000000,
         sendCost: 50000,
-        createdByUser: new mongoose.Types.ObjectId()
+        createdByUser: new mongoose.Types.ObjectId(),
       };
 
-      const validationError = new Error('MoneyDelivery validation failed: code: Path `code` is required.');
+      const validationError = new Error(
+        'MoneyDelivery validation failed: code: Path `code` is required.'
+      );
       mockSave.mockRejectedValue(validationError);
 
       const moneyDelivery = new MockedMoneyDelivery(moneyDeliveryData);
@@ -125,10 +127,12 @@ describe('MoneyDelivery Model', () => {
         toRoute: new mongoose.Types.ObjectId(),
         sendMoneyAmount: 1000000,
         sendCost: 50000,
-        createdByUser: new mongoose.Types.ObjectId()
+        createdByUser: new mongoose.Types.ObjectId(),
       };
 
-      const validationError = new Error('MoneyDelivery validation failed: sender: Path `sender` is required.');
+      const validationError = new Error(
+        'MoneyDelivery validation failed: sender: Path `sender` is required.'
+      );
       mockSave.mockRejectedValue(validationError);
 
       const moneyDelivery = new MockedMoneyDelivery(moneyDeliveryData);
@@ -144,10 +148,12 @@ describe('MoneyDelivery Model', () => {
         toRoute: new mongoose.Types.ObjectId(),
         sendMoneyAmount: 1000000,
         sendCost: 50000,
-        createdByUser: new mongoose.Types.ObjectId()
+        createdByUser: new mongoose.Types.ObjectId(),
       };
 
-      const validationError = new Error('MoneyDelivery validation failed: receiver: Path `receiver` is required.');
+      const validationError = new Error(
+        'MoneyDelivery validation failed: receiver: Path `receiver` is required.'
+      );
       mockSave.mockRejectedValue(validationError);
 
       const moneyDelivery = new MockedMoneyDelivery(moneyDeliveryData);
@@ -163,10 +169,12 @@ describe('MoneyDelivery Model', () => {
         toRoute: new mongoose.Types.ObjectId(),
         sendMoneyAmount: 1000000,
         sendCost: 50000,
-        createdByUser: new mongoose.Types.ObjectId()
+        createdByUser: new mongoose.Types.ObjectId(),
       };
 
-      const validationError = new Error('MoneyDelivery validation failed: fromRoute: Path `fromRoute` is required.');
+      const validationError = new Error(
+        'MoneyDelivery validation failed: fromRoute: Path `fromRoute` is required.'
+      );
       mockSave.mockRejectedValue(validationError);
 
       const moneyDelivery = new MockedMoneyDelivery(moneyDeliveryData);
@@ -182,10 +190,12 @@ describe('MoneyDelivery Model', () => {
         fromRoute: new mongoose.Types.ObjectId(),
         sendMoneyAmount: 1000000,
         sendCost: 50000,
-        createdByUser: new mongoose.Types.ObjectId()
+        createdByUser: new mongoose.Types.ObjectId(),
       };
 
-      const validationError = new Error('MoneyDelivery validation failed: toRoute: Path `toRoute` is required.');
+      const validationError = new Error(
+        'MoneyDelivery validation failed: toRoute: Path `toRoute` is required.'
+      );
       mockSave.mockRejectedValue(validationError);
 
       const moneyDelivery = new MockedMoneyDelivery(moneyDeliveryData);
@@ -201,10 +211,12 @@ describe('MoneyDelivery Model', () => {
         fromRoute: new mongoose.Types.ObjectId(),
         toRoute: new mongoose.Types.ObjectId(),
         sendCost: 50000,
-        createdByUser: new mongoose.Types.ObjectId()
+        createdByUser: new mongoose.Types.ObjectId(),
       };
 
-      const validationError = new Error('MoneyDelivery validation failed: sendMoneyAmount: Path `sendMoneyAmount` is required.');
+      const validationError = new Error(
+        'MoneyDelivery validation failed: sendMoneyAmount: Path `sendMoneyAmount` is required.'
+      );
       mockSave.mockRejectedValue(validationError);
 
       const moneyDelivery = new MockedMoneyDelivery(moneyDeliveryData);
@@ -220,10 +232,12 @@ describe('MoneyDelivery Model', () => {
         fromRoute: new mongoose.Types.ObjectId(),
         toRoute: new mongoose.Types.ObjectId(),
         sendMoneyAmount: 1000000,
-        createdByUser: new mongoose.Types.ObjectId()
+        createdByUser: new mongoose.Types.ObjectId(),
       };
 
-      const validationError = new Error('MoneyDelivery validation failed: sendCost: Path `sendCost` is required.');
+      const validationError = new Error(
+        'MoneyDelivery validation failed: sendCost: Path `sendCost` is required.'
+      );
       mockSave.mockRejectedValue(validationError);
 
       const moneyDelivery = new MockedMoneyDelivery(moneyDeliveryData);
@@ -239,10 +253,12 @@ describe('MoneyDelivery Model', () => {
         fromRoute: new mongoose.Types.ObjectId(),
         toRoute: new mongoose.Types.ObjectId(),
         sendMoneyAmount: 1000000,
-        sendCost: 50000
+        sendCost: 50000,
       };
 
-      const validationError = new Error('MoneyDelivery validation failed: createdByUser: Path `createdByUser` is required.');
+      const validationError = new Error(
+        'MoneyDelivery validation failed: createdByUser: Path `createdByUser` is required.'
+      );
       mockSave.mockRejectedValue(validationError);
 
       const moneyDelivery = new MockedMoneyDelivery(moneyDeliveryData);
@@ -259,10 +275,12 @@ describe('MoneyDelivery Model', () => {
         toRoute: new mongoose.Types.ObjectId(),
         sendMoneyAmount: -1000000,
         sendCost: 50000,
-        createdByUser: new mongoose.Types.ObjectId()
+        createdByUser: new mongoose.Types.ObjectId(),
       };
 
-      const validationError = new Error('MoneyDelivery validation failed: sendMoneyAmount: Path `sendMoneyAmount` (-1000000) is less than minimum allowed value (0).');
+      const validationError = new Error(
+        'MoneyDelivery validation failed: sendMoneyAmount: Path `sendMoneyAmount` (-1000000) is less than minimum allowed value (0).'
+      );
       mockSave.mockRejectedValue(validationError);
 
       const moneyDelivery = new MockedMoneyDelivery(moneyDeliveryData);
@@ -279,10 +297,12 @@ describe('MoneyDelivery Model', () => {
         toRoute: new mongoose.Types.ObjectId(),
         sendMoneyAmount: 1000000,
         sendCost: -50000,
-        createdByUser: new mongoose.Types.ObjectId()
+        createdByUser: new mongoose.Types.ObjectId(),
       };
 
-      const validationError = new Error('MoneyDelivery validation failed: sendCost: Path `sendCost` (-50000) is less than minimum allowed value (0).');
+      const validationError = new Error(
+        'MoneyDelivery validation failed: sendCost: Path `sendCost` (-50000) is less than minimum allowed value (0).'
+      );
       mockSave.mockRejectedValue(validationError);
 
       const moneyDelivery = new MockedMoneyDelivery(moneyDeliveryData);
@@ -299,10 +319,12 @@ describe('MoneyDelivery Model', () => {
         toRoute: new mongoose.Types.ObjectId(),
         sendMoneyAmount: 1000000,
         sendCost: 50000,
-        createdByUser: new mongoose.Types.ObjectId()
+        createdByUser: new mongoose.Types.ObjectId(),
       };
 
-      const validationError = new Error('MoneyDelivery validation failed: code: Path `code` is invalid (invalid-code).');
+      const validationError = new Error(
+        'MoneyDelivery validation failed: code: Path `code` is invalid (invalid-code).'
+      );
       mockSave.mockRejectedValue(validationError);
 
       const moneyDelivery = new MockedMoneyDelivery(moneyDeliveryData);
@@ -321,7 +343,7 @@ describe('MoneyDelivery Model', () => {
         toRoute: new mongoose.Types.ObjectId(),
         sendMoneyAmount: 1000000,
         sendCost: 50000,
-        createdByUser: new mongoose.Types.ObjectId()
+        createdByUser: new mongoose.Types.ObjectId(),
       };
 
       const moneyDelivery = new MockedMoneyDelivery(moneyDeliveryData);
@@ -348,7 +370,7 @@ describe('MoneyDelivery Model', () => {
         toRoute: new mongoose.Types.ObjectId(),
         sendMoneyAmount: 1000000,
         sendCost: 50000,
-        createdByUser: new mongoose.Types.ObjectId()
+        createdByUser: new mongoose.Types.ObjectId(),
       };
 
       const duplicateError = new Error('E11000 duplicate key error collection');
@@ -368,7 +390,7 @@ describe('MoneyDelivery Model', () => {
         toRoute: new mongoose.Types.ObjectId(),
         sendMoneyAmount: 1000000,
         sendCost: 50000,
-        createdByUser: new mongoose.Types.ObjectId()
+        createdByUser: new mongoose.Types.ObjectId(),
       };
 
       const moneyDeliveryData2 = {
@@ -379,14 +401,14 @@ describe('MoneyDelivery Model', () => {
         toRoute: new mongoose.Types.ObjectId(),
         sendMoneyAmount: 2000000,
         sendCost: 75000,
-        createdByUser: new mongoose.Types.ObjectId()
+        createdByUser: new mongoose.Types.ObjectId(),
       };
 
       mockSave.mockResolvedValue({
         ...moneyDeliveryData1,
         _id: new mongoose.Types.ObjectId(),
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       });
 
       const moneyDelivery1 = new MockedMoneyDelivery(moneyDeliveryData1);
@@ -407,7 +429,7 @@ describe('MoneyDelivery Model', () => {
         toRoute: new mongoose.Types.ObjectId(),
         sendMoneyAmount: 1000000,
         sendCost: 50000,
-        createdByUser: new mongoose.Types.ObjectId()
+        createdByUser: new mongoose.Types.ObjectId(),
       };
 
       const now = new Date();
@@ -415,7 +437,7 @@ describe('MoneyDelivery Model', () => {
         ...moneyDeliveryData,
         _id: new mongoose.Types.ObjectId(),
         createdAt: now,
-        updatedAt: now
+        updatedAt: now,
       });
 
       const moneyDelivery = new MockedMoneyDelivery(moneyDeliveryData);
@@ -436,7 +458,7 @@ describe('MoneyDelivery Model', () => {
         toRoute: new mongoose.Types.ObjectId(),
         sendMoneyAmount: 1000000,
         sendCost: 50000,
-        createdByUser: new mongoose.Types.ObjectId()
+        createdByUser: new mongoose.Types.ObjectId(),
       };
 
       const firstSave = new Date('2024-01-25T10:00:00Z');
@@ -447,13 +469,13 @@ describe('MoneyDelivery Model', () => {
           ...moneyDeliveryData,
           _id: new mongoose.Types.ObjectId(),
           createdAt: firstSave,
-          updatedAt: firstSave
+          updatedAt: firstSave,
         })
         .mockResolvedValueOnce({
           ...moneyDeliveryData,
           _id: new mongoose.Types.ObjectId(),
           createdAt: firstSave,
-          updatedAt: secondSave
+          updatedAt: secondSave,
         });
 
       const moneyDelivery = new MockedMoneyDelivery(moneyDeliveryData);

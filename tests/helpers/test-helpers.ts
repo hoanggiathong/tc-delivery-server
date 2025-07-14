@@ -4,7 +4,7 @@ export const createMockCustomer = (overrides: any = {}) => ({
   phone: '+1234567890',
   createdAt: '2025-06-27T07:51:17.342Z',
   updatedAt: '2025-06-27T07:51:17.342Z',
-  ...overrides
+  ...overrides,
 });
 
 export const createMockUser = (overrides: any = {}) => ({
@@ -13,7 +13,7 @@ export const createMockUser = (overrides: any = {}) => ({
   role: 'user',
   createdAt: '2025-06-27T07:51:17.342Z',
   updatedAt: '2025-06-27T07:51:17.342Z',
-  ...overrides
+  ...overrides,
 });
 
 export const createMockDelivery = (overrides: any = {}) => ({
@@ -26,14 +26,14 @@ export const createMockDelivery = (overrides: any = {}) => ({
     code: 'T1',
     name: 'Ho Chi Minh',
     createdAt: '2025-06-27T07:51:17.342Z',
-    updatedAt: '2025-06-27T07:51:17.342Z'
+    updatedAt: '2025-06-27T07:51:17.342Z',
   },
   toRoute: {
     id: 'toRoute123',
     code: 'T2',
     name: 'Long An',
     createdAt: '2025-06-27T07:51:17.342Z',
-    updatedAt: '2025-06-27T07:51:17.342Z'
+    updatedAt: '2025-06-27T07:51:17.342Z',
   },
   name: 'Electronics Package',
   cost: 50000,
@@ -48,5 +48,5 @@ export const createMockDelivery = (overrides: any = {}) => ({
   createdByUser: 'admin',
   createdAt: '2025-06-27T07:51:17.342Z',
   updatedAt: '2025-06-27T07:51:17.342Z',
-  ...overrides
+  ...overrides,
 });

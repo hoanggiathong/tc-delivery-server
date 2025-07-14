@@ -20,24 +20,23 @@ describe('CodeGeneratorService', () => {
       const mockFindOneQuery = {
         sort: jest.fn().mockReturnThis(),
         select: jest.fn().mockReturnThis(),
-        lean: jest.fn().mockResolvedValue(null)
+        lean: jest.fn().mockResolvedValue(null),
       };
       mockDeliveryModel.findOne = jest.fn().mockReturnValue(mockFindOneQuery);
 
       // Mock the second findOne call (verification)
       const mockVerificationQuery = {
-        lean: jest.fn().mockResolvedValue(null)
+        lean: jest.fn().mockResolvedValue(null),
       };
-      mockDeliveryModel.findOne = jest.fn()
+      mockDeliveryModel.findOne = jest
+        .fn()
         .mockReturnValueOnce(mockFindOneQuery) // First call in findLastCodeForDate
         .mockReturnValueOnce(mockVerificationQuery); // Second call in generateNextCode
 
       const result = await CodeGeneratorService.generateNextCode(testDate);
 
       expect(result).toBe('2501240001'); // 25/01/24 + 0001
-      expect(mockDeliveryModel.findOne).toHaveBeenCalledWith(
-        { code: /^250124\d{4}$/ }
-      );
+      expect(mockDeliveryModel.findOne).toHaveBeenCalledWith({ code: /^250124\d{4}$/ });
     });
 
     it('should generate next code in sequence', async () => {
@@ -47,15 +46,16 @@ describe('CodeGeneratorService', () => {
       const mockFindOneQuery = {
         sort: jest.fn().mockReturnThis(),
         select: jest.fn().mockReturnThis(),
-        lean: jest.fn().mockResolvedValue({ code: '2501240005' })
+        lean: jest.fn().mockResolvedValue({ code: '2501240005' }),
       };
 
       // Mock the second findOne call (verification)
       const mockVerificationQuery = {
-        lean: jest.fn().mockResolvedValue(null)
+        lean: jest.fn().mockResolvedValue(null),
       };
 
-      mockDeliveryModel.findOne = jest.fn()
+      mockDeliveryModel.findOne = jest
+        .fn()
         .mockReturnValueOnce(mockFindOneQuery) // First call in findLastCodeForDate
         .mockReturnValueOnce(mockVerificationQuery); // Second call in generateNextCode
 
@@ -71,18 +71,19 @@ describe('CodeGeneratorService', () => {
       const mockFindOneQuery = {
         sort: jest.fn().mockReturnThis(),
         select: jest.fn().mockReturnThis(),
-        lean: jest.fn().mockResolvedValue({ code: '2501240006' })
+        lean: jest.fn().mockResolvedValue({ code: '2501240006' }),
       };
 
       // Mock the verification calls - first one returns existing, second returns null
       const mockVerificationQuery1 = {
-        lean: jest.fn().mockResolvedValue({ code: '2501240007' })
+        lean: jest.fn().mockResolvedValue({ code: '2501240007' }),
       };
       const mockVerificationQuery2 = {
-        lean: jest.fn().mockResolvedValue(null)
+        lean: jest.fn().mockResolvedValue(null),
       };
 
-      mockDeliveryModel.findOne = jest.fn()
+      mockDeliveryModel.findOne = jest
+        .fn()
         .mockReturnValueOnce(mockFindOneQuery) // First call in findLastCodeForDate (returns 0006)
         .mockReturnValueOnce(mockVerificationQuery1) // First verification (0007 exists)
         .mockReturnValueOnce(mockVerificationQuery2); // Second verification (0008 does not exist)
@@ -99,16 +100,17 @@ describe('CodeGeneratorService', () => {
       const mockFindOneQuery = {
         sort: jest.fn().mockReturnThis(),
         select: jest.fn().mockReturnThis(),
-        lean: jest.fn().mockResolvedValue({ code: '2501249999' })
+        lean: jest.fn().mockResolvedValue({ code: '2501249999' }),
       };
 
       mockDeliveryModel.findOne = jest.fn().mockReturnValue(mockFindOneQuery);
 
-      await expect(CodeGeneratorService.generateNextCode(testDate))
-        .rejects.toThrow('Maximum number of deliveries (9999) reached for date 250124');
+      await expect(CodeGeneratorService.generateNextCode(testDate)).rejects.toThrow(
+        'Maximum number of deliveries (9999) reached for date 250124'
+      );
     });
 
-    it('should generate code with today\'s date by default', async () => {
+    it("should generate code with today's date by default", async () => {
       const today = new Date();
       const day = String(today.getDate()).padStart(2, '0');
       const month = String(today.getMonth() + 1).padStart(2, '0');
@@ -119,14 +121,15 @@ describe('CodeGeneratorService', () => {
       const mockFindOneQuery = {
         sort: jest.fn().mockReturnThis(),
         select: jest.fn().mockReturnThis(),
-        lean: jest.fn().mockResolvedValue(null)
+        lean: jest.fn().mockResolvedValue(null),
       };
 
       const mockVerificationQuery = {
-        lean: jest.fn().mockResolvedValue(null)
+        lean: jest.fn().mockResolvedValue(null),
       };
 
-      mockDeliveryModel.findOne = jest.fn()
+      mockDeliveryModel.findOne = jest
+        .fn()
         .mockReturnValueOnce(mockFindOneQuery)
         .mockReturnValueOnce(mockVerificationQuery);
 
@@ -144,7 +147,7 @@ describe('CodeGeneratorService', () => {
       const mockFindOneQuery = {
         sort: jest.fn().mockReturnThis(),
         select: jest.fn().mockReturnThis(),
-        lean: jest.fn().mockResolvedValue({ code: '2501240005' })
+        lean: jest.fn().mockResolvedValue({ code: '2501240005' }),
       };
 
       mockDeliveryModel.findOne = jest.fn().mockReturnValue(mockFindOneQuery);
@@ -182,7 +185,7 @@ describe('CodeGeneratorService', () => {
       const result = CodeGeneratorService.parseCode('2501240001');
       expect(result).toEqual({
         date: new Date(2024, 0, 25), // January 25, 2024
-        sequence: 1
+        sequence: 1,
       });
     });
 
@@ -207,7 +210,7 @@ describe('CodeGeneratorService', () => {
 
       expect(result).toBe(5);
       expect(mockDeliveryModel.countDocuments).toHaveBeenCalledWith({
-        code: /^250124\d{4}$/ // 25/01/24
+        code: /^250124\d{4}$/, // 25/01/24
       });
     });
 
@@ -260,7 +263,7 @@ describe('CodeGeneratorService', () => {
       const mockFindOneQuery = {
         sort: jest.fn().mockReturnThis(),
         select: jest.fn().mockReturnThis(),
-        lean: jest.fn().mockRejectedValue(new Error('Database error'))
+        lean: jest.fn().mockRejectedValue(new Error('Database error')),
       };
 
       mockDeliveryModel.findOne = jest.fn().mockReturnValue(mockFindOneQuery);
@@ -271,7 +274,9 @@ describe('CodeGeneratorService', () => {
     it('should handle database errors in getDeliveryCountForDate', async () => {
       mockDeliveryModel.countDocuments = jest.fn().mockRejectedValue(new Error('Database error'));
 
-      await expect(CodeGeneratorService.getDeliveryCountForDate(new Date())).rejects.toThrow('Database error');
+      await expect(CodeGeneratorService.getDeliveryCountForDate(new Date())).rejects.toThrow(
+        'Database error'
+      );
     });
   });
 });

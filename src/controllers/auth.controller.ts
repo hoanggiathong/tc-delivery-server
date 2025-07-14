@@ -1,6 +1,11 @@
 import { Request, Response } from 'express';
 import { AuthService } from '@/services/auth.service';
-import { LoginRequest, RegisterRequest, CreateUserRequest, UpdateSelectedRouteRequest } from '@/schemas/auth.schema';
+import {
+  LoginRequest,
+  RegisterRequest,
+  CreateUserRequest,
+  UpdateSelectedRouteRequest,
+} from '@/schemas/auth.schema';
 import { AuthRequest, ApiResponse, UserRole } from '@/types';
 import { IUserResponse } from '@/types/user.type';
 
@@ -273,10 +278,10 @@ export class AuthController {
 
       if (req.user.role === UserRole.SUPERADMIN) {
         // Superadmin can see all users
-        users = await this.authService.getAllUsers() || [];
+        users = (await this.authService.getAllUsers()) || [];
       } else if (viewableRoles && viewableRoles.length > 0) {
         // Other roles can only see users they have permission to view
-        users = await this.authService.getUsersByRoles(viewableRoles) || [];
+        users = (await this.authService.getUsersByRoles(viewableRoles)) || [];
       }
 
       const response: ApiResponse = {

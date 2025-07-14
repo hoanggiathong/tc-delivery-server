@@ -10,7 +10,7 @@ import {
   userRouteParamsSchema,
   removeMultipleRoutesSchema,
   userIdParamsSchema,
-  routeIdParamsSchema
+  routeIdParamsSchema,
 } from '@/schemas/user-route.schema';
 
 const router = Router();
@@ -105,11 +105,23 @@ router.use(requireRole([UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]))
 
 // User-route routes
 router.post('/assign', validate(createUserRouteSchema), userRouteController.assignRouteToUser);
-router.post('/assign-multiple', validate(assignMultipleRoutesSchema), userRouteController.assignMultipleRoutesToUser);
-router.delete('/remove-multiple', validate(removeMultipleRoutesSchema), userRouteController.removeMultipleRoutesFromUser);
+router.post(
+  '/assign-multiple',
+  validate(assignMultipleRoutesSchema),
+  userRouteController.assignMultipleRoutesToUser
+);
+router.delete(
+  '/remove-multiple',
+  validate(removeMultipleRoutesSchema),
+  userRouteController.removeMultipleRoutesFromUser
+);
 router.delete('/:id', validate(userRouteParamsSchema), userRouteController.removeRouteFromUser);
 router.get('/user/:userId', validate(userIdParamsSchema), userRouteController.getUserRoutes);
-router.get('/user/:userId/routes', validate(userIdParamsSchema), userRouteController.getRoutesForUser);
+router.get(
+  '/user/:userId/routes',
+  validate(userIdParamsSchema),
+  userRouteController.getRoutesForUser
+);
 router.get('/route/:routeId', validate(routeIdParamsSchema), userRouteController.getUsersForRoute);
 router.get('/', userRouteController.getAllUserRoutes);
 

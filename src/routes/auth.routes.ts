@@ -3,7 +3,12 @@ import { AuthController } from '@/controllers/auth.controller';
 import { validate } from '@/middlewares/validation.middleware';
 import { authenticateToken } from '@/middlewares/auth.middleware';
 import { canViewUsers, canCreateUser } from '@/middlewares/role.middleware';
-import { loginSchema, registerSchema, createUserSchema, updateSelectedRouteSchema } from '@/schemas/auth.schema';
+import {
+  loginSchema,
+  registerSchema,
+  createUserSchema,
+  updateSelectedRouteSchema,
+} from '@/schemas/auth.schema';
 
 const router = Router();
 const authController = new AuthController();
@@ -89,10 +94,21 @@ router.post('/login', validate(loginSchema), authController.login);
 
 // Protected routes
 router.get('/profile', authenticateToken, authController.getProfile);
-router.put('/update-selected-route', authenticateToken, validate(updateSelectedRouteSchema), authController.updateSelectedRoute);
+router.put(
+  '/update-selected-route',
+  authenticateToken,
+  validate(updateSelectedRouteSchema),
+  authController.updateSelectedRoute
+);
 
 // Role-based routes
-router.post('/create-user', authenticateToken, validate(createUserSchema), canCreateUser, authController.createUser);
+router.post(
+  '/create-user',
+  authenticateToken,
+  validate(createUserSchema),
+  canCreateUser,
+  authController.createUser
+);
 router.get('/users', authenticateToken, canViewUsers, authController.getAllUsers);
 
 export default router;

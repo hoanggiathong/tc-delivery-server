@@ -33,7 +33,7 @@ describe('Customer Endpoints', () => {
   describe('POST /api/customer', () => {
     const validCustomerData = {
       name: 'John Doe',
-      phone: '+1234567890'
+      phone: '+1234567890',
     };
 
     it('should create a new customer when authenticated as admin', async () => {
@@ -94,10 +94,7 @@ describe('Customer Endpoints', () => {
     });
 
     it('should return 401 when not authenticated', async () => {
-      const response = await request(app)
-        .post('/api/customer')
-        .send(validCustomerData)
-        .expect(401);
+      const response = await request(app).post('/api/customer').send(validCustomerData).expect(401);
 
       expect(response.body.success).toBe(false);
       expect(response.body.message).toBe('Access token is required');
@@ -106,7 +103,7 @@ describe('Customer Endpoints', () => {
     it('should return 400 with validation errors for invalid data', async () => {
       const invalidData = {
         name: '', // Empty name
-        phone: 'invalid-phone'
+        phone: 'invalid-phone',
       };
 
       const response = await request(app)
@@ -124,7 +121,7 @@ describe('Customer Endpoints', () => {
     const customerId = '507f1f77bcf86cd799439011';
     const updateData = {
       name: 'Jane Doe',
-      phone: '+1987654321'
+      phone: '+1987654321',
     };
 
     it('should update customer successfully', async () => {
@@ -133,7 +130,7 @@ describe('Customer Endpoints', () => {
         name: 'Jane Doe',
         phone: '+1987654321',
         createdAt: new Date('2025-06-27T07:51:17.342Z'),
-        updatedAt: new Date('2025-06-27T07:51:17.342Z')
+        updatedAt: new Date('2025-06-27T07:51:17.342Z'),
       };
 
       MockedCustomerService.prototype.updateCustomer.mockResolvedValue(mockUpdatedCustomer);
@@ -189,7 +186,7 @@ describe('Customer Endpoints', () => {
         name: 'John Doe',
         phone: '+1234567890',
         createdAt: new Date('2025-06-27T07:51:17.342Z'),
-        updatedAt: new Date('2025-06-27T07:51:17.342Z')
+        updatedAt: new Date('2025-06-27T07:51:17.342Z'),
       };
 
       MockedCustomerService.prototype.getCustomerById.mockResolvedValue(mockCustomer);
@@ -233,9 +230,7 @@ describe('Customer Endpoints', () => {
 
   describe('GET /api/customer', () => {
     it('should get all customers successfully', async () => {
-      const mockCustomers = [
-        createMockCustomer({ id: 'customer1' })
-      ];
+      const mockCustomers = [createMockCustomer({ id: 'customer1' })];
 
       MockedCustomerService.prototype.getAllCustomers.mockResolvedValue(mockCustomers);
 

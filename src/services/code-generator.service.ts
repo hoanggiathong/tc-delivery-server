@@ -43,7 +43,6 @@ export class CodeGeneratorService {
       }
 
       return newCode;
-
     } catch (error) {
       logger.error('Error generating delivery code:', error);
       throw error;
@@ -90,14 +89,11 @@ export class CodeGeneratorService {
       }
 
       return newCode;
-
     } catch (error) {
       logger.error('Error generating money delivery code:', error);
       throw error;
     }
   }
-
-
 
   /**
    * Find the last delivery code for a specific date
@@ -120,7 +116,9 @@ export class CodeGeneratorService {
   /**
    * Find the last money delivery code for a specific date
    */
-  private static async findLastMoneyDeliveryCodeForDate(datePrefix: string): Promise<string | null> {
+  private static async findLastMoneyDeliveryCodeForDate(
+    datePrefix: string
+  ): Promise<string | null> {
     try {
       const regex = new RegExp(`^${datePrefix}\\d{4}$`);
       const lastCode = await MoneyDelivery.findOne({ code: regex })
@@ -138,7 +136,10 @@ export class CodeGeneratorService {
   /**
    * Generate code with specific sequence number
    */
-  private static async generateNextCodeWithSequence(datePrefix: string, sequence: number): Promise<string> {
+  private static async generateNextCodeWithSequence(
+    datePrefix: string,
+    sequence: number
+  ): Promise<string> {
     if (sequence > 9999) {
       throw new Error(`Maximum number of deliveries (9999) reached for date ${datePrefix}`);
     }
@@ -159,7 +160,10 @@ export class CodeGeneratorService {
   /**
    * Generate money delivery code with specific sequence number
    */
-  private static async generateNextMoneyDeliveryCodeWithSequence(datePrefix: string, sequence: number): Promise<string> {
+  private static async generateNextMoneyDeliveryCodeWithSequence(
+    datePrefix: string,
+    sequence: number
+  ): Promise<string> {
     if (sequence > 9999) {
       throw new Error(`Maximum number of money deliveries (9999) reached for date ${datePrefix}`);
     }
@@ -195,17 +199,23 @@ export class CodeGeneratorService {
     const sequence = parseInt(code.slice(6, 10));
 
     // Validate date parts
-    if (day < 1 || day > 31) return false;
-    if (month < 1 || month > 12) return false;
-    if (sequence < 1 || sequence > 9999) return false;
+    if (day < 1 || day > 31) {
+      return false;
+    }
+    if (month < 1 || month > 12) {
+      return false;
+    }
+    if (sequence < 1 || sequence > 9999) {
+      return false;
+    }
 
     // Additional date validation (assume 00-99 all means 20xx for delivery codes)
     const fullYear = 2000 + year;
     const date = new Date(fullYear, month - 1, day);
 
-    return date.getDate() === day &&
-           date.getMonth() === month - 1 &&
-           date.getFullYear() === fullYear;
+    return (
+      date.getDate() === day && date.getMonth() === month - 1 && date.getFullYear() === fullYear
+    );
   }
 
   /**
@@ -327,7 +337,6 @@ export class CodeGeneratorService {
       const newCode = `${datePrefix}${sequenceStr}`;
 
       return newCode;
-
     } catch (error) {
       logger.error('Error getting next code preview:', error);
       throw error;

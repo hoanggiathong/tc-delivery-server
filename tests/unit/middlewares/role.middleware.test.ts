@@ -11,7 +11,7 @@ describe('Role Middleware', () => {
     mockRequest = {};
     mockResponse = {
       status: jest.fn().mockReturnThis(),
-      json: jest.fn()
+      json: jest.fn(),
     };
     mockNext = jest.fn();
   });
@@ -22,7 +22,7 @@ describe('Role Middleware', () => {
       mockRequest.user = {
         userId: 'user1',
         username: 'admin',
-        role: UserRole.ADMIN
+        role: UserRole.ADMIN,
       };
 
       const middleware = requireRole([UserRole.ADMIN, UserRole.SUPERADMIN]);
@@ -40,7 +40,7 @@ describe('Role Middleware', () => {
       mockRequest.user = {
         userId: 'user1',
         username: 'user',
-        role: UserRole.USER
+        role: UserRole.USER,
       };
 
       const middleware = requireRole([UserRole.ADMIN]);
@@ -52,7 +52,7 @@ describe('Role Middleware', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(403);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
-        message: 'Insufficient permissions'
+        message: 'Insufficient permissions',
       });
       expect(mockNext).not.toHaveBeenCalled();
     });
@@ -68,7 +68,7 @@ describe('Role Middleware', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(401);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
-        message: 'Authentication required'
+        message: 'Authentication required',
       });
       expect(mockNext).not.toHaveBeenCalled();
     });
@@ -78,7 +78,7 @@ describe('Role Middleware', () => {
       mockRequest.user = {
         userId: 'user1',
         username: 'manager',
-        role: UserRole.MANAGER
+        role: UserRole.MANAGER,
       };
 
       const middleware = requireRole([UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPERADMIN]);
@@ -96,7 +96,7 @@ describe('Role Middleware', () => {
       mockRequest.user = {
         userId: 'user1',
         username: 'superadmin',
-        role: UserRole.SUPERADMIN
+        role: UserRole.SUPERADMIN,
       };
 
       const middleware = requireRole([UserRole.SUPERADMIN]);
@@ -116,7 +116,7 @@ describe('Role Middleware', () => {
       mockRequest.user = {
         userId: 'user1',
         username: 'superadmin',
-        role: UserRole.SUPERADMIN
+        role: UserRole.SUPERADMIN,
       };
 
       // Execute
@@ -137,7 +137,7 @@ describe('Role Middleware', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(401);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
-        message: 'Authentication required'
+        message: 'Authentication required',
       });
       expect(mockNext).not.toHaveBeenCalled();
     });
@@ -147,7 +147,7 @@ describe('Role Middleware', () => {
       mockRequest.user = {
         userId: 'user1',
         username: 'admin',
-        role: UserRole.ADMIN
+        role: UserRole.ADMIN,
       };
 
       // Execute
@@ -165,7 +165,7 @@ describe('Role Middleware', () => {
       mockRequest.user = {
         userId: 'user1',
         username: 'manager',
-        role: UserRole.MANAGER
+        role: UserRole.MANAGER,
       };
 
       // Execute
@@ -183,7 +183,7 @@ describe('Role Middleware', () => {
       mockRequest.user = {
         userId: 'user1',
         username: 'user',
-        role: UserRole.USER
+        role: UserRole.USER,
       };
 
       // Execute
@@ -193,7 +193,7 @@ describe('Role Middleware', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(403);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
-        message: 'No permission to view users'
+        message: 'No permission to view users',
       });
       expect(mockNext).not.toHaveBeenCalled();
     });
@@ -205,7 +205,7 @@ describe('Role Middleware', () => {
       mockRequest.user = {
         userId: 'user1',
         username: 'superadmin',
-        role: UserRole.SUPERADMIN
+        role: UserRole.SUPERADMIN,
       };
       mockRequest.body = { role: UserRole.ADMIN };
 
@@ -222,7 +222,7 @@ describe('Role Middleware', () => {
       mockRequest.user = {
         userId: 'user1',
         username: 'admin',
-        role: UserRole.ADMIN
+        role: UserRole.ADMIN,
       };
       mockRequest.body = { role: UserRole.MANAGER };
 
@@ -239,7 +239,7 @@ describe('Role Middleware', () => {
       mockRequest.user = {
         userId: 'user1',
         username: 'admin',
-        role: UserRole.ADMIN
+        role: UserRole.ADMIN,
       };
       mockRequest.body = { role: UserRole.SUPERADMIN };
 
@@ -250,7 +250,7 @@ describe('Role Middleware', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(403);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
-        message: `No permission to create user with role: ${UserRole.SUPERADMIN}`
+        message: `No permission to create user with role: ${UserRole.SUPERADMIN}`,
       });
       expect(mockNext).not.toHaveBeenCalled();
     });
@@ -260,7 +260,7 @@ describe('Role Middleware', () => {
       mockRequest.user = {
         userId: 'user1',
         username: 'manager',
-        role: UserRole.MANAGER
+        role: UserRole.MANAGER,
       };
       mockRequest.body = { role: UserRole.USER };
 
@@ -271,7 +271,7 @@ describe('Role Middleware', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(403);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
-        message: `No permission to create user with role: ${UserRole.USER}`
+        message: `No permission to create user with role: ${UserRole.USER}`,
       });
       expect(mockNext).not.toHaveBeenCalled();
     });
@@ -281,7 +281,7 @@ describe('Role Middleware', () => {
       mockRequest.user = {
         userId: 'user1',
         username: 'manager',
-        role: UserRole.MANAGER
+        role: UserRole.MANAGER,
       };
       mockRequest.body = { role: UserRole.ADMIN };
 
@@ -292,7 +292,7 @@ describe('Role Middleware', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(403);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
-        message: `No permission to create user with role: ${UserRole.ADMIN}`
+        message: `No permission to create user with role: ${UserRole.ADMIN}`,
       });
       expect(mockNext).not.toHaveBeenCalled();
     });
@@ -308,7 +308,7 @@ describe('Role Middleware', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(401);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
-        message: 'Authentication required'
+        message: 'Authentication required',
       });
       expect(mockNext).not.toHaveBeenCalled();
     });
@@ -318,7 +318,7 @@ describe('Role Middleware', () => {
       mockRequest.user = {
         userId: 'user1',
         username: 'manager',
-        role: UserRole.MANAGER
+        role: UserRole.MANAGER,
       };
       mockRequest.body = {}; // No role specified
 
@@ -329,7 +329,7 @@ describe('Role Middleware', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(403);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
-        message: `No permission to create user with role: ${UserRole.USER}`
+        message: `No permission to create user with role: ${UserRole.USER}`,
       });
       expect(mockNext).not.toHaveBeenCalled();
     });
@@ -339,7 +339,7 @@ describe('Role Middleware', () => {
       mockRequest.user = {
         userId: 'user1',
         username: 'user',
-        role: UserRole.USER
+        role: UserRole.USER,
       };
       mockRequest.body = { role: UserRole.USER };
 
@@ -350,7 +350,7 @@ describe('Role Middleware', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(403);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
-        message: `No permission to create user with role: ${UserRole.USER}`
+        message: `No permission to create user with role: ${UserRole.USER}`,
       });
       expect(mockNext).not.toHaveBeenCalled();
     });

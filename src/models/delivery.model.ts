@@ -24,138 +24,157 @@ export interface IDelivery extends Document {
   updatedAt: Date;
 }
 
-const deliverySchema = new Schema<IDelivery>({
-  code: {
-    type: String,
-    required: [true, 'Delivery code is required'],
-    unique: true,
-    trim: true,
-    match: [/^\d{10}$/, 'Code must be 10 digits in format DDMMYY + sequence (0001-9999)']
+const deliverySchema = new Schema<IDelivery>(
+  {
+    code: {
+      type: String,
+      required: [true, 'Delivery code is required'],
+      unique: true,
+      trim: true,
+      match: [/^\d{10}$/, 'Code must be 10 digits in format DDMMYY + sequence (0001-9999)'],
+    },
+    sender: {
+      type: Schema.Types.ObjectId,
+      ref: 'Customer',
+      required: [true, 'Sender is required'],
+    },
+    receiver: {
+      type: Schema.Types.ObjectId,
+      ref: 'Customer',
+      required: [true, 'Receiver is required'],
+    },
+    fromRoute: {
+      type: Schema.Types.ObjectId,
+      ref: 'Route',
+      required: [true, 'From route is required'],
+    },
+    toRoute: {
+      type: Schema.Types.ObjectId,
+      ref: 'Route',
+      required: [true, 'To route is required'],
+    },
+    name: {
+      type: String,
+      required: [true, 'Item name is required'],
+      trim: true,
+    },
+    cost: {
+      type: Number,
+      required: [true, 'Cost is required'],
+      min: [0, 'Cost must be positive'],
+    },
+    homeDelivery: {
+      type: String,
+      required: false,
+      trim: true,
+    },
+    homeDeliveryCost: {
+      type: Number,
+      required: [true, 'Home delivery cost is required'],
+      min: [0, 'Home delivery cost must be positive'],
+      default: 0,
+    },
+    itemValue: {
+      type: Number,
+      required: [true, 'Item value is required'],
+      min: [0, 'Item value must be positive'],
+    },
+    itemCost: {
+      type: Number,
+      required: [true, 'Item cost is required'],
+      min: [0, 'Item cost must be positive'],
+    },
+    collectCost: {
+      type: Number,
+      required: [true, 'Collect cost is required'],
+      min: [0, 'Collect cost must be positive'],
+    },
+    collectForCustomer: {
+      type: Number,
+      required: [true, 'Collect for customer amount is required'],
+      min: [0, 'Collect for customer amount must be positive'],
+      default: 0,
+    },
+    collectForCustomerCost: {
+      type: Number,
+      required: [true, 'Collect for customer cost is required'],
+      min: [0, 'Collect for customer cost must be positive'],
+    },
+    totalCost: {
+      type: Number,
+      required: false, // Will be calculated by pre-save middleware
+      min: [0, 'Total cost must be positive'],
+      default: 0,
+    },
+    collectForCustomerNote: {
+      type: String,
+      trim: true,
+    },
+    notes: {
+      type: String,
+      trim: true,
+    },
+    createdByUser: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: [true, 'Created by user is required'],
+    },
   },
-  sender: {
-    type: Schema.Types.ObjectId,
-    ref: 'Customer',
-    required: [true, 'Sender is required']
-  },
-  receiver: {
-    type: Schema.Types.ObjectId,
-    ref: 'Customer',
-    required: [true, 'Receiver is required']
-  },
-  fromRoute: {
-    type: Schema.Types.ObjectId,
-    ref: 'Route',
-    required: [true, 'From route is required']
-  },
-  toRoute: {
-    type: Schema.Types.ObjectId,
-    ref: 'Route',
-    required: [true, 'To route is required']
-  },
-  name: {
-    type: String,
-    required: [true, 'Item name is required'],
-    trim: true
-  },
-  cost: {
-    type: Number,
-    required: [true, 'Cost is required'],
-    min: [0, 'Cost must be positive']
-  },
-  homeDelivery: {
-    type: String,
-    required: false,
-    trim: true
-  },
-  homeDeliveryCost: {
-    type: Number,
-    required: [true, 'Home delivery cost is required'],
-    min: [0, 'Home delivery cost must be positive'],
-    default: 0
-  },
-  itemValue: {
-    type: Number,
-    required: [true, 'Item value is required'],
-    min: [0, 'Item value must be positive']
-  },
-  itemCost: {
-    type: Number,
-    required: [true, 'Item cost is required'],
-    min: [0, 'Item cost must be positive']
-  },
-  collectCost: {
-    type: Number,
-    required: [true, 'Collect cost is required'],
-    min: [0, 'Collect cost must be positive']
-  },
-  collectForCustomer: {
-    type: Number,
-    required: [true, 'Collect for customer amount is required'],
-    min: [0, 'Collect for customer amount must be positive'],
-    default: 0
-  },
-  collectForCustomerCost: {
-    type: Number,
-    required: [true, 'Collect for customer cost is required'],
-    min: [0, 'Collect for customer cost must be positive']
-  },
-  totalCost: {
-    type: Number,
-    required: false, // Will be calculated by pre-save middleware
-    min: [0, 'Total cost must be positive'],
-    default: 0
-  },
-  collectForCustomerNote: {
-    type: String,
-    trim: true
-  },
-  notes: {
-    type: String,
-    trim: true
-  },
-  createdByUser: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-    required: [true, 'Created by user is required']
+  {
+    timestamps: true,
+    toJSON: {
+      transform: function (doc, ret) {
+        ret.id = ret._id;
+        delete ret._id;
+        delete ret.__v;
+        return ret;
+      },
+    },
   }
-}, {
-  timestamps: true,
-  toJSON: {
-    transform: function(doc, ret) {
-      ret.id = ret._id;
-      delete ret._id;
-      delete ret.__v;
-      return ret;
-    }
-  }
-});
+);
 
 // Pre-save middleware to calculate totalCost
-deliverySchema.pre('save', function(next) {
+deliverySchema.pre('save', function (next) {
   // Calculate totalCost = cost + homeDeliveryCost + itemCost + collectCost + collectForCustomerCost
-  this.totalCost = this.cost + this.homeDeliveryCost + this.itemCost + this.collectCost + this.collectForCustomerCost;
+  this.totalCost =
+    this.cost +
+    this.homeDeliveryCost +
+    this.itemCost +
+    this.collectCost +
+    this.collectForCustomerCost;
   next();
 });
 
 // Pre-update middleware to calculate totalCost
-deliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function(next) {
+deliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next) {
   const update = this.getUpdate() as any;
   if (update) {
     // Only calculate if at least one cost field is being updated
-    if (update.cost !== undefined || update.homeDeliveryCost !== undefined || 
-        update.itemCost !== undefined || update.collectCost !== undefined || 
-        update.collectForCustomerCost !== undefined) {
-      
+    if (
+      update.cost !== undefined ||
+      update.homeDeliveryCost !== undefined ||
+      update.itemCost !== undefined ||
+      update.collectCost !== undefined ||
+      update.collectForCustomerCost !== undefined
+    ) {
       // Get current document to merge with updates
       const currentDoc = await this.model.findOne(this.getQuery());
       if (currentDoc) {
         const cost = update.cost !== undefined ? update.cost : currentDoc.cost;
-        const homeDeliveryCost = update.homeDeliveryCost !== undefined ? update.homeDeliveryCost : currentDoc.homeDeliveryCost;
+        const homeDeliveryCost =
+          update.homeDeliveryCost !== undefined
+            ? update.homeDeliveryCost
+            : currentDoc.homeDeliveryCost;
         const itemCost = update.itemCost !== undefined ? update.itemCost : currentDoc.itemCost;
-        const collectCost = update.collectCost !== undefined ? update.collectCost : currentDoc.collectCost;
-        const collectForCustomerCost = update.collectForCustomerCost !== undefined ? update.collectForCustomerCost : currentDoc.collectForCustomerCost;
-        
-        update.totalCost = cost + homeDeliveryCost + itemCost + collectCost + collectForCustomerCost;
+        const collectCost =
+          update.collectCost !== undefined ? update.collectCost : currentDoc.collectCost;
+        const collectForCustomerCost =
+          update.collectForCustomerCost !== undefined
+            ? update.collectForCustomerCost
+            : currentDoc.collectForCustomerCost;
+
+        update.totalCost =
+          cost + homeDeliveryCost + itemCost + collectCost + collectForCustomerCost;
       }
     }
   }

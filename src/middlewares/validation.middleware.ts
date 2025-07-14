@@ -12,7 +12,7 @@ export const validate = (schema: ZodSchema) => {
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        const errorMessages = error.errors.map((issue) => ({
+        const errorMessages = error.errors.map(issue => ({
           path: issue.path.join('.'),
           message: issue.message,
         }));

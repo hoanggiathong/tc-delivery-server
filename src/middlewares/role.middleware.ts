@@ -9,7 +9,7 @@ export const requireRole = (requiredRoles: UserRole[]) => {
     if (!req.user) {
       res.status(401).json({
         success: false,
-        message: 'Authentication required'
+        message: 'Authentication required',
       });
       return;
     }
@@ -17,7 +17,7 @@ export const requireRole = (requiredRoles: UserRole[]) => {
     if (!requiredRoles.includes(req.user.role)) {
       res.status(403).json({
         success: false,
-        message: 'Insufficient permissions'
+        message: 'Insufficient permissions',
       });
       return;
     }
@@ -33,7 +33,7 @@ export const canViewUsers = (req: AuthRequest, res: Response, next: NextFunction
   if (!req.user) {
     res.status(401).json({
       success: false,
-      message: 'Authentication required'
+      message: 'Authentication required',
     });
     return;
   }
@@ -55,7 +55,7 @@ export const canViewUsers = (req: AuthRequest, res: Response, next: NextFunction
   if (viewableRoles.length === 0) {
     res.status(403).json({
       success: false,
-      message: 'No permission to view users'
+      message: 'No permission to view users',
     });
     return;
   }
@@ -72,7 +72,7 @@ export const canCreateUser = (req: AuthRequest, res: Response, next: NextFunctio
   if (!req.user) {
     res.status(401).json({
       success: false,
-      message: 'Authentication required'
+      message: 'Authentication required',
     });
     return;
   }
@@ -82,7 +82,7 @@ export const canCreateUser = (req: AuthRequest, res: Response, next: NextFunctio
   if (!canCreateRole(req.user.role, targetRole)) {
     res.status(403).json({
       success: false,
-      message: `No permission to create user with role: ${targetRole}`
+      message: `No permission to create user with role: ${targetRole}`,
     });
     return;
   }

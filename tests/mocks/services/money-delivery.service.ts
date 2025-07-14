@@ -12,7 +12,7 @@ export const mockMoneyDeliveryService = {
   deleteMoneyDelivery: jest.fn(),
   getNextCode: jest.fn(),
   getMoneyDeliveryByCode: jest.fn(),
-  getFrequentCustomers: jest.fn()
+  getFrequentCustomers: jest.fn(),
 };
 
 // Mock Money Delivery Service class

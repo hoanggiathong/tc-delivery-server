@@ -27,17 +27,16 @@ export const connectDB = async (): Promise<void> => {
       Logger.warn('🔸 MongoDB disconnected');
     });
 
-    mongoose.connection.on('error', (err) => {
+    mongoose.connection.on('error', err => {
       Logger.error(`❌ MongoDB connection error: ${err}`);
     });
 
     // Debug queries in development
     if (process.env.NODE_ENV === 'development') {
-      mongoose.connection.on('query', (query) => {
+      mongoose.connection.on('query', query => {
         Logger.debug(`MongoDB Query: ${JSON.stringify(query)}`);
       });
     }
-
   } catch (error) {
     Logger.error(`❌ Error connecting to MongoDB: ${error}`);
     process.exit(1);

@@ -27,7 +27,7 @@ export const createMockRequest = (overrides: any = {}) => {
     query: {},
     headers: {},
     user: null,
-    ...overrides
+    ...overrides,
   };
 };
 

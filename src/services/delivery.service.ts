@@ -8,7 +8,7 @@ import {
   IDeliveryResponse,
   IDeliveryWithPopulatedRefs,
   IDeliveryLeanPopulated,
-  INextCodeResponse
+  INextCodeResponse,
 } from '@/types/delivery.type';
 import { ICustomerResponse } from '@/types/customer.type';
 import { IFrequentCustomersResponse, IFrequentCustomer } from '@/types/delivery.type';
@@ -45,7 +45,7 @@ export class DeliveryService {
       { path: 'receiver', select: '_id name phone createdAt updatedAt' },
       { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
       { path: 'toRoute', select: '_id code name createdAt updatedAt' },
-      { path: 'createdByUser', select: '_id username' }
+      { path: 'createdByUser', select: '_id username' },
     ]);
 
     const populated = this.toPopulatedDelivery(populatedDelivery);
@@ -58,28 +58,28 @@ export class DeliveryService {
         name: populated.sender.name,
         phone: populated.sender.phone,
         createdAt: populated.sender.createdAt,
-        updatedAt: populated.sender.updatedAt
+        updatedAt: populated.sender.updatedAt,
       },
       receiver: {
         id: populated.receiver._id,
         name: populated.receiver.name,
         phone: populated.receiver.phone,
         createdAt: populated.receiver.createdAt,
-        updatedAt: populated.receiver.updatedAt
+        updatedAt: populated.receiver.updatedAt,
       },
       fromRoute: {
         id: populated.fromRoute._id,
         code: populated.fromRoute.code,
         name: populated.fromRoute.name,
         createdAt: populated.fromRoute.createdAt,
-        updatedAt: populated.fromRoute.updatedAt
+        updatedAt: populated.fromRoute.updatedAt,
       },
       toRoute: {
         id: populated.toRoute._id,
         code: populated.toRoute.code,
         name: populated.toRoute.name,
         createdAt: populated.toRoute.createdAt,
-        updatedAt: populated.toRoute.updatedAt
+        updatedAt: populated.toRoute.updatedAt,
       },
       name: populated.name,
       cost: populated.cost,
@@ -95,14 +95,16 @@ export class DeliveryService {
       totalCost: populated.totalCost,
       createdByUser: populated.createdByUser.username,
       createdAt: populated.createdAt,
-      updatedAt: populated.updatedAt
+      updatedAt: populated.updatedAt,
     };
   }
 
   /**
    * Transform pre-populated lean delivery to IDeliveryResponse (optimized)
    */
-  private transformDeliveryToResponseOptimized(delivery: IDeliveryLeanPopulated): IDeliveryResponse {
+  private transformDeliveryToResponseOptimized(
+    delivery: IDeliveryLeanPopulated
+  ): IDeliveryResponse {
     return {
       id: delivery._id,
       code: delivery.code,
@@ -111,28 +113,28 @@ export class DeliveryService {
         name: delivery.sender.name,
         phone: delivery.sender.phone,
         createdAt: delivery.sender.createdAt,
-        updatedAt: delivery.sender.updatedAt
+        updatedAt: delivery.sender.updatedAt,
       },
       receiver: {
         id: delivery.receiver._id,
         name: delivery.receiver.name,
         phone: delivery.receiver.phone,
         createdAt: delivery.receiver.createdAt,
-        updatedAt: delivery.receiver.updatedAt
+        updatedAt: delivery.receiver.updatedAt,
       },
       fromRoute: {
         id: delivery.fromRoute._id,
         code: delivery.fromRoute.code,
         name: delivery.fromRoute.name,
         createdAt: delivery.fromRoute.createdAt,
-        updatedAt: delivery.fromRoute.updatedAt
+        updatedAt: delivery.fromRoute.updatedAt,
       },
       toRoute: {
         id: delivery.toRoute._id,
         code: delivery.toRoute.code,
         name: delivery.toRoute.name,
         createdAt: delivery.toRoute.createdAt,
-        updatedAt: delivery.toRoute.updatedAt
+        updatedAt: delivery.toRoute.updatedAt,
       },
       name: delivery.name,
       cost: delivery.cost,
@@ -148,7 +150,7 @@ export class DeliveryService {
       totalCost: delivery.totalCost,
       createdByUser: delivery.createdByUser.username,
       createdAt: delivery.createdAt,
-      updatedAt: delivery.updatedAt
+      updatedAt: delivery.updatedAt,
     };
   }
 
@@ -158,8 +160,14 @@ export class DeliveryService {
   async createDelivery(data: IDeliveryCreateRequest, userId: string): Promise<IDeliveryResponse> {
     try {
       // Find or create sender and receiver
-      const sender = await this.customerService.findOrCreateCustomer(data.senderName, data.senderPhone);
-      const receiver = await this.customerService.findOrCreateCustomer(data.receiverName, data.receiverPhone);
+      const sender = await this.customerService.findOrCreateCustomer(
+        data.senderName,
+        data.senderPhone
+      );
+      const receiver = await this.customerService.findOrCreateCustomer(
+        data.receiverName,
+        data.receiverPhone
+      );
 
       // Validate fromRoute and toRoute exist
       const fromRoute = await Route.findById(data.fromRouteId);
@@ -193,7 +201,7 @@ export class DeliveryService {
         collectForCustomerCost: data.collectForCustomerCost,
         collectForCustomerNote: data.collectForCustomerNote,
         notes: data.notes,
-        createdByUser: userId
+        createdByUser: userId,
       });
 
       await delivery.save();
@@ -229,7 +237,10 @@ export class DeliveryService {
       if (data.receiverName || data.receiverPhone) {
         const receiverName = data.receiverName || delivery.receiver.toString();
         const receiverPhone = data.receiverPhone || delivery.receiver.toString();
-        const receiver = await this.customerService.findOrCreateCustomer(receiverName, receiverPhone);
+        const receiver = await this.customerService.findOrCreateCustomer(
+          receiverName,
+          receiverPhone
+        );
         updateData.receiver = receiver.id;
       } else {
         updateData.receiver = delivery.receiver;
@@ -251,17 +262,39 @@ export class DeliveryService {
         }
         updateData.toRoute = data.toRouteId;
       }
-      if (data.name !== undefined) updateData.name = data.name;
-      if (data.cost !== undefined) updateData.cost = data.cost;
-      if (data.homeDelivery !== undefined) updateData.homeDelivery = data.homeDelivery;
-      if (data.homeDeliveryCost !== undefined) updateData.homeDeliveryCost = data.homeDeliveryCost;
-      if (data.itemValue !== undefined) updateData.itemValue = data.itemValue;
-      if (data.itemCost !== undefined) updateData.itemCost = data.itemCost;
-      if (data.collectCost !== undefined) updateData.collectCost = data.collectCost;
-      if (data.collectForCustomer !== undefined) updateData.collectForCustomer = data.collectForCustomer;
-      if (data.collectForCustomerCost !== undefined) updateData.collectForCustomerCost = data.collectForCustomerCost;
-      if (data.collectForCustomerNote !== undefined) updateData.collectForCustomerNote = data.collectForCustomerNote;
-      if (data.notes !== undefined) updateData.notes = data.notes;
+      if (data.name !== undefined) {
+        updateData.name = data.name;
+      }
+      if (data.cost !== undefined) {
+        updateData.cost = data.cost;
+      }
+      if (data.homeDelivery !== undefined) {
+        updateData.homeDelivery = data.homeDelivery;
+      }
+      if (data.homeDeliveryCost !== undefined) {
+        updateData.homeDeliveryCost = data.homeDeliveryCost;
+      }
+      if (data.itemValue !== undefined) {
+        updateData.itemValue = data.itemValue;
+      }
+      if (data.itemCost !== undefined) {
+        updateData.itemCost = data.itemCost;
+      }
+      if (data.collectCost !== undefined) {
+        updateData.collectCost = data.collectCost;
+      }
+      if (data.collectForCustomer !== undefined) {
+        updateData.collectForCustomer = data.collectForCustomer;
+      }
+      if (data.collectForCustomerCost !== undefined) {
+        updateData.collectForCustomerCost = data.collectForCustomerCost;
+      }
+      if (data.collectForCustomerNote !== undefined) {
+        updateData.collectForCustomerNote = data.collectForCustomerNote;
+      }
+      if (data.notes !== undefined) {
+        updateData.notes = data.notes;
+      }
 
       // Update delivery
       const updatedDelivery = await Delivery.findByIdAndUpdate(
@@ -291,7 +324,7 @@ export class DeliveryService {
           { path: 'receiver', select: '_id name phone createdAt updatedAt' },
           { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
           { path: 'toRoute', select: '_id code name createdAt updatedAt' },
-          { path: 'createdByUser', select: '_id username' }
+          { path: 'createdByUser', select: '_id username' },
         ])
         .lean();
 
@@ -316,12 +349,14 @@ export class DeliveryService {
           { path: 'receiver', select: '_id name phone createdAt updatedAt' },
           { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
           { path: 'toRoute', select: '_id code name createdAt updatedAt' },
-          { path: 'createdByUser', select: '_id username' }
+          { path: 'createdByUser', select: '_id username' },
         ])
         .sort({ createdAt: -1 })
         .lean();
 
-      return deliveries.map(delivery => this.transformDeliveryToResponseOptimized(this.toPopulatedDeliveryLean(delivery)));
+      return deliveries.map(delivery =>
+        this.transformDeliveryToResponseOptimized(this.toPopulatedDeliveryLean(delivery))
+      );
     } catch (error) {
       throw new Error('Failed to fetch deliveries');
     }
@@ -354,14 +389,14 @@ export class DeliveryService {
 
       // Find all deliveries by these senders with populated data
       const deliveries = await Delivery.find({
-        sender: { $in: senderIds }
+        sender: { $in: senderIds },
       })
         .populate([
           { path: 'sender', select: '_id name phone createdAt updatedAt' },
           { path: 'receiver', select: '_id name phone createdAt updatedAt' },
           { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
           { path: 'toRoute', select: '_id code name createdAt updatedAt' },
-          { path: 'createdByUser', select: '_id username' }
+          { path: 'createdByUser', select: '_id username' },
         ])
         .sort({ createdAt: -1 })
         .lean();
@@ -390,7 +425,9 @@ export class DeliveryService {
 
       return uniqueDeliveries;
     } catch (error) {
-      throw new Error(`Failed to fetch related deliveries: ${error instanceof Error ? error.message : 'Unexpected error occurred'}`);
+      throw new Error(
+        `Failed to fetch related deliveries: ${error instanceof Error ? error.message : 'Unexpected error occurred'}`
+      );
     }
   }
 
@@ -415,8 +452,8 @@ export class DeliveryService {
           code: toRoute.code,
           name: toRoute.name,
           createdAt: toRoute.createdAt,
-          updatedAt: toRoute.updatedAt
-        }
+          updatedAt: toRoute.updatedAt,
+        },
       };
     } catch (error) {
       throw error;
@@ -432,7 +469,9 @@ export class DeliveryService {
       // Parse delivery identifier
       const parsed = this.parseDeliveryIdentifier(deliveryIdentifier);
       if (!parsed) {
-        throw new Error('Invalid delivery identifier format. Expected: codeFromRouteToRoute (e.g., 2401250001T1T2)');
+        throw new Error(
+          'Invalid delivery identifier format. Expected: codeFromRouteToRoute (e.g., 2401250001T1T2)'
+        );
       }
 
       const { code, fromRouteCode, toRouteCode } = parsed;
@@ -452,14 +491,14 @@ export class DeliveryService {
       const delivery = await Delivery.findOne({
         code: code,
         fromRoute: fromRoute._id,
-        toRoute: toRoute._id
+        toRoute: toRoute._id,
       })
         .populate([
           { path: 'sender', select: '_id name phone createdAt updatedAt' },
           { path: 'receiver', select: '_id name phone createdAt updatedAt' },
           { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
           { path: 'toRoute', select: '_id code name createdAt updatedAt' },
-          { path: 'createdByUser', select: '_id username' }
+          { path: 'createdByUser', select: '_id username' },
         ])
         .lean();
 
@@ -477,7 +516,9 @@ export class DeliveryService {
    * Parse delivery identifier to extract code and route codes
    * @param deliveryIdentifier - Format: codeFromRouteToRoute (e.g., 2401250001T1T2)
    */
-  private parseDeliveryIdentifier(deliveryIdentifier: string): { code: string; fromRouteCode: string; toRouteCode: string } | null {
+  private parseDeliveryIdentifier(
+    deliveryIdentifier: string
+  ): { code: string; fromRouteCode: string; toRouteCode: string } | null {
     // Expected format: 10 digits + route codes (e.g., 2401250001T1T2)
     const match = deliveryIdentifier.match(/^(\d{10})([A-Z]\d+)([A-Z]\d+)$/);
 
@@ -495,7 +536,7 @@ export class DeliveryService {
     return {
       code,
       fromRouteCode,
-      toRouteCode
+      toRouteCode,
     };
   }
 
@@ -503,7 +544,11 @@ export class DeliveryService {
    * Get frequent customers for a sender with pagination
    * Groups by receiver name, phone, and route to avoid duplicates
    */
-  async getFrequentCustomers(senderIdentifier: string, page: number = 1, limit: number = 10): Promise<IFrequentCustomersResponse> {
+  async getFrequentCustomers(
+    senderIdentifier: string,
+    page: number = 1,
+    limit: number = 10
+  ): Promise<IFrequentCustomersResponse> {
     try {
       const skip = (page - 1) * limit;
 
@@ -511,8 +556,8 @@ export class DeliveryService {
       const senderQuery = {
         $or: [
           { 'sender.name': { $regex: senderIdentifier, $options: 'i' } },
-          { 'sender.phone': senderIdentifier }
-        ]
+          { 'sender.phone': senderIdentifier },
+        ],
       };
 
       // Aggregation pipeline to group and paginate
@@ -523,24 +568,24 @@ export class DeliveryService {
             from: 'customers',
             localField: 'sender',
             foreignField: '_id',
-            as: 'sender'
-          }
+            as: 'sender',
+          },
         },
         {
           $lookup: {
             from: 'customers',
             localField: 'receiver',
             foreignField: '_id',
-            as: 'receiver'
-          }
+            as: 'receiver',
+          },
         },
         {
           $lookup: {
             from: 'routes',
             localField: 'toRoute',
             foreignField: '_id',
-            as: 'toRoute'
-          }
+            as: 'toRoute',
+          },
         },
         // Unwind arrays
         { $unwind: '$sender' },
@@ -556,35 +601,30 @@ export class DeliveryService {
               receiverPhone: '$receiver.phone',
               toRouteId: '$toRoute._id',
               toRouteCode: '$toRoute.code',
-              toRouteName: '$toRoute.name'
+              toRouteName: '$toRoute.name',
             },
             deliveryCount: { $sum: 1 },
             totalCost: { $sum: '$totalCost' },
             totalItemValue: { $sum: '$itemValue' },
             lastDeliveryDate: { $max: '$createdAt' },
             firstDeliveryDate: { $min: '$createdAt' },
-            senderInfo: { $first: '$sender' }
-          }
+            senderInfo: { $first: '$sender' },
+          },
         },
         // Sort by delivery count (most frequent first) and then by last delivery date
         {
           $sort: {
             deliveryCount: -1,
-            lastDeliveryDate: -1
-          }
+            lastDeliveryDate: -1,
+          },
         },
         // Add pagination fields
         {
           $facet: {
-            data: [
-              { $skip: skip },
-              { $limit: limit }
-            ],
-            totalCount: [
-              { $count: 'count' }
-            ]
-          }
-        }
+            data: [{ $skip: skip }, { $limit: limit }],
+            totalCount: [{ $count: 'count' }],
+          },
+        },
       ];
 
       const result = await Delivery.aggregate(pipeline as any);
@@ -598,13 +638,13 @@ export class DeliveryService {
         toRoute: {
           id: item._id.toRouteId.toString(),
           code: item._id.toRouteCode,
-          name: item._id.toRouteName
+          name: item._id.toRouteName,
         },
         deliveryCount: item.deliveryCount,
         totalCost: item.totalCost,
         totalItemValue: item.totalItemValue,
         lastDeliveryDate: item.lastDeliveryDate,
-        firstDeliveryDate: item.firstDeliveryDate
+        firstDeliveryDate: item.firstDeliveryDate,
       }));
 
       // Get sender info from the first record if available
@@ -616,10 +656,12 @@ export class DeliveryService {
 
       return {
         senderIdentifier,
-        senderInfo: senderInfo ? {
-          name: senderInfo.name,
-          phone: senderInfo.phone
-        } : null,
+        senderInfo: senderInfo
+          ? {
+              name: senderInfo.name,
+              phone: senderInfo.phone,
+            }
+          : null,
         frequentCustomers,
         pagination: {
           currentPage: page,
@@ -627,16 +669,15 @@ export class DeliveryService {
           totalRecords: total,
           limit,
           hasNextPage,
-          hasPrevPage
-        }
+          hasPrevPage,
+        },
       };
-
     } catch (error) {
       Logger.error('Failed to get frequent customers', {
         error: error instanceof Error ? error.message : error,
         senderIdentifier,
         page,
-        limit
+        limit,
       });
       throw new Error('Failed to get frequent customers');
     }

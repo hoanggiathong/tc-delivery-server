@@ -1,6 +1,8 @@
 import { IDeliveryResponse } from '@/types/delivery.type';
 
-export const createMockDelivery = (overrides: Partial<IDeliveryResponse> = {}): IDeliveryResponse => {
+export const createMockDelivery = (
+  overrides: Partial<IDeliveryResponse> = {}
+): IDeliveryResponse => {
   return {
     id: 'delivery-id-1',
     code: '2401250001',
@@ -9,28 +11,28 @@ export const createMockDelivery = (overrides: Partial<IDeliveryResponse> = {}): 
       name: 'John Doe',
       phone: '1234567890',
       createdAt: new Date('2023-01-01'),
-      updatedAt: new Date('2023-01-01')
+      updatedAt: new Date('2023-01-01'),
     },
     receiver: {
       id: 'customer-id-2',
       name: 'Jane Doe',
       phone: '0987654321',
       createdAt: new Date('2023-01-01'),
-      updatedAt: new Date('2023-01-01')
+      updatedAt: new Date('2023-01-01'),
     },
     fromRoute: {
       id: 'route-id-1',
       code: 'T1',
       name: 'Test Route 1',
       createdAt: new Date('2023-01-01'),
-      updatedAt: new Date('2023-01-01')
+      updatedAt: new Date('2023-01-01'),
     },
     toRoute: {
       id: 'route-id-2',
       code: 'T2',
       name: 'Test Route 2',
       createdAt: new Date('2023-01-01'),
-      updatedAt: new Date('2023-01-01')
+      updatedAt: new Date('2023-01-01'),
     },
     name: 'Test Package',
     cost: 50000,
@@ -47,7 +49,7 @@ export const createMockDelivery = (overrides: Partial<IDeliveryResponse> = {}): 
     createdByUser: 'testuser',
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2023-01-01'),
-    ...overrides
+    ...overrides,
   };
 };
 
@@ -70,7 +72,7 @@ export const createMockDeliveryRequest = (overrides: any = {}) => {
     collectForCustomerCost: 3000,
     collectForCustomerNote: 'Test note',
     notes: 'Test delivery notes',
-    ...overrides
+    ...overrides,
   };
 };
 
@@ -91,7 +93,7 @@ export const createMockDeliveryRequestWithoutHome = (overrides: any = {}) => {
     collectForCustomer: 50000,
     collectForCustomerCost: 3000,
     notes: 'Test delivery notes',
-    ...overrides
+    ...overrides,
   };
 };
 
@@ -101,7 +103,7 @@ export const createMockDeliveryList = (count: number = 3): IDeliveryResponse[] =
       id: `delivery-id-${index + 1}`,
       code: `240125000${index + 1}`,
       name: `Test Package ${index + 1}`,
-      cost: 30000 + (index * 10000)
+      cost: 30000 + index * 10000,
     })
   );
 };

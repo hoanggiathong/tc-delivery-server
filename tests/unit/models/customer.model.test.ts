@@ -6,7 +6,7 @@ describe('Customer Model', () => {
     it('should create customer with valid data', () => {
       const customerData = {
         name: 'John Doe',
-        phone: '+1234567890'
+        phone: '+1234567890',
       };
 
       const customer = new Customer(customerData);
@@ -16,7 +16,7 @@ describe('Customer Model', () => {
 
     it('should fail validation without name', () => {
       const customerData = {
-        phone: '+1234567890'
+        phone: '+1234567890',
       };
 
       const customer = new Customer(customerData);
@@ -27,7 +27,7 @@ describe('Customer Model', () => {
 
     it('should fail validation without phone', () => {
       const customerData = {
-        name: 'John Doe'
+        name: 'John Doe',
       };
 
       const customer = new Customer(customerData);
@@ -39,7 +39,7 @@ describe('Customer Model', () => {
     it('should fail validation with invalid phone format', () => {
       const customerData = {
         name: 'John Doe',
-        phone: 'abc123' // Invalid format - contains letters
+        phone: 'abc123', // Invalid format - contains letters
       };
 
       const customer = new Customer(customerData);
@@ -51,7 +51,7 @@ describe('Customer Model', () => {
     it('should fail validation with phone starting with 0', () => {
       const customerData = {
         name: 'John Doe',
-        phone: '+0123456789' // Invalid - can't start with 0 after +
+        phone: '+0123456789', // Invalid - can't start with 0 after +
       };
 
       const customer = new Customer(customerData);
@@ -62,7 +62,7 @@ describe('Customer Model', () => {
     it('should fail validation with name too long', () => {
       const customerData = {
         name: 'a'.repeat(101), // Exceeds 100 characters
-        phone: '+1234567890'
+        phone: '+1234567890',
       };
 
       const customer = new Customer(customerData);
@@ -72,17 +72,12 @@ describe('Customer Model', () => {
     });
 
     it('should accept valid phone formats', () => {
-      const validPhones = [
-        '+1234567890',
-        '1234567890',
-        '+12345678901234',
-        '987654321'
-      ];
+      const validPhones = ['+1234567890', '1234567890', '+12345678901234', '987654321'];
 
       validPhones.forEach(phone => {
         const customerData = {
           name: 'John Doe',
-          phone
+          phone,
         };
 
         const customer = new Customer(customerData);
@@ -94,7 +89,7 @@ describe('Customer Model', () => {
     it('should trim whitespace from name and phone', () => {
       const customerData = {
         name: '  John Doe  ',
-        phone: '  +1234567890  '
+        phone: '  +1234567890  ',
       };
 
       const customer = new Customer(customerData);
@@ -111,7 +106,7 @@ describe('Customer Model', () => {
         phone: '+1234567890',
         __v: 0,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
 
       const customer = new Customer(customerData);
@@ -130,9 +125,7 @@ describe('Customer Model', () => {
   describe('Indexes', () => {
     it('should have compound index on name and phone', () => {
       const indexes = Customer.schema.indexes();
-      const compoundIndex = indexes.find(index =>
-        index[0].name === 1 && index[0].phone === 1
-      );
+      const compoundIndex = indexes.find(index => index[0].name === 1 && index[0].phone === 1);
 
       expect(compoundIndex).toBeDefined();
       expect(compoundIndex?.[1].unique).toBe(true);

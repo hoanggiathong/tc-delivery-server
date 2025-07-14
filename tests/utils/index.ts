@@ -16,7 +16,7 @@ export {
   createMockResponse,
   createMockNext,
   wait,
-  createMockJWTToken
+  createMockJWTToken,
 } from './test-helpers';
 
 // Re-export from mocks for backward compatibility
