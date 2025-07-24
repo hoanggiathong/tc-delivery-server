@@ -15,9 +15,10 @@ describe('AuthService', () => {
   let authService: any;
   let mockUserInstance: any;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     // Import AuthService after mocks are set up
-    AuthService = require('@/services/auth.service').AuthService;
+    const authServiceModule = await import('@/services/auth.service');
+    AuthService = authServiceModule.AuthService;
   });
 
   beforeEach(() => {

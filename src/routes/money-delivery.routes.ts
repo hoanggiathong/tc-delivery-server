@@ -131,7 +131,7 @@ router.post('/', validate(createMoneyDeliverySchema), moneyDeliveryController.cr
 router.get('/', moneyDeliveryController.getAllMoneyDeliveries);
 
 // Next code route (must be before /:id to avoid conflicts)
-router.post(
+router.get(
   '/next-code',
   validate(getNextMoneyDeliveryCodeSchema),
   moneyDeliveryController.getNextCode

@@ -29,3 +29,43 @@ export const createMockUserList = (count: number = 3): IUserResponse[] => {
     })
   );
 };
+
+// ===== INTEGRATION TEST MOCKS =====
+// These are specific mock objects used in integration tests
+
+/**
+ * Auth test users with different route configurations
+ */
+export const mockAuthUsersForIntegration = {
+  basicUser: {
+    id: 'user123',
+    username: 'testuser',
+    role: UserRole.USER,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  userWithRoute: {
+    id: 'user123',
+    username: 'testuser',
+    role: UserRole.USER,
+    selectedRouteId: 'route123',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  userWithNullRoute: {
+    id: 'user123',
+    username: 'testuser',
+    role: UserRole.USER,
+    selectedRouteId: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  userWithUndefinedRoute: {
+    id: 'user123',
+    username: 'testuser',
+    role: UserRole.USER,
+    selectedRouteId: undefined,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+};

@@ -8,6 +8,10 @@
  * - Reset utilities
  */
 
+// Import reset functions for use in resetAllMocks
+import { resetAllModelMocks } from './models';
+import { resetAllServiceMocks } from './services';
+
 // Export all mock data
 export * from './data';
 
@@ -36,7 +40,6 @@ export {
   createMockDeliveryList,
   createMockMoneyDeliveryList,
   createMockNextCodeResult,
-  createMockFrequentCustomersResult,
 } from './data';
 
 export {
@@ -90,10 +93,6 @@ export {
 
 // Global reset utility function
 export const resetAllMocks = () => {
-  // Import at function level to avoid circular dependencies
-  const { resetAllModelMocks } = require('./models');
-  const { resetAllServiceMocks } = require('./services');
-
   resetAllModelMocks();
   resetAllServiceMocks();
   jest.clearAllMocks();

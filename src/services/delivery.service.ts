@@ -11,7 +11,7 @@ import {
   INextCodeResponse,
   IFrequentCustomersResponse,
   IFrequentCustomer,
-} from '@/types/delivery.type';hông
+} from '@/types/delivery.type';
 import { ICustomerResponse } from '@/types/customer.type';
 import Logger from '@/utils/logger';
 

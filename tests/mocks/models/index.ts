@@ -4,6 +4,13 @@
  * This module provides all mock model classes and functions for testing
  */
 
+// Import reset functions for use in resetAllModelMocks
+import { resetDeliveryMocks } from './delivery.model';
+import { resetUserMocks } from './user.model';
+import { resetCustomerMocks } from './customer.model';
+import { resetRouteMocks } from './route.model';
+import { resetUserRouteMocks } from './user-route.model';
+
 // Export all mock models
 export * from './delivery.model';
 export * from './user.model';
@@ -75,13 +82,6 @@ export const createMockErrorQuery = () => ({
 
 // Global reset function for all model mocks
 export const resetAllModelMocks = () => {
-  // Import at function level to avoid circular dependencies
-  const { resetDeliveryMocks } = require('./delivery.model');
-  const { resetUserMocks } = require('./user.model');
-  const { resetCustomerMocks } = require('./customer.model');
-  const { resetRouteMocks } = require('./route.model');
-  const { resetUserRouteMocks } = require('./user-route.model');
-
   resetDeliveryMocks();
   resetUserMocks();
   resetCustomerMocks();

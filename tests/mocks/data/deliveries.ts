@@ -107,3 +107,20 @@ export const createMockDeliveryList = (count: number = 3): IDeliveryResponse[] =
     })
   );
 };
+
+// ===== INTEGRATION TEST MOCKS =====
+// These are specific mock objects used in integration tests
+
+/**
+ * Mock next code response for delivery integration tests
+ */
+export const mockNextCodeResponseForIntegration = {
+  nextCode: '2401250001',
+  toRoute: {
+    id: '507f1f77bcf86cd799439012',
+    code: 'T2',
+    name: 'Ha Noi',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+};

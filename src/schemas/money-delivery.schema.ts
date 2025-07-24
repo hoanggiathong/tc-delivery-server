@@ -90,7 +90,7 @@ export const moneyDeliveryParamsSchema = z.object({
 
 // Schema for getting next money delivery code
 export const getNextMoneyDeliveryCodeSchema = z.object({
-  body: z.object({
+  query: z.object({
     toRouteId: z
       .string()
       .min(1, 'To route ID is required')
@@ -154,5 +154,5 @@ export type CreateMoneyDeliveryRequest = z.infer<typeof createMoneyDeliverySchem
 export type UpdateMoneyDeliveryRequest = z.infer<typeof updateMoneyDeliverySchema>['body'];
 export type GetNextMoneyDeliveryCodeRequest = z.infer<
   typeof getNextMoneyDeliveryCodeSchema
->['body'];
+>['query'];
 export type MoneyDeliveryCodeParams = z.infer<typeof moneyDeliveryCodeSchema>['params'];

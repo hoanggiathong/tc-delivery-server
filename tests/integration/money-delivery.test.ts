@@ -1,13 +1,15 @@
 import request from 'supertest';
 import app from '../../src/app';
-import { MoneyDelivery } from '@/models/money-delivery.model';
+import { User } from '@/models/user.model';
 import { Customer } from '@/models/customer.model';
 import { Route } from '@/models/route.model';
-import { User } from '@/models/user.model';
 import jwt from 'jsonwebtoken';
 import { UserRole } from '@/types/user.type';
 import { MoneyDeliveryService } from '../../src/services/money-delivery.service';
-import { createMockMoneyDelivery, createMockFrequentCustomersResult } from '../mocks';
+import {
+  mockMoneyDeliveryForIntegration,
+  mockMoneyDeliveryNextCodeResponseForIntegration,
+} from '../mocks';
 
 // Mock MoneyDeliveryService at module level
 jest.mock('@/services/money-delivery.service');
@@ -16,22 +18,19 @@ const MockedMoneyDeliveryService = MoneyDeliveryService as jest.MockedClass<
   typeof MoneyDeliveryService
 >;
 
-// Mock all models
-jest.mock('@/models/money-delivery.model');
+// Mock all models  
+jest.mock('@/models/user.model');
 jest.mock('@/models/customer.model');
 jest.mock('@/models/route.model');
-jest.mock('@/models/user.model');
 
-const MockedMoneyDelivery = MoneyDelivery as jest.MockedClass<typeof MoneyDelivery>;
+const MockedUser = User as jest.MockedClass<typeof User>;
 const MockedCustomer = Customer as jest.MockedClass<typeof Customer>;
 const MockedRoute = Route as jest.MockedClass<typeof Route>;
-const MockedUser = User as jest.MockedClass<typeof User>;
 
 describe('Money Delivery API Integration Tests', () => {
   let authToken: string;
   let testUser: any;
   let testCustomer1: any;
-  let testCustomer2: any;
   let testRoute1: any;
   let testRoute2: any;
 
@@ -57,13 +56,6 @@ describe('Money Delivery API Integration Tests', () => {
       phone: '+84123456789',
     };
 
-    testCustomer2 = {
-      _id: 'customer456',
-      name: 'Jane Doe',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      phone: '+84987654321',
-    };
 
     // Mock test routes
     testRoute1 = {
@@ -95,46 +87,9 @@ describe('Money Delivery API Integration Tests', () => {
     (MockedRoute.findById as jest.Mock).mockResolvedValue(testRoute1);
 
     // Set up default mock responses for happy path scenarios
-    MockedMoneyDeliveryService.prototype.createMoneyDelivery.mockResolvedValue({
-      id: 'moneyDelivery123',
-      code: '2401250001',
-      sender: {
-        id: 'customer123',
-        name: 'John Doe',
-        phone: '+84123456789',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      receiver: {
-        id: 'customer456',
-        name: 'Jane Doe',
-        phone: '+84987654321',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      fromRoute: {
-        id: 'route123',
-        code: 'T1',
-        name: 'Test Route 1',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      toRoute: {
-        id: 'route456',
-        code: 'T2',
-        name: 'Test Route 2',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      sendMoneyAmount: 1000000,
-      sendCost: 50000,
-      totalCost: 50000,
-      notes: 'Ghi chú chuyển tiền',
-      createdByUser: 'user123',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-
+    MockedMoneyDeliveryService.prototype.createMoneyDelivery.mockResolvedValue(
+      mockMoneyDeliveryForIntegration
+    );
     MockedMoneyDeliveryService.prototype.getAllMoneyDeliveries.mockResolvedValue([
       {
         id: 'moneyDelivery123',
@@ -551,7 +506,7 @@ describe('Money Delivery API Integration Tests', () => {
         mockFrequentCustomersResult
       );
 
-      const response = await request(app)
+      await request(app)
         .get('/api/money-deliveries/frequent-customers/John%20Doe')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -582,7 +537,7 @@ describe('Money Delivery API Integration Tests', () => {
         mockFrequentCustomersResult
       );
 
-      const response = await request(app)
+      await request(app)
         .get('/api/money-deliveries/frequent-customers/John%20Doe')
         .set('Authorization', `Bearer ${authToken}`)
         .query({ page: 2, limit: 5 })
@@ -593,6 +548,67 @@ describe('Money Delivery API Integration Tests', () => {
         2,
         5
       );
+    });
+  });
+
+  describe('GET /api/money-deliveries/next-code', () => {
+    it('should get next money delivery code successfully', async () => {
+      MockedMoneyDeliveryService.prototype.getNextCode.mockResolvedValue(
+        mockMoneyDeliveryNextCodeResponseForIntegration
+      );
+
+      const response = await request(app)
+        .get('/api/money-deliveries/next-code')
+        .query({ toRouteId: '507f1f77bcf86cd799439011' })
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.nextCode).toBe(
+        mockMoneyDeliveryNextCodeResponseForIntegration.nextCode
+      );
+      expect(response.body.data.toRoute.id).toBe(
+        mockMoneyDeliveryNextCodeResponseForIntegration.toRoute.id
+      );
+      expect(response.body.data.toRoute.code).toBe(
+        mockMoneyDeliveryNextCodeResponseForIntegration.toRoute.code
+      );
+      expect(response.body.data.toRoute.name).toBe(
+        mockMoneyDeliveryNextCodeResponseForIntegration.toRoute.name
+      );
+      expect(MockedMoneyDeliveryService.prototype.getNextCode).toHaveBeenCalledWith(
+        '507f1f77bcf86cd799439011'
+      );
+    });
+
+    it('should return 400 for invalid toRouteId format', async () => {
+      const response = await request(app)
+        .get('/api/money-deliveries/next-code')
+        .query({ toRouteId: 'invalid-id' })
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Validation');
+    });
+
+    it('should return 401 for unauthenticated request', async () => {
+      const response = await request(app)
+        .get('/api/money-deliveries/next-code')
+        .query({ toRouteId: '507f1f77bcf86cd799439011' })
+        .expect(401);
+
+      expect(response.body.success).toBe(false);
+    });
+
+    it('should return 400 for missing toRouteId parameter', async () => {
+      const response = await request(app)
+        .get('/api/money-deliveries/next-code')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Validation');
     });
   });
 });

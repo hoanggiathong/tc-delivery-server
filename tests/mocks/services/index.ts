@@ -4,6 +4,15 @@
  * This module provides all mock service classes and functions for testing
  */
 
+// Import reset functions for use in resetAllServiceMocks
+import { resetAuthServiceMocks } from './auth.service';
+import { resetCustomerServiceMocks } from './customer.service';
+import { resetDeliveryServiceMocks } from './delivery.service';
+import { resetMoneyDeliveryServiceMocks } from './money-delivery.service';
+import { resetUserRouteServiceMocks } from './user-route.service';
+import { resetRouteServiceMocks } from './route.service';
+import { resetCodeGeneratorServiceMocks } from './code-generator.service';
+
 // Export all mock services
 export * from './auth.service';
 export * from './customer.service';
@@ -65,15 +74,6 @@ export {
 
 // Global reset function for all service mocks
 export const resetAllServiceMocks = () => {
-  // Import at function level to avoid circular dependencies
-  const { resetAuthServiceMocks } = require('./auth.service');
-  const { resetCustomerServiceMocks } = require('./customer.service');
-  const { resetDeliveryServiceMocks } = require('./delivery.service');
-  const { resetMoneyDeliveryServiceMocks } = require('./money-delivery.service');
-  const { resetUserRouteServiceMocks } = require('./user-route.service');
-  const { resetRouteServiceMocks } = require('./route.service');
-  const { resetCodeGeneratorServiceMocks } = require('./code-generator.service');
-
   resetAuthServiceMocks();
   resetCustomerServiceMocks();
   resetDeliveryServiceMocks();

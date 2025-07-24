@@ -13,7 +13,6 @@ import {
   IFrequentMoneyCustomersResponse,
   IFrequentMoneyCustomer,
 } from '@/types/money-delivery.type';
-import { ICustomerResponse } from '@/types/customer.type';
 
 export class MoneyDeliveryService {
   private customerService: CustomerService;

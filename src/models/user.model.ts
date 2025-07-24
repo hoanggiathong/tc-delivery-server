@@ -47,7 +47,7 @@ const userSchema = new Schema<IUser>(
     timestamps: true,
     toJSON: {
       transform: function (doc, ret) {
-        const { _id, __v, password, ...rest } = ret;
+        const { _id, __v, password: _password, ...rest } = ret;
         return { id: _id, ...rest };
       },
     },

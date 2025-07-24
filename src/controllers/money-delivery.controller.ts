@@ -3,8 +3,6 @@ import { MoneyDeliveryService } from '@/services/money-delivery.service';
 import {
   CreateMoneyDeliveryRequest,
   UpdateMoneyDeliveryRequest,
-  GetNextMoneyDeliveryCodeRequest,
-  MoneyDeliveryCodeParams,
 } from '@/schemas/money-delivery.schema';
 import { AuthRequest, ApiResponse } from '@/types';
 import logger from '@/utils/logger';
@@ -436,29 +434,52 @@ export class MoneyDeliveryController {
 
   /**
    * Get next money delivery code for a specific route
-   * POST /api/money-deliveries/next-code
+   * GET /api/money-deliveries/next-code
    * @swagger
    * /api/money-deliveries/next-code:
-   *   post:
+   *   get:
    *     summary: Get next available money delivery code
    *     tags: [MoneyDelivery]
    *     security:
    *       - bearerAuth: []
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             required:
-   *               - toRouteId
-   *             properties:
-   *               toRouteId:
-   *                 type: string
-   *                 description: ObjectId of the destination route
+   *     parameters:
+   *       - in: query
+   *         name: toRouteId
+   *         required: true
+   *         schema:
+   *           type: string
+   *           pattern: '^[0-9a-fA-F]{24}$'
+   *         description: ObjectId of the destination route
+   *         example: "507f1f77bcf86cd799439011"
    *     responses:
    *       200:
    *         description: Next code retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Next money delivery code retrieved successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     nextCode:
+   *                       type: string
+   *                       example: "2407240001"
+   *                     toRoute:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                         code:
+   *                           type: string
+   *                         name:
+   *                           type: string
    *       400:
    *         description: Validation error
    *       401:
@@ -477,9 +498,8 @@ export class MoneyDeliveryController {
         return;
       }
 
-      const { toRouteId }: GetNextMoneyDeliveryCodeRequest = req.body;
-
-      const result = await this.moneyDeliveryService.getNextCode(toRouteId);
+      const { toRouteId } = req.query;
+      const result = await this.moneyDeliveryService.getNextCode(toRouteId as string);
 
       logger.info(
         `Generated next money delivery code: ${result.nextCode} for route: ${result.toRoute.code}`

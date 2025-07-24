@@ -4,19 +4,14 @@
  * This module provides all mock data creators for testing
  */
 
-// Export all mock data creators
-export * from './customers';
-export * from './users';
-export * from './deliveries';
-export * from './routes';
-export * from './money-deliveries';
-
 // Convenience exports for commonly used items
 export {
   // Customer mocks
   createMockCustomer,
   createMockCustomerRequest,
   createMockCustomerList,
+  // Integration test mocks
+  mockCustomersForIntegration,
 } from './customers';
 
 export {
@@ -24,6 +19,8 @@ export {
   createMockUser,
   createMockUserRequest,
   createMockUserList,
+  // Integration test mocks
+  mockAuthUsersForIntegration,
 } from './users';
 
 export {
@@ -32,6 +29,11 @@ export {
   createMockDeliveryRequest,
   createMockDeliveryRequestWithoutHome,
   createMockDeliveryList,
+} from './deliveries';
+
+export {
+  // Delivery integration test mocks
+  mockNextCodeResponseForIntegration as mockDeliveryNextCodeResponseForIntegration,
 } from './deliveries';
 
 export {
@@ -46,6 +48,11 @@ export {
   createMockMoneyDelivery,
   createMockMoneyDeliveryRequest,
   createMockNextCodeResult,
-  createMockFrequentCustomersResult,
   createMockMoneyDeliveryList,
+} from './money-deliveries';
+
+export {
+  // Money Delivery integration test mocks
+  mockMoneyDeliveryForIntegration,
+  mockNextCodeResponseForIntegration as mockMoneyDeliveryNextCodeResponseForIntegration,
 } from './money-deliveries';

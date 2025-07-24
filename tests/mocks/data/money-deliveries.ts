@@ -70,34 +70,6 @@ export const createMockNextCodeResult = (overrides: any = {}) => {
   };
 };
 
-export const createMockFrequentCustomersResult = (overrides: any = {}) => {
-  return {
-    senderIdentifier: 'John Doe',
-    senderInfo: { name: 'John Doe', phone: '+84123456789' },
-    frequentCustomers: [
-      {
-        receiverName: 'Jane Doe',
-        receiverPhone: '+84987654321',
-        toRoute: { id: 'route456', code: 'T2', name: 'Test Route 2' },
-        deliveryCount: 5,
-        totalSendMoneyAmount: 5000000,
-        totalSendCost: 250000,
-        totalCost: 250000, // totalSendCost only
-        lastDeliveryDate: new Date('2024-01-25'),
-        firstDeliveryDate: new Date('2024-01-20'),
-      },
-    ],
-    pagination: {
-      currentPage: 1,
-      totalPages: 1,
-      totalRecords: 1,
-      limit: 10,
-      hasNextPage: false,
-      hasPrevPage: false,
-    },
-    ...overrides,
-  };
-};
 
 export const createMockMoneyDeliveryList = (count: number = 3): IMoneyDeliveryResponse[] => {
   return Array.from({ length: count }, (_, index) => {
@@ -111,4 +83,117 @@ export const createMockMoneyDeliveryList = (count: number = 3): IMoneyDeliveryRe
       totalCost: sendCost,
     });
   });
+};
+
+// ===== INTEGRATION TEST MOCKS =====
+// These are specific mock objects used in integration tests
+
+/**
+ * Mock money delivery for integration tests - matches the exact structure used in tests
+ */
+export const mockMoneyDeliveryForIntegration = {
+  id: 'moneyDelivery123',
+  code: '2401250001',
+  sender: {
+    id: 'customer123',
+    name: 'John Doe',
+    phone: '+84123456789',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  receiver: {
+    id: 'customer456',
+    name: 'Jane Doe',
+    phone: '+84987654321',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  fromRoute: {
+    id: 'route123',
+    code: 'T1',
+    name: 'Test Route 1',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  toRoute: {
+    id: 'route456',
+    code: 'T2',
+    name: 'Test Route 2',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  sendMoneyAmount: 1000000,
+  sendCost: 50000,
+  totalCost: 50000,
+  notes: 'Ghi chú chuyển tiền',
+  createdByUser: 'user123',
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
+/**
+ * Mock next code response for money delivery integration tests
+ */
+export const mockNextCodeResponseForIntegration = {
+  nextCode: '2407240001',
+  toRoute: {
+    id: 'route-id',
+    code: 'T1',
+    name: 'Test Route',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+};
+
+/**
+ * Mock frequent customers responses for integration tests
+ */
+export const mockFrequentCustomersForIntegration = {
+  withResults: {
+    senderIdentifier: 'John Doe',
+    senderInfo: {
+      name: 'John Doe',
+      phone: '+84123456789',
+    },
+    frequentCustomers: [
+      {
+        name: 'Jane Smith',
+        phone: '+84987654321',
+        frequency: 5,
+      },
+      {
+        name: 'Bob Johnson',
+        phone: '+84555666777',
+        frequency: 3,
+      },
+    ],
+    pagination: {
+      currentPage: 1,
+      totalPages: 1,
+      totalCount: 2,
+      limit: 5,
+    },
+  },
+  empty: {
+    senderIdentifier: 'John Doe',
+    senderInfo: null,
+    frequentCustomers: [],
+    pagination: {
+      currentPage: 1,
+      totalPages: 0,
+      totalCount: 0,
+      limit: 5,
+    },
+  },
+  page2Empty: {
+    senderIdentifier: 'John Doe',
+    senderInfo: null,
+    frequentCustomers: [],
+    pagination: {
+      currentPage: 2,
+      totalPages: 1,
+      totalCount: 0,
+      limit: 5,
+    },
+  },
 };

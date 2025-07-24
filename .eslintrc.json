@@ -37,6 +37,7 @@
     "no-unused-expressions": "error",
     "eqeqeq": ["error", "always"],
     "curly": ["error", "all"],
+    
 
     // Code style (handled by Prettier)
     "prettier/prettier": "error"
@@ -46,7 +47,16 @@
       "files": ["tests/**/*.ts", "**/*.test.ts", "**/*.spec.ts"],
       "rules": {
         "@typescript-eslint/no-explicit-any": "off",
-        "@typescript-eslint/no-unused-vars": "off",
+        "@typescript-eslint/no-unused-vars": [
+          "error",
+          {
+            "argsIgnorePattern": "^_",
+            "varsIgnorePattern": "^_",
+            "ignoreRestSiblings": true,
+            "vars": "all",
+            "args": "none"
+          }
+        ],
         "no-console": "off"
       }
     }
