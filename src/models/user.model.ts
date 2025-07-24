@@ -7,7 +7,7 @@ export interface IUser extends Document {
   username: string;
   password: string;
   role: UserRole;
-  selectedRouteId?: string;
+  selectedRouteId?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -37,7 +37,7 @@ const userSchema = new Schema<IUser>(
       required: true,
     },
     selectedRouteId: {
-      type: String,
+      type: Schema.Types.ObjectId,
       ref: 'Route',
       required: false,
       default: null,
@@ -47,11 +47,8 @@ const userSchema = new Schema<IUser>(
     timestamps: true,
     toJSON: {
       transform: function (doc, ret) {
-        ret.id = ret._id;
-        delete ret._id;
-        delete ret.__v;
-        delete ret.password;
-        return ret;
+        const { _id, __v, password, ...rest } = ret;
+        return { id: _id, ...rest };
       },
     },
   }

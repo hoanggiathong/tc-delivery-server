@@ -9,9 +9,10 @@ import {
   IDeliveryWithPopulatedRefs,
   IDeliveryLeanPopulated,
   INextCodeResponse,
-} from '@/types/delivery.type';
+  IFrequentCustomersResponse,
+  IFrequentCustomer,
+} from '@/types/delivery.type';hông
 import { ICustomerResponse } from '@/types/customer.type';
-import { IFrequentCustomersResponse, IFrequentCustomer } from '@/types/delivery.type';
 import Logger from '@/utils/logger';
 
 export class DeliveryService {
@@ -158,159 +159,148 @@ export class DeliveryService {
    * Create a new delivery
    */
   async createDelivery(data: IDeliveryCreateRequest, userId: string): Promise<IDeliveryResponse> {
-    try {
-      // Find or create sender and receiver
-      const sender = await this.customerService.findOrCreateCustomer(
-        data.senderName,
-        data.senderPhone
-      );
-      const receiver = await this.customerService.findOrCreateCustomer(
-        data.receiverName,
-        data.receiverPhone
-      );
+    // Find or create sender and receiver
+    const sender = await this.customerService.findOrCreateCustomer(
+      data.senderName,
+      data.senderPhone
+    );
+    const receiver = await this.customerService.findOrCreateCustomer(
+      data.receiverName,
+      data.receiverPhone
+    );
 
-      // Validate fromRoute and toRoute exist
-      const fromRoute = await Route.findById(data.fromRouteId);
-      if (!fromRoute) {
-        throw new Error('From route not found');
-      }
-
-      const toRoute = await Route.findById(data.toRouteId);
-      if (!toRoute) {
-        throw new Error('To route not found');
-      }
-
-      // Generate delivery code
-      const deliveryCode = await CodeGeneratorService.generateNextCode();
-
-      // Create delivery
-      const delivery = new Delivery({
-        code: deliveryCode,
-        sender: sender.id,
-        receiver: receiver.id,
-        fromRoute: data.fromRouteId,
-        toRoute: data.toRouteId,
-        name: data.name,
-        cost: data.cost,
-        homeDelivery: data.homeDelivery,
-        homeDeliveryCost: data.homeDeliveryCost,
-        itemValue: data.itemValue,
-        itemCost: data.itemCost,
-        collectCost: data.collectCost,
-        collectForCustomer: data.collectForCustomer,
-        collectForCustomerCost: data.collectForCustomerCost,
-        collectForCustomerNote: data.collectForCustomerNote,
-        notes: data.notes,
-        createdByUser: userId,
-      });
-
-      await delivery.save();
-      return this.transformDeliveryToResponse(delivery);
-    } catch (error) {
-      throw error;
+    // Validate fromRoute and toRoute exist
+    const fromRoute = await Route.findById(data.fromRouteId);
+    if (!fromRoute) {
+      throw new Error('From route not found');
     }
+
+    const toRoute = await Route.findById(data.toRouteId);
+    if (!toRoute) {
+      throw new Error('To route not found');
+    }
+
+    // Generate delivery code
+    const deliveryCode = await CodeGeneratorService.generateNextCode();
+
+    // Create delivery
+    const delivery = new Delivery({
+      code: deliveryCode,
+      sender: sender.id,
+      receiver: receiver.id,
+      fromRoute: data.fromRouteId,
+      toRoute: data.toRouteId,
+      name: data.name,
+      cost: data.cost,
+      homeDelivery: data.homeDelivery,
+      homeDeliveryCost: data.homeDeliveryCost,
+      itemValue: data.itemValue,
+      itemCost: data.itemCost,
+      collectCost: data.collectCost,
+      collectForCustomer: data.collectForCustomer,
+      collectForCustomerCost: data.collectForCustomerCost,
+      collectForCustomerNote: data.collectForCustomerNote,
+      notes: data.notes,
+      createdByUser: userId,
+    });
+
+    await delivery.save();
+    return this.transformDeliveryToResponse(delivery);
   }
 
   /**
    * Update delivery by ID
    */
   async updateDelivery(id: string, data: IDeliveryUpdateRequest): Promise<IDeliveryResponse> {
-    try {
-      const delivery = await Delivery.findById(id);
-      if (!delivery) {
-        throw new Error('Delivery not found');
-      }
-
-      const updateData: Record<string, any> = {};
-
-      // Handle sender update
-      if (data.senderName || data.senderPhone) {
-        const senderName = data.senderName || delivery.sender.toString();
-        const senderPhone = data.senderPhone || delivery.sender.toString();
-        const sender = await this.customerService.findOrCreateCustomer(senderName, senderPhone);
-        updateData.sender = sender.id;
-      } else {
-        updateData.sender = delivery.sender;
-      }
-
-      // Handle receiver update
-      if (data.receiverName || data.receiverPhone) {
-        const receiverName = data.receiverName || delivery.receiver.toString();
-        const receiverPhone = data.receiverPhone || delivery.receiver.toString();
-        const receiver = await this.customerService.findOrCreateCustomer(
-          receiverName,
-          receiverPhone
-        );
-        updateData.receiver = receiver.id;
-      } else {
-        updateData.receiver = delivery.receiver;
-      }
-
-      // Handle route updates
-      if (data.fromRouteId !== undefined) {
-        const fromRoute = await Route.findById(data.fromRouteId);
-        if (!fromRoute) {
-          throw new Error('From route not found');
-        }
-        updateData.fromRoute = data.fromRouteId;
-      }
-
-      if (data.toRouteId !== undefined) {
-        const toRoute = await Route.findById(data.toRouteId);
-        if (!toRoute) {
-          throw new Error('To route not found');
-        }
-        updateData.toRoute = data.toRouteId;
-      }
-      if (data.name !== undefined) {
-        updateData.name = data.name;
-      }
-      if (data.cost !== undefined) {
-        updateData.cost = data.cost;
-      }
-      if (data.homeDelivery !== undefined) {
-        updateData.homeDelivery = data.homeDelivery;
-      }
-      if (data.homeDeliveryCost !== undefined) {
-        updateData.homeDeliveryCost = data.homeDeliveryCost;
-      }
-      if (data.itemValue !== undefined) {
-        updateData.itemValue = data.itemValue;
-      }
-      if (data.itemCost !== undefined) {
-        updateData.itemCost = data.itemCost;
-      }
-      if (data.collectCost !== undefined) {
-        updateData.collectCost = data.collectCost;
-      }
-      if (data.collectForCustomer !== undefined) {
-        updateData.collectForCustomer = data.collectForCustomer;
-      }
-      if (data.collectForCustomerCost !== undefined) {
-        updateData.collectForCustomerCost = data.collectForCustomerCost;
-      }
-      if (data.collectForCustomerNote !== undefined) {
-        updateData.collectForCustomerNote = data.collectForCustomerNote;
-      }
-      if (data.notes !== undefined) {
-        updateData.notes = data.notes;
-      }
-
-      // Update delivery
-      const updatedDelivery = await Delivery.findByIdAndUpdate(
-        id,
-        { $set: updateData },
-        { new: true, runValidators: true }
-      );
-
-      if (!updatedDelivery) {
-        throw new Error('Failed to update delivery');
-      }
-
-      return this.transformDeliveryToResponse(updatedDelivery);
-    } catch (error) {
-      throw error;
+    const delivery = await Delivery.findById(id);
+    if (!delivery) {
+      throw new Error('Delivery not found');
     }
+
+    const updateData: Record<string, any> = {};
+
+    // Handle sender update
+    if (data.senderName || data.senderPhone) {
+      const senderName = data.senderName || delivery.sender.toString();
+      const senderPhone = data.senderPhone || delivery.sender.toString();
+      const sender = await this.customerService.findOrCreateCustomer(senderName, senderPhone);
+      updateData.sender = sender.id;
+    } else {
+      updateData.sender = delivery.sender;
+    }
+
+    // Handle receiver update
+    if (data.receiverName || data.receiverPhone) {
+      const receiverName = data.receiverName || delivery.receiver.toString();
+      const receiverPhone = data.receiverPhone || delivery.receiver.toString();
+      const receiver = await this.customerService.findOrCreateCustomer(receiverName, receiverPhone);
+      updateData.receiver = receiver.id;
+    } else {
+      updateData.receiver = delivery.receiver;
+    }
+
+    // Handle route updates
+    if (data.fromRouteId !== undefined) {
+      const fromRoute = await Route.findById(data.fromRouteId);
+      if (!fromRoute) {
+        throw new Error('From route not found');
+      }
+      updateData.fromRoute = data.fromRouteId;
+    }
+
+    if (data.toRouteId !== undefined) {
+      const toRoute = await Route.findById(data.toRouteId);
+      if (!toRoute) {
+        throw new Error('To route not found');
+      }
+      updateData.toRoute = data.toRouteId;
+    }
+    if (data.name !== undefined) {
+      updateData.name = data.name;
+    }
+    if (data.cost !== undefined) {
+      updateData.cost = data.cost;
+    }
+    if (data.homeDelivery !== undefined) {
+      updateData.homeDelivery = data.homeDelivery;
+    }
+    if (data.homeDeliveryCost !== undefined) {
+      updateData.homeDeliveryCost = data.homeDeliveryCost;
+    }
+    if (data.itemValue !== undefined) {
+      updateData.itemValue = data.itemValue;
+    }
+    if (data.itemCost !== undefined) {
+      updateData.itemCost = data.itemCost;
+    }
+    if (data.collectCost !== undefined) {
+      updateData.collectCost = data.collectCost;
+    }
+    if (data.collectForCustomer !== undefined) {
+      updateData.collectForCustomer = data.collectForCustomer;
+    }
+    if (data.collectForCustomerCost !== undefined) {
+      updateData.collectForCustomerCost = data.collectForCustomerCost;
+    }
+    if (data.collectForCustomerNote !== undefined) {
+      updateData.collectForCustomerNote = data.collectForCustomerNote;
+    }
+    if (data.notes !== undefined) {
+      updateData.notes = data.notes;
+    }
+
+    // Update delivery
+    const updatedDelivery = await Delivery.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedDelivery) {
+      throw new Error('Failed to update delivery');
+    }
+
+    return this.transformDeliveryToResponse(updatedDelivery);
   }
 
   /**
@@ -363,16 +353,12 @@ export class DeliveryService {
   }
 
   async deleteDelivery(id: string): Promise<void> {
-    try {
-      const delivery = await Delivery.findById(id);
-      if (!delivery) {
-        throw new Error('Delivery not found');
-      }
-
-      await Delivery.findByIdAndDelete(id);
-    } catch (error) {
-      throw error;
+    const delivery = await Delivery.findById(id);
+    if (!delivery) {
+      throw new Error('Delivery not found');
     }
+
+    await Delivery.findByIdAndDelete(id);
   }
 
   async getRelatedDeliveriesBySender(senderName: string): Promise<IDeliveryResponse[]> {
@@ -435,29 +421,25 @@ export class DeliveryService {
    * Get next delivery code for a specific route
    */
   async getNextCode(toRouteId: string): Promise<INextCodeResponse> {
-    try {
-      // Validate toRoute exists
-      const toRoute = await Route.findById(toRouteId);
-      if (!toRoute) {
-        throw new Error('To route not found');
-      }
-
-      // Get next code preview
-      const nextCode = await CodeGeneratorService.getNextCodePreview();
-
-      return {
-        nextCode,
-        toRoute: {
-          id: toRoute._id,
-          code: toRoute.code,
-          name: toRoute.name,
-          createdAt: toRoute.createdAt,
-          updatedAt: toRoute.updatedAt,
-        },
-      };
-    } catch (error) {
-      throw error;
+    // Validate toRoute exists
+    const toRoute = await Route.findById(toRouteId);
+    if (!toRoute) {
+      throw new Error('To route not found');
     }
+
+    // Get next code preview
+    const nextCode = await CodeGeneratorService.getNextCodePreview();
+
+    return {
+      nextCode,
+      toRoute: {
+        id: toRoute._id,
+        code: toRoute.code,
+        name: toRoute.name,
+        createdAt: toRoute.createdAt,
+        updatedAt: toRoute.updatedAt,
+      },
+    };
   }
 
   /**
@@ -465,51 +447,47 @@ export class DeliveryService {
    * @param deliveryIdentifier - Format: codeFromRouteToRoute (e.g., 2401250001T1T2)
    */
   async getDeliveryByCode(deliveryIdentifier: string): Promise<IDeliveryResponse | null> {
-    try {
-      // Parse delivery identifier
-      const parsed = this.parseDeliveryIdentifier(deliveryIdentifier);
-      if (!parsed) {
-        throw new Error(
-          'Invalid delivery identifier format. Expected: codeFromRouteToRoute (e.g., 2401250001T1T2)'
-        );
-      }
-
-      const { code, fromRouteCode, toRouteCode } = parsed;
-
-      // Find routes by code
-      const fromRoute = await Route.findOne({ code: fromRouteCode });
-      if (!fromRoute) {
-        throw new Error(`From route with code ${fromRouteCode} not found`);
-      }
-
-      const toRoute = await Route.findOne({ code: toRouteCode });
-      if (!toRoute) {
-        throw new Error(`To route with code ${toRouteCode} not found`);
-      }
-
-      // Find delivery by code and routes
-      const delivery = await Delivery.findOne({
-        code: code,
-        fromRoute: fromRoute._id,
-        toRoute: toRoute._id,
-      })
-        .populate([
-          { path: 'sender', select: '_id name phone createdAt updatedAt' },
-          { path: 'receiver', select: '_id name phone createdAt updatedAt' },
-          { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
-          { path: 'toRoute', select: '_id code name createdAt updatedAt' },
-          { path: 'createdByUser', select: '_id username' },
-        ])
-        .lean();
-
-      if (!delivery) {
-        return null;
-      }
-
-      return this.transformDeliveryToResponseOptimized(this.toPopulatedDeliveryLean(delivery));
-    } catch (error) {
-      throw error;
+    // Parse delivery identifier
+    const parsed = this.parseDeliveryIdentifier(deliveryIdentifier);
+    if (!parsed) {
+      throw new Error(
+        'Invalid delivery identifier format. Expected: codeFromRouteToRoute (e.g., 2401250001T1T2)'
+      );
     }
+
+    const { code, fromRouteCode, toRouteCode } = parsed;
+
+    // Find routes by code
+    const fromRoute = await Route.findOne({ code: fromRouteCode });
+    if (!fromRoute) {
+      throw new Error(`From route with code ${fromRouteCode} not found`);
+    }
+
+    const toRoute = await Route.findOne({ code: toRouteCode });
+    if (!toRoute) {
+      throw new Error(`To route with code ${toRouteCode} not found`);
+    }
+
+    // Find delivery by code and routes
+    const delivery = await Delivery.findOne({
+      code: code,
+      fromRoute: fromRoute._id,
+      toRoute: toRoute._id,
+    })
+      .populate([
+        { path: 'sender', select: '_id name phone createdAt updatedAt' },
+        { path: 'receiver', select: '_id name phone createdAt updatedAt' },
+        { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
+        { path: 'toRoute', select: '_id code name createdAt updatedAt' },
+        { path: 'createdByUser', select: '_id username' },
+      ])
+      .lean();
+
+    if (!delivery) {
+      return null;
+    }
+
+    return this.transformDeliveryToResponseOptimized(this.toPopulatedDeliveryLean(delivery));
   }
 
   /**

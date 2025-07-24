@@ -148,49 +148,45 @@ export class MoneyDeliveryService {
     data: IMoneyDeliveryCreateRequest,
     userId: string
   ): Promise<IMoneyDeliveryResponse> {
-    try {
-      // Find or create sender and receiver
-      const sender = await this.customerService.findOrCreateCustomer(
-        data.senderName,
-        data.senderPhone
-      );
-      const receiver = await this.customerService.findOrCreateCustomer(
-        data.receiverName,
-        data.receiverPhone
-      );
+    // Find or create sender and receiver
+    const sender = await this.customerService.findOrCreateCustomer(
+      data.senderName,
+      data.senderPhone
+    );
+    const receiver = await this.customerService.findOrCreateCustomer(
+      data.receiverName,
+      data.receiverPhone
+    );
 
-      // Validate fromRoute and toRoute exist
-      const fromRoute = await Route.findById(data.fromRouteId);
-      if (!fromRoute) {
-        throw new Error('From route not found');
-      }
-
-      const toRoute = await Route.findById(data.toRouteId);
-      if (!toRoute) {
-        throw new Error('To route not found');
-      }
-
-      // Generate money delivery code
-      const moneyDeliveryCode = await CodeGeneratorService.generateNextMoneyDeliveryCode();
-
-      // Create money delivery
-      const moneyDelivery = new MoneyDelivery({
-        code: moneyDeliveryCode,
-        sender: sender.id,
-        receiver: receiver.id,
-        fromRoute: data.fromRouteId,
-        toRoute: data.toRouteId,
-        sendMoneyAmount: data.sendMoneyAmount,
-        sendCost: data.sendCost,
-        notes: data.notes,
-        createdByUser: userId,
-      });
-
-      await moneyDelivery.save();
-      return this.transformMoneyDeliveryToResponse(moneyDelivery);
-    } catch (error) {
-      throw error;
+    // Validate fromRoute and toRoute exist
+    const fromRoute = await Route.findById(data.fromRouteId);
+    if (!fromRoute) {
+      throw new Error('From route not found');
     }
+
+    const toRoute = await Route.findById(data.toRouteId);
+    if (!toRoute) {
+      throw new Error('To route not found');
+    }
+
+    // Generate money delivery code
+    const moneyDeliveryCode = await CodeGeneratorService.generateNextMoneyDeliveryCode();
+
+    // Create money delivery
+    const moneyDelivery = new MoneyDelivery({
+      code: moneyDeliveryCode,
+      sender: sender.id,
+      receiver: receiver.id,
+      fromRoute: data.fromRouteId,
+      toRoute: data.toRouteId,
+      sendMoneyAmount: data.sendMoneyAmount,
+      sendCost: data.sendCost,
+      notes: data.notes,
+      createdByUser: userId,
+    });
+
+    await moneyDelivery.save();
+    return this.transformMoneyDeliveryToResponse(moneyDelivery);
   }
 
   /**
@@ -200,79 +196,72 @@ export class MoneyDeliveryService {
     id: string,
     data: IMoneyDeliveryUpdateRequest
   ): Promise<IMoneyDeliveryResponse> {
-    try {
-      const moneyDelivery = await MoneyDelivery.findById(id);
-      if (!moneyDelivery) {
-        throw new Error('Money delivery not found');
-      }
-
-      const updateData: Record<string, any> = {};
-
-      // Handle sender update
-      if (data.senderName || data.senderPhone) {
-        const senderName = data.senderName || moneyDelivery.sender.toString();
-        const senderPhone = data.senderPhone || moneyDelivery.sender.toString();
-        const sender = await this.customerService.findOrCreateCustomer(senderName, senderPhone);
-        updateData.sender = sender.id;
-      } else {
-        updateData.sender = moneyDelivery.sender;
-      }
-
-      // Handle receiver update
-      if (data.receiverName || data.receiverPhone) {
-        const receiverName = data.receiverName || moneyDelivery.receiver.toString();
-        const receiverPhone = data.receiverPhone || moneyDelivery.receiver.toString();
-        const receiver = await this.customerService.findOrCreateCustomer(
-          receiverName,
-          receiverPhone
-        );
-        updateData.receiver = receiver.id;
-      } else {
-        updateData.receiver = moneyDelivery.receiver;
-      }
-
-      // Handle route updates
-      if (data.fromRouteId !== undefined) {
-        const fromRoute = await Route.findById(data.fromRouteId);
-        if (!fromRoute) {
-          throw new Error('From route not found');
-        }
-        updateData.fromRoute = data.fromRouteId;
-      }
-
-      if (data.toRouteId !== undefined) {
-        const toRoute = await Route.findById(data.toRouteId);
-        if (!toRoute) {
-          throw new Error('To route not found');
-        }
-        updateData.toRoute = data.toRouteId;
-      }
-
-      if (data.sendMoneyAmount !== undefined) {
-        updateData.sendMoneyAmount = data.sendMoneyAmount;
-      }
-      if (data.sendCost !== undefined) {
-        updateData.sendCost = data.sendCost;
-      }
-      if (data.notes !== undefined) {
-        updateData.notes = data.notes;
-      }
-
-      // Update money delivery
-      const updatedMoneyDelivery = await MoneyDelivery.findByIdAndUpdate(
-        id,
-        { $set: updateData },
-        { new: true, runValidators: true }
-      );
-
-      if (!updatedMoneyDelivery) {
-        throw new Error('Failed to update money delivery');
-      }
-
-      return this.transformMoneyDeliveryToResponse(updatedMoneyDelivery);
-    } catch (error) {
-      throw error;
+    const moneyDelivery = await MoneyDelivery.findById(id);
+    if (!moneyDelivery) {
+      throw new Error('Money delivery not found');
     }
+
+    const updateData: Record<string, any> = {};
+
+    // Handle sender update
+    if (data.senderName || data.senderPhone) {
+      const senderName = data.senderName || moneyDelivery.sender.toString();
+      const senderPhone = data.senderPhone || moneyDelivery.sender.toString();
+      const sender = await this.customerService.findOrCreateCustomer(senderName, senderPhone);
+      updateData.sender = sender.id;
+    } else {
+      updateData.sender = moneyDelivery.sender;
+    }
+
+    // Handle receiver update
+    if (data.receiverName || data.receiverPhone) {
+      const receiverName = data.receiverName || moneyDelivery.receiver.toString();
+      const receiverPhone = data.receiverPhone || moneyDelivery.receiver.toString();
+      const receiver = await this.customerService.findOrCreateCustomer(receiverName, receiverPhone);
+      updateData.receiver = receiver.id;
+    } else {
+      updateData.receiver = moneyDelivery.receiver;
+    }
+
+    // Handle route updates
+    if (data.fromRouteId !== undefined) {
+      const fromRoute = await Route.findById(data.fromRouteId);
+      if (!fromRoute) {
+        throw new Error('From route not found');
+      }
+      updateData.fromRoute = data.fromRouteId;
+    }
+
+    if (data.toRouteId !== undefined) {
+      const toRoute = await Route.findById(data.toRouteId);
+      if (!toRoute) {
+        throw new Error('To route not found');
+      }
+      updateData.toRoute = data.toRouteId;
+    }
+
+    if (data.sendMoneyAmount !== undefined) {
+      updateData.sendMoneyAmount = data.sendMoneyAmount;
+    }
+    if (data.sendCost !== undefined) {
+      updateData.sendCost = data.sendCost;
+    }
+    if (data.notes !== undefined) {
+      updateData.notes = data.notes;
+    }
+
+    // Update money delivery
+    const updatedMoneyDelivery = await MoneyDelivery.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedMoneyDelivery) {
+      throw new Error('Failed to update money delivery');
+    }
+
+    return this.transformMoneyDeliveryToResponse(updatedMoneyDelivery);
   }
 
   /**
@@ -332,45 +321,37 @@ export class MoneyDeliveryService {
    * Delete money delivery by ID
    */
   async deleteMoneyDelivery(id: string): Promise<void> {
-    try {
-      const moneyDelivery = await MoneyDelivery.findById(id);
-      if (!moneyDelivery) {
-        throw new Error('Money delivery not found');
-      }
-
-      await MoneyDelivery.findByIdAndDelete(id);
-    } catch (error) {
-      throw error;
+    const moneyDelivery = await MoneyDelivery.findById(id);
+    if (!moneyDelivery) {
+      throw new Error('Money delivery not found');
     }
+
+    await MoneyDelivery.findByIdAndDelete(id);
   }
 
   /**
    * Get next money delivery code for a specific route
    */
   async getNextCode(toRouteId: string): Promise<INextMoneyDeliveryCodeResponse> {
-    try {
-      // Validate toRoute exists
-      const toRoute = await Route.findById(toRouteId);
-      if (!toRoute) {
-        throw new Error('To route not found');
-      }
-
-      // Generate next code
-      const nextCode = await CodeGeneratorService.generateNextMoneyDeliveryCode();
-
-      return {
-        nextCode,
-        toRoute: {
-          id: toRoute._id,
-          code: toRoute.code,
-          name: toRoute.name,
-          createdAt: toRoute.createdAt,
-          updatedAt: toRoute.updatedAt,
-        },
-      };
-    } catch (error) {
-      throw error;
+    // Validate toRoute exists
+    const toRoute = await Route.findById(toRouteId);
+    if (!toRoute) {
+      throw new Error('To route not found');
     }
+
+    // Generate next code
+    const nextCode = await CodeGeneratorService.generateNextMoneyDeliveryCode();
+
+    return {
+      nextCode,
+      toRoute: {
+        id: toRoute._id,
+        code: toRoute.code,
+        name: toRoute.name,
+        createdAt: toRoute.createdAt,
+        updatedAt: toRoute.updatedAt,
+      },
+    };
   }
 
   /**

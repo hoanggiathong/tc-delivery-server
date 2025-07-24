@@ -31,7 +31,7 @@ const deliverySchema = new Schema<IDelivery>(
       required: [true, 'Delivery code is required'],
       unique: true,
       trim: true,
-      match: [/^\d{10}$/, 'Code must be 10 digits in format DDMMYY + sequence (0001-9999)'],
+      match: [/^\d{6}\d{4}$/, 'Code must be 10 digits in format DDMMYY + sequence (0001-9999)'],
     },
     sender: {
       type: Schema.Types.ObjectId,
@@ -124,10 +124,8 @@ const deliverySchema = new Schema<IDelivery>(
     timestamps: true,
     toJSON: {
       transform: function (doc, ret) {
-        ret.id = ret._id;
-        delete ret._id;
-        delete ret.__v;
-        return ret;
+        const { _id, __v, ...rest } = ret;
+        return { id: _id, ...rest };
       },
     },
   }
@@ -145,10 +143,37 @@ deliverySchema.pre('save', function (next) {
   next();
 });
 
+// Business logic validation
+deliverySchema.pre('save', function (next) {
+  if (this.sender.toString() === this.receiver.toString()) {
+    return next(new Error('Sender and receiver cannot be the same'));
+  }
+  if (this.fromRoute.toString() === this.toRoute.toString()) {
+    return next(new Error('From route and to route cannot be the same'));
+  }
+  next();
+});
+
 // Pre-update middleware to calculate totalCost
 deliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next) {
   const update = this.getUpdate() as any;
   if (update) {
+    // Business logic validation for updates
+    if (
+      update.sender &&
+      update.receiver &&
+      update.sender.toString() === update.receiver.toString()
+    ) {
+      return next(new Error('Sender and receiver cannot be the same'));
+    }
+    if (
+      update.fromRoute &&
+      update.toRoute &&
+      update.fromRoute.toString() === update.toRoute.toString()
+    ) {
+      return next(new Error('From route and to route cannot be the same'));
+    }
+
     // Only calculate if at least one cost field is being updated
     if (
       update.cost !== undefined ||

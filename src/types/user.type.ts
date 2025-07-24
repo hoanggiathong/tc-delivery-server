@@ -97,12 +97,12 @@ export interface IUserDetailResponse extends IUserResponse {
  * Transform IUser to IUserResponse
  * Removes sensitive data and converts to response format
  */
-export const transformUserToResponse = (user: IUser): IUserResponse => {
+export const transformUserToResponse = (user: IUser | any): IUserResponse => {
   return {
     id: user._id.toString(),
     username: user.username,
     role: user.role,
-    selectedRouteId: user.selectedRouteId,
+    selectedRouteId: user.selectedRouteId?.toString() || null,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
@@ -117,7 +117,7 @@ export const transformUserLeanToResponse = (user: IUserLean): IUserResponse => {
     id: user._id.toString(),
     username: user.username,
     role: user.role,
-    selectedRouteId: user.selectedRouteId,
+    selectedRouteId: user.selectedRouteId?.toString() || null,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
