@@ -18,7 +18,7 @@ const MockedMoneyDeliveryService = MoneyDeliveryService as jest.MockedClass<
   typeof MoneyDeliveryService
 >;
 
-// Mock all models  
+// Mock all models
 jest.mock('@/models/user.model');
 jest.mock('@/models/customer.model');
 jest.mock('@/models/route.model');
@@ -55,7 +55,6 @@ describe('Money Delivery API Integration Tests', () => {
       updatedAt: new Date(),
       phone: '+84123456789',
     };
-
 
     // Mock test routes
     testRoute1 = {

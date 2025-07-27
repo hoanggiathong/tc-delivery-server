@@ -1,5 +1,6 @@
 import { DeliveryService } from '@/services/delivery.service';
 import { Delivery } from '@/models/delivery.model';
+import { Customer } from '@/models/customer.model';
 import { Route } from '@/models/route.model';
 import { CodeGeneratorService } from '@/services/code-generator.service';
 import { IDeliveryResponse } from '@/types/delivery.type';
@@ -7,6 +8,7 @@ import { CustomerService } from '@/services/customer.service';
 
 // Mock the Delivery and Route models
 jest.mock('@/models/delivery.model');
+jest.mock('@/models/customer.model');
 jest.mock('@/models/route.model');
 jest.mock('@/services/customer.service');
 
@@ -20,6 +22,7 @@ jest.mock('@/services/code-generator.service', () => ({
 }));
 
 const MockedDelivery = Delivery as jest.MockedClass<typeof Delivery>;
+const MockedCustomer = Customer as jest.MockedClass<typeof Customer>;
 const MockedRoute = Route as jest.MockedClass<typeof Route>;
 const MockedCodeGeneratorService = CodeGeneratorService as jest.Mocked<typeof CodeGeneratorService>;
 
@@ -100,7 +103,7 @@ describe('DeliveryService', () => {
       collectForCustomer: 25000,
       collectForCustomerCost: 40,
       collectForCustomerNote: 'Test note',
-      totalCost: 240, // 100 + 20 + 50 + 30 + 40
+      totalCost: 210, // 100 + 20 + 50 + 40 (excluding collectCost)
       createdByUser: 'user123',
       createdAt: new Date('2023-01-01'),
       updatedAt: new Date('2023-01-01'),
@@ -136,7 +139,7 @@ describe('DeliveryService', () => {
       collectForCustomer: 25000,
       collectForCustomerCost: 40,
       collectForCustomerNote: 'Test note',
-      totalCost: 240, // 100 + 20 + 50 + 30 + 40
+      totalCost: 210, // 100 + 20 + 50 + 40 (excluding collectCost)
       createdByUser: 'testuser',
       createdAt: new Date('2023-01-01'),
       updatedAt: new Date('2023-01-01'),
@@ -368,7 +371,7 @@ describe('DeliveryService', () => {
       collectForCustomer: 25000,
       collectForCustomerCost: 40,
       collectForCustomerNote: 'Test note',
-      totalCost: 240, // 100 + 20 + 50 + 30 + 40
+      totalCost: 210, // 100 + 20 + 50 + 40 (excluding collectCost)
       createdByUser: 'testuser',
       createdAt: new Date('2023-01-01'),
       updatedAt: new Date('2023-01-01'),
@@ -558,7 +561,7 @@ describe('DeliveryService', () => {
       collectForCustomer: 25000,
       collectForCustomerCost: 40,
       collectForCustomerNote: 'Test note',
-      totalCost: 240, // 100 + 20 + 50 + 30 + 40
+      totalCost: 210, // 100 + 20 + 50 + 40 (excluding collectCost)
       createdByUser: 'testuser',
       createdAt: new Date('2023-01-01'),
       updatedAt: new Date('2023-01-01'),
@@ -708,7 +711,7 @@ describe('DeliveryService', () => {
         collectForCustomer: 25000,
         collectForCustomerCost: 40,
         collectForCustomerNote: 'Test note',
-        totalCost: 240, // 100 + 20 + 50 + 30 + 40
+        totalCost: 210, // 100 + 20 + 50 + 40 (excluding collectCost)
         createdByUser: 'testuser',
         createdAt: new Date('2023-01-01'),
         updatedAt: new Date('2023-01-01'),
@@ -934,7 +937,7 @@ describe('DeliveryService', () => {
       collectForCustomer: 25000,
       collectForCustomerCost: 40,
       collectForCustomerNote: 'Test note',
-      totalCost: 240, // 100 + 20 + 50 + 30 + 40
+      totalCost: 210, // 100 + 20 + 50 + 40 (excluding collectCost)
       createdByUser: 'testuser',
       createdAt: new Date('2023-01-01'),
       updatedAt: new Date('2023-01-01'),
@@ -1059,9 +1062,12 @@ describe('DeliveryService', () => {
         },
       ];
 
-      // Mock the aggregate method
-      const mockAggregate = jest.fn().mockReturnValue({
-        aggregate: jest.fn().mockResolvedValue(mockAggregationResult),
+      // Mock Customer.find to return sender IDs
+      const mockSenders = [{ _id: 'sender1' }, { _id: 'sender2' }];
+      MockedCustomer.find = jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue(mockSenders),
+        }),
       });
 
       // Mock the Delivery model
@@ -1105,14 +1111,12 @@ describe('DeliveryService', () => {
     });
 
     it('should handle empty results', async () => {
-      const mockAggregationResult = [
-        {
-          data: [],
-          totalCount: [{ count: 0 }],
-        },
-      ];
-
-      jest.spyOn(Delivery, 'aggregate').mockResolvedValue(mockAggregationResult as any);
+      // Mock Customer.find to return empty array (no senders found)
+      MockedCustomer.find = jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue([]),
+        }),
+      });
 
       const result = await deliveryService.getFrequentCustomers('NonExistentSender', 1, 10);
 
@@ -1132,6 +1136,14 @@ describe('DeliveryService', () => {
     });
 
     it('should handle aggregation errors', async () => {
+      // Mock Customer.find to return sender IDs
+      const mockSenders = [{ _id: 'sender1' }];
+      MockedCustomer.find = jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue(mockSenders),
+        }),
+      });
+
       jest.spyOn(Delivery, 'aggregate').mockRejectedValue(new Error('Database error'));
 
       await expect(deliveryService.getFrequentCustomers('Sender Name', 1, 10)).rejects.toThrow(

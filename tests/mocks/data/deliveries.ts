@@ -45,7 +45,7 @@ export const createMockDelivery = (
     collectForCustomerCost: 3000,
     collectForCustomerNote: 'Test note',
     notes: 'Test delivery notes',
-    totalCost: 70000, // 50000 + 10000 + 5000 + 2000 + 3000
+    totalCost: 68000, // 50000 + 10000 + 5000 + 3000 (excluding collectCost)
     createdByUser: 'testuser',
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2023-01-01'),

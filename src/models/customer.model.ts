@@ -37,4 +37,8 @@ const customerSchema = new Schema<ICustomer>(
 // Create compound index for name and phone (both together must be unique)
 customerSchema.index({ name: 1, phone: 1 }, { unique: true });
 
+// Performance indexes for frequent customer search
+customerSchema.index({ name: 'text' }); // Text index for name search
+customerSchema.index({ phone: 1 }); // Single field index for exact phone match
+
 export const Customer = mongoose.model<ICustomer>('Customer', customerSchema);

@@ -70,7 +70,6 @@ export const createMockNextCodeResult = (overrides: any = {}) => {
   };
 };
 
-
 export const createMockMoneyDeliveryList = (count: number = 3): IMoneyDeliveryResponse[] => {
   return Array.from({ length: count }, (_, index) => {
     const sendMoneyAmount = 500000 + index * 100000;

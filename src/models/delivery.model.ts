@@ -13,9 +13,9 @@ export interface IDelivery extends Document {
   homeDeliveryCost: number;
   itemValue: number;
   itemCost: number;
-  collectCost: number;
-  collectForCustomer: number;
-  collectForCustomerCost: number;
+  collectCost: number; // Thu hộ
+  collectForCustomer: number; // Thu dùm
+  collectForCustomerCost: number; // Phụ phí
   collectForCustomerNote?: string;
   notes?: string;
   totalCost: number;
@@ -131,26 +131,18 @@ const deliverySchema = new Schema<IDelivery>(
   }
 );
 
-// Pre-save middleware to calculate totalCost
+// Pre-save middleware for totalCost calculation and business logic validation
 deliverySchema.pre('save', function (next) {
-  // Calculate totalCost = cost + homeDeliveryCost + itemCost + collectCost + collectForCustomerCost
-  this.totalCost =
-    this.cost +
-    this.homeDeliveryCost +
-    this.itemCost +
-    this.collectCost +
-    this.collectForCustomerCost;
-  next();
-});
-
-// Business logic validation
-deliverySchema.pre('save', function (next) {
+  // Business logic validation
   if (this.sender.toString() === this.receiver.toString()) {
     return next(new Error('Sender and receiver cannot be the same'));
   }
   if (this.fromRoute.toString() === this.toRoute.toString()) {
     return next(new Error('From route and to route cannot be the same'));
   }
+
+  // Calculate totalCost = cost + homeDeliveryCost + itemCost + collectForCustomerCost
+  this.totalCost = this.cost + this.homeDeliveryCost + this.itemCost + this.collectForCustomerCost;
   next();
 });
 
@@ -191,15 +183,12 @@ deliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next) {
             ? update.homeDeliveryCost
             : currentDoc.homeDeliveryCost;
         const itemCost = update.itemCost !== undefined ? update.itemCost : currentDoc.itemCost;
-        const collectCost =
-          update.collectCost !== undefined ? update.collectCost : currentDoc.collectCost;
         const collectForCustomerCost =
           update.collectForCustomerCost !== undefined
             ? update.collectForCustomerCost
             : currentDoc.collectForCustomerCost;
 
-        update.totalCost =
-          cost + homeDeliveryCost + itemCost + collectCost + collectForCustomerCost;
+        update.totalCost = cost + homeDeliveryCost + itemCost + collectForCustomerCost;
       }
     }
   }

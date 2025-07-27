@@ -98,7 +98,7 @@ describe('Delivery Endpoints', () => {
       const mockDelivery = createMockDelivery({
         homeDelivery: undefined,
         homeDeliveryCost: 0,
-        totalCost: 115000, // Auto-calculated: 50000 + 0 + 30000 + 15000 + 20000
+        totalCost: 100000, // Auto-calculated: 50000 + 0 + 30000 + 20000 (excluding collectCost)
       });
 
       MockedDeliveryService.prototype.createDelivery.mockResolvedValue(mockDelivery);
