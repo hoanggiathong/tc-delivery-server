@@ -17,6 +17,7 @@ jest.mock('@/models/route.model');
 jest.mock('@/models/customer.model');
 
 const MockedMoneyDelivery = MoneyDelivery as jest.MockedClass<typeof MoneyDelivery>;
+const MockedCustomer = Customer as jest.MockedClass<typeof Customer>;
 const MockedRoute = Route as jest.MockedClass<typeof Route>;
 const MockedCodeGeneratorService = CodeGeneratorService as jest.Mocked<typeof CodeGeneratorService>;
 const MockedCustomerService = CustomerService as jest.MockedClass<typeof CustomerService>;
@@ -484,6 +485,14 @@ describe('MoneyDeliveryService', () => {
         },
       ];
 
+      // Mock Customer.find to return sender IDs
+      const mockSenders = [{ _id: 'sender1' }, { _id: 'sender2' }];
+      MockedCustomer.find = jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue(mockSenders),
+        }),
+      });
+
       // Mock the MoneyDelivery model
       jest.spyOn(MoneyDelivery, 'aggregate').mockResolvedValue(mockAggregationResult as any);
 
@@ -525,14 +534,12 @@ describe('MoneyDeliveryService', () => {
     });
 
     it('should handle empty results', async () => {
-      const mockAggregationResult = [
-        {
-          data: [],
-          totalCount: [{ count: 0 }],
-        },
-      ];
-
-      jest.spyOn(MoneyDelivery, 'aggregate').mockResolvedValue(mockAggregationResult as any);
+      // Mock Customer.find to return empty array (no senders found)
+      MockedCustomer.find = jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue([]),
+        }),
+      });
 
       const result = await moneyDeliveryService.getFrequentCustomers('NonExistentSender', 1, 10);
 
@@ -552,6 +559,14 @@ describe('MoneyDeliveryService', () => {
     });
 
     it('should handle aggregation errors', async () => {
+      // Mock Customer.find to return sender IDs
+      const mockSenders = [{ _id: 'sender1' }];
+      MockedCustomer.find = jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue(mockSenders),
+        }),
+      });
+
       jest.spyOn(MoneyDelivery, 'aggregate').mockRejectedValue(new Error('Database error'));
 
       await expect(moneyDeliveryService.getFrequentCustomers('Sender Name', 1, 10)).rejects.toThrow(

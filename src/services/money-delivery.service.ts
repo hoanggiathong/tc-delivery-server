@@ -1,4 +1,5 @@
 import { MoneyDelivery, IMoneyDelivery } from '@/models/money-delivery.model';
+import { Customer } from '@/models/customer.model';
 import { Route } from '@/models/route.model';
 import { CustomerService } from '@/services/customer.service';
 import { CodeGeneratorService } from '@/services/code-generator.service';
@@ -428,17 +429,59 @@ export class MoneyDeliveryService {
     try {
       const skip = (page - 1) * limit;
 
-      // Build query to match sender by name or phone
-      const senderQuery = {
-        $or: [
-          { 'sender.name': { $regex: senderIdentifier, $options: 'i' } },
-          { 'sender.phone': senderIdentifier },
-        ],
-      };
+      // Find sender IDs first to reduce pipeline load
+      // Use optimized queries with indexes
+      let senders;
+      try {
+        let senderQuery;
+        if (/^\+?[1-9]\d{1,14}$/.test(senderIdentifier)) {
+          // If it looks like a phone number, search phone first (exact match with index)
+          senderQuery = { phone: senderIdentifier };
+        } else {
+          // Use text search for name (leverages text index)
+          senderQuery = {
+            $or: [
+              { $text: { $search: senderIdentifier } },
+              { phone: senderIdentifier }, // Still check phone as fallback
+            ],
+          };
+        }
 
-      // Aggregation pipeline to group and paginate
+        senders = await Customer.find(senderQuery).select('_id').lean();
+      } catch (error) {
+        // Fallback to regex search if text index is not available (e.g., in tests)
+        senders = await Customer.find({
+          $or: [{ name: { $regex: senderIdentifier, $options: 'i' } }, { phone: senderIdentifier }],
+        })
+          .select('_id')
+          .lean();
+      }
+
+      const senderIds = senders.map((sender: any) => sender._id);
+
+      // If no senders found, return empty result early
+      if (senderIds.length === 0) {
+        return {
+          senderIdentifier,
+          senderInfo: null,
+          frequentCustomers: [],
+          pagination: {
+            currentPage: page,
+            totalPages: 0,
+            totalRecords: 0,
+            limit,
+            hasNextPage: false,
+            hasPrevPage: false,
+          },
+        };
+      }
+
+      // Optimized aggregation pipeline - filter first, then join
       const pipeline = [
-        // Populate references
+        // Match money deliveries by sender IDs first (uses index)
+        { $match: { sender: { $in: senderIds } } },
+
+        // Lookup only needed collections for filtered records
         {
           $lookup: {
             from: 'customers',
@@ -467,8 +510,6 @@ export class MoneyDeliveryService {
         { $unwind: '$sender' },
         { $unwind: '$receiver' },
         { $unwind: '$toRoute' },
-        // Match sender
-        { $match: senderQuery },
         // Group by receiver name, phone, and route to avoid duplicates
         {
           $group: {
