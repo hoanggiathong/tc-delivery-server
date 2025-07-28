@@ -1,6 +1,7 @@
 import { Delivery, IDelivery } from '@/models/delivery.model';
 import { Customer } from '@/models/customer.model';
 import { Route } from '@/models/route.model';
+import { Types, PipelineStage } from 'mongoose';
 import { CustomerService } from '@/services/customer.service';
 import { CodeGeneratorService } from '@/services/code-generator.service';
 import {
@@ -16,6 +17,25 @@ import {
 import { ICustomerResponse } from '@/types/customer.type';
 import Logger from '@/utils/logger';
 
+interface IAggregationResultItem {
+  _id: {
+    receiverName: string;
+    receiverPhone: string;
+    toRouteId: Types.ObjectId;
+    toRouteCode: string;
+    toRouteName: string;
+  };
+  deliveryCount: number;
+  totalCost: number;
+  totalItemValue: number;
+  lastDeliveryDate: Date;
+  firstDeliveryDate: Date;
+  senderInfo: {
+    name: string;
+    phone: string;
+  };
+}
+
 export class DeliveryService {
   private customerService: CustomerService;
 
@@ -26,15 +46,15 @@ export class DeliveryService {
   /**
    * Type assertion helper for populated delivery objects
    */
-  private toPopulatedDelivery(delivery: any): IDeliveryWithPopulatedRefs {
-    return delivery;
+  private toPopulatedDelivery(delivery: unknown): IDeliveryWithPopulatedRefs {
+    return delivery as IDeliveryWithPopulatedRefs;
   }
 
   /**
    * Type assertion helper for lean populated delivery objects
    */
-  private toPopulatedDeliveryLean(delivery: any): IDeliveryLeanPopulated {
-    return delivery;
+  private toPopulatedDeliveryLean(delivery: unknown): IDeliveryLeanPopulated {
+    return delivery as IDeliveryLeanPopulated;
   }
 
   /**
@@ -559,7 +579,7 @@ export class DeliveryService {
           .lean();
       }
 
-      const senderIds = senders.map((sender: any) => sender._id);
+      const senderIds = senders.map(sender => sender._id);
 
       // If no senders found, return empty result early
       if (senderIds.length === 0) {
@@ -579,7 +599,7 @@ export class DeliveryService {
       }
 
       // Optimized aggregation pipeline - filter first, then join
-      const pipeline = [
+      const pipeline: PipelineStage[] = [
         // Match deliveries by sender IDs first (uses index)
         { $match: { sender: { $in: senderIds } } },
 
@@ -646,12 +666,12 @@ export class DeliveryService {
         },
       ];
 
-      const result = await Delivery.aggregate(pipeline as any);
+      const result = await Delivery.aggregate(pipeline);
       const data = result[0]?.data || [];
       const total = result[0]?.totalCount[0]?.count || 0;
 
       // Transform the data to match the response interface
-      const frequentCustomers: IFrequentCustomer[] = data.map((item: any) => ({
+      const frequentCustomers: IFrequentCustomer[] = data.map((item: IAggregationResultItem) => ({
         receiverName: item._id.receiverName,
         receiverPhone: item._id.receiverPhone,
         toRoute: {

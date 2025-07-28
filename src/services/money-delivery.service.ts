@@ -1,9 +1,31 @@
 import { MoneyDelivery, IMoneyDelivery } from '@/models/money-delivery.model';
 import { Customer } from '@/models/customer.model';
 import { Route } from '@/models/route.model';
+import { Types, PipelineStage } from 'mongoose';
 import { CustomerService } from '@/services/customer.service';
 import { CodeGeneratorService } from '@/services/code-generator.service';
 import Logger from '@/utils/logger';
+
+interface IMoneyAggregationResultItem {
+  _id: {
+    receiverName: string;
+    receiverPhone: string;
+    toRouteId: Types.ObjectId;
+    toRouteCode: string;
+    toRouteName: string;
+  };
+  deliveryCount: number;
+  totalSendMoneyAmount: number;
+  totalSendCost: number;
+  totalCost: number;
+  lastDeliveryDate: Date;
+  firstDeliveryDate: Date;
+  senderInfo: {
+    name: string;
+    phone: string;
+  };
+}
+
 import {
   IMoneyDeliveryCreateRequest,
   IMoneyDeliveryUpdateRequest,
@@ -25,15 +47,15 @@ export class MoneyDeliveryService {
   /**
    * Type assertion helper for populated money delivery objects
    */
-  private toPopulatedMoneyDelivery(moneyDelivery: any): IMoneyDeliveryWithPopulatedRefs {
-    return moneyDelivery;
+  private toPopulatedMoneyDelivery(moneyDelivery: unknown): IMoneyDeliveryWithPopulatedRefs {
+    return moneyDelivery as IMoneyDeliveryWithPopulatedRefs;
   }
 
   /**
    * Type assertion helper for lean populated money delivery objects
    */
-  private toPopulatedMoneyDeliveryLean(moneyDelivery: any): IMoneyDeliveryLeanPopulated {
-    return moneyDelivery;
+  private toPopulatedMoneyDeliveryLean(moneyDelivery: unknown): IMoneyDeliveryLeanPopulated {
+    return moneyDelivery as IMoneyDeliveryLeanPopulated;
   }
 
   /**
@@ -457,7 +479,7 @@ export class MoneyDeliveryService {
           .lean();
       }
 
-      const senderIds = senders.map((sender: any) => sender._id);
+      const senderIds = senders.map(sender => sender._id);
 
       // If no senders found, return empty result early
       if (senderIds.length === 0) {
@@ -477,7 +499,7 @@ export class MoneyDeliveryService {
       }
 
       // Optimized aggregation pipeline - filter first, then join
-      const pipeline = [
+      const pipeline: PipelineStage[] = [
         // Match money deliveries by sender IDs first (uses index)
         { $match: { sender: { $in: senderIds } } },
 
@@ -545,26 +567,28 @@ export class MoneyDeliveryService {
         },
       ];
 
-      const result = await MoneyDelivery.aggregate(pipeline as any);
+      const result = await MoneyDelivery.aggregate(pipeline);
       const data = result[0]?.data || [];
       const total = result[0]?.totalCount[0]?.count || 0;
 
       // Transform the data to match the response interface
-      const frequentCustomers: IFrequentMoneyCustomer[] = data.map((item: any) => ({
-        receiverName: item._id.receiverName,
-        receiverPhone: item._id.receiverPhone,
-        toRoute: {
-          id: item._id.toRouteId.toString(),
-          code: item._id.toRouteCode,
-          name: item._id.toRouteName,
-        },
-        deliveryCount: item.deliveryCount,
-        totalSendMoneyAmount: item.totalSendMoneyAmount,
-        totalSendCost: item.totalSendCost,
-        totalCost: item.totalCost,
-        lastDeliveryDate: item.lastDeliveryDate,
-        firstDeliveryDate: item.firstDeliveryDate,
-      }));
+      const frequentCustomers: IFrequentMoneyCustomer[] = data.map(
+        (item: IMoneyAggregationResultItem) => ({
+          receiverName: item._id.receiverName,
+          receiverPhone: item._id.receiverPhone,
+          toRoute: {
+            id: item._id.toRouteId.toString(),
+            code: item._id.toRouteCode,
+            name: item._id.toRouteName,
+          },
+          deliveryCount: item.deliveryCount,
+          totalSendMoneyAmount: item.totalSendMoneyAmount,
+          totalSendCost: item.totalSendCost,
+          totalCost: item.totalCost,
+          lastDeliveryDate: item.lastDeliveryDate,
+          firstDeliveryDate: item.firstDeliveryDate,
+        })
+      );
 
       // Get sender info from the first record if available
       const senderInfo = data.length > 0 ? data[0].senderInfo : null;
