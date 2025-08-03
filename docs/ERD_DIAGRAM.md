@@ -1,197 +1,207 @@
-# Entity Relationship Diagram
+# Sơ Đồ Mối Quan Hệ Thực Thể
 
-## TC Delivery Server Database Schema
+## Sơ Đồ Cơ Sở Dữ Liệu TC Delivery Server
 
 ```mermaid
 erDiagram
-    USERS ||--o{ DELIVERIES : creates
-    USERS ||--o{ MONEY_DELIVERIES : creates
-    USERS ||--o{ USER_ROUTES : "assigned to"
-    USERS ||--o{ USER_ROUTES : "assigns (assignedBy)"
-    USERS }o--|| ROUTES : "has selected route"
-    ROUTES ||--o{ USER_ROUTES : "contains"
-    ROUTES ||--o{ DELIVERIES : "from route"
-    ROUTES ||--o{ DELIVERIES : "to route"
-    ROUTES ||--o{ MONEY_DELIVERIES : "from route"
-    ROUTES ||--o{ MONEY_DELIVERIES : "to route"
-    CUSTOMERS ||--o{ DELIVERIES : "sender"
-    CUSTOMERS ||--o{ DELIVERIES : "receiver"
-    CUSTOMERS ||--o{ MONEY_DELIVERIES : "sender"
-    CUSTOMERS ||--o{ MONEY_DELIVERIES : "receiver"
+    USERS ||--o{ DELIVERIES : "tạo"
+    USERS ||--o{ MONEY_DELIVERIES : "tạo"
+    USERS ||--o{ USER_ROUTES : "được phân công"
+    USERS ||--o{ USER_ROUTES : "phân công (assignedBy)"
+    USERS }o--|| ROUTES : "có tuyến đường đã chọn"
+    ROUTES ||--o{ USER_ROUTES : "chứa"
+    ROUTES ||--o{ DELIVERIES : "từ tuyến"
+    ROUTES ||--o{ DELIVERIES : "đến tuyến"
+    ROUTES ||--o{ MONEY_DELIVERIES : "từ tuyến"
+    ROUTES ||--o{ MONEY_DELIVERIES : "đến tuyến"
+    CUSTOMERS ||--o{ DELIVERIES : "người gửi"
+    CUSTOMERS ||--o{ DELIVERIES : "người nhận"
+    CUSTOMERS ||--o{ MONEY_DELIVERIES : "người gửi"
+    CUSTOMERS ||--o{ MONEY_DELIVERIES : "người nhận"
 
     USERS {
         ObjectId _id PK
-        string username UK "unique, 3-50 chars, alphanumeric+underscore"
-        string password "hashed bcrypt, min 6 chars, select:false"
-        enum role "superadmin|admin|manager|user, default:user"
-        ObjectId selectedRouteId FK "ref: ROUTES, optional, default:null"
-        datetime createdAt "auto-generated"
-        datetime updatedAt "auto-generated"
+        string username UK "duy nhất, 3-50 ký tự, chữ cái số + dấu gạch dưới"
+        string password "mã hóa bcrypt, tối thiểu 6 ký tự, select:false"
+        enum role "superadmin|admin|manager|user, mặc định:user"
+        ObjectId selectedRouteId FK "tham chiếu: ROUTES, tùy chọn, mặc định:null"
+        datetime createdAt "tự động tạo"
+        datetime updatedAt "tự động cập nhật"
     }
 
     ROUTES {
         ObjectId _id PK
-        string code UK "unique, format: [A-Z][0-9]+, uppercase, trim"
-        string name "required, max 100 chars, trim"
-        datetime createdAt "auto-generated"
-        datetime updatedAt "auto-generated"
+        string code UK "duy nhất, định dạng: [A-Z][0-9]+, chữ hoa, trim"
+        string name "bắt buộc, tối đa 100 ký tự, trim"
+        datetime createdAt "tự động tạo"
+        datetime updatedAt "tự động cập nhật"
     }
 
     USER_ROUTES {
         ObjectId _id PK
-        ObjectId userId FK "ref: USERS, required"
-        ObjectId routeId FK "ref: ROUTES, required"
-        ObjectId assignedBy FK "ref: USERS, required, manager+"
-        datetime createdAt "auto-generated"
-        datetime updatedAt "auto-generated"
+        ObjectId userId FK "tham chiếu: USERS, bắt buộc"
+        ObjectId routeId FK "tham chiếu: ROUTES, bắt buộc"
+        ObjectId assignedBy FK "tham chiếu: USERS, bắt buộc, manager+"
+        datetime createdAt "tự động tạo"
+        datetime updatedAt "tự động cập nhật"
     }
 
     CUSTOMERS {
         ObjectId _id PK
-        string name "required, max 100 chars, trim"
-        string phone "required, international format, trim"
-        datetime createdAt "auto-generated"
-        datetime updatedAt "auto-generated"
+        string name "bắt buộc, tối đa 100 ký tự, trim"
+        string phone "bắt buộc, định dạng quốc tế, trim"
+        datetime createdAt "tự động tạo"
+        datetime updatedAt "tự động cập nhật"
     }
 
     DELIVERIES {
         ObjectId _id PK
-        string code UK "unique, 10 digits: DDMMYY+sequence(0001-9999)"
-        ObjectId sender FK "ref: CUSTOMERS, required"
-        ObjectId receiver FK "ref: CUSTOMERS, required"
-        ObjectId fromRoute FK "ref: ROUTES, required"
-        ObjectId toRoute FK "ref: ROUTES, required"
-        string name "item name, required, trim"
-        number cost "delivery cost, required, min 0"
-        string homeDelivery "delivery address, optional, trim"
-        number homeDeliveryCost "required, min 0, default 0"
-        number itemValue "item value, required, min 0"
-        number itemCost "item cost, required, min 0"
-        number collectCost "collection cost (thu hộ), required, min 0"
-        number collectForCustomer "collect for customer (thu dùm), required, min 0, default 0"
-        number collectForCustomerCost "additional fee (phụ phí), required, min 0"
-        number totalCost "calculated: cost+homeDeliveryCost+itemCost+collectForCustomerCost"
-        string collectForCustomerNote "optional, trim"
-        string notes "optional, trim"
-        ObjectId createdByUser FK "ref: USERS, required"
-        datetime createdAt "auto-generated"
-        datetime updatedAt "auto-generated"
+        string code UK "duy nhất, 10 chữ số: DDMMYY+số thứ tự(0001-9999)"
+        ObjectId sender FK "tham chiếu: CUSTOMERS, bắt buộc"
+        ObjectId receiver FK "tham chiếu: CUSTOMERS, bắt buộc"
+        ObjectId fromRoute FK "tham chiếu: ROUTES, bắt buộc"
+        ObjectId toRoute FK "tham chiếu: ROUTES, bắt buộc"
+        string name "tên hàng hóa, bắt buộc, trim"
+        number cost "phí vận chuyển, bắt buộc, tối thiểu 0"
+        string homeDelivery "địa chỉ giao hàng, tùy chọn, trim"
+        number homeDeliveryCost "bắt buộc, tối thiểu 0, mặc định 0"
+        number itemValue "giá trị hàng hóa, bắt buộc, tối thiểu 0"
+        number itemCost "phí hàng hóa, bắt buộc, tối thiểu 0"
+        number collectCost "phí thu hộ, bắt buộc, tối thiểu 0"
+        number collectForCustomer "thu dùm khách hàng, bắt buộc, tối thiểu 0, mặc định 0"
+        number collectForCustomerCost "phí phụ thu, bắt buộc, tối thiểu 0"
+        number totalCost "tính toán: cost+homeDeliveryCost+itemCost+collectForCustomerCost"
+        string collectForCustomerNote "tùy chọn, trim"
+        string notes "tùy chọn, trim"
+        ObjectId createdByUser FK "tham chiếu: USERS, bắt buộc"
+        datetime createdAt "tự động tạo"
+        datetime updatedAt "tự động cập nhật"
     }
 
     MONEY_DELIVERIES {
         ObjectId _id PK
-        string code UK "unique, 10 digits: DDMMYY+sequence(0001-9999)"
-        ObjectId sender FK "ref: CUSTOMERS, required"
-        ObjectId receiver FK "ref: CUSTOMERS, required"
-        ObjectId fromRoute FK "ref: ROUTES, required"
-        ObjectId toRoute FK "ref: ROUTES, required"
-        number sendMoneyAmount "amount to send, required, min 0"
-        number sendCost "service cost, required, min 0"
-        number totalCost "calculated: sendCost only (simplified calculation)"
-        string notes "optional, trim"
-        ObjectId createdByUser FK "ref: USERS, required"
-        datetime createdAt "auto-generated"
-        datetime updatedAt "auto-generated"
+        string code UK "duy nhất, 10 chữ số: DDMMYY+số thứ tự(0001-9999)"
+        ObjectId sender FK "tham chiếu: CUSTOMERS, bắt buộc"
+        ObjectId receiver FK "tham chiếu: CUSTOMERS, bắt buộc"
+        ObjectId fromRoute FK "tham chiếu: ROUTES, bắt buộc"
+        ObjectId toRoute FK "tham chiếu: ROUTES, bắt buộc"
+        number sendMoneyAmount "số tiền gửi, bắt buộc, tối thiểu 0"
+        number sendCost "phí dịch vụ, bắt buộc, tối thiểu 0"
+        number totalCost "tính toán: chỉ sendCost (tính toán đơn giản)"
+        string notes "tùy chọn, trim"
+        ObjectId createdByUser FK "tham chiếu: USERS, bắt buộc"
+        datetime createdAt "tự động tạo"
+        datetime updatedAt "tự động cập nhật"
     }
 ```
 
-## Schema Details and Business Rules
+## Chi Tiết Sơ Đồ và Quy Tắc Nghiệp Vụ
 
-### Collection Names
-- `users` - User accounts and authentication
-- `customers` - Customer information database
-- `routes` - Delivery routes configuration
-- `userRoutes` - Many-to-many relationship between users and routes
-- `deliveries` - Regular delivery transactions
-- `moneydeliveries` - Money transfer transactions
+### Tên Các Collection
+- `users` - Tài khoản người dùng và xác thực
+- `customers` - Cơ sở dữ liệu thông tin khách hàng
+- `routes` - Cấu hình tuyến đường vận chuyển
+- `userRoutes` - Mối quan hệ nhiều-nhiều giữa người dùng và tuyến đường
+- `deliveries` - Giao dịch vận chuyển thông thường
+- `moneydeliveries` - Giao dịch chuyển tiền
 
-### Key Constraints and Validations
+### Ràng Buộc và Xác Thực Chính
 
-#### USERS Table
-- **Username**: Must be unique, 3-50 characters, alphanumeric + underscore only
-- **Password**: Minimum 6 characters, hashed with bcrypt (salt rounds: 12)
-- **Role Hierarchy**: user(1) → manager(2) → admin(3) → superadmin(4)
-- **Selected Route**: Optional reference to user's preferred route
+#### Bảng USERS
+- **Tên đăng nhập**: Phải duy nhất, 3-50 ký tự, chỉ chữ cái số và dấu gạch dưới
+- **Mật khẩu**: Tối thiểu 6 ký tự, mã hóa bằng bcrypt (salt rounds: 12)
+- **Phân cấp vai trò**: user(1) → manager(2) → admin(3) → superadmin(4)
+- **Tuyến đường đã chọn**: Tham chiếu tùy chọn đến tuyến đường ưa thích của người dùng
 
-#### CUSTOMERS Table
-- **Unique Constraint**: Combination of name + phone must be unique
-- **Phone Format**: International format validation with regex `/^\+?[1-9]\d{1,14}$/`
-- **Performance Indexes**: Text search on name, exact match on phone
+#### Bảng CUSTOMERS
+- **Ràng buộc duy nhất**: Tổ hợp name + phone phải duy nhất
+- **Định dạng số điện thoại**: Định dạng quốc tế với regex `/^\+?[1-9]\d{1,14}$/`
+- **Index hiệu suất**: Text search trên name, exact match trên phone
+- **Index quan trọng**: `{phone: 1}` cho phone search, `{name: "text"}` cho text search
 
-#### ROUTES Table
-- **Code Format**: Must match pattern `[A-Z]\d+` (e.g., T1, T2, A1)
-- **Auto-transformation**: Code is automatically converted to uppercase
+#### Bảng ROUTES
+- **Định dạng mã**: Phải khớp với pattern `[A-Z]\d+` (ví dụ: T1, T2, A1)
+- **Tự động chuyển đổi**: Mã được tự động chuyển thành chữ hoa
 
-#### USER_ROUTES Table
-- **Unique Constraint**: Each user can only be assigned to a route once (userId + routeId)
-- **Assignment Permission**: Only managers and above can assign routes
-- **Performance Indexes**: Separate indexes on userId and routeId for query optimization
+#### Bảng USER_ROUTES
+- **Ràng buộc duy nhất**: Mỗi người dùng chỉ có thể được phân công vào một tuyến đường một lần (userId + routeId)
+- **Quyền phân công**: Chỉ có manager trở lên mới có thể phân công tuyến đường
+- **Index hiệu suất**: Index riêng biệt trên userId và routeId để tối ưu truy vấn
 
-#### DELIVERIES Table
-- **Code Format**: 10-digit format DDMMYY + sequence number (0001-9999)
-- **Business Rules**:
-  - Sender and receiver cannot be the same customer
-  - From route and to route cannot be the same
-  - Total cost automatically calculated via middleware
-- **Cost Calculation**: `totalCost = cost + homeDeliveryCost + itemCost + collectForCustomerCost`
-- **Performance Indexes**: Optimized for 10M+ records with compound indexes
+#### Bảng DELIVERIES
+- **Định dạng mã**: Định dạng 10 số DDMMYY + số thứ tự (0001-9999)
+- **Quy tắc nghiệp vụ**:
+  - Người gửi và người nhận không thể là cùng một khách hàng
+  - Tuyến đi và tuyến đến không thể giống nhau
+  - Tổng chi phí được tính tự động qua middleware
+- **Tính toán chi phí**: `totalCost = cost + homeDeliveryCost + itemCost + collectForCustomerCost`
+- **Index hiệu suất**: Được tối ưu cho 10M+ records với compound indexes
+- **Index quan trọng**: 
+  - `{sender: 1, receiver: 1, toRoute: 1}` - Index chính cho frequent customers
+  - `{receiver: 1, toRoute: 1}` - Index hỗ trợ cho receiver lookups
+  - `{code: 1, fromRoute: 1, toRoute: 1}` - Index cho code + route lookup
 
-#### MONEY_DELIVERIES Table
-- **Code Format**: Same 10-digit format as deliveries
-- **Business Rules**: Same sender/receiver and route restrictions as deliveries
-- **Simplified Cost**: `totalCost = sendCost` (excludes sendMoneyAmount from total)
-- **Performance Indexes**: Same optimization pattern as deliveries
+#### Bảng MONEY_DELIVERIES
+- **Định dạng mã**: Cùng định dạng 10 chữ số như deliveries
+- **Quy tắc nghiệp vụ**: Cùng các ràng buộc người gửi/nhận và tuyến đường như deliveries
+- **Chi phí đơn giản**: `totalCost = sendCost` (loại trừ sendMoneyAmount khỏi tổng)
+- **Index hiệu suất**: Cùng pattern tối ưu như deliveries
 
-### Performance Optimizations
+### Tối Ưu Hóa Hiệu Suất
 
-#### Database Indexes Strategy
-1. **Primary Keys**: ObjectId indexes on all `_id` fields
-2. **Unique Indexes**: On code fields for deliveries and money deliveries
-3. **Foreign Key Indexes**: On all reference fields for join performance
-4. **Compound Indexes**: For common query patterns
-   - `{fromRoute: 1, toRoute: 1, createdAt: -1}` - Route analysis
-   - `{sender: 1, createdAt: -1}` - Customer history
-   - `{userId: 1, routeId: 1}` - User route assignments
+#### Chiến Lược Index Database
+1. **Khóa Chính**: ObjectId indexes trên tất cả các trường `_id`
+2. **Index Duy Nhất**: Trên các trường code cho deliveries và money deliveries
+3. **Index Khóa Ngoại**: Trên tất cả các trường tham chiếu để tối ưu join performance
+4. **Index Hỗn Hợp**: Cho các pattern query phổ biến
+   - `{fromRoute: 1, toRoute: 1, createdAt: -1}` - Phân tích tuyến đường
+   - `{sender: 1, createdAt: -1}` - Lịch sử khách hàng gửi
+   - `{userId: 1, routeId: 1}` - Phân công tuyến đường cho user
+5. **Index Hiệu Suất Quan Trọng**: Cho tối ưu frequent customers (40-60% faster)
+   - `{sender: 1, receiver: 1, toRoute: 1}` - Index chính cho frequent customers aggregation
+   - `{receiver: 1, toRoute: 1}` - Index hỗ trợ cho receiver lookups
+   - `{phone: 1}` - Index cho exact phone search trong customers
+   - `{name: "text"}` - Text search index cho tìm kiếm tên khách hàng
 
-#### Query Optimization Features
-- **Lean Queries**: For read-only operations to reduce memory usage
-- **Field Projection**: Limit returned fields to reduce network transfer
-- **Text Search**: Full-text search capability on customer names
-- **Date Sorting**: Optimized recent-first queries with descending createdAt indexes
+#### Tính Năng Tối Ưu Truy Vấn
+- **Lean Queries**: Cho các thao tác chỉ đọc để giảm sử dụng bộ nhớ
+- **Field Projection**: Giới hạn các trường trả về để giảm truyền tải mạng
+- **Text Search**: Khả năng tìm kiếm toàn văn trên tên khách hàng
+- **Date Sorting**: Tối ưu các truy vấn gần nhất trước với descending createdAt indexes
 
-### Data Transformation Rules
+### Quy Tắc Chuyển Đổi Dữ Liệu
 
-#### Response Formatting
-- All MongoDB `_id` fields are transformed to `id` in API responses
-- Password fields are excluded from all responses (`select: false`)
-- `__v` version fields are removed from JSON output
-- Date fields maintain ISO string format in responses
+#### Định Dạng Phản Hồi
+- Tất cả trường `_id` của MongoDB được chuyển thành `id` trong API responses
+- Trường password được loại trừ khỏi tất cả responses (`select: false`)
+- Trường `__v` version được xóa khỏi JSON output
+- Trường date duy trì định dạng ISO string trong responses
 
-#### Middleware Processing
-- **Pre-save**: Automatic cost calculations and business rule validation
-- **Pre-update**: Maintains cost calculations during updates
-- **Password Hashing**: Automatic bcrypt hashing on password changes
+#### Xử Lý Middleware
+- **Pre-save**: Tính toán chi phí tự động và xác thực quy tắc nghiệp vụ
+- **Pre-update**: Duy trì tính toán chi phí trong quá trình cập nhật
+- **Password Hashing**: Mã hóa bcrypt tự động khi thay đổi mật khẩu
 
-### API Integration Notes
+### Ghi Chú Tích Hợp API
 
-#### Authentication Flow
-- JWT tokens contain: `userId`, `username`, `role`
-- Token expiration configurable via `JWT_EXPIRES_IN` environment variable
-- Role-based access control enforced at middleware level
+#### Luồng Xác Thực
+- JWT tokens chứa: `userId`, `username`, `role`
+- Thời gian hết hạn token có thể cấu hình qua biến môi trường `JWT_EXPIRES_IN`
+- Kiểm soát truy cập dựa trên vai trò được thực thi ở mức middleware
 
-#### Code Generation
-- **Next Code Endpoint**: `GET /api/delivery/next-code?toRouteId={ObjectId}`
-- **Money Delivery Codes**: `GET /api/money-deliveries/next-code?toRouteId={ObjectId}`
-- Code sequences managed per route to avoid conflicts
+#### Tạo Mã
+- **Endpoint Mã Tiếp Theo**: `GET /api/delivery/next-code?toRouteId={ObjectId}`
+- **Mã Chuyển Tiền**: `GET /api/money-deliveries/next-code?toRouteId={ObjectId}`
+- Chuỗi mã được quản lý theo từng tuyến để tránh xung đột
 
-### Migration and Scaling Considerations
+### Cân Nhắc Migration và Mở Rộng
 
-#### Current Scale Targets
-- Designed for 10M+ delivery records
-- Optimized query patterns for high-volume operations
-- Memory-efficient aggregation pipelines for reporting
+#### Mục Tiêu Quy Mô Hiện Tại
+- Thiết kế cho 10M+ bản ghi delivery
+- Tối ưu các pattern truy vấn cho các thao tác quy mô lớn
+- Pipeline aggregation hiệu quả bộ nhớ cho báo cáo
 
-#### Future Enhancements
-- Prepared for horizontal scaling with proper indexing
-- Stateless design enables load balancing
-- Caching strategy ready for implementation at service layer
+#### Cải Tiến Tương Lai
+- Chuẩn bị cho mở rộng ngang với indexing phù hợp
+- Thiết kế stateless cho phép cân bằng tải
+- Chiến lược caching sẵn sàng để triển khai ở lớp dịch vụ

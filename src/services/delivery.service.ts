@@ -26,10 +26,6 @@ interface IAggregationResultItem {
     toRouteName: string;
   };
   deliveryCount: number;
-  totalCost: number;
-  totalItemValue: number;
-  lastDeliveryDate: Date;
-  firstDeliveryDate: Date;
   senderInfo: {
     name: string;
     phone: string;
@@ -238,7 +234,7 @@ export class DeliveryService {
       throw new Error('Delivery not found');
     }
 
-    const updateData: Record<string, any> = {};
+    const updateData: Record<string, unknown> = {};
 
     // Handle sender update
     if (data.senderName || data.senderPhone) {
@@ -643,18 +639,13 @@ export class DeliveryService {
               toRouteName: '$toRoute.name',
             },
             deliveryCount: { $sum: 1 },
-            totalCost: { $sum: '$totalCost' },
-            totalItemValue: { $sum: '$itemValue' },
-            lastDeliveryDate: { $max: '$createdAt' },
-            firstDeliveryDate: { $min: '$createdAt' },
             senderInfo: { $first: '$sender' },
           },
         },
-        // Sort by delivery count (most frequent first) and then by last delivery date
+        // Sort by delivery count (most frequent first)
         {
           $sort: {
             deliveryCount: -1,
-            lastDeliveryDate: -1,
           },
         },
         // Add pagination fields
@@ -680,10 +671,6 @@ export class DeliveryService {
           name: item._id.toRouteName,
         },
         deliveryCount: item.deliveryCount,
-        totalCost: item.totalCost,
-        totalItemValue: item.totalItemValue,
-        lastDeliveryDate: item.lastDeliveryDate,
-        firstDeliveryDate: item.firstDeliveryDate,
       }));
 
       // Get sender info from the first record if available

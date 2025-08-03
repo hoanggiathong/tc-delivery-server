@@ -191,10 +191,6 @@ export interface IFrequentCustomer {
     name: string;
   };
   deliveryCount: number;
-  totalCost: number;
-  totalItemValue: number;
-  lastDeliveryDate: Date;
-  firstDeliveryDate: Date;
 }
 
 export interface IFrequentCustomersPagination {
