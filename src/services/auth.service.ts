@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { User } from '@/models/user.model';
+import { UserRoute } from '@/models/user-route.model';
 import {
   JWTPayload,
   IUserResponse,
@@ -81,6 +82,20 @@ export class AuthService {
       const isPasswordValid = await user.comparePassword(data.password);
       if (!isPasswordValid) {
         throw new Error('Invalid credentials');
+      }
+
+      // If user has no selectedRouteId, try to auto-assign from USER_ROUTES
+      if (!user.selectedRouteId) {
+        const userRoute = await UserRoute.findOne({ userId: user._id }).select('routeId').lean();
+
+        if (userRoute) {
+          // Update user with the first found route
+          await User.findByIdAndUpdate(user._id, {
+            selectedRouteId: userRoute.routeId,
+          });
+          // Update the user object for response
+          user.selectedRouteId = userRoute.routeId;
+        }
       }
 
       // Alternative JWT signing approach

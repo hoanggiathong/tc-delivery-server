@@ -664,6 +664,7 @@ export class MoneyDeliveryController {
 
       const frequentCustomers = await this.moneyDeliveryService.getFrequentCustomers(
         senderIdentifier,
+        req.user.userId,
         page,
         limit
       );

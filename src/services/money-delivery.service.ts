@@ -1,6 +1,7 @@
 import { MoneyDelivery, IMoneyDelivery } from '@/models/money-delivery.model';
 import { Customer } from '@/models/customer.model';
 import { Route } from '@/models/route.model';
+import { User } from '@/models/user.model';
 import { Types, PipelineStage } from 'mongoose';
 import { CustomerService } from '@/services/customer.service';
 import { CodeGeneratorService } from '@/services/code-generator.service';
@@ -445,11 +446,30 @@ export class MoneyDeliveryService {
    */
   async getFrequentCustomers(
     senderIdentifier: string,
+    userId: string,
     page: number = 1,
     limit: number = 10
   ): Promise<IFrequentMoneyCustomersResponse> {
     try {
       const skip = (page - 1) * limit;
+
+      // Get user's selectedRouteId to filter by fromRoute
+      const user = await User.findById(userId).select('selectedRouteId').lean();
+      if (!user || !user.selectedRouteId) {
+        return {
+          senderIdentifier,
+          senderInfo: null,
+          frequentCustomers: [],
+          pagination: {
+            currentPage: page,
+            totalPages: 0,
+            totalRecords: 0,
+            limit,
+            hasNextPage: false,
+            hasPrevPage: false,
+          },
+        };
+      }
 
       // Find sender IDs first to reduce pipeline load
       // Use optimized queries with indexes
@@ -500,8 +520,13 @@ export class MoneyDeliveryService {
 
       // Optimized aggregation pipeline - filter first, then join
       const pipeline: PipelineStage[] = [
-        // Match money deliveries by sender IDs first (uses index)
-        { $match: { sender: { $in: senderIds } } },
+        // Match money deliveries by sender IDs and fromRoute (uses index)
+        {
+          $match: {
+            sender: { $in: senderIds },
+            fromRoute: new Types.ObjectId(user.selectedRouteId),
+          },
+        },
 
         // Lookup only needed collections for filtered records
         {

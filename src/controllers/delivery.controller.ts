@@ -754,6 +754,7 @@ export class DeliveryController {
 
       const frequentCustomers = await this.deliveryService.getFrequentCustomers(
         senderIdentifier,
+        req.user.userId,
         page,
         limit
       );

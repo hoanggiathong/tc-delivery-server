@@ -1,10 +1,13 @@
 import { User } from '@/models/user.model';
+import { UserRoute } from '@/models/user-route.model';
 import jwt from 'jsonwebtoken';
 import { UserRole } from '@/types/user.type';
 
 // Mock User model
 jest.mock('@/models/user.model');
+jest.mock('@/models/user-route.model');
 const MockedUser = User as jest.MockedClass<typeof User>;
+const MockedUserRoute = UserRoute as jest.MockedClass<typeof UserRoute>;
 
 // Mock jwt
 jest.mock('jsonwebtoken');
@@ -114,6 +117,14 @@ describe('AuthService', () => {
       // Mock password comparison
       mockUserInstance.comparePassword.mockResolvedValue(true);
 
+      // Mock UserRoute.findOne (no routes found, so no auto-assignment)
+      const mockUserRouteSelect = jest.fn().mockResolvedValue(null);
+      (MockedUserRoute.findOne as any).mockReturnValue({ 
+        select: jest.fn().mockReturnValue({
+          lean: mockUserRouteSelect
+        })
+      });
+
       // Mock JWT sign
       mockedJwt.sign = jest.fn().mockReturnValue(mockToken);
 
@@ -158,6 +169,54 @@ describe('AuthService', () => {
       await expect(authService.login(loginData)).rejects.toThrow('Invalid credentials');
 
       expect(mockUserInstance.comparePassword).toHaveBeenCalledWith(loginData.password);
+    });
+
+    it('should auto-assign selectedRouteId when user has no selected route', async () => {
+      const loginData = {
+        username: 'testuser',
+        password: 'TestPass123',
+      };
+
+      // Create mock user without selectedRouteId
+      const mockUserWithoutRoute = {
+        ...mockUserInstance,
+        selectedRouteId: null,
+        comparePassword: jest.fn().mockResolvedValue(true),
+      };
+
+      const mockToken = 'valid-jwt-token';
+
+      // Mock findOne to return user without selectedRouteId
+      const mockSelect = jest.fn().mockResolvedValue(mockUserWithoutRoute);
+      (MockedUser.findOne as any).mockReturnValue({ select: mockSelect });
+
+      // Mock UserRoute.findOne to return a route
+      const mockUserRouteSelect = jest.fn().mockResolvedValue({ routeId: 'route123' });
+      (MockedUserRoute.findOne as any).mockReturnValue({ 
+        select: jest.fn().mockReturnValue({
+          lean: mockUserRouteSelect
+        })
+      });
+
+      // Mock User.findByIdAndUpdate for auto-assignment
+      (MockedUser.findByIdAndUpdate as any).mockResolvedValue(mockUserWithoutRoute);
+
+      // Mock JWT sign
+      mockedJwt.sign = jest.fn().mockReturnValue(mockToken);
+
+      const result = await authService.login(loginData);
+
+      // Verify that UserRoute.findOne was called to find routes for user
+      expect(MockedUserRoute.findOne).toHaveBeenCalledWith({ userId: mockUserWithoutRoute._id });
+      
+      // Verify that User.findByIdAndUpdate was called to set selectedRouteId
+      expect(MockedUser.findByIdAndUpdate).toHaveBeenCalledWith(
+        mockUserWithoutRoute._id, 
+        { selectedRouteId: 'route123' }
+      );
+
+      expect(result.token).toBe(mockToken);
+      expect(result.user.username).toBe('testuser');
     });
   });
 

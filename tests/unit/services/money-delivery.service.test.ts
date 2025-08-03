@@ -4,6 +4,7 @@ import { CodeGeneratorService } from '@/services/code-generator.service';
 import { MoneyDelivery } from '@/models/money-delivery.model';
 import { Route } from '@/models/route.model';
 import { Customer } from '@/models/customer.model';
+import { User } from '@/models/user.model';
 import {
   IMoneyDeliveryCreateRequest,
   IMoneyDeliveryUpdateRequest,
@@ -15,9 +16,11 @@ jest.mock('@/services/code-generator.service');
 jest.mock('@/models/money-delivery.model');
 jest.mock('@/models/route.model');
 jest.mock('@/models/customer.model');
+jest.mock('@/models/user.model');
 
 const MockedMoneyDelivery = MoneyDelivery as jest.MockedClass<typeof MoneyDelivery>;
 const MockedCustomer = Customer as jest.MockedClass<typeof Customer>;
+const MockedUser = User as jest.MockedClass<typeof User>;
 const MockedRoute = Route as jest.MockedClass<typeof Route>;
 const MockedCodeGeneratorService = CodeGeneratorService as jest.Mocked<typeof CodeGeneratorService>;
 const MockedCustomerService = CustomerService as jest.MockedClass<typeof CustomerService>;
@@ -458,6 +461,13 @@ describe('MoneyDeliveryService', () => {
 
   describe('getFrequentCustomers', () => {
     it('should return frequent customers for a sender', async () => {
+      // Mock User.findById to return user with selectedRouteId
+      MockedUser.findById = jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue({ _id: 'user123', selectedRouteId: 'route123' }),
+        }),
+      });
+
       // Mock data
       const mockAggregationResult = [
         {
@@ -496,7 +506,7 @@ describe('MoneyDeliveryService', () => {
       // Mock the MoneyDelivery model
       jest.spyOn(MoneyDelivery, 'aggregate').mockResolvedValue(mockAggregationResult as any);
 
-      const result = await moneyDeliveryService.getFrequentCustomers('Sender Name', 1, 10);
+      const result = await moneyDeliveryService.getFrequentCustomers('Sender Name', 'user123', 1, 10);
 
       expect(result).toEqual({
         senderIdentifier: 'Sender Name',
@@ -534,6 +544,13 @@ describe('MoneyDeliveryService', () => {
     });
 
     it('should handle empty results', async () => {
+      // Mock User.findById to return user with selectedRouteId
+      MockedUser.findById = jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue({ _id: 'user123', selectedRouteId: 'route123' }),
+        }),
+      });
+
       // Mock Customer.find to return empty array (no senders found)
       MockedCustomer.find = jest.fn().mockReturnValue({
         select: jest.fn().mockReturnValue({
@@ -541,7 +558,7 @@ describe('MoneyDeliveryService', () => {
         }),
       });
 
-      const result = await moneyDeliveryService.getFrequentCustomers('NonExistentSender', 1, 10);
+      const result = await moneyDeliveryService.getFrequentCustomers('NonExistentSender', 'user123', 1, 10);
 
       expect(result).toEqual({
         senderIdentifier: 'NonExistentSender',
@@ -559,6 +576,13 @@ describe('MoneyDeliveryService', () => {
     });
 
     it('should handle aggregation errors', async () => {
+      // Mock User.findById to return user with selectedRouteId
+      MockedUser.findById = jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue({ _id: 'user123', selectedRouteId: 'route123' }),
+        }),
+      });
+
       // Mock Customer.find to return sender IDs
       const mockSenders = [{ _id: 'sender1' }];
       MockedCustomer.find = jest.fn().mockReturnValue({
@@ -569,7 +593,7 @@ describe('MoneyDeliveryService', () => {
 
       jest.spyOn(MoneyDelivery, 'aggregate').mockRejectedValue(new Error('Database error'));
 
-      await expect(moneyDeliveryService.getFrequentCustomers('Sender Name', 1, 10)).rejects.toThrow(
+      await expect(moneyDeliveryService.getFrequentCustomers('Sender Name', 'user123', 1, 10)).rejects.toThrow(
         'Failed to get frequent money customers'
       );
     });

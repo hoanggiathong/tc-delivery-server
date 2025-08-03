@@ -2,6 +2,7 @@ import { DeliveryService } from '@/services/delivery.service';
 import { Delivery } from '@/models/delivery.model';
 import { Customer } from '@/models/customer.model';
 import { Route } from '@/models/route.model';
+import { User } from '@/models/user.model';
 import { CodeGeneratorService } from '@/services/code-generator.service';
 import { IDeliveryResponse } from '@/types/delivery.type';
 import { CustomerService } from '@/services/customer.service';
@@ -10,6 +11,7 @@ import { CustomerService } from '@/services/customer.service';
 jest.mock('@/models/delivery.model');
 jest.mock('@/models/customer.model');
 jest.mock('@/models/route.model');
+jest.mock('@/models/user.model');
 jest.mock('@/services/customer.service');
 
 const MockedCustomerService = CustomerService as jest.MockedClass<typeof CustomerService>;
@@ -23,6 +25,7 @@ jest.mock('@/services/code-generator.service', () => ({
 
 const MockedDelivery = Delivery as jest.MockedClass<typeof Delivery>;
 const MockedCustomer = Customer as jest.MockedClass<typeof Customer>;
+const MockedUser = User as jest.MockedClass<typeof User>;
 const MockedRoute = Route as jest.MockedClass<typeof Route>;
 const MockedCodeGeneratorService = CodeGeneratorService as jest.Mocked<typeof CodeGeneratorService>;
 
@@ -1035,6 +1038,13 @@ describe('DeliveryService', () => {
 
   describe('getFrequentCustomers', () => {
     it('should return frequent customers for a sender', async () => {
+      // Mock User.findById to return user with selectedRouteId
+      MockedUser.findById = jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue({ _id: 'user123', selectedRouteId: 'route123' }),
+        }),
+      });
+
       // Mock data
       const mockAggregationResult = [
         {
@@ -1073,7 +1083,7 @@ describe('DeliveryService', () => {
       // Mock the Delivery model
       jest.spyOn(Delivery, 'aggregate').mockResolvedValue(mockAggregationResult as any);
 
-      const result = await deliveryService.getFrequentCustomers('Sender Name', 1, 10);
+      const result = await deliveryService.getFrequentCustomers('Sender Name', 'user123', 1, 10);
 
       expect(result).toEqual({
         senderIdentifier: 'Sender Name',
@@ -1111,6 +1121,13 @@ describe('DeliveryService', () => {
     });
 
     it('should handle empty results', async () => {
+      // Mock User.findById to return user with selectedRouteId
+      MockedUser.findById = jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue({ _id: 'user123', selectedRouteId: 'route123' }),
+        }),
+      });
+
       // Mock Customer.find to return empty array (no senders found)
       MockedCustomer.find = jest.fn().mockReturnValue({
         select: jest.fn().mockReturnValue({
@@ -1118,7 +1135,7 @@ describe('DeliveryService', () => {
         }),
       });
 
-      const result = await deliveryService.getFrequentCustomers('NonExistentSender', 1, 10);
+      const result = await deliveryService.getFrequentCustomers('NonExistentSender', 'user123', 1, 10);
 
       expect(result).toEqual({
         senderIdentifier: 'NonExistentSender',
@@ -1136,6 +1153,13 @@ describe('DeliveryService', () => {
     });
 
     it('should handle aggregation errors', async () => {
+      // Mock User.findById to return user with selectedRouteId
+      MockedUser.findById = jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue({ _id: 'user123', selectedRouteId: 'route123' }),
+        }),
+      });
+
       // Mock Customer.find to return sender IDs
       const mockSenders = [{ _id: 'sender1' }];
       MockedCustomer.find = jest.fn().mockReturnValue({
@@ -1146,7 +1170,7 @@ describe('DeliveryService', () => {
 
       jest.spyOn(Delivery, 'aggregate').mockRejectedValue(new Error('Database error'));
 
-      await expect(deliveryService.getFrequentCustomers('Sender Name', 1, 10)).rejects.toThrow(
+      await expect(deliveryService.getFrequentCustomers('Sender Name', 'user123', 1, 10)).rejects.toThrow(
         'Failed to get frequent customers'
       );
     });
