@@ -9,6 +9,7 @@ import {
   getNextCodeSchema,
   deliveryCodeSchema,
   frequentCustomersSchema,
+  deliveryCostReportSchema,
 } from '@/schemas/delivery.schema';
 
 const router = Router();
@@ -213,6 +214,9 @@ router.get('/', deliveryController.getAllDeliveries);
 
 // Next code route (must be before /:id to avoid conflicts)
 router.get('/next-code', validate(getNextCodeSchema), deliveryController.getNextCode);
+
+// Cost report route (must be before /:id to avoid conflicts)
+router.get('/cost-report', validate(deliveryCostReportSchema), deliveryController.getCostReport);
 
 // Get delivery by code route (must be before /:id to avoid conflicts)
 router.get(

@@ -19,6 +19,7 @@ export interface IDelivery extends Document {
   collectForCustomerNote?: string;
   notes?: string;
   totalCost: number;
+  paymentType?: 'debt' | 'free' | null; // null (default), 'debt' (nợ), 'free' (miễn phí)
   createdByUser: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -114,6 +115,12 @@ const deliverySchema = new Schema<IDelivery>(
       type: String,
       trim: true,
     },
+    paymentType: {
+      type: String,
+      enum: ['debt', 'free', null],
+      default: null,
+      required: false,
+    },
     createdByUser: {
       type: Schema.Types.ObjectId,
       ref: 'User',
@@ -141,8 +148,8 @@ deliverySchema.pre('save', function (next) {
     return next(new Error('From route and to route cannot be the same'));
   }
 
-  // Calculate totalCost = cost + homeDeliveryCost + itemCost + collectForCustomerCost
-  this.totalCost = this.cost + this.homeDeliveryCost + this.itemCost + this.collectForCustomerCost;
+  // Calculate totalCost = cost + itemCost + collectForCustomerCost (homeDeliveryCost excluded)
+  this.totalCost = this.cost + this.itemCost + this.collectForCustomerCost;
   next();
 });
 
@@ -169,7 +176,6 @@ deliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next) {
     // Only calculate if at least one cost field is being updated
     if (
       update.cost !== undefined ||
-      update.homeDeliveryCost !== undefined ||
       update.itemCost !== undefined ||
       update.collectCost !== undefined ||
       update.collectForCustomerCost !== undefined
@@ -178,17 +184,14 @@ deliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next) {
       const currentDoc = await this.model.findOne(this.getQuery());
       if (currentDoc) {
         const cost = update.cost !== undefined ? update.cost : currentDoc.cost;
-        const homeDeliveryCost =
-          update.homeDeliveryCost !== undefined
-            ? update.homeDeliveryCost
-            : currentDoc.homeDeliveryCost;
         const itemCost = update.itemCost !== undefined ? update.itemCost : currentDoc.itemCost;
         const collectForCustomerCost =
           update.collectForCustomerCost !== undefined
             ? update.collectForCustomerCost
             : currentDoc.collectForCustomerCost;
 
-        update.totalCost = cost + homeDeliveryCost + itemCost + collectForCustomerCost;
+        // Calculate totalCost = cost + itemCost + collectForCustomerCost (homeDeliveryCost excluded)
+        update.totalCost = cost + itemCost + collectForCustomerCost;
       }
     }
   }
@@ -212,5 +215,7 @@ deliverySchema.index({ receiver: 1, createdAt: -1 }); // Receiver history
 deliverySchema.index({ code: 1, fromRoute: 1, toRoute: 1 });
 deliverySchema.index({ sender: 1, receiver: 1, toRoute: 1 });
 deliverySchema.index({ receiver: 1, toRoute: 1 });
+// Optimized index for cost report queries
+deliverySchema.index({ fromRoute: 1, createdAt: -1 }); // Cost report by route and date
 
 export const Delivery = mongoose.model<IDelivery>('Delivery', deliverySchema);

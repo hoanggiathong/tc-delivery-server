@@ -70,9 +70,10 @@ erDiagram
         number collectCost "phí thu hộ, bắt buộc, tối thiểu 0"
         number collectForCustomer "thu dùm khách hàng, bắt buộc, tối thiểu 0, mặc định 0"
         number collectForCustomerCost "phí phụ thu, bắt buộc, tối thiểu 0"
-        number totalCost "tính toán: cost+homeDeliveryCost+itemCost+collectForCustomerCost"
+        number totalCost "tính toán: cost+itemCost+collectForCustomerCost (homeDeliveryCost đã được loại trừ)"
         string collectForCustomerNote "tùy chọn, trim"
         string notes "tùy chọn, trim"
+        enum paymentType "null|debt|free, mặc định null, loại thanh toán"
         ObjectId createdByUser FK "tham chiếu: USERS, bắt buộc"
         datetime createdAt "tự động tạo"
         datetime updatedAt "tự động cập nhật"
@@ -134,7 +135,11 @@ erDiagram
   - Người gửi và người nhận không thể là cùng một khách hàng
   - Tuyến đi và tuyến đến không thể giống nhau
   - Tổng chi phí được tính tự động qua middleware
-- **Tính toán chi phí**: `totalCost = cost + homeDeliveryCost + itemCost + collectForCustomerCost`
+- **Tính toán chi phí**: `totalCost = cost + itemCost + collectForCustomerCost` (homeDeliveryCost đã được loại trừ)
+- **Loại thanh toán**: 
+  - `null` (mặc định): Thanh toán bình thường, khách hàng thanh toán đầy đủ
+  - `debt`: Khách hàng nợ tiền, sẽ thanh toán sau
+  - `free`: Giao hàng miễn phí, không cần thanh toán
 - **Index hiệu suất**: Được tối ưu cho 10M+ records với compound indexes
 - **Index quan trọng**: 
   - `{sender: 1, receiver: 1, toRoute: 1}` - Index chính cho frequent customers
@@ -193,6 +198,17 @@ erDiagram
 - **Endpoint Mã Tiếp Theo**: `GET /api/delivery/next-code?toRouteId={ObjectId}`
 - **Mã Chuyển Tiền**: `GET /api/money-deliveries/next-code?toRouteId={ObjectId}`
 - Chuỗi mã được quản lý theo từng tuyến để tránh xung đột
+
+### Cập Nhật Gần Đây Quan Trọng
+
+#### Phiên Bản Mới Nhất
+- **Field PaymentType**: Thêm trường `paymentType` vào bảng DELIVERIES với 3 giá trị:
+  - `null` (mặc định): Thanh toán bình thường
+  - `debt`: Thanh toán nợ (khách hàng sẽ trả sau)  
+  - `free`: Giao hàng miễn phí
+- **Cập Nhật Công Thức TotalCost**: Loại bỏ `homeDeliveryCost` khỏi tính toán tổng chi phí
+  - Công thức cũ: `totalCost = cost + homeDeliveryCost + itemCost + collectForCustomerCost`
+  - Công thức mới: `totalCost = cost + itemCost + collectForCustomerCost`
 
 ### Cân Nhắc Migration và Mở Rộng
 

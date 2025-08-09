@@ -14,6 +14,9 @@ import {
   INextCodeResponse,
   IFrequentCustomersResponse,
   IFrequentCustomer,
+  IDeliveryCostReport,
+  IDeliveryReportItem,
+  IDeliveryCostReportSummary,
 } from '@/types/delivery.type';
 import { ICustomerResponse } from '@/types/customer.type';
 import Logger from '@/utils/logger';
@@ -112,6 +115,7 @@ export class DeliveryService {
       collectForCustomerNote: populated.collectForCustomerNote,
       notes: populated.notes,
       totalCost: populated.totalCost,
+      paymentType: populated.paymentType,
       createdByUser: populated.createdByUser.username,
       createdAt: populated.createdAt,
       updatedAt: populated.updatedAt,
@@ -167,6 +171,7 @@ export class DeliveryService {
       collectForCustomerNote: delivery.collectForCustomerNote,
       notes: delivery.notes,
       totalCost: delivery.totalCost,
+      paymentType: delivery.paymentType,
       createdByUser: delivery.createdByUser.username,
       createdAt: delivery.createdAt,
       updatedAt: delivery.updatedAt,
@@ -219,6 +224,7 @@ export class DeliveryService {
       collectForCustomerCost: data.collectForCustomerCost,
       collectForCustomerNote: data.collectForCustomerNote,
       notes: data.notes,
+      paymentType: data.paymentType,
       createdByUser: userId,
     });
 
@@ -305,6 +311,9 @@ export class DeliveryService {
     }
     if (data.notes !== undefined) {
       updateData.notes = data.notes;
+    }
+    if (data.paymentType !== undefined) {
+      updateData.paymentType = data.paymentType;
     }
 
     // Update delivery
@@ -731,6 +740,294 @@ export class DeliveryService {
         limit,
       });
       throw new Error('Failed to get frequent customers');
+    }
+  }
+
+  /**
+   * Get cost report for deliveries with filtering and pagination
+   */
+  async getCostReport(
+    userId: string,
+    startDate: Date,
+    endDate: Date,
+    page: number = 1,
+    limit: number = 20
+  ): Promise<IDeliveryCostReport> {
+    try {
+      // Get user with selectedRouteId
+      const user = await User.findById(userId).select('selectedRouteId').lean();
+      if (!user || !user.selectedRouteId) {
+        throw new Error('User does not have a selected route');
+      }
+
+      // Get the selected route information
+      const fromRoute = await Route.findById(user.selectedRouteId).lean();
+      if (!fromRoute) {
+        throw new Error('Selected route not found');
+      }
+
+      // Use provided date range
+      const dateRange = {
+        from: startDate,
+        to: endDate,
+      };
+
+      // Calculate skip for pagination
+      const skip = (page - 1) * limit;
+
+      // Build aggregation pipeline for deliveries
+      const pipeline: PipelineStage[] = [
+        // Match by fromRoute and date range
+        {
+          $match: {
+            fromRoute: new Types.ObjectId(user.selectedRouteId),
+            createdAt: {
+              $gte: dateRange.from,
+              $lte: dateRange.to,
+            },
+          },
+        },
+        // Lookup related collections
+        {
+          $lookup: {
+            from: 'customers',
+            localField: 'sender',
+            foreignField: '_id',
+            as: 'senderData',
+          },
+        },
+        {
+          $lookup: {
+            from: 'customers',
+            localField: 'receiver',
+            foreignField: '_id',
+            as: 'receiverData',
+          },
+        },
+        {
+          $lookup: {
+            from: 'routes',
+            localField: 'toRoute',
+            foreignField: '_id',
+            as: 'toRouteData',
+          },
+        },
+        // Unwind arrays
+        { $unwind: '$senderData' },
+        { $unwind: '$receiverData' },
+        { $unwind: '$toRouteData' },
+        // Project required fields
+        {
+          $project: {
+            _id: 1,
+            code: 1,
+            createdAt: 1,
+            sender: {
+              name: '$senderData.name',
+              phone: '$senderData.phone',
+            },
+            receiver: {
+              name: '$receiverData.name',
+              phone: '$receiverData.phone',
+            },
+            toRoute: {
+              id: '$toRouteData._id',
+              code: '$toRouteData.code',
+              name: '$toRouteData.name',
+            },
+            cost: 1,
+            homeDeliveryCost: 1,
+            itemCost: 1,
+            itemValue: 1,
+            collectCost: 1,
+            collectForCustomer: 1,
+            collectForCustomerCost: 1,
+            totalCost: 1,
+            paymentType: 1,
+            notes: 1,
+          },
+        },
+        // Facet for pagination and data
+        {
+          $facet: {
+            // Get paginated data
+            data: [{ $sort: { createdAt: -1 } }, { $skip: skip }, { $limit: limit }],
+            // Get total count
+            totalCount: [{ $count: 'count' }],
+            // Get summary statistics
+            summary: [
+              {
+                $group: {
+                  _id: null,
+                  totalDeliveries: { $sum: 1 },
+                  totalCost: { $sum: '$totalCost' },
+                  totalHomeDeliveryCost: { $sum: '$homeDeliveryCost' },
+                  totalItemCost: { $sum: '$itemCost' },
+                  totalItemValue: { $sum: '$itemValue' },
+                  totalCollectCost: { $sum: '$collectCost' },
+                  totalCollectForCustomer: { $sum: '$collectForCustomer' },
+                  totalCollectForCustomerCost: { $sum: '$collectForCustomerCost' },
+
+                  // Payment type counts
+                  normalPaymentCount: {
+                    $sum: {
+                      $cond: [
+                        {
+                          $or: [
+                            { $eq: ['$paymentType', null] },
+                            { $eq: [{ $type: '$paymentType' }, 'missing'] },
+                          ],
+                        },
+                        1,
+                        0,
+                      ],
+                    },
+                  },
+                  normalPaymentAmount: {
+                    $sum: {
+                      $cond: [
+                        {
+                          $or: [
+                            { $eq: ['$paymentType', null] },
+                            { $eq: [{ $type: '$paymentType' }, 'missing'] },
+                          ],
+                        },
+                        '$totalCost',
+                        0,
+                      ],
+                    },
+                  },
+                  debtPaymentCount: {
+                    $sum: {
+                      $cond: [{ $eq: ['$paymentType', 'debt'] }, 1, 0],
+                    },
+                  },
+                  debtPaymentAmount: {
+                    $sum: {
+                      $cond: [{ $eq: ['$paymentType', 'debt'] }, '$totalCost', 0],
+                    },
+                  },
+                  freePaymentCount: {
+                    $sum: {
+                      $cond: [{ $eq: ['$paymentType', 'free'] }, 1, 0],
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        },
+      ];
+
+      // Execute aggregation
+      const result = await Delivery.aggregate(pipeline);
+
+      // Extract results
+      const deliveries = result[0]?.data || [];
+      const totalRecords = result[0]?.totalCount[0]?.count || 0;
+      const summaryData = result[0]?.summary[0] || {};
+
+      // Calculate pagination info
+      const totalPages = Math.ceil(totalRecords / limit);
+      const hasNextPage = page < totalPages;
+      const hasPrevPage = page > 1;
+
+      // Transform deliveries to report items
+      const deliveryItems: IDeliveryReportItem[] = deliveries.map(
+        (d: {
+          _id: Types.ObjectId;
+          code: string;
+          createdAt: Date;
+          sender: { name: string; phone: string };
+          receiver: { name: string; phone: string };
+          toRoute: { id: Types.ObjectId; code: string; name: string };
+          cost: number;
+          homeDeliveryCost: number;
+          itemCost: number;
+          itemValue: number;
+          collectCost: number;
+          collectForCustomer: number;
+          collectForCustomerCost: number;
+          totalCost: number;
+          paymentType: 'debt' | 'free' | null;
+          notes?: string;
+        }) => ({
+          id: d._id.toString(),
+          code: d.code,
+          date: d.createdAt,
+          sender: d.sender,
+          receiver: d.receiver,
+          toRoute: {
+            id: d.toRoute.id.toString(),
+            code: d.toRoute.code,
+            name: d.toRoute.name,
+          },
+          cost: d.cost,
+          homeDeliveryCost: d.homeDeliveryCost,
+          itemCost: d.itemCost,
+          itemValue: d.itemValue,
+          collectCost: d.collectCost,
+          collectForCustomer: d.collectForCustomer,
+          collectForCustomerCost: d.collectForCustomerCost,
+          totalCost: d.totalCost,
+          paymentType: d.paymentType,
+          notes: d.notes,
+        })
+      );
+
+      // Build summary with calculated averages
+      const summary: IDeliveryCostReportSummary = {
+        totalDeliveries: summaryData.totalDeliveries || 0,
+        totalCost: summaryData.totalCost || 0,
+        totalHomeDeliveryCost: summaryData.totalHomeDeliveryCost || 0,
+        totalItemCost: summaryData.totalItemCost || 0,
+        totalItemValue: summaryData.totalItemValue || 0,
+        totalCollectCost: summaryData.totalCollectCost || 0,
+        totalCollectForCustomer: summaryData.totalCollectForCustomer || 0,
+        totalCollectForCustomerCost: summaryData.totalCollectForCustomerCost || 0,
+        totalRevenue: summaryData.totalCost || 0,
+
+        normalPaymentCount: summaryData.normalPaymentCount || 0,
+        normalPaymentAmount: summaryData.normalPaymentAmount || 0,
+        debtPaymentCount: summaryData.debtPaymentCount || 0,
+        debtPaymentAmount: summaryData.debtPaymentAmount || 0,
+        freePaymentCount: summaryData.freePaymentCount || 0,
+
+        averageCostPerDelivery:
+          summaryData.totalDeliveries > 0
+            ? (summaryData.totalCost || 0) / summaryData.totalDeliveries
+            : 0,
+        averageItemValue:
+          summaryData.totalDeliveries > 0
+            ? (summaryData.totalItemValue || 0) / summaryData.totalDeliveries
+            : 0,
+      };
+
+      // Build final response
+      const report: IDeliveryCostReport = {
+        summary,
+        deliveries: deliveryItems,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalRecords,
+          limit,
+          hasNextPage,
+          hasPrevPage,
+        },
+      };
+
+      return report;
+    } catch (error) {
+      Logger.error('Failed to generate cost report', {
+        error: error instanceof Error ? error.message : error,
+        userId,
+        startDate,
+        endDate,
+        page,
+        limit,
+      });
+      throw error;
     }
   }
 }

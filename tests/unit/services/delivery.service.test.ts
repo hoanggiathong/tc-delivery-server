@@ -106,7 +106,8 @@ describe('DeliveryService', () => {
       collectForCustomer: 25000,
       collectForCustomerCost: 40,
       collectForCustomerNote: 'Test note',
-      totalCost: 210, // 100 + 20 + 50 + 40 (excluding collectCost)
+      totalCost: 190, // 100 + 50 + 40 (cost + itemCost + collectForCustomerCost, homeDeliveryCost excluded)
+      paymentType: null,
       createdByUser: 'user123',
       createdAt: new Date('2023-01-01'),
       updatedAt: new Date('2023-01-01'),
@@ -142,7 +143,8 @@ describe('DeliveryService', () => {
       collectForCustomer: 25000,
       collectForCustomerCost: 40,
       collectForCustomerNote: 'Test note',
-      totalCost: 210, // 100 + 20 + 50 + 40 (excluding collectCost)
+      totalCost: 190, // 100 + 50 + 40 (cost + itemCost + collectForCustomerCost, homeDeliveryCost excluded)
+      paymentType: null,
       createdByUser: 'testuser',
       createdAt: new Date('2023-01-01'),
       updatedAt: new Date('2023-01-01'),
@@ -374,7 +376,8 @@ describe('DeliveryService', () => {
       collectForCustomer: 25000,
       collectForCustomerCost: 40,
       collectForCustomerNote: 'Test note',
-      totalCost: 210, // 100 + 20 + 50 + 40 (excluding collectCost)
+      totalCost: 190, // 100 + 50 + 40 (cost + itemCost + collectForCustomerCost, homeDeliveryCost excluded)
+      paymentType: null,
       createdByUser: 'testuser',
       createdAt: new Date('2023-01-01'),
       updatedAt: new Date('2023-01-01'),
@@ -564,7 +567,8 @@ describe('DeliveryService', () => {
       collectForCustomer: 25000,
       collectForCustomerCost: 40,
       collectForCustomerNote: 'Test note',
-      totalCost: 210, // 100 + 20 + 50 + 40 (excluding collectCost)
+      totalCost: 190, // 100 + 50 + 40 (cost + itemCost + collectForCustomerCost, homeDeliveryCost excluded)
+      paymentType: null,
       createdByUser: 'testuser',
       createdAt: new Date('2023-01-01'),
       updatedAt: new Date('2023-01-01'),
@@ -714,7 +718,7 @@ describe('DeliveryService', () => {
         collectForCustomer: 25000,
         collectForCustomerCost: 40,
         collectForCustomerNote: 'Test note',
-        totalCost: 210, // 100 + 20 + 50 + 40 (excluding collectCost)
+        totalCost: 190, // 100 + 50 + 40 (cost + itemCost + collectForCustomerCost, homeDeliveryCost excluded)
         createdByUser: 'testuser',
         createdAt: new Date('2023-01-01'),
         updatedAt: new Date('2023-01-01'),
@@ -940,7 +944,8 @@ describe('DeliveryService', () => {
       collectForCustomer: 25000,
       collectForCustomerCost: 40,
       collectForCustomerNote: 'Test note',
-      totalCost: 210, // 100 + 20 + 50 + 40 (excluding collectCost)
+      totalCost: 190, // 100 + 50 + 40 (cost + itemCost + collectForCustomerCost, homeDeliveryCost excluded)
+      paymentType: null,
       createdByUser: 'testuser',
       createdAt: new Date('2023-01-01'),
       updatedAt: new Date('2023-01-01'),
@@ -1072,16 +1077,23 @@ describe('DeliveryService', () => {
         },
       ];
 
-      // Mock Customer.find to return sender IDs
+      // Mock Customer.find to return sender IDs - first call should succeed
       const mockSenders = [{ _id: 'sender1' }, { _id: 'sender2' }];
-      MockedCustomer.find = jest.fn().mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          lean: jest.fn().mockResolvedValue(mockSenders),
-        }),
-      });
+      MockedCustomer.find = jest
+        .fn()
+        .mockReturnValueOnce({
+          select: jest.fn().mockReturnValue({
+            lean: jest.fn().mockResolvedValue(mockSenders),
+          }),
+        })
+        .mockReturnValueOnce({
+          select: jest.fn().mockReturnValue({
+            lean: jest.fn().mockResolvedValue(mockSenders),
+          }),
+        });
 
       // Mock the Delivery model
-      jest.spyOn(Delivery, 'aggregate').mockResolvedValue(mockAggregationResult as any);
+      MockedDelivery.aggregate = jest.fn().mockResolvedValue(mockAggregationResult as any);
 
       const result = await deliveryService.getFrequentCustomers('Sender Name', 'user123', 1, 10);
 
@@ -1117,7 +1129,7 @@ describe('DeliveryService', () => {
         },
       });
 
-      expect(Delivery.aggregate).toHaveBeenCalled();
+      expect(MockedDelivery.aggregate).toHaveBeenCalled();
     });
 
     it('should handle empty results', async () => {
@@ -1135,7 +1147,12 @@ describe('DeliveryService', () => {
         }),
       });
 
-      const result = await deliveryService.getFrequentCustomers('NonExistentSender', 'user123', 1, 10);
+      const result = await deliveryService.getFrequentCustomers(
+        'NonExistentSender',
+        'user123',
+        1,
+        10
+      );
 
       expect(result).toEqual({
         senderIdentifier: 'NonExistentSender',
@@ -1170,9 +1187,259 @@ describe('DeliveryService', () => {
 
       jest.spyOn(Delivery, 'aggregate').mockRejectedValue(new Error('Database error'));
 
-      await expect(deliveryService.getFrequentCustomers('Sender Name', 'user123', 1, 10)).rejects.toThrow(
-        'Failed to get frequent customers'
-      );
+      await expect(
+        deliveryService.getFrequentCustomers('Sender Name', 'user123', 1, 10)
+      ).rejects.toThrow('Failed to get frequent customers');
+    });
+  });
+
+  describe('getCostReport', () => {
+    const mockUser = {
+      _id: 'user123',
+      selectedRouteId: '507f1f77bcf86cd799439011',
+    };
+
+    const mockFromRoute = {
+      _id: '507f1f77bcf86cd799439011',
+      code: 'T1',
+      name: 'Test Route',
+      createdAt: new Date('2023-01-01'),
+      updatedAt: new Date('2023-01-01'),
+    };
+
+    const mockAggregationResults = [
+      {
+        data: [
+          {
+            _id: 'delivery1',
+            code: '2401250001',
+            sender: { name: 'John Doe', phone: '1234567890' },
+            receiver: { name: 'Jane Doe', phone: '0987654321' },
+            toRoute: { id: 'route2', code: 'T2', name: 'Ha Noi' },
+            name: 'Package 1',
+            cost: 50000,
+            itemCost: 5000,
+            collectForCustomerCost: 3000,
+            collectForCustomer: 50000,
+            totalCost: 58000,
+            createdAt: new Date('2024-01-15'),
+          },
+          {
+            _id: 'delivery2',
+            code: '2401250002',
+            sender: { name: 'Alice Smith', phone: '1111111111' },
+            receiver: { name: 'Bob Johnson', phone: '2222222222' },
+            toRoute: { id: 'route3', code: 'T3', name: 'Ho Chi Minh' },
+            name: 'Package 2',
+            cost: 60000,
+            itemCost: 6000,
+            collectForCustomerCost: 4000,
+            collectForCustomer: 60000,
+            totalCost: 70000,
+            createdAt: new Date('2024-01-16'),
+          },
+        ],
+        totalCount: [{ count: 2 }],
+        summary: [
+          {
+            totalDeliveries: 2,
+            totalCost: 110000,
+            totalItemCost: 11000,
+            totalCollectForCustomerCost: 7000,
+            totalCollectForCustomer: 110000,
+          },
+        ],
+      },
+    ];
+
+    beforeEach(() => {
+      // Mock User.findById
+      MockedUser.findById = jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue(mockUser),
+        }),
+      });
+
+      // Mock Route.findById
+      MockedRoute.findById = jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue(mockFromRoute),
+      });
+    });
+
+    it('should get cost report successfully', async () => {
+      const startDate = new Date('2024-01-01');
+      const endDate = new Date('2024-01-31');
+
+      // Mock Delivery.aggregate
+      jest.spyOn(Delivery, 'aggregate').mockResolvedValue(mockAggregationResults);
+
+      const result = await deliveryService.getCostReport('user123', startDate, endDate, 1, 20);
+
+      expect(result).toEqual({
+        summary: {
+          totalDeliveries: 2,
+          totalCost: 110000,
+          totalHomeDeliveryCost: 0,
+          totalItemCost: 11000,
+          totalItemValue: 0,
+          totalCollectCost: 0,
+          totalCollectForCustomer: 110000,
+          totalCollectForCustomerCost: 7000,
+          totalRevenue: 110000,
+          averageCostPerDelivery: 55000,
+          averageItemValue: 0,
+          normalPaymentCount: 0,
+          normalPaymentAmount: 0,
+          debtPaymentCount: 0,
+          debtPaymentAmount: 0,
+          freePaymentCount: 0,
+        },
+        deliveries: [
+          {
+            id: 'delivery1',
+            code: '2401250001',
+            date: new Date('2024-01-15'),
+            sender: {
+              name: 'John Doe',
+              phone: '1234567890',
+            },
+            receiver: {
+              name: 'Jane Doe',
+              phone: '0987654321',
+            },
+            toRoute: {
+              id: 'route2',
+              code: 'T2',
+              name: 'Ha Noi',
+            },
+            cost: 50000,
+            homeDeliveryCost: undefined,
+            itemCost: 5000,
+            itemValue: undefined,
+            collectCost: undefined,
+            collectForCustomerCost: 3000,
+            collectForCustomer: 50000,
+            totalCost: 58000,
+            paymentType: undefined,
+            notes: undefined,
+          },
+          {
+            id: 'delivery2',
+            code: '2401250002',
+            date: new Date('2024-01-16'),
+            sender: {
+              name: 'Alice Smith',
+              phone: '1111111111',
+            },
+            receiver: {
+              name: 'Bob Johnson',
+              phone: '2222222222',
+            },
+            toRoute: {
+              id: 'route3',
+              code: 'T3',
+              name: 'Ho Chi Minh',
+            },
+            cost: 60000,
+            homeDeliveryCost: undefined,
+            itemCost: 6000,
+            itemValue: undefined,
+            collectCost: undefined,
+            collectForCustomerCost: 4000,
+            collectForCustomer: 60000,
+            totalCost: 70000,
+            paymentType: undefined,
+            notes: undefined,
+          },
+        ],
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalRecords: 2,
+          limit: 20,
+          hasNextPage: false,
+          hasPrevPage: false,
+        },
+      });
+
+      expect(MockedUser.findById).toHaveBeenCalledWith('user123');
+      expect(MockedRoute.findById).toHaveBeenCalledWith('507f1f77bcf86cd799439011');
+      expect(Delivery.aggregate).toHaveBeenCalledTimes(1);
+    });
+
+    it('should throw error when user has no selected route', async () => {
+      MockedUser.findById = jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue({ _id: 'user123' }),
+        }),
+      });
+
+      const startDate = new Date('2024-01-01');
+      const endDate = new Date('2024-01-31');
+
+      await expect(
+        deliveryService.getCostReport('user123', startDate, endDate, 1, 20)
+      ).rejects.toThrow('User does not have a selected route');
+    });
+
+    it('should throw error when user not found', async () => {
+      MockedUser.findById = jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue(null),
+        }),
+      });
+
+      const startDate = new Date('2024-01-01');
+      const endDate = new Date('2024-01-31');
+
+      await expect(
+        deliveryService.getCostReport('user123', startDate, endDate, 1, 20)
+      ).rejects.toThrow('User does not have a selected route');
+    });
+
+    it('should throw error when selected route not found', async () => {
+      MockedRoute.findById = jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue(null),
+      });
+
+      const startDate = new Date('2024-01-01');
+      const endDate = new Date('2024-01-31');
+
+      await expect(
+        deliveryService.getCostReport('user123', startDate, endDate, 1, 20)
+      ).rejects.toThrow('Selected route not found');
+    });
+
+    it('should handle empty results', async () => {
+      const startDate = new Date('2024-01-01');
+      const endDate = new Date('2024-01-31');
+
+      const emptyResults = [
+        {
+          data: [],
+          totalCount: [{ count: 0 }],
+          summary: [{}],
+        },
+      ];
+
+      jest.spyOn(Delivery, 'aggregate').mockResolvedValue(emptyResults);
+
+      const result = await deliveryService.getCostReport('user123', startDate, endDate, 1, 20);
+
+      expect(result.summary.totalDeliveries).toBe(0);
+      expect(result.deliveries).toEqual([]);
+      expect(result.pagination.totalRecords).toBe(0);
+    });
+
+    it('should handle aggregation errors', async () => {
+      const startDate = new Date('2024-01-01');
+      const endDate = new Date('2024-01-31');
+
+      jest.spyOn(Delivery, 'aggregate').mockRejectedValue(new Error('Database error'));
+
+      await expect(
+        deliveryService.getCostReport('user123', startDate, endDate, 1, 20)
+      ).rejects.toThrow('Failed to generate cost report');
     });
   });
 });

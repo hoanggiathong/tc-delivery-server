@@ -43,6 +43,7 @@ export const createDeliverySchema = z.object({
     collectForCustomerCost: z.number().min(0, 'Collect for customer cost must be positive'),
     collectForCustomerNote: z.string().trim().optional(),
     notes: z.string().trim().optional(),
+    paymentType: z.enum(['debt', 'free']).nullable().optional(),
   }),
 });
 
@@ -105,6 +106,7 @@ export const updateDeliverySchema = z.object({
       .optional(),
     collectForCustomerNote: z.string().trim().optional(),
     notes: z.string().trim().optional(),
+    paymentType: z.enum(['debt', 'free']).nullable().optional(),
   }),
 });
 
@@ -172,9 +174,45 @@ export const frequentCustomersSchema = z.object({
   }),
 });
 
+// Schema for cost report
+export const deliveryCostReportSchema = z
+  .object({
+    query: z.object({
+      startDate: z
+        .string()
+        .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid start date in ISO format')
+        .transform(val => new Date(val))
+        .refine(val => {
+          const oneMonthAgo = new Date();
+          oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+          return val >= oneMonthAgo;
+        }, 'Start date cannot be more than 1 month in the past'),
+      endDate: z
+        .string()
+        .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid end date in ISO format')
+        .transform(val => new Date(val))
+        .refine(val => val <= new Date(), 'End date cannot be in the future'),
+      page: z
+        .string()
+        .optional()
+        .transform(val => (val ? parseInt(val) : 1))
+        .refine(val => val >= 1, 'Page must be greater than 0'),
+      limit: z
+        .string()
+        .optional()
+        .transform(val => (val ? parseInt(val) : 20))
+        .refine(val => val >= 1 && val <= 100, 'Limit must be between 1 and 100'),
+    }),
+  })
+  .refine(data => data.query.startDate <= data.query.endDate, {
+    message: 'Start date must be before or equal to end date',
+    path: ['query', 'startDate'],
+  });
+
 export type CreateDeliveryRequest = z.infer<typeof createDeliverySchema>['body'];
 export type UpdateDeliveryRequest = z.infer<typeof updateDeliverySchema>['body'];
 export type GetNextCodeRequest = z.infer<typeof getNextCodeSchema>['query'];
 export type DeliveryCodeParams = z.infer<typeof deliveryCodeSchema>['params'];
 export type FrequentCustomersParams = z.infer<typeof frequentCustomersSchema>['params'];
 export type FrequentCustomersQuery = z.infer<typeof frequentCustomersSchema>['query'];
+export type DeliveryCostReportQuery = z.infer<typeof deliveryCostReportSchema>['query'];

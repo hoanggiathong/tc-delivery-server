@@ -504,9 +504,14 @@ describe('MoneyDeliveryService', () => {
       });
 
       // Mock the MoneyDelivery model
-      jest.spyOn(MoneyDelivery, 'aggregate').mockResolvedValue(mockAggregationResult as any);
+      MockedMoneyDelivery.aggregate = jest.fn().mockResolvedValue(mockAggregationResult as any);
 
-      const result = await moneyDeliveryService.getFrequentCustomers('Sender Name', 'user123', 1, 10);
+      const result = await moneyDeliveryService.getFrequentCustomers(
+        'Sender Name',
+        'user123',
+        1,
+        10
+      );
 
       expect(result).toEqual({
         senderIdentifier: 'Sender Name',
@@ -540,7 +545,7 @@ describe('MoneyDeliveryService', () => {
         },
       });
 
-      expect(MoneyDelivery.aggregate).toHaveBeenCalled();
+      expect(MockedMoneyDelivery.aggregate).toHaveBeenCalled();
     });
 
     it('should handle empty results', async () => {
@@ -558,7 +563,12 @@ describe('MoneyDeliveryService', () => {
         }),
       });
 
-      const result = await moneyDeliveryService.getFrequentCustomers('NonExistentSender', 'user123', 1, 10);
+      const result = await moneyDeliveryService.getFrequentCustomers(
+        'NonExistentSender',
+        'user123',
+        1,
+        10
+      );
 
       expect(result).toEqual({
         senderIdentifier: 'NonExistentSender',
@@ -593,9 +603,9 @@ describe('MoneyDeliveryService', () => {
 
       jest.spyOn(MoneyDelivery, 'aggregate').mockRejectedValue(new Error('Database error'));
 
-      await expect(moneyDeliveryService.getFrequentCustomers('Sender Name', 'user123', 1, 10)).rejects.toThrow(
-        'Failed to get frequent money customers'
-      );
+      await expect(
+        moneyDeliveryService.getFrequentCustomers('Sender Name', 'user123', 1, 10)
+      ).rejects.toThrow('Failed to get frequent money customers');
     });
   });
 });

@@ -25,6 +25,7 @@ export interface IDeliveryResponse extends BaseEntity {
   collectForCustomerNote?: string;
   notes?: string;
   totalCost: number;
+  paymentType?: 'debt' | 'free' | null;
   createdByUser: string;
 }
 
@@ -47,6 +48,7 @@ export interface IDeliveryCreateRequest {
   collectForCustomerCost: number;
   collectForCustomerNote?: string;
   notes?: string;
+  paymentType?: 'debt' | 'free' | null;
 }
 
 // Delivery update request interface
@@ -68,6 +70,7 @@ export interface IDeliveryUpdateRequest {
   collectForCustomerCost?: number;
   collectForCustomerNote?: string;
   notes?: string;
+  paymentType?: 'debt' | 'free' | null;
 }
 
 // Interface for populated delivery (when sender, receiver, fromRoute, toRoute, createdByUser are populated)
@@ -100,6 +103,7 @@ export interface IDeliveryWithPopulatedRefs {
   collectForCustomerNote?: string;
   notes?: string;
   totalCost: number;
+  paymentType?: 'debt' | 'free' | null;
   createdByUser: {
     _id: string;
     username: string;
@@ -173,6 +177,7 @@ export interface IDeliveryLeanPopulated {
   collectForCustomerNote?: string;
   notes?: string;
   totalCost: number;
+  paymentType?: 'debt' | 'free' | null;
   createdByUser: {
     _id: string;
     username: string;
@@ -210,4 +215,87 @@ export interface IFrequentCustomersResponse {
   } | null;
   frequentCustomers: IFrequentCustomer[];
   pagination: IFrequentCustomersPagination;
+}
+
+// Cost Report Interfaces
+export interface IDeliveryCostReportSummary {
+  totalDeliveries: number;
+  totalCost: number;
+  totalHomeDeliveryCost: number;
+  totalItemCost: number;
+  totalItemValue: number;
+  totalCollectCost: number;
+  totalCollectForCustomer: number;
+  totalCollectForCustomerCost: number;
+  totalRevenue: number; // Tổng thu (totalCost của tất cả deliveries)
+
+  // Phân loại theo paymentType
+  normalPaymentCount: number;
+  normalPaymentAmount: number;
+  debtPaymentCount: number;
+  debtPaymentAmount: number;
+  freePaymentCount: number;
+
+  // Thống kê
+  averageCostPerDelivery: number;
+  averageItemValue: number;
+}
+
+export interface IDeliveryReportItem {
+  id: string;
+  code: string;
+  date: Date;
+  sender: {
+    name: string;
+    phone: string;
+  };
+  receiver: {
+    name: string;
+    phone: string;
+  };
+  toRoute: {
+    id: string;
+    code: string;
+    name: string;
+  };
+
+  // Chi tiết chi phí
+  cost: number;
+  homeDeliveryCost: number;
+  itemCost: number;
+  itemValue: number;
+  collectCost: number;
+  collectForCustomer: number;
+  collectForCustomerCost: number;
+  totalCost: number;
+
+  paymentType: 'debt' | 'free' | null;
+  notes?: string;
+}
+
+export interface IDeliveryCostReportPagination {
+  currentPage: number;
+  totalPages: number;
+  totalRecords: number;
+  limit: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
+
+export interface IDeliveryCostReportFilter {
+  dateRange: {
+    from: Date;
+    to: Date;
+  };
+  fromRoute: {
+    id: string;
+    code: string;
+    name: string;
+  };
+}
+
+export interface IDeliveryCostReport {
+  summary: IDeliveryCostReportSummary;
+  deliveries: IDeliveryReportItem[];
+  pagination: IDeliveryCostReportPagination;
 }

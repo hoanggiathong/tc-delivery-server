@@ -1,6 +1,10 @@
 import { Response } from 'express';
 import { DeliveryService } from '@/services/delivery.service';
-import { CreateDeliveryRequest, UpdateDeliveryRequest } from '@/schemas/delivery.schema';
+import {
+  CreateDeliveryRequest,
+  UpdateDeliveryRequest,
+  DeliveryCostReportQuery,
+} from '@/schemas/delivery.schema';
 import { AuthRequest, ApiResponse } from '@/types';
 import Logger from '@/utils/logger';
 
@@ -791,6 +795,129 @@ export class DeliveryController {
       };
 
       res.status(500).json(response);
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/delivery/cost-report:
+   *   get:
+   *     summary: Get cost report for deliveries with date range filtering and pagination
+   *     tags: [Delivery]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: startDate
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Start date for filtering (ISO format). Cannot be more than 1 month in the past.
+   *         example: "2024-01-01"
+   *       - in: query
+   *         name: endDate
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: End date for filtering (ISO format). Cannot be in the future.
+   *         example: "2024-01-31"
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           default: 1
+   *         description: Page number for pagination
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 20
+   *         description: Number of records per page
+   *     responses:
+   *       200:
+   *         description: Cost report retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                 message:
+   *                   type: string
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     summary:
+   *                       type: object
+   *                       description: Summary statistics for the deliveries
+   *                     deliveries:
+   *                       type: array
+   *                       description: List of deliveries with cost details
+   *                     pagination:
+   *                       type: object
+   *                       description: Pagination information
+   *                     filter:
+   *                       type: object
+   *                       description: Applied filter information
+   *       400:
+   *         description: Validation error, invalid date range, or user has no selected route
+   *       401:
+   *         description: Unauthorized
+   */
+  getCostReport = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      // Get query parameters from validated request
+      const { startDate, endDate, page, limit } = req.query as unknown as DeliveryCostReportQuery;
+
+      // Call service to get cost report
+      const report = await this.deliveryService.getCostReport(
+        req.user.userId,
+        startDate,
+        endDate,
+        page,
+        limit
+      );
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Cost report retrieved successfully',
+        data: report,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Failed to generate cost report', {
+        error: error instanceof Error ? error.message : error,
+        userId: req.user?.userId,
+        query: req.query,
+      });
+
+      const message = error instanceof Error ? error.message : 'Failed to generate cost report';
+
+      // Determine appropriate status code
+      let statusCode = 500;
+      if (message.includes('selected route')) {
+        statusCode = 400;
+      }
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(statusCode).json(response);
     }
   };
 }

@@ -34,6 +34,7 @@ describe('AuthService', () => {
       username: 'testuser',
       password: 'hashedPassword',
       role: UserRole.USER,
+      selectedRouteId: null,
       createdAt: new Date(),
       updatedAt: new Date(),
       save: jest.fn(),
@@ -77,6 +78,7 @@ describe('AuthService', () => {
         id: 'user123',
         username: userData.username,
         role: userData.role,
+        selectedRouteId: null,
         createdAt: mockUserInstance.createdAt,
         updatedAt: mockUserInstance.updatedAt,
       });
@@ -119,10 +121,10 @@ describe('AuthService', () => {
 
       // Mock UserRoute.findOne (no routes found, so no auto-assignment)
       const mockUserRouteSelect = jest.fn().mockResolvedValue(null);
-      (MockedUserRoute.findOne as any).mockReturnValue({ 
+      (MockedUserRoute.findOne as any).mockReturnValue({
         select: jest.fn().mockReturnValue({
-          lean: mockUserRouteSelect
-        })
+          lean: mockUserRouteSelect,
+        }),
       });
 
       // Mock JWT sign
@@ -192,10 +194,10 @@ describe('AuthService', () => {
 
       // Mock UserRoute.findOne to return a route
       const mockUserRouteSelect = jest.fn().mockResolvedValue({ routeId: 'route123' });
-      (MockedUserRoute.findOne as any).mockReturnValue({ 
+      (MockedUserRoute.findOne as any).mockReturnValue({
         select: jest.fn().mockReturnValue({
-          lean: mockUserRouteSelect
-        })
+          lean: mockUserRouteSelect,
+        }),
       });
 
       // Mock User.findByIdAndUpdate for auto-assignment
@@ -208,12 +210,11 @@ describe('AuthService', () => {
 
       // Verify that UserRoute.findOne was called to find routes for user
       expect(MockedUserRoute.findOne).toHaveBeenCalledWith({ userId: mockUserWithoutRoute._id });
-      
+
       // Verify that User.findByIdAndUpdate was called to set selectedRouteId
-      expect(MockedUser.findByIdAndUpdate).toHaveBeenCalledWith(
-        mockUserWithoutRoute._id, 
-        { selectedRouteId: 'route123' }
-      );
+      expect(MockedUser.findByIdAndUpdate).toHaveBeenCalledWith(mockUserWithoutRoute._id, {
+        selectedRouteId: 'route123',
+      });
 
       expect(result.token).toBe(mockToken);
       expect(result.user.username).toBe('testuser');
@@ -238,6 +239,7 @@ describe('AuthService', () => {
         id: 'user123',
         username: 'testuser',
         role: UserRole.USER,
+        selectedRouteId: null,
         createdAt: mockUserInstance.createdAt,
         updatedAt: mockUserInstance.updatedAt,
       });
@@ -421,7 +423,7 @@ describe('AuthService', () => {
         { selectedRouteId: undefined },
         { new: true }
       );
-      expect(result.user.selectedRouteId).toBeUndefined();
+      expect(result.user.selectedRouteId).toBeNull();
     });
   });
 });

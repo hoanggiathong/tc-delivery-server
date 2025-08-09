@@ -45,7 +45,8 @@ export const createMockDelivery = (
     collectForCustomerCost: 3000,
     collectForCustomerNote: 'Test note',
     notes: 'Test delivery notes',
-    totalCost: 68000, // 50000 + 10000 + 5000 + 3000 (excluding collectCost)
+    totalCost: 58000, // 50000 + 5000 + 3000 (cost + itemCost + collectForCustomerCost, homeDeliveryCost excluded)
+    paymentType: null,
     createdByUser: 'testuser',
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2023-01-01'),
@@ -72,6 +73,7 @@ export const createMockDeliveryRequest = (overrides: any = {}) => {
     collectForCustomerCost: 3000,
     collectForCustomerNote: 'Test note',
     notes: 'Test delivery notes',
+    paymentType: null,
     ...overrides,
   };
 };
@@ -93,6 +95,7 @@ export const createMockDeliveryRequestWithoutHome = (overrides: any = {}) => {
     collectForCustomer: 50000,
     collectForCustomerCost: 3000,
     notes: 'Test delivery notes',
+    paymentType: null,
     ...overrides,
   };
 };
@@ -122,5 +125,106 @@ export const mockNextCodeResponseForIntegration = {
     name: 'Ha Noi',
     createdAt: new Date(),
     updatedAt: new Date(),
+  },
+};
+
+/**
+ * Mock cost report response for delivery integration tests
+ */
+export const mockCostReportForIntegration = {
+  summary: {
+    totalDeliveries: 5,
+    totalCost: 250000,
+    totalHomeDeliveryCost: 20000,
+    totalItemCost: 25000,
+    totalItemValue: 500000,
+    totalCollectCost: 10000,
+    totalCollectForCustomer: 250000,
+    totalCollectForCustomerCost: 15000,
+    totalRevenue: 290000,
+    averageCostPerDelivery: 50000,
+    averageItemValue: 100000,
+    debtPaymentCount: 2,
+    debtPaymentAmount: 150000,
+    freePaymentCount: 1,
+    normalPaymentCount: 2,
+    normalPaymentAmount: 140000,
+  },
+  deliveries: [
+    {
+      id: 'delivery-1',
+      code: '2401250001',
+      date: new Date('2024-01-15'),
+      sender: {
+        name: 'John Doe',
+        phone: '1234567890',
+      },
+      receiver: {
+        name: 'Jane Doe',
+        phone: '0987654321',
+      },
+      toRoute: {
+        id: 'route-2',
+        code: 'T2',
+        name: 'Ha Noi',
+      },
+      cost: 50000,
+      homeDeliveryCost: 10000,
+      itemCost: 5000,
+      itemValue: 100000,
+      collectCost: 2000,
+      collectForCustomerCost: 3000,
+      collectForCustomer: 50000,
+      totalCost: 58000,
+      paymentType: 'debt' as const,
+      notes: 'Test delivery 1',
+    },
+    {
+      id: 'delivery-2',
+      code: '2401250002',
+      date: new Date('2024-01-16'),
+      sender: {
+        name: 'Alice Smith',
+        phone: '1111111111',
+      },
+      receiver: {
+        name: 'Bob Johnson',
+        phone: '2222222222',
+      },
+      toRoute: {
+        id: 'route-3',
+        code: 'T3',
+        name: 'Ho Chi Minh',
+      },
+      cost: 60000,
+      homeDeliveryCost: 10000,
+      itemCost: 6000,
+      itemValue: 120000,
+      collectCost: 2500,
+      collectForCustomerCost: 4000,
+      collectForCustomer: 60000,
+      totalCost: 70000,
+      paymentType: null,
+      notes: 'Test delivery 2',
+    },
+  ],
+  pagination: {
+    currentPage: 1,
+    totalPages: 1,
+    totalRecords: 2,
+    limit: 20,
+    hasNextPage: false,
+    hasPrevPage: false,
+  },
+  filter: {
+    dateRange: {
+      from: new Date('2024-01-01'),
+      to: new Date('2024-01-31'),
+    },
+    fromRoute: {
+      id: 'route-1',
+      code: 'T1',
+      name: 'Test Route',
+    },
   },
 };

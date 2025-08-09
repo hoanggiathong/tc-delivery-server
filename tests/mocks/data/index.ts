@@ -29,11 +29,9 @@ export {
   createMockDeliveryRequest,
   createMockDeliveryRequestWithoutHome,
   createMockDeliveryList,
-} from './deliveries';
-
-export {
   // Delivery integration test mocks
   mockNextCodeResponseForIntegration as mockDeliveryNextCodeResponseForIntegration,
+  mockCostReportForIntegration,
 } from './deliveries';
 
 export {

@@ -7,6 +7,7 @@ import {
   createMockDelivery,
   createMockCustomer,
   createMockDeliveryRequestWithoutHome,
+  mockCostReportForIntegration,
 } from '../mocks';
 
 // Mock DeliveryService
@@ -453,6 +454,204 @@ describe('Delivery Endpoints', () => {
 
       expect(response.body.success).toBe(false);
       expect(response.body.message).toBe('No related deliveries found');
+    });
+  });
+
+  describe('GET /api/delivery/cost-report', () => {
+    // Use recent dates that are within 1 month
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const validQuery = {
+      startDate: oneWeekAgo.toISOString().split('T')[0],
+      endDate: yesterday.toISOString().split('T')[0],
+      page: '1',
+      limit: '20',
+    };
+
+    it('should get cost report successfully', async () => {
+      MockedDeliveryService.prototype.getCostReport.mockResolvedValue(mockCostReportForIntegration);
+
+      const response = await request(app)
+        .get('/api/delivery/cost-report')
+        .query(validQuery)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toEqualWithDateStrings(mockCostReportForIntegration);
+      expect(MockedDeliveryService.prototype.getCostReport).toHaveBeenCalledWith(
+        'admin123',
+        validQuery.startDate,
+        validQuery.endDate,
+        '1',
+        '20'
+      );
+    });
+
+    it('should return 400 for missing startDate', async () => {
+      const invalidQuery: Partial<typeof validQuery> = { ...validQuery };
+      delete invalidQuery.startDate;
+
+      const response = await request(app)
+        .get('/api/delivery/cost-report')
+        .query(invalidQuery)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Validation');
+    });
+
+    it('should return 400 for missing endDate', async () => {
+      const invalidQuery: Partial<typeof validQuery> = { ...validQuery };
+      delete invalidQuery.endDate;
+
+      const response = await request(app)
+        .get('/api/delivery/cost-report')
+        .query(invalidQuery)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Validation');
+    });
+
+    it('should return 400 for invalid startDate format', async () => {
+      const invalidQuery = { ...validQuery, startDate: 'invalid-date' };
+
+      const response = await request(app)
+        .get('/api/delivery/cost-report')
+        .query(invalidQuery)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Validation');
+    });
+
+    it('should return 400 for invalid endDate format', async () => {
+      const invalidQuery = { ...validQuery, endDate: 'invalid-date' };
+
+      const response = await request(app)
+        .get('/api/delivery/cost-report')
+        .query(invalidQuery)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Validation');
+    });
+
+    it('should return 400 for endDate in the future', async () => {
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 1);
+      const invalidQuery = { ...validQuery, endDate: futureDate.toISOString().split('T')[0] };
+
+      const response = await request(app)
+        .get('/api/delivery/cost-report')
+        .query(invalidQuery)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Validation');
+    });
+
+    it('should return 400 for startDate more than 1 month in the past', async () => {
+      const twoMonthsAgo = new Date();
+      twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+      const invalidQuery = { ...validQuery, startDate: twoMonthsAgo.toISOString().split('T')[0] };
+
+      const response = await request(app)
+        .get('/api/delivery/cost-report')
+        .query(invalidQuery)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Validation');
+    });
+
+    it('should return 400 for startDate after endDate', async () => {
+      const invalidQuery = {
+        ...validQuery,
+        startDate: '2024-01-31',
+        endDate: '2024-01-01',
+      };
+
+      const response = await request(app)
+        .get('/api/delivery/cost-report')
+        .query(invalidQuery)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Validation');
+    });
+
+    it('should return 401 for unauthenticated request', async () => {
+      const response = await request(app)
+        .get('/api/delivery/cost-report')
+        .query(validQuery)
+        .expect(401);
+
+      expect(response.body.success).toBe(false);
+    });
+
+    it('should return 400 when user has no selected route', async () => {
+      const errorMessage = 'User does not have a selected route';
+      MockedDeliveryService.prototype.getCostReport.mockRejectedValue(new Error(errorMessage));
+
+      const response = await request(app)
+        .get('/api/delivery/cost-report')
+        .query(validQuery)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe(errorMessage);
+    });
+
+    it('should handle service errors with proper status codes', async () => {
+      MockedDeliveryService.prototype.getCostReport.mockRejectedValue(
+        new Error('Failed to generate cost report')
+      );
+
+      const response = await request(app)
+        .get('/api/delivery/cost-report')
+        .query(validQuery)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(500);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Failed to generate cost report');
+    });
+
+    it('should use default pagination values', async () => {
+      MockedDeliveryService.prototype.getCostReport.mockResolvedValue(mockCostReportForIntegration);
+
+      const queryWithoutPagination = {
+        startDate: validQuery.startDate,
+        endDate: validQuery.endDate,
+      };
+
+      const response = await request(app)
+        .get('/api/delivery/cost-report')
+        .query(queryWithoutPagination)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(MockedDeliveryService.prototype.getCostReport).toHaveBeenCalledWith(
+        'admin123',
+        validQuery.startDate,
+        validQuery.endDate,
+        '1', // default page
+        '20' // default limit
+      );
     });
   });
 });
