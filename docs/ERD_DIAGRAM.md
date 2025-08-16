@@ -14,6 +14,7 @@ erDiagram
     ROUTES ||--o{ DELIVERIES : "đến tuyến"
     ROUTES ||--o{ MONEY_DELIVERIES : "từ tuyến"
     ROUTES ||--o{ MONEY_DELIVERIES : "đến tuyến"
+    ROUTES ||--o{ DELIVERY_COUNTERS : "sequence tracking"
     CUSTOMERS ||--o{ DELIVERIES : "người gửi"
     CUSTOMERS ||--o{ DELIVERIES : "người nhận"
     CUSTOMERS ||--o{ MONEY_DELIVERIES : "người gửi"
@@ -94,6 +95,16 @@ erDiagram
         datetime createdAt "tự động tạo"
         datetime updatedAt "tự động cập nhật"
     }
+
+    DELIVERY_COUNTERS {
+        ObjectId _id PK
+        string datePrefix "DDMMYY format, bắt buộc, regex: /^\\d{6}$/"
+        ObjectId toRoute FK "tham chiếu: ROUTES, bắt buộc"
+        number deliverySequence "sequence cho deliveries, mặc định 0, min:0, max:9999"
+        number moneyDeliverySequence "sequence cho money deliveries, mặc định 0, min:0, max:9999"
+        datetime createdAt "tự động tạo, TTL 90 ngày"
+        datetime updatedAt "tự động cập nhật"
+    }
 ```
 
 ## Chi Tiết Sơ Đồ và Quy Tắc Nghiệp Vụ
@@ -105,6 +116,7 @@ erDiagram
 - `userRoutes` - Mối quan hệ nhiều-nhiều giữa người dùng và tuyến đường
 - `deliveries` - Giao dịch vận chuyển thông thường
 - `moneydeliveries` - Giao dịch chuyển tiền
+- `deliveryCounters` - Bộ đếm atomic cho code generation
 
 ### Ràng Buộc và Xác Thực Chính
 
@@ -152,6 +164,17 @@ erDiagram
 - **Chi phí đơn giản**: `totalCost = sendCost` (loại trừ sendMoneyAmount khỏi tổng)
 - **Index hiệu suất**: Cùng pattern tối ưu như deliveries
 
+#### Bảng DELIVERY_COUNTERS
+- **Ràng buộc duy nhất**: Tổ hợp datePrefix + toRoute phải duy nhất (mỗi ngày mỗi route có 1 counter)
+- **Atomic Operations**: Sử dụng MongoDB `findOneAndUpdate` với `$inc` để đảm bảo thread-safe sequence generation
+- **TTL Auto-cleanup**: Documents tự động expire sau 90 ngày để giữ database size tối ưu
+- **Sequence Range**: Mỗi sequence field giới hạn từ 0-9999 (4 chữ số cuối trong delivery code)
+- **Date Format**: datePrefix phải đúng format DDMMYY (6 chữ số)
+- **Index Strategy**: 
+  - Compound unique index: `{datePrefix: 1, toRoute: 1}`
+  - Individual index: `{toRoute: 1}` cho route-only queries
+  - TTL index: `{createdAt: 1}` với expiration 90 ngày
+
 ### Tối Ưu Hóa Hiệu Suất
 
 #### Chiến Lược Index Database
@@ -197,11 +220,22 @@ erDiagram
 #### Tạo Mã
 - **Endpoint Mã Tiếp Theo**: `GET /api/delivery/next-code?toRouteId={ObjectId}`
 - **Mã Chuyển Tiền**: `GET /api/money-deliveries/next-code?toRouteId={ObjectId}`
-- Chuỗi mã được quản lý theo từng tuyến để tránh xung đột
+- **Atomic Code Generation**: Sử dụng bảng `deliveryCounters` với atomic operations để đảm bảo unique codes
+- **Concurrency Safe**: Hỗ trợ multiple concurrent requests mà không sinh duplicate codes
+- **Fallback Strategy**: Có retry mechanism và legacy fallback khi atomic operations fail
+- **Performance**: Reduced database round trips với single atomic operation thay vì multiple queries
 
 ### Cập Nhật Gần Đây Quan Trọng
 
 #### Phiên Bản Mới Nhất
+- **New Table: DELIVERY_COUNTERS**: Thêm bảng atomic counter cho code generation
+  - Đảm bảo thread-safe sequence generation
+  - Auto TTL cleanup sau 90 ngày
+  - Compound unique indexes cho performance
+- **Improved Code Generation**: Cải thiện CodeGeneratorService với atomic operations
+  - Atomic `findOneAndUpdate` operations
+  - Retry mechanism với fallback strategy
+  - Type safety với required toRouteId validation
 - **Field PaymentType**: Thêm trường `paymentType` vào bảng DELIVERIES với 3 giá trị:
   - `null` (mặc định): Thanh toán bình thường
   - `debt`: Thanh toán nợ (khách hàng sẽ trả sau)  

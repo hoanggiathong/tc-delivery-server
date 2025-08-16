@@ -443,6 +443,7 @@ describe('Money Delivery API Integration Tests', () => {
       expect(response.body.data).toEqualWithDateStrings(mockFrequentCustomersResult);
       expect(MockedMoneyDeliveryService.prototype.getFrequentCustomers).toHaveBeenCalledWith(
         'John Doe',
+        'user123',
         1,
         10
       );
@@ -512,6 +513,7 @@ describe('Money Delivery API Integration Tests', () => {
 
       expect(MockedMoneyDeliveryService.prototype.getFrequentCustomers).toHaveBeenCalledWith(
         'John Doe',
+        'user123',
         1,
         10
       );
@@ -544,6 +546,7 @@ describe('Money Delivery API Integration Tests', () => {
 
       expect(MockedMoneyDeliveryService.prototype.getFrequentCustomers).toHaveBeenCalledWith(
         'John Doe',
+        'user123',
         2,
         5
       );

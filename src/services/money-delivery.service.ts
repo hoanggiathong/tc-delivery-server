@@ -193,7 +193,9 @@ export class MoneyDeliveryService {
     }
 
     // Generate money delivery code
-    const moneyDeliveryCode = await CodeGeneratorService.generateNextMoneyDeliveryCode();
+    const moneyDeliveryCode = await CodeGeneratorService.generateNextMoneyDeliveryCode(
+      data.toRouteId
+    );
 
     // Create money delivery
     const moneyDelivery = new MoneyDelivery({
@@ -363,7 +365,7 @@ export class MoneyDeliveryService {
     }
 
     // Generate next code
-    const nextCode = await CodeGeneratorService.generateNextMoneyDeliveryCode();
+    const nextCode = await CodeGeneratorService.generateNextMoneyDeliveryCode(toRouteId);
 
     return {
       nextCode,

@@ -1,65 +1,68 @@
 import { CodeGeneratorService } from '@/services/code-generator.service';
 import { Delivery } from '@/models/delivery.model';
+import { DeliveryCounter } from '@/models/delivery-counter.model';
+import { Types } from 'mongoose';
 
-// Mock the Delivery model
+// Mock the models
 jest.mock('@/models/delivery.model');
+jest.mock('@/models/delivery-counter.model');
 
 describe('CodeGeneratorService', () => {
   let mockDeliveryModel: jest.Mocked<typeof Delivery>;
+  let mockDeliveryCounterModel: jest.Mocked<typeof DeliveryCounter>;
 
   beforeEach(() => {
     jest.clearAllMocks();
     mockDeliveryModel = Delivery as jest.Mocked<typeof Delivery>;
+    mockDeliveryCounterModel = DeliveryCounter as jest.Mocked<typeof DeliveryCounter>;
   });
 
   describe('generateNextCode', () => {
     it('should generate first code for a new day', async () => {
       const testDate = new Date('2024-01-25');
 
-      // Mock findOne to return null (no existing codes)
-      const mockFindOneQuery = {
-        sort: jest.fn().mockReturnThis(),
-        select: jest.fn().mockReturnThis(),
-        lean: jest.fn().mockResolvedValue(null),
+      // Mock DeliveryCounter.findOneAndUpdate to return counter with sequence 1
+      const mockCounter = {
+        deliverySequence: 1,
+        datePrefix: '250124',
+        toRoute: new Types.ObjectId('507f1f77bcf86cd799439011'),
       };
-      mockDeliveryModel.findOne = jest.fn().mockReturnValue(mockFindOneQuery);
+      mockDeliveryCounterModel.findOneAndUpdate = jest.fn().mockResolvedValue(mockCounter);
 
-      // Mock the second findOne call (verification)
-      const mockVerificationQuery = {
-        lean: jest.fn().mockResolvedValue(null),
-      };
-      mockDeliveryModel.findOne = jest
-        .fn()
-        .mockReturnValueOnce(mockFindOneQuery) // First call in findLastCodeForDate
-        .mockReturnValueOnce(mockVerificationQuery); // Second call in generateNextCode
+      // Mock Delivery.exists to return false (no duplicate)
+      mockDeliveryModel.exists = jest.fn().mockResolvedValue(false);
 
-      const result = await CodeGeneratorService.generateNextCode(testDate);
+      const result = await CodeGeneratorService.generateNextCode(
+        '507f1f77bcf86cd799439011',
+        testDate
+      );
 
       expect(result).toBe('2501240001'); // 25/01/24 + 0001
-      expect(mockDeliveryModel.findOne).toHaveBeenCalledWith({ code: /^250124\d{4}$/ });
+      expect(mockDeliveryCounterModel.findOneAndUpdate).toHaveBeenCalledWith(
+        { datePrefix: '250124', toRoute: new Types.ObjectId('507f1f77bcf86cd799439011') },
+        { $inc: { deliverySequence: 1 } },
+        { new: true, upsert: true }
+      );
     });
 
     it('should generate next code in sequence', async () => {
       const testDate = new Date('2024-01-25');
 
-      // Mock findOne to return existing code
-      const mockFindOneQuery = {
-        sort: jest.fn().mockReturnThis(),
-        select: jest.fn().mockReturnThis(),
-        lean: jest.fn().mockResolvedValue({ code: '2501240005' }),
+      // Mock DeliveryCounter.findOneAndUpdate to return counter with sequence 6
+      const mockCounter = {
+        deliverySequence: 6,
+        datePrefix: '250124',
+        toRoute: new Types.ObjectId('507f1f77bcf86cd799439011'),
       };
+      mockDeliveryCounterModel.findOneAndUpdate = jest.fn().mockResolvedValue(mockCounter);
 
-      // Mock the second findOne call (verification)
-      const mockVerificationQuery = {
-        lean: jest.fn().mockResolvedValue(null),
-      };
+      // Mock Delivery.exists to return false (no duplicate)
+      mockDeliveryModel.exists = jest.fn().mockResolvedValue(false);
 
-      mockDeliveryModel.findOne = jest
-        .fn()
-        .mockReturnValueOnce(mockFindOneQuery) // First call in findLastCodeForDate
-        .mockReturnValueOnce(mockVerificationQuery); // Second call in generateNextCode
-
-      const result = await CodeGeneratorService.generateNextCode(testDate);
+      const result = await CodeGeneratorService.generateNextCode(
+        '507f1f77bcf86cd799439011',
+        testDate
+      );
 
       expect(result).toBe('2501240006'); // 25/01/24 + 0006
     });
@@ -67,28 +70,21 @@ describe('CodeGeneratorService', () => {
     it('should handle existing code collision', async () => {
       const testDate = new Date('2024-01-25');
 
-      // Mock findOne to return existing code
-      const mockFindOneQuery = {
-        sort: jest.fn().mockReturnThis(),
-        select: jest.fn().mockReturnThis(),
-        lean: jest.fn().mockResolvedValue({ code: '2501240006' }),
+      // Mock DeliveryCounter.findOneAndUpdate to return counter with sequence 8
+      const mockCounter = {
+        deliverySequence: 8,
+        datePrefix: '250124',
+        toRoute: new Types.ObjectId('507f1f77bcf86cd799439011'),
       };
+      mockDeliveryCounterModel.findOneAndUpdate = jest.fn().mockResolvedValue(mockCounter);
 
-      // Mock the verification calls - first one returns existing, second returns null
-      const mockVerificationQuery1 = {
-        lean: jest.fn().mockResolvedValue({ code: '2501240007' }),
-      };
-      const mockVerificationQuery2 = {
-        lean: jest.fn().mockResolvedValue(null),
-      };
+      // Mock Delivery.exists to return false (no duplicate after retry)
+      mockDeliveryModel.exists = jest.fn().mockResolvedValue(false);
 
-      mockDeliveryModel.findOne = jest
-        .fn()
-        .mockReturnValueOnce(mockFindOneQuery) // First call in findLastCodeForDate (returns 0006)
-        .mockReturnValueOnce(mockVerificationQuery1) // First verification (0007 exists)
-        .mockReturnValueOnce(mockVerificationQuery2); // Second verification (0008 does not exist)
-
-      const result = await CodeGeneratorService.generateNextCode(testDate);
+      const result = await CodeGeneratorService.generateNextCode(
+        '507f1f77bcf86cd799439011',
+        testDate
+      );
 
       expect(result).toBe('2501240008'); // 25/01/24 + 0008
     });
@@ -96,18 +92,17 @@ describe('CodeGeneratorService', () => {
     it('should throw error when maximum sequence reached', async () => {
       const testDate = new Date('2024-01-25');
 
-      // Mock findOne to return maximum code
-      const mockFindOneQuery = {
-        sort: jest.fn().mockReturnThis(),
-        select: jest.fn().mockReturnThis(),
-        lean: jest.fn().mockResolvedValue({ code: '2501249999' }),
+      // Mock DeliveryCounter.findOneAndUpdate to return counter exceeding maximum
+      const mockCounter = {
+        deliverySequence: 10000, // Exceeds MAX_SEQUENCE (9999)
+        datePrefix: '250124',
+        toRoute: new Types.ObjectId('507f1f77bcf86cd799439011'),
       };
+      mockDeliveryCounterModel.findOneAndUpdate = jest.fn().mockResolvedValue(mockCounter);
 
-      mockDeliveryModel.findOne = jest.fn().mockReturnValue(mockFindOneQuery);
-
-      await expect(CodeGeneratorService.generateNextCode(testDate)).rejects.toThrow(
-        'Maximum number of deliveries (9999) reached for date 250124'
-      );
+      await expect(
+        CodeGeneratorService.generateNextCode('507f1f77bcf86cd799439011', testDate)
+      ).rejects.toThrow('Maximum number of deliveries (9999) reached for date 250124');
     });
 
     it("should generate code with today's date by default", async () => {
@@ -117,23 +112,18 @@ describe('CodeGeneratorService', () => {
       const year = String(today.getFullYear()).slice(-2);
       const expectedPrefix = `${day}${month}${year}`;
 
-      // Mock findOne to return null
-      const mockFindOneQuery = {
-        sort: jest.fn().mockReturnThis(),
-        select: jest.fn().mockReturnThis(),
-        lean: jest.fn().mockResolvedValue(null),
+      // Mock DeliveryCounter.findOneAndUpdate to return counter with sequence 1
+      const mockCounter = {
+        deliverySequence: 1,
+        datePrefix: expectedPrefix,
+        toRoute: new Types.ObjectId('507f1f77bcf86cd799439011'),
       };
+      mockDeliveryCounterModel.findOneAndUpdate = jest.fn().mockResolvedValue(mockCounter);
 
-      const mockVerificationQuery = {
-        lean: jest.fn().mockResolvedValue(null),
-      };
+      // Mock Delivery.exists to return false (no duplicate)
+      mockDeliveryModel.exists = jest.fn().mockResolvedValue(false);
 
-      mockDeliveryModel.findOne = jest
-        .fn()
-        .mockReturnValueOnce(mockFindOneQuery)
-        .mockReturnValueOnce(mockVerificationQuery);
-
-      const result = await CodeGeneratorService.generateNextCode();
+      const result = await CodeGeneratorService.generateNextCode('507f1f77bcf86cd799439011');
 
       expect(result).toMatch(new RegExp(`^${expectedPrefix}0001$`));
     });
@@ -152,7 +142,10 @@ describe('CodeGeneratorService', () => {
 
       mockDeliveryModel.findOne = jest.fn().mockReturnValue(mockFindOneQuery);
 
-      const result = await CodeGeneratorService.getNextCodePreview(testDate);
+      const result = await CodeGeneratorService.getNextCodePreview(
+        '507f1f77bcf86cd799439011',
+        testDate
+      );
 
       expect(result).toBe('2501240006');
     });
@@ -201,7 +194,7 @@ describe('CodeGeneratorService', () => {
   });
 
   describe('getDeliveryCountForDate', () => {
-    it('should return delivery count for date', async () => {
+    it('should return delivery count for date without toRoute filter', async () => {
       const testDate = new Date('2024-01-25');
 
       mockDeliveryModel.countDocuments = jest.fn().mockResolvedValue(5);
@@ -211,6 +204,23 @@ describe('CodeGeneratorService', () => {
       expect(result).toBe(5);
       expect(mockDeliveryModel.countDocuments).toHaveBeenCalledWith({
         code: /^250124\d{4}$/, // 25/01/24
+      });
+    });
+
+    it('should return delivery count for date with toRoute filter', async () => {
+      const testDate = new Date('2024-01-25');
+
+      mockDeliveryModel.countDocuments = jest.fn().mockResolvedValue(3);
+
+      const result = await CodeGeneratorService.getDeliveryCountForDate(
+        testDate,
+        '507f1f77bcf86cd799439011'
+      );
+
+      expect(result).toBe(3);
+      expect(mockDeliveryModel.countDocuments).toHaveBeenCalledWith({
+        code: /^250124\d{4}$/, // 25/01/24
+        toRoute: new Types.ObjectId('507f1f77bcf86cd799439011'),
       });
     });
 
@@ -259,16 +269,14 @@ describe('CodeGeneratorService', () => {
 
   describe('error handling', () => {
     it('should handle database errors in generateNextCode', async () => {
-      // Mock findOne to throw error
-      const mockFindOneQuery = {
-        sort: jest.fn().mockReturnThis(),
-        select: jest.fn().mockReturnThis(),
-        lean: jest.fn().mockRejectedValue(new Error('Database error')),
-      };
+      // Mock DeliveryCounter.findOneAndUpdate to throw error
+      mockDeliveryCounterModel.findOneAndUpdate = jest
+        .fn()
+        .mockRejectedValue(new Error('Database error'));
 
-      mockDeliveryModel.findOne = jest.fn().mockReturnValue(mockFindOneQuery);
-
-      await expect(CodeGeneratorService.generateNextCode()).rejects.toThrow('Database error');
+      await expect(
+        CodeGeneratorService.generateNextCode('507f1f77bcf86cd799439011')
+      ).rejects.toThrow('Database error');
     });
 
     it('should handle database errors in getDeliveryCountForDate', async () => {

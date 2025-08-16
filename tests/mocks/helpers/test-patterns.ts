@@ -7,7 +7,7 @@
 import { Response } from 'supertest';
 
 // Common test constants
-const TEST_OBJECT_IDS = {
+const _TEST_OBJECT_IDS = {
   validObjectId: '507f1f77bcf86cd799439011',
   user: 'user123',
   customer1: 'customer123',

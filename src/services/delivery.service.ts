@@ -204,7 +204,7 @@ export class DeliveryService {
     }
 
     // Generate delivery code
-    const deliveryCode = await CodeGeneratorService.generateNextCode();
+    const deliveryCode = await CodeGeneratorService.generateNextCode(data.toRouteId);
 
     // Create delivery
     const delivery = new Delivery({
@@ -455,7 +455,7 @@ export class DeliveryService {
     }
 
     // Get next code preview
-    const nextCode = await CodeGeneratorService.getNextCodePreview();
+    const nextCode = await CodeGeneratorService.getNextCodePreview(toRouteId);
 
     return {
       nextCode,

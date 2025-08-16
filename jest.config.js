@@ -24,6 +24,7 @@ module.exports = {
           ...compilerOptions,
           baseUrl: '.',
           paths: compilerOptions.paths,
+          isolatedModules: true
         },
       },
     ],
@@ -32,4 +33,10 @@ module.exports = {
   clearMocks: true,
   restoreMocks: true,
   testTimeout: 30000,
+  
+  // Force exit to prevent hanging
+  forceExit: true,
+  
+  // Detect open handles to help debug hanging tests
+  detectOpenHandles: false
 };

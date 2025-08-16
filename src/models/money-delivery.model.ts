@@ -146,5 +146,7 @@ moneyDeliverySchema.index({ receiver: 1, createdAt: -1 }); // Receiver history
 
 // 7. Code-based queries optimization
 moneyDeliverySchema.index({ code: 1, fromRoute: 1, toRoute: 1 }); // For code + route lookup
+// Additional unique compound index for code generation safety
+moneyDeliverySchema.index({ code: 1, toRoute: 1 }, { unique: true });
 
 export const MoneyDelivery = mongoose.model<IMoneyDelivery>('MoneyDelivery', moneyDeliverySchema);

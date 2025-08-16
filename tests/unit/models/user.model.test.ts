@@ -121,10 +121,10 @@ describe('User Model', () => {
       mockUser.isModified.mockReturnValue(true);
 
       // Create a spy for the pre-save hook
-      const preSaveHook = User.schema.pre as jest.Mock;
+      const _preSaveHook = User.schema.pre as jest.Mock;
 
       // Simulate the pre-save hook execution
-      const nextMock = jest.fn();
+      const _nextMock = jest.fn();
       mockUser.password = 'plainpassword';
 
       // Mock the hash function

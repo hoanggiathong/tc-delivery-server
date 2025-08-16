@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import { requireRole, canViewUsers, canCreateUser } from '@/middlewares/role.middleware';
 import { AuthRequest, UserRole } from '@/types';
 

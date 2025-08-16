@@ -1,8 +1,5 @@
 import mongoose from 'mongoose';
 import { MoneyDelivery } from '@/models/money-delivery.model';
-import { Customer } from '@/models/customer.model';
-import { Route } from '@/models/route.model';
-import { User } from '@/models/user.model';
 
 // Mock dependencies
 jest.mock('@/models/customer.model');

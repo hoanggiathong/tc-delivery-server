@@ -10,6 +10,14 @@ import {
   IMoneyDeliveryUpdateRequest,
 } from '@/types/money-delivery.type';
 
+// Mock mongoose Types
+jest.mock('mongoose', () => ({
+  ...jest.requireActual('mongoose'),
+  Types: {
+    ObjectId: jest.fn(id => id || 'mocked-object-id'),
+  },
+}));
+
 // Mock all dependencies
 jest.mock('@/services/customer.service');
 jest.mock('@/services/code-generator.service');

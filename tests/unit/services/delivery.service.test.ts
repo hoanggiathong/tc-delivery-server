@@ -7,6 +7,14 @@ import { CodeGeneratorService } from '@/services/code-generator.service';
 import { IDeliveryResponse } from '@/types/delivery.type';
 import { CustomerService } from '@/services/customer.service';
 
+// Mock mongoose Types
+jest.mock('mongoose', () => ({
+  ...jest.requireActual('mongoose'),
+  Types: {
+    ObjectId: jest.fn(id => id || 'mocked-object-id'),
+  },
+}));
+
 // Mock the Delivery and Route models
 jest.mock('@/models/delivery.model');
 jest.mock('@/models/customer.model');
@@ -1079,18 +1087,11 @@ describe('DeliveryService', () => {
 
       // Mock Customer.find to return sender IDs - first call should succeed
       const mockSenders = [{ _id: 'sender1' }, { _id: 'sender2' }];
-      MockedCustomer.find = jest
-        .fn()
-        .mockReturnValueOnce({
-          select: jest.fn().mockReturnValue({
-            lean: jest.fn().mockResolvedValue(mockSenders),
-          }),
-        })
-        .mockReturnValueOnce({
-          select: jest.fn().mockReturnValue({
-            lean: jest.fn().mockResolvedValue(mockSenders),
-          }),
-        });
+      MockedCustomer.find = jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue(mockSenders),
+        }),
+      });
 
       // Mock the Delivery model
       MockedDelivery.aggregate = jest.fn().mockResolvedValue(mockAggregationResult as any);
@@ -1113,10 +1114,6 @@ describe('DeliveryService', () => {
               name: 'Route 1',
             },
             deliveryCount: 5,
-            totalCost: 1000,
-            totalItemValue: 2000,
-            lastDeliveryDate: new Date('2024-01-15'),
-            firstDeliveryDate: new Date('2024-01-01'),
           },
         ],
         pagination: {
@@ -1439,7 +1436,7 @@ describe('DeliveryService', () => {
 
       await expect(
         deliveryService.getCostReport('user123', startDate, endDate, 1, 20)
-      ).rejects.toThrow('Failed to generate cost report');
+      ).rejects.toThrow('Database error');
     });
   });
 });

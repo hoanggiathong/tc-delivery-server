@@ -115,7 +115,7 @@ describe('Delivery Endpoints', () => {
       expect(response.body.message).toBe('Delivery created successfully');
       expect(response.body.data.delivery).toEqualWithDateStrings(mockDelivery);
       expect(MockedDeliveryService.prototype.createDelivery).toHaveBeenCalledWith(
-        requestData,
+        { ...requestData, homeDeliveryCost: 0 },
         'admin123'
       );
     });
@@ -484,10 +484,10 @@ describe('Delivery Endpoints', () => {
       expect(response.body.data).toEqualWithDateStrings(mockCostReportForIntegration);
       expect(MockedDeliveryService.prototype.getCostReport).toHaveBeenCalledWith(
         'admin123',
-        validQuery.startDate,
-        validQuery.endDate,
-        '1',
-        '20'
+        new Date(validQuery.startDate),
+        new Date(validQuery.endDate),
+        1,
+        20
       );
     });
 
@@ -647,10 +647,10 @@ describe('Delivery Endpoints', () => {
       expect(response.body.success).toBe(true);
       expect(MockedDeliveryService.prototype.getCostReport).toHaveBeenCalledWith(
         'admin123',
-        validQuery.startDate,
-        validQuery.endDate,
-        '1', // default page
-        '20' // default limit
+        new Date(validQuery.startDate),
+        new Date(validQuery.endDate),
+        1, // default page
+        20 // default limit
       );
     });
   });

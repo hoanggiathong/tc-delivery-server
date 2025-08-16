@@ -1,6 +1,4 @@
 import { UserRoute } from '@/models/user-route.model';
-import { User } from '@/models/user.model';
-import { Route } from '@/models/route.model';
 import { UserRole } from '@/types/user.type';
 import { Types } from 'mongoose';
 
