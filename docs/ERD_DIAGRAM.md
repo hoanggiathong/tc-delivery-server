@@ -105,6 +105,21 @@ erDiagram
         datetime createdAt "tự động tạo, TTL 90 ngày"
         datetime updatedAt "tự động cập nhật"
     }
+
+    SETTINGS {
+        ObjectId _id PK
+        string name UK "shipping_rates|other_settings, duy nhất"
+        array metadata "shipping rate configurations [ShippingRate]"
+        datetime createdAt "tự động tạo"
+        datetime updatedAt "tự động cập nhật"
+    }
+
+    SHIPPING_RATE {
+        number fromAmount "số tiền bắt đầu, tối thiểu 0"
+        number toAmount "số tiền kết thúc, > fromAmount"
+        number regularShippingFee "phí gửi thường, tối thiểu 0"
+        number expressShippingFee "phí gửi nhanh, tối thiểu 0"
+    }
 ```
 
 ## Chi Tiết Sơ Đồ và Quy Tắc Nghiệp Vụ
@@ -117,6 +132,7 @@ erDiagram
 - `deliveries` - Giao dịch vận chuyển thông thường
 - `moneydeliveries` - Giao dịch chuyển tiền
 - `deliveryCounters` - Bộ đếm atomic cho code generation
+- `settings` - Cấu hình hệ thống và bảng giá cước
 
 ### Ràng Buộc và Xác Thực Chính
 
@@ -175,6 +191,30 @@ erDiagram
   - Individual index: `{toRoute: 1}` cho route-only queries
   - TTL index: `{createdAt: 1}` với expiration 90 ngày
 
+#### Bảng SETTINGS
+- **Tên cấu hình**: Phải duy nhất, enum values: `shipping_rates`, `other_settings`
+- **Metadata structure**: Array của shipping rate objects với validation:
+  - `fromAmount`: Số tiền bắt đầu (≥ 0)
+  - `toAmount`: Số tiền kết thúc (> fromAmount)
+  - `regularShippingFee`: Phí gửi thường (≥ 0)
+  - `expressShippingFee`: Phí gửi nhanh (≥ 0)
+- **Quy tắc nghiệp vụ**:
+  - Các khoảng giá phải liên tục và không chồng lấp
+  - Rate tiếp theo phải có fromAmount = rate trước.toAmount + 1
+  - Ít nhất một shipping rate trong mỗi settings
+- **Quyền truy cập**:
+  - Tạo/Sửa: Admin và Superadmin only
+  - Xóa: Superadmin only
+  - Đọc: Tất cả authenticated users
+- **API Endpoints**:
+  - `POST /api/settings` - Tạo settings mới
+  - `GET /api/settings` - Lấy tất cả settings (Admin/Superadmin)
+  - `GET /api/settings/:name` - Lấy settings theo tên
+  - `PUT /api/settings/:name` - Cập nhật settings
+  - `DELETE /api/settings/:name` - Xóa settings (Superadmin)
+  - `POST /api/settings/calculate-shipping-fee` - Tính phí vận chuyển
+- **Index hiệu suất**: Unique index trên trường `name`
+
 ### Tối Ưu Hóa Hiệu Suất
 
 #### Chiến Lược Index Database
@@ -190,6 +230,7 @@ erDiagram
    - `{receiver: 1, toRoute: 1}` - Index hỗ trợ cho receiver lookups
    - `{phone: 1}` - Index cho exact phone search trong customers
    - `{name: "text"}` - Text search index cho tìm kiếm tên khách hàng
+6. **Settings Index**: `{name: 1}` - Unique index cho settings name lookup
 
 #### Tính Năng Tối Ưu Truy Vấn
 - **Lean Queries**: Cho các thao tác chỉ đọc để giảm sử dụng bộ nhớ
@@ -225,6 +266,13 @@ erDiagram
 - **Fallback Strategy**: Có retry mechanism và legacy fallback khi atomic operations fail
 - **Performance**: Reduced database round trips với single atomic operation thay vì multiple queries
 
+#### Tính Phí Vận Chuyển
+- **API Endpoint**: `POST /api/settings/calculate-shipping-fee`
+- **Input**: `{amount: number, isExpress?: boolean}`
+- **Logic**: Tìm shipping rate phù hợp dựa trên amount và trả về phí tương ứng
+- **Real-time Calculation**: Không cache, luôn tính toán real-time từ settings
+- **Error Handling**: Trả về 404 nếu không tìm thấy rate phù hợp cho amount
+
 ### Cập Nhật Gần Đây Quan Trọng
 
 #### Phiên Bản Mới Nhất
@@ -232,6 +280,11 @@ erDiagram
   - Đảm bảo thread-safe sequence generation
   - Auto TTL cleanup sau 90 ngày
   - Compound unique indexes cho performance
+- **New Table: SETTINGS**: Thêm bảng cấu hình hệ thống và bảng giá cước
+  - Quản lý shipping rates với các mức giá linh hoạt
+  - Role-based access control (Admin/Superadmin only)
+  - API endpoint tính phí vận chuyển real-time
+  - Validation rules đảm bảo tính toàn vẹn dữ liệu
 - **Improved Code Generation**: Cải thiện CodeGeneratorService với atomic operations
   - Atomic `findOneAndUpdate` operations
   - Retry mechanism với fallback strategy
