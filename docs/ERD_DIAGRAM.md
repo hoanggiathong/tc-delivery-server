@@ -108,17 +108,28 @@ erDiagram
 
     SETTINGS {
         ObjectId _id PK
-        string name UK "shipping_rates|other_settings, duy nhất"
-        array metadata "shipping rate configurations [ShippingRate]"
+        string name UK "shipping_rates|product_list, duy nhất"
+        mixed metadata "flexible metadata: ShippingRateConfig[]|ProductConfig[]|Record<string,unknown>"
+        string description "mô tả tùy chọn, trim"
+        boolean isActive "trạng thái hoạt động, mặc định true"
         datetime createdAt "tự động tạo"
         datetime updatedAt "tự động cập nhật"
     }
 
-    SHIPPING_RATE {
+    SHIPPING_RATE_CONFIG {
         number fromAmount "số tiền bắt đầu, tối thiểu 0"
         number toAmount "số tiền kết thúc, > fromAmount"
         number regularShippingFee "phí gửi thường, tối thiểu 0"
         number expressShippingFee "phí gửi nhanh, tối thiểu 0"
+        enum fromAmountUnit "VND|USD|%, mặc định VND"
+        enum toAmountUnit "VND|USD|%, mặc định VND"
+        enum regularShippingFeeUnit "VND|USD|%, mặc định VND"
+        enum expressShippingFeeUnit "VND|USD|%, mặc định VND"
+    }
+
+    PRODUCT_CONFIG {
+        string name "tên hàng hóa, bắt buộc, trim"
+        number cost "chi phí hàng hóa, tối thiểu 0"
     }
 ```
 
@@ -132,7 +143,7 @@ erDiagram
 - `deliveries` - Giao dịch vận chuyển thông thường
 - `moneydeliveries` - Giao dịch chuyển tiền
 - `deliveryCounters` - Bộ đếm atomic cho code generation
-- `settings` - Cấu hình hệ thống và bảng giá cước
+- `settings` - Cấu hình hệ thống linh hoạt (shipping rates, product list, custom configs)
 
 ### Ràng Buộc và Xác Thực Chính
 
@@ -192,27 +203,37 @@ erDiagram
   - TTL index: `{createdAt: 1}` với expiration 90 ngày
 
 #### Bảng SETTINGS
-- **Tên cấu hình**: Phải duy nhất, enum values: `shipping_rates`, `other_settings`
-- **Metadata structure**: Array của shipping rate objects với validation:
-  - `fromAmount`: Số tiền bắt đầu (≥ 0)
-  - `toAmount`: Số tiền kết thúc (> fromAmount)
-  - `regularShippingFee`: Phí gửi thường (≥ 0)
-  - `expressShippingFee`: Phí gửi nhanh (≥ 0)
+- **Tên cấu hình**: Phải duy nhất, enum values: `shipping_rates`, `product_list`
+- **Metadata structure**: Union type hỗ trợ nhiều loại cấu hình:
+  - **ShippingRateConfig[]**: Array shipping rates với unit fields
+    - `fromAmount`, `toAmount`: Khoảng số tiền (≥ 0)
+    - `regularShippingFee`, `expressShippingFee`: Phí vận chuyển (≥ 0)
+    - `fromAmountUnit`, `toAmountUnit`, `regularShippingFeeUnit`, `expressShippingFeeUnit`: Đơn vị tiền tệ (VND|USD|%, mặc định VND)
+  - **ProductConfig[]**: Array danh sách hàng hóa
+    - `name`: Tên hàng hóa (bắt buộc, trim)
+    - `cost`: Chi phí hàng hóa (≥ 0)
+  - **Record<string, unknown>**: Custom settings cho tương lai
 - **Quy tắc nghiệp vụ**:
-  - Các khoảng giá phải liên tục và không chồng lấp
+  - **Shipping Rates**: Các khoảng giá phải liên tục và không chồng lấp
   - Rate tiếp theo phải có fromAmount = rate trước.toAmount + 1
-  - Ít nhất một shipping rate trong mỗi settings
+  - **Product List**: Mỗi product phải có tên và cost hợp lệ
+  - Dynamic validation dựa trên setting name
+- **Default Unit Handling**: Tất cả unit fields mặc định là VND
 - **Quyền truy cập**:
   - Tạo/Sửa: Admin và Superadmin only
   - Xóa: Superadmin only
   - Đọc: Tất cả authenticated users
 - **API Endpoints**:
-  - `POST /api/settings` - Tạo settings mới
+  - `POST /api/settings` - Tạo settings mới với metadata linh hoạt
   - `GET /api/settings` - Lấy tất cả settings (Admin/Superadmin)
   - `GET /api/settings/:name` - Lấy settings theo tên
   - `PUT /api/settings/:name` - Cập nhật settings
   - `DELETE /api/settings/:name` - Xóa settings (Superadmin)
   - `POST /api/settings/calculate-shipping-fee` - Tính phí vận chuyển
+  - `GET /api/settings/shipping-rates` - Lấy shipping rates
+  - `PUT /api/settings/shipping-rates` - Cập nhật shipping rates với default VND
+  - `GET /api/settings/products` - Lấy danh sách hàng hóa
+  - `PUT /api/settings/products` - Cập nhật danh sách hàng hóa
 - **Index hiệu suất**: Unique index trên trường `name`
 
 ### Tối Ưu Hóa Hiệu Suất
@@ -231,6 +252,7 @@ erDiagram
    - `{phone: 1}` - Index cho exact phone search trong customers
    - `{name: "text"}` - Text search index cho tìm kiếm tên khách hàng
 6. **Settings Index**: `{name: 1}` - Unique index cho settings name lookup
+7. **Settings Performance**: `{isActive: 1}` - Index cho active settings filter
 
 #### Tính Năng Tối Ưu Truy Vấn
 - **Lean Queries**: Cho các thao tác chỉ đọc để giảm sử dụng bộ nhớ
@@ -269,9 +291,18 @@ erDiagram
 #### Tính Phí Vận Chuyển
 - **API Endpoint**: `POST /api/settings/calculate-shipping-fee`
 - **Input**: `{amount: number, isExpress?: boolean}`
-- **Logic**: Tìm shipping rate phù hợp dựa trên amount và trả về phí tương ứng
+- **Logic**: Tìm shipping rate phù hợp dựa trên amount và unit, trả về phí tương ứng
+- **Unit Support**: Hỗ trợ tính toán với nhiều đơn vị tiền tệ (VND, USD, %)
 - **Real-time Calculation**: Không cache, luôn tính toán real-time từ settings
 - **Error Handling**: Trả về 404 nếu không tìm thấy rate phù hợp cho amount
+
+#### Quản Lý Hàng Hóa
+- **API Endpoints**: 
+  - `GET /api/settings/products` - Lấy danh sách hàng hóa
+  - `PUT /api/settings/products` - Cập nhật danh sách hàng hóa
+- **Input**: `{products: [{name: string, cost: number}]}`
+- **Validation**: Tên hàng hóa bắt buộc, chi phí ≥ 0
+- **Use Case**: Quản lý danh mục hàng hóa với giá cố định
 
 ### Cập Nhật Gần Đây Quan Trọng
 
@@ -280,10 +311,14 @@ erDiagram
   - Đảm bảo thread-safe sequence generation
   - Auto TTL cleanup sau 90 ngày
   - Compound unique indexes cho performance
-- **New Table: SETTINGS**: Thêm bảng cấu hình hệ thống và bảng giá cước
-  - Quản lý shipping rates với các mức giá linh hoạt
+- **Enhanced Table: SETTINGS**: Nâng cấp bảng cấu hình với flexible metadata
+  - **Flexible Metadata**: Hỗ trợ nhiều loại settings (shipping_rates, product_list)
+  - **Unit Support**: Thêm unit fields cho shipping rates (VND, USD, %)
+  - **Default Unit**: Tất cả unit fields mặc định là VND theo yêu cầu
+  - **Product Management**: Quản lý danh sách hàng hóa với tên và chi phí
+  - **Type Safety**: Union types với dynamic validation theo setting name
+  - **Enhanced APIs**: Specialized endpoints cho từng loại setting
   - Role-based access control (Admin/Superadmin only)
-  - API endpoint tính phí vận chuyển real-time
   - Validation rules đảm bảo tính toàn vẹn dữ liệu
 - **Improved Code Generation**: Cải thiện CodeGeneratorService với atomic operations
   - Atomic `findOneAndUpdate` operations

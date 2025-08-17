@@ -14,18 +14,30 @@ describe('SettingsService', () => {
       toAmount: 1000000,
       regularShippingFee: 15000,
       expressShippingFee: 20000,
+      fromAmountUnit: 'VND' as const,
+      toAmountUnit: 'VND' as const,
+      regularShippingFeeUnit: 'VND' as const,
+      expressShippingFeeUnit: 'VND' as const,
     },
     {
       fromAmount: 1000001,
       toAmount: 2000000,
       regularShippingFee: 15000,
       expressShippingFee: 30000,
+      fromAmountUnit: 'VND' as const,
+      toAmountUnit: 'VND' as const,
+      regularShippingFeeUnit: 'VND' as const,
+      expressShippingFeeUnit: 'VND' as const,
     },
     {
       fromAmount: 2000001,
       toAmount: 3000000,
       regularShippingFee: 20000,
       expressShippingFee: 40000,
+      fromAmountUnit: 'VND' as const,
+      toAmountUnit: 'VND' as const,
+      regularShippingFeeUnit: 'VND' as const,
+      expressShippingFeeUnit: 'VND' as const,
     },
   ];
 
@@ -189,6 +201,10 @@ describe('SettingsService', () => {
         toAmount: 2000000,
         regularShippingFee: 15000,
         expressShippingFee: 30000,
+        fromAmountUnit: 'VND',
+        toAmountUnit: 'VND',
+        regularShippingFeeUnit: 'VND',
+        expressShippingFeeUnit: 'VND',
       });
 
       const result = await settingsService.calculateShippingFee(1500000, false);
@@ -202,6 +218,10 @@ describe('SettingsService', () => {
         toAmount: 2000000,
         regularShippingFee: 15000,
         expressShippingFee: 30000,
+        fromAmountUnit: 'VND',
+        toAmountUnit: 'VND',
+        regularShippingFeeUnit: 'VND',
+        expressShippingFeeUnit: 'VND',
       });
 
       const result = await settingsService.calculateShippingFee(1500000, true);

@@ -6,6 +6,10 @@ import {
   updateSettings,
   deleteSettings,
   calculateShippingFee,
+  getShippingRates,
+  updateShippingRates,
+  getProductList,
+  updateProductList,
 } from '@/controllers/settings.controller';
 import { authenticateToken } from '@/middlewares/auth.middleware';
 import { requireRole } from '@/middlewares/role.middleware';
@@ -112,7 +116,13 @@ const router = Router();
  *       409:
  *         description: Settings already exists
  */
-router.post('/', authenticateToken, requireRole([UserRole.ADMIN, UserRole.SUPERADMIN]), validate(createSettingsSchema), createSettings);
+router.post(
+  '/',
+  authenticateToken,
+  requireRole([UserRole.ADMIN, UserRole.SUPERADMIN]),
+  validate(createSettingsSchema),
+  createSettings
+);
 
 /**
  * @swagger
@@ -130,7 +140,12 @@ router.post('/', authenticateToken, requireRole([UserRole.ADMIN, UserRole.SUPERA
  *       403:
  *         description: Insufficient permissions
  */
-router.get('/', authenticateToken, requireRole([UserRole.ADMIN, UserRole.SUPERADMIN]), getAllSettings);
+router.get(
+  '/',
+  authenticateToken,
+  requireRole([UserRole.ADMIN, UserRole.SUPERADMIN]),
+  getAllSettings
+);
 
 /**
  * @swagger
@@ -281,6 +296,99 @@ router.post(
   authenticateToken,
   validate(calculateShippingFeeSchema),
   calculateShippingFee
+);
+
+/**
+ * @swagger
+ * /api/settings/shipping-rates:
+ *   get:
+ *     summary: Get shipping rates
+ *     tags: [Settings]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Shipping rates retrieved successfully
+ */
+router.get('/shipping-rates', authenticateToken, getShippingRates);
+
+/**
+ * @swagger
+ * /api/settings/shipping-rates:
+ *   put:
+ *     summary: Update shipping rates with default units (Admin/Superadmin only)
+ *     tags: [Settings]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               rates:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *     responses:
+ *       200:
+ *         description: Shipping rates updated successfully
+ */
+router.put(
+  '/shipping-rates',
+  authenticateToken,
+  requireRole([UserRole.ADMIN, UserRole.SUPERADMIN]),
+  updateShippingRates
+);
+
+/**
+ * @swagger
+ * /api/settings/products:
+ *   get:
+ *     summary: Get product list
+ *     tags: [Settings]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Product list retrieved successfully
+ */
+router.get('/products', authenticateToken, getProductList);
+
+/**
+ * @swagger
+ * /api/settings/products:
+ *   put:
+ *     summary: Update product list (Admin/Superadmin only)
+ *     tags: [Settings]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               products:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     name:
+ *                       type: string
+ *                     cost:
+ *                       type: number
+ *     responses:
+ *       200:
+ *         description: Product list updated successfully
+ */
+router.put(
+  '/products',
+  authenticateToken,
+  requireRole([UserRole.ADMIN, UserRole.SUPERADMIN]),
+  updateProductList
 );
 
 export default router;

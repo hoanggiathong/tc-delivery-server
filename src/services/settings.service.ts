@@ -1,8 +1,53 @@
-import { Settings, ISettings, IShippingRate } from '@/models/settings.model';
+import {
+  Settings,
+  ISettings,
+  IShippingRateConfig,
+  SettingsMetadata,
+  IProductConfig,
+} from '@/models/settings.model';
 import { AppError } from '@/middlewares/error.middleware';
 
 export class SettingsService {
-  async create(name: string, metadata: IShippingRate[]): Promise<ISettings> {
+  async getSetting<T = SettingsMetadata>(name: string): Promise<T | null> {
+    try {
+      const setting = await Settings.findOne({ name, isActive: true });
+      return setting ? (setting.metadata as T) : null;
+    } catch (error) {
+      throw new AppError('Failed to get setting', 500);
+    }
+  }
+
+  async getShippingRates(): Promise<IShippingRateConfig[]> {
+    const rates = await this.getSetting<IShippingRateConfig[]>('shipping_rates');
+    return rates || [];
+  }
+
+  async updateSetting<T extends SettingsMetadata>(name: string, metadata: T): Promise<boolean> {
+    try {
+      const result = await Settings.findOneAndUpdate(
+        { name },
+        { metadata, updatedAt: new Date() },
+        { upsert: true, new: true, runValidators: true }
+      );
+      return !!result;
+    } catch (error) {
+      throw new AppError('Failed to update setting', 500);
+    }
+  }
+
+  async updateShippingRates(rates: IShippingRateConfig[]): Promise<boolean> {
+    return this.updateSetting('shipping_rates', rates);
+  }
+
+  async getProductList(): Promise<IProductConfig[]> {
+    const products = await this.getSetting<IProductConfig[]>('product_list');
+    return products || [];
+  }
+
+  async updateProductList(products: IProductConfig[]): Promise<boolean> {
+    return this.updateSetting('product_list', products);
+  }
+  async create(name: string, metadata: SettingsMetadata): Promise<ISettings> {
     try {
       const existingSettings = await Settings.findOne({ name });
       if (existingSettings) {
@@ -46,7 +91,7 @@ export class SettingsService {
     }
   }
 
-  async update(name: string, metadata: IShippingRate[]): Promise<ISettings> {
+  async update(name: string, metadata: SettingsMetadata): Promise<ISettings> {
     try {
       const settings = await Settings.findOneAndUpdate(
         { name },
@@ -81,15 +126,19 @@ export class SettingsService {
     }
   }
 
-  async getShippingRate(amount: number): Promise<IShippingRate | null> {
+  async getShippingRate(amount: number): Promise<IShippingRateConfig | null> {
     try {
       const settings = await this.getByName('shipping_rates');
       if (!settings || !settings.metadata) {
         return null;
       }
 
-      const rate = settings.metadata.find(
-        rate => amount >= rate.fromAmount && amount <= rate.toAmount
+      if (!Array.isArray(settings.metadata)) {
+        return null;
+      }
+
+      const rate = (settings.metadata as IShippingRateConfig[]).find(
+        (rate: IShippingRateConfig) => amount >= rate.fromAmount && amount <= rate.toAmount
       );
 
       return rate || null;
@@ -115,5 +164,30 @@ export class SettingsService {
       }
       throw new AppError('Failed to calculate shipping fee', 500);
     }
+  }
+
+  private setDefaultUnits<T extends IShippingRateConfig[]>(rates: T): T {
+    return rates.map(rate => ({
+      ...rate,
+      fromAmountUnit: rate.fromAmountUnit || 'VND',
+      toAmountUnit: rate.toAmountUnit || 'VND',
+      regularShippingFeeUnit: rate.regularShippingFeeUnit || 'VND',
+      expressShippingFeeUnit: rate.expressShippingFeeUnit || 'VND',
+    })) as T;
+  }
+
+  async createShippingRatesWithDefaults(rates: Partial<IShippingRateConfig>[]): Promise<boolean> {
+    const ratesWithDefaults = rates.map(rate => ({
+      fromAmount: rate.fromAmount || 0,
+      toAmount: rate.toAmount || 0,
+      regularShippingFee: rate.regularShippingFee || 0,
+      expressShippingFee: rate.expressShippingFee || 0,
+      fromAmountUnit: rate.fromAmountUnit || 'VND',
+      toAmountUnit: rate.toAmountUnit || 'VND',
+      regularShippingFeeUnit: rate.regularShippingFeeUnit || 'VND',
+      expressShippingFeeUnit: rate.expressShippingFeeUnit || 'VND',
+    })) as IShippingRateConfig[];
+
+    return this.updateSetting('shipping_rates', ratesWithDefaults);
   }
 }

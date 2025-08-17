@@ -16,8 +16,16 @@ export const createSettings = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { name, metadata } = req.body;
+    const { name, metadata, description, isActive } = req.body;
     const settings = await settingsService.create(name, metadata);
+
+    if (description !== undefined || isActive !== undefined) {
+      await settingsService.update(name, {
+        ...metadata,
+        ...(description !== undefined && { description }),
+        ...(isActive !== undefined && { isActive }),
+      } as any);
+    }
 
     res.status(201).json({
       success: true,
@@ -80,6 +88,78 @@ export const updateSettings = async (
       success: true,
       message: 'Settings updated successfully',
       data: settings,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getShippingRates = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const rates = await settingsService.getShippingRates();
+
+    res.status(200).json({
+      success: true,
+      message: 'Shipping rates retrieved successfully',
+      data: rates,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateShippingRates = async (
+  req: Request<Record<string, never>, Record<string, never>, { rates: any[] }>,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { rates } = req.body;
+    const success = await settingsService.createShippingRatesWithDefaults(rates);
+
+    res.status(200).json({
+      success,
+      message: success ? 'Shipping rates updated successfully' : 'Failed to update shipping rates',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getProductList = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const products = await settingsService.getProductList();
+
+    res.status(200).json({
+      success: true,
+      message: 'Product list retrieved successfully',
+      data: products,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateProductList = async (
+  req: Request<Record<string, never>, Record<string, never>, { products: any[] }>,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { products } = req.body;
+    const success = await settingsService.updateProductList(products);
+
+    res.status(200).json({
+      success,
+      message: success ? 'Product list updated successfully' : 'Failed to update product list',
     });
   } catch (error) {
     next(error);
