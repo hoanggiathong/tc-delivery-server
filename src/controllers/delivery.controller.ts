@@ -125,12 +125,24 @@ export class DeliveryController {
 
       const message = error instanceof Error ? error.message : 'Failed to create delivery';
 
+      // Determine appropriate status code based on error type
+      let statusCode = 400;
+      if (error instanceof Error) {
+        if (error.message.includes('Item cost validation failed')) {
+          statusCode = 400; // Bad Request for validation errors
+        } else if (error.message.includes('not found')) {
+          statusCode = 404; // Not Found for missing resources
+        } else if (error.message.includes('Shipping rate configuration')) {
+          statusCode = 400; // Bad Request for configuration issues
+        }
+      }
+
       const response: ApiResponse = {
         success: false,
         message,
       };
 
-      res.status(400).json(response);
+      res.status(statusCode).json(response);
     }
   };
 
@@ -235,7 +247,20 @@ export class DeliveryController {
       });
 
       const message = error instanceof Error ? error.message : 'Failed to update delivery';
-      const statusCode = message === 'Delivery not found' ? 404 : 400;
+
+      // Determine appropriate status code based on error type
+      let statusCode = 400;
+      if (error instanceof Error) {
+        if (error.message === 'Delivery not found') {
+          statusCode = 404; // Not Found for missing delivery
+        } else if (error.message.includes('Item cost validation failed')) {
+          statusCode = 400; // Bad Request for validation errors
+        } else if (error.message.includes('not found')) {
+          statusCode = 404; // Not Found for missing resources
+        } else if (error.message.includes('Shipping rate configuration')) {
+          statusCode = 400; // Bad Request for configuration issues
+        }
+      }
 
       const response: ApiResponse = {
         success: false,

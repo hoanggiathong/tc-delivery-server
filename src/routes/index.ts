@@ -6,6 +6,7 @@ import moneyDeliveryRoutes from './money-delivery.routes';
 import routeRoutes from './route.routes';
 import userRouteRoutes from './user-route.routes';
 import settingsRoutes from './settings.routes';
+import draftDeliveryRoutes from './draft-delivery.routes';
 
 const router = Router();
 
@@ -16,5 +17,6 @@ router.use('/money-deliveries', moneyDeliveryRoutes);
 router.use('/route', routeRoutes);
 router.use('/user-route', userRouteRoutes);
 router.use('/settings', settingsRoutes);
+router.use('/draft-deliveries', draftDeliveryRoutes);
 
 export default router;

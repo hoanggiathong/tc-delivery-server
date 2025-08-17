@@ -6,6 +6,7 @@
 erDiagram
     USERS ||--o{ DELIVERIES : "tạo"
     USERS ||--o{ MONEY_DELIVERIES : "tạo"
+    USERS ||--o{ DRAFT_DELIVERIES : "tạo bản nháp"
     USERS ||--o{ USER_ROUTES : "được phân công"
     USERS ||--o{ USER_ROUTES : "phân công (assignedBy)"
     USERS }o--|| ROUTES : "có tuyến đường đã chọn"
@@ -14,6 +15,8 @@ erDiagram
     ROUTES ||--o{ DELIVERIES : "đến tuyến"
     ROUTES ||--o{ MONEY_DELIVERIES : "từ tuyến"
     ROUTES ||--o{ MONEY_DELIVERIES : "đến tuyến"
+    ROUTES ||--o{ DRAFT_DELIVERIES : "từ tuyến"
+    ROUTES ||--o{ DRAFT_DELIVERIES : "đến tuyến"
     ROUTES ||--o{ DELIVERY_COUNTERS : "sequence tracking"
     CUSTOMERS ||--o{ DELIVERIES : "người gửi"
     CUSTOMERS ||--o{ DELIVERIES : "người nhận"
@@ -67,11 +70,11 @@ erDiagram
         string homeDelivery "địa chỉ giao hàng, tùy chọn, trim"
         number homeDeliveryCost "bắt buộc, tối thiểu 0, mặc định 0"
         number itemValue "giá trị hàng hóa, bắt buộc, tối thiểu 0"
-        number itemCost "phí hàng hóa, bắt buộc, tối thiểu 0"
+        number itemCost "phí trị giá, bắt buộc, tối thiểu 0"
         number collectCost "phí thu hộ, bắt buộc, tối thiểu 0"
         number collectForCustomer "thu dùm khách hàng, bắt buộc, tối thiểu 0, mặc định 0"
         number collectForCustomerCost "phí phụ thu, bắt buộc, tối thiểu 0"
-        number totalCost "tính toán: cost+itemCost+collectForCustomerCost (homeDeliveryCost đã được loại trừ)"
+        number totalCost "tính toán: cost+itemCost(phí trị giá)+collectForCustomerCost"
         string collectForCustomerNote "tùy chọn, trim"
         string notes "tùy chọn, trim"
         enum paymentType "null|debt|free, mặc định null, loại thanh toán"
@@ -103,6 +106,32 @@ erDiagram
         number deliverySequence "sequence cho deliveries, mặc định 0, min:0, max:9999"
         number moneyDeliverySequence "sequence cho money deliveries, mặc định 0, min:0, max:9999"
         datetime createdAt "tự động tạo, TTL 90 ngày"
+        datetime updatedAt "tự động cập nhật"
+    }
+
+    DRAFT_DELIVERIES {
+        ObjectId _id PK
+        string senderName "bắt buộc, tối đa 100 ký tự, trim"
+        string senderPhone "bắt buộc, định dạng quốc tế, trim"
+        string receiverName "bắt buộc, tối đa 100 ký tự, trim"
+        string receiverPhone "bắt buộc, định dạng quốc tế, trim"
+        ObjectId fromRoute FK "tham chiếu: ROUTES, bắt buộc, khớp selectedRoute của user"
+        ObjectId toRoute FK "tham chiếu: ROUTES, bắt buộc"
+        string name "tên hàng hóa, bắt buộc, trim"
+        number cost "phí vận chuyển, bắt buộc, tối thiểu 0"
+        string homeDelivery "địa chỉ giao hàng, tùy chọn, trim"
+        number homeDeliveryCost "bắt buộc, tối thiểu 0, mặc định 0"
+        number itemValue "giá trị hàng hóa, bắt buộc, tối thiểu 0"
+        number itemCost "phí trị giá, bắt buộc, tối thiểu 0"
+        number collectCost "phí thu hộ, bắt buộc, tối thiểu 0"
+        number collectForCustomer "thu dùm khách hàng, bắt buộc, tối thiểu 0, mặc định 0"
+        number collectForCustomerCost "phí phụ thu, bắt buộc, tối thiểu 0"
+        number totalCost "tính toán: cost+itemCost+collectForCustomerCost"
+        string collectForCustomerNote "tùy chọn, trim"
+        string notes "tùy chọn, trim"
+        enum paymentType "null|debt|free, mặc định null"
+        ObjectId createdByUser FK "tham chiếu: USERS, bắt buộc"
+        datetime createdAt "tự động tạo, TTL 30 ngày"
         datetime updatedAt "tự động cập nhật"
     }
 
@@ -142,6 +171,7 @@ erDiagram
 - `userRoutes` - Mối quan hệ nhiều-nhiều giữa người dùng và tuyến đường
 - `deliveries` - Giao dịch vận chuyển thông thường
 - `moneydeliveries` - Giao dịch chuyển tiền
+- `draftdeliveries` - Bản nháp delivery (lưu tạm thông tin chưa hoàn tất)
 - `deliveryCounters` - Bộ đếm atomic cho code generation
 - `settings` - Cấu hình hệ thống linh hoạt (shipping rates, product list, custom configs)
 
@@ -174,13 +204,13 @@ erDiagram
   - Người gửi và người nhận không thể là cùng một khách hàng
   - Tuyến đi và tuyến đến không thể giống nhau
   - Tổng chi phí được tính tự động qua middleware
-- **Tính toán chi phí**: `totalCost = cost + itemCost + collectForCustomerCost` (homeDeliveryCost đã được loại trừ)
-- **Loại thanh toán**: 
+- **Tính toán chi phí**: `totalCost = cost + itemCost(phí trị giá) + collectForCustomerCost`
+- **Loại thanh toán**:
   - `null` (mặc định): Thanh toán bình thường, khách hàng thanh toán đầy đủ
   - `debt`: Khách hàng nợ tiền, sẽ thanh toán sau
   - `free`: Giao hàng miễn phí, không cần thanh toán
 - **Index hiệu suất**: Được tối ưu cho 10M+ records với compound indexes
-- **Index quan trọng**: 
+- **Index quan trọng**:
   - `{sender: 1, receiver: 1, toRoute: 1}` - Index chính cho frequent customers
   - `{receiver: 1, toRoute: 1}` - Index hỗ trợ cho receiver lookups
   - `{code: 1, fromRoute: 1, toRoute: 1}` - Index cho code + route lookup
@@ -192,15 +222,30 @@ erDiagram
 - **Index hiệu suất**: Cùng pattern tối ưu như deliveries
 
 #### Bảng DELIVERY_COUNTERS
+
 - **Ràng buộc duy nhất**: Tổ hợp datePrefix + toRoute phải duy nhất (mỗi ngày mỗi route có 1 counter)
 - **Atomic Operations**: Sử dụng MongoDB `findOneAndUpdate` với `$inc` để đảm bảo thread-safe sequence generation
 - **TTL Auto-cleanup**: Documents tự động expire sau 90 ngày để giữ database size tối ưu
 - **Sequence Range**: Mỗi sequence field giới hạn từ 0-9999 (4 chữ số cuối trong delivery code)
 - **Date Format**: datePrefix phải đúng format DDMMYY (6 chữ số)
-- **Index Strategy**: 
+- **Index Strategy**:
   - Compound unique index: `{datePrefix: 1, toRoute: 1}`
   - Individual index: `{toRoute: 1}` cho route-only queries
   - TTL index: `{createdAt: 1}` với expiration 90 ngày
+
+#### Bảng DRAFT_DELIVERIES
+
+- **Mục đích**: Lưu tạm thông tin delivery chưa hoàn tất (không có code)
+- **Quy tắc**:
+  - `fromRoute` phải khớp với `selectedRouteId` của user hiện tại
+  - Chỉ owner mới có thể xem/sửa/xóa draft
+  - Tự động xóa sau 30 ngày (TTL index)
+- **Chuyển đổi**: Có thể convert draft thành delivery chính thức với code
+- **Index Strategy**:
+  - `{fromRoute: 1, createdByUser: 1, createdAt: -1}` - Query chính
+  - `{createdByUser: 1, createdAt: -1}` - User's drafts
+  - `{fromRoute: 1, createdAt: -1}` - Route-based queries
+  - TTL index: `{createdAt: 1}` với expiration 30 ngày
 
 #### Bảng SETTINGS
 - **Tên cấu hình**: Phải duy nhất, enum values: `shipping_rates`, `product_list`
@@ -297,16 +342,39 @@ erDiagram
 - **Error Handling**: Trả về 404 nếu không tìm thấy rate phù hợp cho amount
 
 #### Quản Lý Hàng Hóa
-- **API Endpoints**: 
+
+- **API Endpoints**:
   - `GET /api/settings/products` - Lấy danh sách hàng hóa
   - `PUT /api/settings/products` - Cập nhật danh sách hàng hóa
 - **Input**: `{products: [{name: string, cost: number}]}`
 - **Validation**: Tên hàng hóa bắt buộc, chi phí ≥ 0
 - **Use Case**: Quản lý danh mục hàng hóa với giá cố định
 
+#### Draft Delivery APIs
+
+- **API Endpoints**:
+  - `POST /api/draft-deliveries` - Tạo draft mới
+  - `GET /api/draft-deliveries` - Lấy tất cả drafts của user (theo selectedRoute)
+  - `GET /api/draft-deliveries/:id` - Lấy chi tiết draft
+  - `PUT /api/draft-deliveries/:id` - Cập nhật draft
+  - `DELETE /api/draft-deliveries/:id` - Xóa draft
+  - `POST /api/draft-deliveries/:id/convert` - Convert draft thành delivery chính thức
+  - `DELETE /api/draft-deliveries/all` - Xóa tất cả drafts của user
+- **Business Rules**:
+  - Draft không có code (chỉ có khi convert thành delivery)
+  - fromRoute phải match với selectedRouteId của user
+  - Chỉ owner mới có thể thao tác draft
+  - Tự động xóa sau 30 ngày
+
 ### Cập Nhật Gần Đây Quan Trọng
 
 #### Phiên Bản Mới Nhất
+
+- **New Table: DRAFT_DELIVERIES**: Thêm bảng lưu tạm delivery
+  - Lưu tạm thông tin delivery chưa hoàn tất (không có code)
+  - Auto TTL cleanup sau 30 ngày
+  - Chỉ owner mới có thể thao tác
+  - Có thể convert thành delivery chính thức
 - **New Table: DELIVERY_COUNTERS**: Thêm bảng atomic counter cho code generation
   - Đảm bảo thread-safe sequence generation
   - Auto TTL cleanup sau 90 ngày
@@ -326,11 +394,11 @@ erDiagram
   - Type safety với required toRouteId validation
 - **Field PaymentType**: Thêm trường `paymentType` vào bảng DELIVERIES với 3 giá trị:
   - `null` (mặc định): Thanh toán bình thường
-  - `debt`: Thanh toán nợ (khách hàng sẽ trả sau)  
+  - `debt`: Thanh toán nợ (khách hàng sẽ trả sau)
   - `free`: Giao hàng miễn phí
 - **Cập Nhật Công Thức TotalCost**: Loại bỏ `homeDeliveryCost` khỏi tính toán tổng chi phí
-  - Công thức cũ: `totalCost = cost + homeDeliveryCost + itemCost + collectForCustomerCost`
-  - Công thức mới: `totalCost = cost + itemCost + collectForCustomerCost`
+  - Công thức cũ: `totalCost = cost + homeDeliveryCost + itemCost(phí trị giá) + collectForCustomerCost`
+  - Công thức mới: `totalCost = cost + itemCost(phí trị giá) + collectForCustomerCost`
 
 ### Cân Nhắc Migration và Mở Rộng
 

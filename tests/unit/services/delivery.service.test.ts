@@ -6,6 +6,7 @@ import { User } from '@/models/user.model';
 import { CodeGeneratorService } from '@/services/code-generator.service';
 import { IDeliveryResponse } from '@/types/delivery.type';
 import { CustomerService } from '@/services/customer.service';
+import { SettingsService } from '@/services/settings.service';
 
 // Mock mongoose Types
 jest.mock('mongoose', () => ({
@@ -21,8 +22,10 @@ jest.mock('@/models/customer.model');
 jest.mock('@/models/route.model');
 jest.mock('@/models/user.model');
 jest.mock('@/services/customer.service');
+jest.mock('@/services/settings.service');
 
 const MockedCustomerService = CustomerService as jest.MockedClass<typeof CustomerService>;
+const MockedSettingsService = SettingsService as jest.MockedClass<typeof SettingsService>;
 jest.mock('@/services/code-generator.service', () => ({
   CodeGeneratorService: {
     generateNextCode: jest.fn(),
@@ -42,6 +45,29 @@ describe('DeliveryService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+
+    // Mock settings service to return valid shipping rates for itemCost validation
+    const mockShippingRates = [
+      {
+        fromAmount: 0,
+        toAmount: 10000000,
+        regularShippingFee: 15000,
+        expressShippingFee: 20000,
+        fromAmountUnit: 'VND' as const,
+        toAmountUnit: 'VND' as const,
+        regularShippingFeeUnit: 'VND' as const,
+        expressShippingFeeUnit: 'VND' as const,
+      },
+    ];
+
+    // Mock the constructor and the method
+    MockedSettingsService.mockImplementation(
+      () =>
+        ({
+          getShippingRates: jest.fn().mockResolvedValue(mockShippingRates),
+        }) as any
+    );
+
     deliveryService = new DeliveryService();
   });
 
@@ -58,7 +84,7 @@ describe('DeliveryService', () => {
       homeDelivery: '123 Main St',
       homeDeliveryCost: 20,
       itemValue: 500,
-      itemCost: 50,
+      itemCost: 15000,
       collectCost: 30,
       collectForCustomer: 25000,
       collectForCustomerCost: 40,
@@ -109,7 +135,7 @@ describe('DeliveryService', () => {
       homeDelivery: '123 Main St',
       homeDeliveryCost: 20,
       itemValue: 500,
-      itemCost: 50,
+      itemCost: 15000,
       collectCost: 30,
       collectForCustomer: 25000,
       collectForCustomerCost: 40,
@@ -146,7 +172,7 @@ describe('DeliveryService', () => {
       homeDelivery: '123 Main St',
       homeDeliveryCost: 20,
       itemValue: 500,
-      itemCost: 50,
+      itemCost: 15000,
       collectCost: 30,
       collectForCustomer: 25000,
       collectForCustomerCost: 40,
@@ -205,11 +231,13 @@ describe('DeliveryService', () => {
         homeDelivery: '123 Main St',
         homeDeliveryCost: 20,
         itemValue: 500,
-        itemCost: 50,
+        itemCost: 15000,
         collectCost: 30,
         collectForCustomer: 25000,
         collectForCustomerCost: 40,
         collectForCustomerNote: 'Test note',
+        notes: undefined,
+        paymentType: undefined,
         createdByUser: 'user123',
       });
       expect(mockDelivery.save).toHaveBeenCalled();
@@ -339,7 +367,7 @@ describe('DeliveryService', () => {
       homeDelivery: '123 Main St',
       homeDeliveryCost: 20,
       itemValue: 500,
-      itemCost: 50,
+      itemCost: 15000,
       collectCost: 30,
       collectForCustomer: 25000,
       collectForCustomerCost: 40,
@@ -379,7 +407,7 @@ describe('DeliveryService', () => {
       homeDelivery: '123 Main St',
       homeDeliveryCost: 20,
       itemValue: 500,
-      itemCost: 50,
+      itemCost: 15000,
       collectCost: 30,
       collectForCustomer: 25000,
       collectForCustomerCost: 40,
@@ -521,7 +549,7 @@ describe('DeliveryService', () => {
       homeDelivery: '123 Main St',
       homeDeliveryCost: 20,
       itemValue: 500,
-      itemCost: 50,
+      itemCost: 15000,
       collectCost: 30,
       collectForCustomer: 25000,
       collectForCustomerCost: 40,
@@ -570,7 +598,7 @@ describe('DeliveryService', () => {
       homeDelivery: '123 Main St',
       homeDeliveryCost: 20,
       itemValue: 500,
-      itemCost: 50,
+      itemCost: 15000,
       collectCost: 30,
       collectForCustomer: 25000,
       collectForCustomerCost: 40,
@@ -898,7 +926,7 @@ describe('DeliveryService', () => {
       homeDelivery: '123 Main St',
       homeDeliveryCost: 20,
       itemValue: 500,
-      itemCost: 50,
+      itemCost: 15000,
       collectCost: 30,
       collectForCustomer: 25000,
       collectForCustomerCost: 40,
@@ -947,7 +975,7 @@ describe('DeliveryService', () => {
       homeDelivery: '123 Main St',
       homeDeliveryCost: 20,
       itemValue: 500,
-      itemCost: 50,
+      itemCost: 15000,
       collectCost: 30,
       collectForCustomer: 25000,
       collectForCustomerCost: 40,
