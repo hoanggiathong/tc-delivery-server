@@ -31,18 +31,109 @@ export class CustomerController {
    *               name:
    *                 type: string
    *                 maxLength: 100
+   *                 example: "Phạm Văn Đức"
    *               phone:
    *                 type: string
    *                 pattern: ^\+?[1-9]\d{1,14}$
+   *                 example: "+84912345678"
+   *           examples:
+   *             newCustomer:
+   *               summary: Create new customer
+   *               value:
+   *                 name: "Phạm Văn Đức"
+   *                 phone: "+84912345678"
    *     responses:
    *       201:
    *         description: Customer created successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Customer created successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     customer:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                         name:
+   *                           type: string
+   *                         phone:
+   *                           type: string
+   *                         createdAt:
+   *                           type: string
+   *                         updatedAt:
+   *                           type: string
+   *             examples:
+   *               created:
+   *                 summary: Customer created
+   *                 value:
+   *                   success: true
+   *                   message: "Customer created successfully"
+   *                   data:
+   *                     customer:
+   *                       id: "507f1f77bcf86cd799439030"
+   *                       name: "Phạm Văn Đức"
+   *                       phone: "+84912345678"
+   *                       createdAt: "2024-12-17T10:00:00.000Z"
+   *                       updatedAt: "2024-12-17T10:00:00.000Z"
    *       400:
    *         description: Validation error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *             examples:
+   *               invalidPhone:
+   *                 summary: Invalid phone format
+   *                 value:
+   *                   success: false
+   *                   message: "Validation error: Invalid phone number format"
+   *               missingName:
+   *                 summary: Missing required field
+   *                 value:
+   *                   success: false
+   *                   message: "Validation error: Name is required"
    *       409:
    *         description: Customer with this name and phone already exists
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Customer with this name and phone already exists"
    *       403:
    *         description: Insufficient permissions
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Insufficient permissions"
    */
   createCustomer = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -85,6 +176,7 @@ export class CustomerController {
    *         required: true
    *         schema:
    *           type: string
+   *         example: "507f1f77bcf86cd799439030"
    *     requestBody:
    *       required: true
    *       content:

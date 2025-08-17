@@ -9,6 +9,8 @@ export interface IMoneyDelivery extends Document {
   toRoute: mongoose.Types.ObjectId;
   sendMoneyAmount: number;
   sendCost: number;
+  sendFee: number;
+  transferType: 'regular' | 'express' | 'free';
   totalCost: number;
   notes?: string;
   createdByUser: mongoose.Types.ObjectId;
@@ -55,6 +57,18 @@ const moneyDeliverySchema = new Schema<IMoneyDelivery>(
       required: [true, 'Send cost is required'],
       min: [0, 'Send cost must be positive'],
     },
+    sendFee: {
+      type: Number,
+      required: false,
+      min: [0, 'Send fee must be positive'],
+      default: 0,
+    },
+    transferType: {
+      type: String,
+      enum: ['regular', 'express', 'free'],
+      default: 'regular',
+      required: true,
+    },
     totalCost: {
       type: Number,
       required: false, // Will be calculated by pre-save middleware
@@ -82,9 +96,16 @@ const moneyDeliverySchema = new Schema<IMoneyDelivery>(
   }
 );
 
-// Pre-save middleware to calculate totalCost
-moneyDeliverySchema.pre('save', function (next) {
-  this.totalCost = this.sendCost;
+// Pre-save middleware to calculate sendFee and totalCost based on transferType
+moneyDeliverySchema.pre('save', async function (next) {
+  if (this.transferType === 'free') {
+    this.sendFee = 0;
+    this.totalCost = 0;
+  } else {
+    // For regular and express, sendFee will be calculated in service layer
+    // based on shipping rates configuration
+    this.totalCost = this.sendCost;
+  }
   next();
 });
 
@@ -99,7 +120,7 @@ moneyDeliverySchema.pre('save', function (next) {
   next();
 });
 
-// Pre-update middleware to calculate totalCost
+// Pre-update middleware to calculate totalCost based on transferType
 moneyDeliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next) {
   const update = this.getUpdate() as any;
   if (update) {
@@ -119,9 +140,16 @@ moneyDeliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next)
       return next(new Error('From route and to route cannot be the same'));
     }
 
-    // Only calculate if sendCost is being updated
-    if (update.sendCost !== undefined) {
-      update.totalCost = update.sendCost;
+    // Calculate totalCost based on transferType
+    if (update.transferType === 'free') {
+      update.sendFee = 0;
+      update.totalCost = 0;
+    } else if (update.sendCost !== undefined || update.transferType !== undefined) {
+      // For regular and express, sendFee should be calculated in service layer
+      // totalCost = sendCost for now
+      if (update.sendCost !== undefined) {
+        update.totalCost = update.sendCost;
+      }
     }
   }
   next();

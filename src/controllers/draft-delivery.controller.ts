@@ -23,12 +23,120 @@ export class DraftDeliveryController {
    *       content:
    *         application/json:
    *           schema:
-   *             $ref: '#/components/schemas/CreateDraftDelivery'
+   *             type: object
+   *             properties:
+   *               senderName:
+   *                 type: string
+   *                 example: "Nguyễn Văn An"
+   *               senderPhone:
+   *                 type: string
+   *                 example: "+84901234567"
+   *               receiverName:
+   *                 type: string
+   *                 example: "Trần Thị Bình"
+   *               receiverPhone:
+   *                 type: string
+   *                 example: "+84907654321"
+   *               fromRouteId:
+   *                 type: string
+   *                 example: "507f1f77bcf86cd799439011"
+   *               toRouteId:
+   *                 type: string
+   *                 example: "507f1f77bcf86cd799439012"
+   *               name:
+   *                 type: string
+   *                 example: "Quần áo"
+   *               cost:
+   *                 type: number
+   *                 example: 30000
+   *               itemValue:
+   *                 type: number
+   *                 example: 500000
+   *               notes:
+   *                 type: string
+   *                 example: "Hàng dễ vỡ"
+   *           examples:
+   *             simpleDraft:
+   *               summary: Simple draft
+   *               value:
+   *                 senderName: "Nguyễn Văn An"
+   *                 senderPhone: "+84901234567"
+   *                 receiverName: "Trần Thị Bình"
+   *                 receiverPhone: "+84907654321"
+   *                 fromRouteId: "507f1f77bcf86cd799439011"
+   *                 toRouteId: "507f1f77bcf86cd799439012"
+   *                 name: "Quần áo"
+   *                 cost: 30000
+   *             detailedDraft:
+   *               summary: Detailed draft
+   *               value:
+   *                 senderName: "Shop ABC"
+   *                 senderPhone: "+84908888888"
+   *                 receiverName: "Lê Văn Cường"
+   *                 receiverPhone: "+84909999999"
+   *                 fromRouteId: "507f1f77bcf86cd799439011"
+   *                 toRouteId: "507f1f77bcf86cd799439012"
+   *                 name: "Điện thoại"
+   *                 cost: 50000
+   *                 itemValue: 15000000
+   *                 itemCost: 150000
+   *                 collectForCustomer: 15000000
+   *                 collectForCustomerCost: 150000
+   *                 notes: "Hàng giá trị cao, cẩn thận"
    *     responses:
    *       201:
    *         description: Draft created successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Draft created successfully"
+   *                 data:
+   *                   type: object
+   *             examples:
+   *               created:
+   *                 summary: Draft created
+   *                 value:
+   *                   success: true
+   *                   message: "Draft created successfully"
+   *                   data:
+   *                     id: "507f1f77bcf86cd799439030"
+   *                     senderName: "Nguyễn Văn An"
+   *                     senderPhone: "+84901234567"
+   *                     receiverName: "Trần Thị Bình"
+   *                     receiverPhone: "+84907654321"
+   *                     fromRouteId: "507f1f77bcf86cd799439011"
+   *                     toRouteId: "507f1f77bcf86cd799439012"
+   *                     name: "Quần áo"
+   *                     cost: 30000
+   *                     status: "draft"
+   *                     createdByUser: "507f1f77bcf86cd799439040"
+   *                     createdAt: "2024-12-17T10:00:00.000Z"
+   *                     updatedAt: "2024-12-17T10:00:00.000Z"
    *       400:
    *         description: Validation error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *             examples:
+   *               invalidPhone:
+   *                 summary: Invalid phone format
+   *                 value:
+   *                   success: false
+   *                   message: "Validation error: Invalid phone number format"
    *       401:
    *         description: Unauthorized
    */
@@ -89,19 +197,85 @@ export class DraftDeliveryController {
    *         required: true
    *         schema:
    *           type: string
+   *         example: "507f1f77bcf86cd799439030"
    *     requestBody:
    *       required: true
    *       content:
    *         application/json:
    *           schema:
-   *             $ref: '#/components/schemas/UpdateDraftDelivery'
+   *             type: object
+   *             properties:
+   *               senderName:
+   *                 type: string
+   *               senderPhone:
+   *                 type: string
+   *               receiverName:
+   *                 type: string
+   *               receiverPhone:
+   *                 type: string
+   *               name:
+   *                 type: string
+   *               cost:
+   *                 type: number
+   *               notes:
+   *                 type: string
+   *           examples:
+   *             updateReceiver:
+   *               summary: Update receiver info
+   *               value:
+   *                 receiverName: "Phạm Văn Đức"
+   *                 receiverPhone: "+84906666666"
+   *             updateCost:
+   *               summary: Update cost
+   *               value:
+   *                 cost: 45000
+   *                 notes: "Đã cập nhật phí giao hàng"
    *     responses:
    *       200:
    *         description: Draft updated successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Draft updated successfully"
+   *                 data:
+   *                   type: object
+   *             examples:
+   *               updated:
+   *                 summary: Draft updated
+   *                 value:
+   *                   success: true
+   *                   message: "Draft updated successfully"
+   *                   data:
+   *                     id: "507f1f77bcf86cd799439030"
+   *                     senderName: "Nguyễn Văn An"
+   *                     senderPhone: "+84901234567"
+   *                     receiverName: "Phạm Văn Đức"
+   *                     receiverPhone: "+84906666666"
+   *                     cost: 45000
+   *                     status: "draft"
+   *                     updatedAt: "2024-12-17T11:00:00.000Z"
    *       400:
    *         description: Validation error
    *       404:
    *         description: Draft not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Draft not found"
    *       401:
    *         description: Unauthorized
    */
@@ -161,6 +335,57 @@ export class DraftDeliveryController {
    *     responses:
    *       200:
    *         description: Drafts retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Drafts retrieved successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     drafts:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                     total:
+   *                       type: integer
+   *             examples:
+   *               withDrafts:
+   *                 summary: User has drafts
+   *                 value:
+   *                   success: true
+   *                   message: "Drafts retrieved successfully"
+   *                   data:
+   *                     drafts:
+   *                       - id: "507f1f77bcf86cd799439030"
+   *                         senderName: "Nguyễn Văn An"
+   *                         receiverName: "Trần Thị Bình"
+   *                         name: "Quần áo"
+   *                         cost: 30000
+   *                         status: "draft"
+   *                         createdAt: "2024-12-17T10:00:00.000Z"
+   *                       - id: "507f1f77bcf86cd799439031"
+   *                         senderName: "Shop ABC"
+   *                         receiverName: "Lê Văn Cường"
+   *                         name: "Điện thoại"
+   *                         cost: 50000
+   *                         status: "draft"
+   *                         createdAt: "2024-12-17T09:00:00.000Z"
+   *                     total: 2
+   *               noDrafts:
+   *                 summary: No drafts found
+   *                 value:
+   *                   success: true
+   *                   message: "Drafts retrieved successfully"
+   *                   data:
+   *                     drafts: []
+   *                     total: 0
    *       401:
    *         description: Unauthorized
    */
@@ -220,11 +445,57 @@ export class DraftDeliveryController {
    *         required: true
    *         schema:
    *           type: string
+   *         example: "507f1f77bcf86cd799439030"
    *     responses:
    *       200:
    *         description: Draft retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Draft retrieved successfully"
+   *                 data:
+   *                   type: object
+   *             examples:
+   *               found:
+   *                 summary: Draft found
+   *                 value:
+   *                   success: true
+   *                   message: "Draft retrieved successfully"
+   *                   data:
+   *                     id: "507f1f77bcf86cd799439030"
+   *                     senderName: "Nguyễn Văn An"
+   *                     senderPhone: "+84901234567"
+   *                     receiverName: "Trần Thị Bình"
+   *                     receiverPhone: "+84907654321"
+   *                     fromRouteId: "507f1f77bcf86cd799439011"
+   *                     toRouteId: "507f1f77bcf86cd799439012"
+   *                     name: "Quần áo"
+   *                     cost: 30000
+   *                     itemValue: 500000
+   *                     status: "draft"
+   *                     createdByUser: "507f1f77bcf86cd799439040"
+   *                     createdAt: "2024-12-17T10:00:00.000Z"
+   *                     updatedAt: "2024-12-17T10:00:00.000Z"
    *       404:
    *         description: Draft not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Draft not found"
    *       401:
    *         description: Unauthorized
    */
@@ -287,11 +558,40 @@ export class DraftDeliveryController {
    *         required: true
    *         schema:
    *           type: string
+   *         example: "507f1f77bcf86cd799439030"
    *     responses:
    *       200:
    *         description: Draft deleted successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Draft deleted successfully"
+   *             examples:
+   *               deleted:
+   *                 summary: Draft deleted
+   *                 value:
+   *                   success: true
+   *                   message: "Draft deleted successfully"
    *       404:
    *         description: Draft not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Draft not found"
    *       401:
    *         description: Unauthorized
    */
@@ -353,11 +653,65 @@ export class DraftDeliveryController {
    *         required: true
    *         schema:
    *           type: string
+   *         example: "507f1f77bcf86cd799439030"
    *     responses:
    *       201:
    *         description: Draft converted to delivery successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Draft converted to delivery successfully"
+   *                 data:
+   *                   type: object
+   *             examples:
+   *               converted:
+   *                 summary: Draft converted
+   *                 value:
+   *                   success: true
+   *                   message: "Draft converted to delivery successfully"
+   *                   data:
+   *                     id: "507f1f77bcf86cd799439050"
+   *                     code: "2412170001"
+   *                     sender:
+   *                       id: "507f1f77bcf86cd799439051"
+   *                       name: "Nguyễn Văn An"
+   *                       phone: "+84901234567"
+   *                     receiver:
+   *                       id: "507f1f77bcf86cd799439052"
+   *                       name: "Trần Thị Bình"
+   *                       phone: "+84907654321"
+   *                     fromRoute:
+   *                       id: "507f1f77bcf86cd799439011"
+   *                       code: "T1"
+   *                       name: "TP.HCM"
+   *                     toRoute:
+   *                       id: "507f1f77bcf86cd799439012"
+   *                       code: "T2"
+   *                       name: "Hà Nội"
+   *                     name: "Quần áo"
+   *                     cost: 30000
+   *                     totalCost: 30000
+   *                     createdAt: "2024-12-17T10:30:00.000Z"
    *       404:
    *         description: Draft not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Draft not found"
    *       401:
    *         description: Unauthorized
    */
@@ -418,6 +772,37 @@ export class DraftDeliveryController {
    *     responses:
    *       200:
    *         description: All drafts deleted successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "3 drafts deleted successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     deletedCount:
+   *                       type: integer
+   *             examples:
+   *               deleted:
+   *                 summary: Multiple drafts deleted
+   *                 value:
+   *                   success: true
+   *                   message: "3 drafts deleted successfully"
+   *                   data:
+   *                     deletedCount: 3
+   *               noDrafts:
+   *                 summary: No drafts to delete
+   *                 value:
+   *                   success: true
+   *                   message: "0 drafts deleted successfully"
+   *                   data:
+   *                     deletedCount: 0
    *       401:
    *         description: Unauthorized
    */

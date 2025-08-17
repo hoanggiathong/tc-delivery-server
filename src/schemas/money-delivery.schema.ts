@@ -34,6 +34,7 @@ export const createMoneyDeliverySchema = z.object({
       .trim(),
     sendMoneyAmount: z.number().min(0, 'Send money amount must be positive'),
     sendCost: z.number().min(0, 'Send cost must be positive'),
+    transferType: z.enum(['regular', 'express', 'free']).optional(),
     notes: z.string().trim().optional(),
   }),
 });
@@ -78,6 +79,7 @@ export const updateMoneyDeliverySchema = z.object({
       .optional(),
     sendMoneyAmount: z.number().min(0, 'Send money amount must be positive').optional(),
     sendCost: z.number().min(0, 'Send cost must be positive').optional(),
+    transferType: z.enum(['regular', 'express', 'free']).optional(),
     notes: z.string().trim().optional(),
   }),
 });

@@ -277,19 +277,119 @@ router.delete(
  *                 type: number
  *                 minimum: 0
  *                 description: Amount to calculate shipping fee for
+ *                 example: 1000000
  *               isExpress:
  *                 type: boolean
  *                 default: false
  *                 description: Whether to calculate express shipping fee
+ *                 example: false
+ *           examples:
+ *             regular:
+ *               summary: Regular shipping fee
+ *               value:
+ *                 amount: 1000000
+ *                 isExpress: false
+ *             express:
+ *               summary: Express shipping fee
+ *               value:
+ *                 amount: 1000000
+ *                 isExpress: true
  *     responses:
  *       200:
  *         description: Shipping fee calculated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Shipping fee calculated successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     amount:
+ *                       type: number
+ *                       description: The amount used for calculation
+ *                       example: 1000000
+ *                     isExpress:
+ *                       type: boolean
+ *                       description: Whether express fee was calculated
+ *                       example: false
+ *                     shippingFee:
+ *                       type: number
+ *                       description: The calculated shipping fee
+ *                       example: 15000
+ *             examples:
+ *               regularFee:
+ *                 summary: Regular shipping fee response
+ *                 value:
+ *                   success: true
+ *                   message: "Shipping fee calculated successfully"
+ *                   data:
+ *                     amount: 1000000
+ *                     isExpress: false
+ *                     shippingFee: 15000
+ *               expressFee:
+ *                 summary: Express shipping fee response
+ *                 value:
+ *                   success: true
+ *                   message: "Shipping fee calculated successfully"
+ *                   data:
+ *                     amount: 1000000
+ *                     isExpress: true
+ *                     shippingFee: 30000
+ *               percentageFee:
+ *                 summary: Percentage-based fee response
+ *                 value:
+ *                   success: true
+ *                   message: "Shipping fee calculated successfully"
+ *                   data:
+ *                     amount: 10000000
+ *                     isExpress: false
+ *                     shippingFee: 100000
  *       400:
  *         description: Invalid input data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Validation error: Amount must be a positive number"
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "No token provided"
  *       404:
  *         description: No shipping rate found for amount
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "No shipping rate found for amount 999999999"
  */
 router.post(
   '/calculate-shipping-fee',

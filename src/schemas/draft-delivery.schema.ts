@@ -50,8 +50,14 @@ export const updateDraftDeliverySchema = z.object({
     senderPhone: z.string().regex(phoneRegex, 'Invalid phone number format').optional(),
     receiverName: z.string().min(1).max(100).optional(),
     receiverPhone: z.string().regex(phoneRegex, 'Invalid phone number format').optional(),
-    fromRouteId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format').optional(),
-    toRouteId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format').optional(),
+    fromRouteId: z
+      .string()
+      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format')
+      .optional(),
+    toRouteId: z
+      .string()
+      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format')
+      .optional(),
     name: z.string().min(1).max(200).optional(),
     cost: z.number().min(0).optional(),
     homeDelivery: z.string().max(500).optional(),

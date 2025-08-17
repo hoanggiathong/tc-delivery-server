@@ -157,8 +157,12 @@ export class DraftDeliveryService {
       }
     });
 
-    if (data.fromRouteId) updateData.fromRoute = data.fromRouteId;
-    if (data.toRouteId) updateData.toRoute = data.toRouteId;
+    if (data.fromRouteId) {
+      updateData.fromRoute = data.fromRouteId;
+    }
+    if (data.toRouteId) {
+      updateData.toRoute = data.toRouteId;
+    }
 
     const updatedDraft = await DraftDelivery.findByIdAndUpdate(draftId, updateData, {
       new: true,
@@ -313,9 +317,7 @@ export class DraftDeliveryService {
       );
 
       if (!matchingRate) {
-        throw new Error(
-          `No shipping rate found for item value ${itemValue.toLocaleString()} VND`
-        );
+        throw new Error(`No shipping rate found for item value ${itemValue.toLocaleString()} VND`);
       }
 
       let expectedFee: number;

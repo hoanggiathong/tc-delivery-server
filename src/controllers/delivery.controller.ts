@@ -38,56 +38,198 @@ export class DeliveryController {
    *               - toRouteId
    *               - name
    *               - cost
-   *               - homeDelivery
-   *               - homeDeliveryCost
    *               - itemValue
    *               - itemCost
-   *               - collectCost
    *               - collectForCustomer
    *               - collectForCustomerCost
-   *               - collectForCustomerNote
    *             properties:
    *               senderName:
    *                 type: string
+   *                 example: "Nguyễn Văn An"
    *               senderPhone:
    *                 type: string
+   *                 example: "+84901234567"
    *               receiverName:
    *                 type: string
+   *                 example: "Trần Thị Bình"
    *               receiverPhone:
    *                 type: string
+   *                 example: "+84907654321"
    *               fromRouteId:
    *                 type: string
    *                 description: ObjectId of the from route
+   *                 example: "507f1f77bcf86cd799439011"
    *               toRouteId:
    *                 type: string
    *                 description: ObjectId of the to route
+   *                 example: "507f1f77bcf86cd799439012"
    *               name:
    *                 type: string
+   *                 example: "Quần áo"
    *               cost:
    *                 type: number
+   *                 example: 30000
    *               homeDelivery:
    *                 type: string
+   *                 example: "123 Nguyễn Trãi, Q.5, TP.HCM"
    *               homeDeliveryCost:
    *                 type: number
+   *                 example: 20000
    *               itemValue:
    *                 type: number
+   *                 example: 500000
    *               itemCost:
    *                 type: number
+   *                 example: 10000
    *               collectCost:
    *                 type: number
+   *                 example: 0
    *               collectForCustomer:
-   *                 type: boolean
+   *                 type: number
+   *                 example: 500000
    *               collectForCustomerCost:
    *                 type: number
+   *                 example: 5000
    *               collectForCustomerNote:
    *                 type: string
+   *                 example: "Thu tiền hàng"
+   *               paymentType:
+   *                 type: string
+   *                 enum: [null, debt, free]
+   *                 example: null
+   *               notes:
+   *                 type: string
+   *                 example: "Hàng dễ vỡ, vui lòng cẩn thận"
+   *           examples:
+   *             normalDelivery:
+   *               summary: Normal delivery with COD
+   *               value:
+   *                 senderName: "Nguyễn Văn An"
+   *                 senderPhone: "+84901234567"
+   *                 receiverName: "Trần Thị Bình"
+   *                 receiverPhone: "+84907654321"
+   *                 fromRouteId: "507f1f77bcf86cd799439011"
+   *                 toRouteId: "507f1f77bcf86cd799439012"
+   *                 name: "Quần áo"
+   *                 cost: 30000
+   *                 homeDelivery: "123 Nguyễn Trãi, Q.5, TP.HCM"
+   *                 homeDeliveryCost: 20000
+   *                 itemValue: 500000
+   *                 itemCost: 10000
+   *                 collectCost: 0
+   *                 collectForCustomer: 500000
+   *                 collectForCustomerCost: 5000
+   *                 collectForCustomerNote: "Thu tiền hàng"
+   *                 notes: "Hàng dễ vỡ, vui lòng cẩn thận"
+   *             freeDelivery:
+   *               summary: Free delivery
+   *               value:
+   *                 senderName: "Shop ABC"
+   *                 senderPhone: "+84908888888"
+   *                 receiverName: "Lê Văn Cường"
+   *                 receiverPhone: "+84909999999"
+   *                 fromRouteId: "507f1f77bcf86cd799439011"
+   *                 toRouteId: "507f1f77bcf86cd799439012"
+   *                 name: "Quà tặng"
+   *                 cost: 0
+   *                 itemValue: 100000
+   *                 itemCost: 0
+   *                 collectForCustomer: 0
+   *                 collectForCustomerCost: 0
+   *                 paymentType: "free"
+   *                 notes: "Giao hàng miễn phí"
    *     responses:
    *       201:
    *         description: Delivery created successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Delivery created successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     id:
+   *                       type: string
+   *                     code:
+   *                       type: string
+   *                     totalCost:
+   *                       type: number
+   *             examples:
+   *               created:
+   *                 summary: Delivery created
+   *                 value:
+   *                   success: true
+   *                   message: "Delivery created successfully"
+   *                   data:
+   *                     id: "507f1f77bcf86cd799439020"
+   *                     code: "2412170001"
+   *                     sender:
+   *                       id: "507f1f77bcf86cd799439021"
+   *                       name: "Nguyễn Văn An"
+   *                       phone: "+84901234567"
+   *                     receiver:
+   *                       id: "507f1f77bcf86cd799439022"
+   *                       name: "Trần Thị Bình"
+   *                       phone: "+84907654321"
+   *                     fromRoute:
+   *                       id: "507f1f77bcf86cd799439011"
+   *                       code: "T1"
+   *                       name: "Tuyến 1"
+   *                     toRoute:
+   *                       id: "507f1f77bcf86cd799439012"
+   *                       code: "T2"
+   *                       name: "Tuyến 2"
+   *                     name: "Quần áo"
+   *                     cost: 30000
+   *                     itemValue: 500000
+   *                     itemCost: 10000
+   *                     collectForCustomer: 500000
+   *                     collectForCustomerCost: 5000
+   *                     totalCost: 45000
+   *                     createdAt: "2024-12-17T10:00:00.000Z"
    *       400:
    *         description: Validation error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *             examples:
+   *               invalidItemCost:
+   *                 summary: Invalid item cost
+   *                 value:
+   *                   success: false
+   *                   message: "Item cost 5000 does not match the expected fee 10000 for item value 500000"
+   *               invalidPhone:
+   *                 summary: Invalid phone number
+   *                 value:
+   *                   success: false
+   *                   message: "Validation error: Invalid phone number format"
    *       401:
    *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Unauthorized"
    */
   createDelivery = async (req: AuthRequest, res: Response): Promise<void> => {
     try {

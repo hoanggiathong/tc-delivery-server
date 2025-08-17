@@ -5,6 +5,7 @@ import { User } from '@/models/user.model';
 import { Types, PipelineStage } from 'mongoose';
 import { CustomerService } from '@/services/customer.service';
 import { CodeGeneratorService } from '@/services/code-generator.service';
+import { SettingsService } from '@/services/settings.service';
 import Logger from '@/utils/logger';
 
 interface IMoneyAggregationResultItem {
@@ -40,9 +41,62 @@ import {
 
 export class MoneyDeliveryService {
   private customerService: CustomerService;
+  private settingsService: SettingsService;
 
   constructor() {
     this.customerService = new CustomerService();
+    this.settingsService = new SettingsService();
+  }
+
+  /**
+   * Calculate sendFee based on transferType and sendMoneyAmount
+   */
+  private async calculateSendFee(
+    sendMoneyAmount: number,
+    transferType: 'regular' | 'express' | 'free'
+  ): Promise<number> {
+    if (transferType === 'free') {
+      return 0;
+    }
+
+    try {
+      const shippingRates = await this.settingsService.getShippingRates();
+      if (!shippingRates || shippingRates.length === 0) {
+        Logger.warn('No shipping rates configured, using sendCost as default');
+        return 0;
+      }
+
+      // Find the matching rate range for the sendMoneyAmount
+      const matchingRate = shippingRates.find(
+        rate => sendMoneyAmount >= rate.fromAmount && sendMoneyAmount <= rate.toAmount
+      );
+
+      if (!matchingRate) {
+        Logger.warn(`No matching rate found for amount ${sendMoneyAmount}, using 0 as sendFee`);
+        return 0;
+      }
+
+      // Get the appropriate fee based on transferType
+      const feeAmount =
+        transferType === 'express'
+          ? matchingRate.expressShippingFee
+          : matchingRate.regularShippingFee;
+      const feeUnit =
+        transferType === 'express'
+          ? matchingRate.expressShippingFeeUnit || 'VND'
+          : matchingRate.regularShippingFeeUnit || 'VND';
+
+      // Calculate based on unit type
+      if (feeUnit === '%') {
+        return Math.round((sendMoneyAmount * feeAmount) / 100);
+      }
+
+      // For VND or USD, return the fixed amount
+      return feeAmount;
+    } catch (error) {
+      Logger.error('Error calculating sendFee:', error);
+      return 0;
+    }
   }
 
   /**
@@ -109,6 +163,8 @@ export class MoneyDeliveryService {
       },
       sendMoneyAmount: populated.sendMoneyAmount,
       sendCost: populated.sendCost,
+      sendFee: populated.sendFee,
+      transferType: populated.transferType,
       totalCost: populated.totalCost,
       notes: populated.notes,
       createdByUser: populated.createdByUser.username,
@@ -156,6 +212,8 @@ export class MoneyDeliveryService {
       },
       sendMoneyAmount: moneyDelivery.sendMoneyAmount,
       sendCost: moneyDelivery.sendCost,
+      sendFee: moneyDelivery.sendFee,
+      transferType: moneyDelivery.transferType,
       totalCost: moneyDelivery.totalCost,
       notes: moneyDelivery.notes,
       createdByUser: moneyDelivery.createdByUser.username,
@@ -197,6 +255,12 @@ export class MoneyDeliveryService {
       data.toRouteId
     );
 
+    // Get transfer type (default to 'regular' if not specified)
+    const transferType = data.transferType || 'regular';
+
+    // Calculate sendFee based on transferType
+    const sendFee = await this.calculateSendFee(data.sendMoneyAmount, transferType);
+
     // Create money delivery
     const moneyDelivery = new MoneyDelivery({
       code: moneyDeliveryCode,
@@ -206,6 +270,8 @@ export class MoneyDeliveryService {
       toRoute: data.toRouteId,
       sendMoneyAmount: data.sendMoneyAmount,
       sendCost: data.sendCost,
+      sendFee,
+      transferType,
       notes: data.notes,
       createdByUser: userId,
     });
@@ -273,6 +339,21 @@ export class MoneyDeliveryService {
     }
     if (data.notes !== undefined) {
       updateData.notes = data.notes;
+    }
+
+    // Handle transferType update and recalculate sendFee
+    if (data.transferType !== undefined) {
+      updateData.transferType = data.transferType;
+
+      // Get the sendMoneyAmount for fee calculation
+      const sendMoneyAmount = data.sendMoneyAmount || moneyDelivery.sendMoneyAmount;
+      updateData.sendFee = await this.calculateSendFee(sendMoneyAmount, data.transferType);
+    } else if (data.sendMoneyAmount !== undefined) {
+      // If only sendMoneyAmount changed, recalculate sendFee with existing transferType
+      updateData.sendFee = await this.calculateSendFee(
+        data.sendMoneyAmount,
+        moneyDelivery.transferType
+      );
     }
 
     // Update money delivery

@@ -92,7 +92,9 @@ erDiagram
         ObjectId toRoute FK "tham chiếu: ROUTES, bắt buộc"
         number sendMoneyAmount "số tiền gửi, bắt buộc, tối thiểu 0"
         number sendCost "phí dịch vụ, bắt buộc, tối thiểu 0"
-        number totalCost "tính toán: chỉ sendCost (tính toán đơn giản)"
+        number sendFee "phí giao dịch, tính theo shipping rates, mặc định 0"
+        enum transferType "regular|express|free, mặc định regular"
+        number totalCost "tính toán: sendCost (free thì = 0)"
         string notes "tùy chọn, trim"
         ObjectId createdByUser FK "tham chiếu: USERS, bắt buộc"
         datetime createdAt "tự động tạo"
@@ -218,7 +220,17 @@ erDiagram
 #### Bảng MONEY_DELIVERIES
 - **Định dạng mã**: Cùng định dạng 10 chữ số như deliveries
 - **Quy tắc nghiệp vụ**: Cùng các ràng buộc người gửi/nhận và tuyến đường như deliveries
-- **Chi phí đơn giản**: `totalCost = sendCost` (loại trừ sendMoneyAmount khỏi tổng)
+- **Hình thức chuyển tiền (transferType)**:
+  - `regular` (mặc định): Chuyển tiền thường, sendFee tính theo regularShippingFee
+  - `express`: Chuyển tiền nhanh, sendFee tính theo expressShippingFee
+  - `free`: Miễn phí, sendFee = 0 và totalCost = 0
+- **Tính phí giao dịch (sendFee)**:
+  - Tính dựa trên sendMoneyAmount và shipping rates configuration
+  - Hỗ trợ phí cố định (VND/USD) hoặc phần trăm (%)
+  - Tự động cập nhật khi thay đổi transferType hoặc sendMoneyAmount
+- **Chi phí tổng**: 
+  - `totalCost = sendCost` cho regular và express
+  - `totalCost = 0` cho free
 - **Index hiệu suất**: Cùng pattern tối ưu như deliveries
 
 #### Bảng DELIVERY_COUNTERS
@@ -333,6 +345,16 @@ erDiagram
 - **Fallback Strategy**: Có retry mechanism và legacy fallback khi atomic operations fail
 - **Performance**: Reduced database round trips với single atomic operation thay vì multiple queries
 
+#### Money Delivery APIs
+- **Create Money Delivery**: `POST /api/money-deliveries`
+  - Request body bao gồm `transferType` (optional): 'regular', 'express', 'free'
+  - Tự động tính `sendFee` dựa trên `sendMoneyAmount` và `transferType`
+  - `totalCost` = 0 khi `transferType` = 'free'
+- **Update Money Delivery**: `PUT /api/money-deliveries/:id`
+  - Có thể cập nhật `transferType`
+  - Tự động tính lại `sendFee` khi thay đổi `transferType` hoặc `sendMoneyAmount`
+- **Response Format**: Bao gồm `sendFee` và `transferType` trong tất cả responses
+
 #### Tính Phí Vận Chuyển
 - **API Endpoint**: `POST /api/settings/calculate-shipping-fee`
 - **Input**: `{amount: number, isExpress?: boolean}`
@@ -399,6 +421,13 @@ erDiagram
 - **Cập Nhật Công Thức TotalCost**: Loại bỏ `homeDeliveryCost` khỏi tính toán tổng chi phí
   - Công thức cũ: `totalCost = cost + homeDeliveryCost + itemCost(phí trị giá) + collectForCustomerCost`
   - Công thức mới: `totalCost = cost + itemCost(phí trị giá) + collectForCustomerCost`
+- **Money Delivery Transfer Types**: Thêm hình thức chuyển tiền cho MONEY_DELIVERIES
+  - Thêm field `transferType`: regular (mặc định), express, free
+  - Thêm field `sendFee`: Phí giao dịch tính theo shipping rates
+  - Tự động tính sendFee dựa trên sendMoneyAmount và transferType
+  - Free transfer: sendFee = 0, totalCost = 0
+  - Regular: Sử dụng regularShippingFee từ settings
+  - Express: Sử dụng expressShippingFee từ settings
 
 ### Cân Nhắc Migration và Mở Rộng
 

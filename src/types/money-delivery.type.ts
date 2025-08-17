@@ -15,6 +15,8 @@ export interface IMoneyDeliveryResponse extends BaseEntity {
   toRoute: IRouteResponse;
   sendMoneyAmount: number;
   sendCost: number;
+  sendFee: number;
+  transferType: 'regular' | 'express' | 'free';
   totalCost: number;
   notes?: string;
   createdByUser: string;
@@ -30,6 +32,7 @@ export interface IMoneyDeliveryCreateRequest {
   toRouteId: string;
   sendMoneyAmount: number;
   sendCost: number;
+  transferType?: 'regular' | 'express' | 'free';
   notes?: string;
 }
 
@@ -43,6 +46,7 @@ export interface IMoneyDeliveryUpdateRequest {
   toRouteId?: string;
   sendMoneyAmount?: number;
   sendCost?: number;
+  transferType?: 'regular' | 'express' | 'free';
   notes?: string;
 }
 
@@ -66,6 +70,8 @@ export interface IMoneyDeliveryWithPopulatedRefs {
   toRoute: IRoute;
   sendMoneyAmount: number;
   sendCost: number;
+  sendFee: number;
+  transferType: 'regular' | 'express' | 'free';
   totalCost: number;
   notes?: string;
   createdByUser: {
@@ -131,6 +137,8 @@ export interface IMoneyDeliveryLeanPopulated {
   };
   sendMoneyAmount: number;
   sendCost: number;
+  sendFee: number;
+  transferType: 'regular' | 'express' | 'free';
   totalCost: number;
   notes?: string;
   createdByUser: {
@@ -185,6 +193,7 @@ export interface CreateMoneyDeliveryRequest {
   toRouteId: string;
   sendMoneyAmount: number;
   sendCost: number;
+  transferType?: 'regular' | 'express' | 'free';
   notes?: string;
 }
 
@@ -197,5 +206,6 @@ export interface UpdateMoneyDeliveryRequest {
   toRouteId?: string;
   sendMoneyAmount?: number;
   sendCost?: number;
+  transferType?: 'regular' | 'express' | 'free';
   notes?: string;
 }

@@ -43,39 +43,252 @@ export class MoneyDeliveryController {
    *               senderName:
    *                 type: string
    *                 description: Name of the sender
+   *                 example: "Nguyen Van A"
    *               senderPhone:
    *                 type: string
    *                 description: Phone number of the sender
+   *                 example: "+84123456789"
    *               receiverName:
    *                 type: string
    *                 description: Name of the receiver
+   *                 example: "Tran Thi B"
    *               receiverPhone:
    *                 type: string
    *                 description: Phone number of the receiver
+   *                 example: "+84987654321"
    *               fromRouteId:
    *                 type: string
    *                 description: ObjectId of the from route
+   *                 example: "507f1f77bcf86cd799439011"
    *               toRouteId:
    *                 type: string
    *                 description: ObjectId of the to route
+   *                 example: "507f1f77bcf86cd799439012"
    *               sendMoneyAmount:
    *                 type: number
    *                 description: Amount of money to send
+   *                 example: 1000000
    *               sendCost:
    *                 type: number
    *                 description: Service cost for money transfer
+   *                 example: 50000
+   *               transferType:
+   *                 type: string
+   *                 enum: [regular, express, free]
+   *                 description: Transfer type (default is regular)
+   *                 example: "regular"
    *               notes:
    *                 type: string
    *                 description: Optional notes for the money delivery
+   *                 example: "Gửi tiền sinh nhật"
+   *           examples:
+   *             regular:
+   *               summary: Regular money transfer
+   *               value:
+   *                 senderName: "Nguyen Van A"
+   *                 senderPhone: "+84123456789"
+   *                 receiverName: "Tran Thi B"
+   *                 receiverPhone: "+84987654321"
+   *                 fromRouteId: "507f1f77bcf86cd799439011"
+   *                 toRouteId: "507f1f77bcf86cd799439012"
+   *                 sendMoneyAmount: 1000000
+   *                 sendCost: 50000
+   *                 transferType: "regular"
+   *                 notes: "Gửi tiền sinh nhật"
+   *             express:
+   *               summary: Express money transfer
+   *               value:
+   *                 senderName: "Le Van C"
+   *                 senderPhone: "+84333444555"
+   *                 receiverName: "Pham Thi D"
+   *                 receiverPhone: "+84666777888"
+   *                 fromRouteId: "507f1f77bcf86cd799439011"
+   *                 toRouteId: "507f1f77bcf86cd799439012"
+   *                 sendMoneyAmount: 5000000
+   *                 sendCost: 100000
+   *                 transferType: "express"
+   *                 notes: "Gửi tiền khẩn cấp"
+   *             free:
+   *               summary: Free money transfer
+   *               value:
+   *                 senderName: "Hoang Van E"
+   *                 senderPhone: "+84111222333"
+   *                 receiverName: "Vu Thi F"
+   *                 receiverPhone: "+84444555666"
+   *                 fromRouteId: "507f1f77bcf86cd799439011"
+   *                 toRouteId: "507f1f77bcf86cd799439012"
+   *                 sendMoneyAmount: 500000
+   *                 sendCost: 0
+   *                 transferType: "free"
+   *                 notes: "Chuyển tiền miễn phí"
    *     responses:
    *       201:
    *         description: Money delivery created successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Money delivery created successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     id:
+   *                       type: string
+   *                       example: "507f1f77bcf86cd799439013"
+   *                     code:
+   *                       type: string
+   *                       example: "2412170001"
+   *                     sender:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                         name:
+   *                           type: string
+   *                         phone:
+   *                           type: string
+   *                     receiver:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                         name:
+   *                           type: string
+   *                         phone:
+   *                           type: string
+   *                     sendMoneyAmount:
+   *                       type: number
+   *                     sendCost:
+   *                       type: number
+   *                     sendFee:
+   *                       type: number
+   *                       description: Calculated fee based on shipping rates
+   *                     transferType:
+   *                       type: string
+   *                       enum: [regular, express, free]
+   *                     totalCost:
+   *                       type: number
+   *                       description: Total cost (0 for free transfers)
+   *             examples:
+   *               regularTransfer:
+   *                 summary: Regular transfer created
+   *                 value:
+   *                   success: true
+   *                   message: "Money delivery created successfully"
+   *                   data:
+   *                     id: "507f1f77bcf86cd799439013"
+   *                     code: "2412170001"
+   *                     sender:
+   *                       id: "507f1f77bcf86cd799439014"
+   *                       name: "Nguyen Van A"
+   *                       phone: "+84123456789"
+   *                       createdAt: "2024-12-17T10:00:00.000Z"
+   *                       updatedAt: "2024-12-17T10:00:00.000Z"
+   *                     receiver:
+   *                       id: "507f1f77bcf86cd799439015"
+   *                       name: "Tran Thi B"
+   *                       phone: "+84987654321"
+   *                       createdAt: "2024-12-17T10:00:00.000Z"
+   *                       updatedAt: "2024-12-17T10:00:00.000Z"
+   *                     fromRoute:
+   *                       id: "507f1f77bcf86cd799439011"
+   *                       code: "T1"
+   *                       name: "Tuyến 1"
+   *                       createdAt: "2024-01-01T00:00:00.000Z"
+   *                       updatedAt: "2024-01-01T00:00:00.000Z"
+   *                     toRoute:
+   *                       id: "507f1f77bcf86cd799439012"
+   *                       code: "T2"
+   *                       name: "Tuyến 2"
+   *                       createdAt: "2024-01-01T00:00:00.000Z"
+   *                       updatedAt: "2024-01-01T00:00:00.000Z"
+   *                     sendMoneyAmount: 1000000
+   *                     sendCost: 50000
+   *                     sendFee: 15000
+   *                     transferType: "regular"
+   *                     totalCost: 50000
+   *                     notes: "Gửi tiền sinh nhật"
+   *                     createdByUser: "testuser"
+   *                     createdAt: "2024-12-17T10:00:00.000Z"
+   *                     updatedAt: "2024-12-17T10:00:00.000Z"
+   *               freeTransfer:
+   *                 summary: Free transfer created
+   *                 value:
+   *                   success: true
+   *                   message: "Money delivery created successfully"
+   *                   data:
+   *                     id: "507f1f77bcf86cd799439016"
+   *                     code: "2412170002"
+   *                     sendMoneyAmount: 500000
+   *                     sendCost: 0
+   *                     sendFee: 0
+   *                     transferType: "free"
+   *                     totalCost: 0
    *       400:
    *         description: Validation error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *             examples:
+   *               invalidPhone:
+   *                 summary: Invalid phone number
+   *                 value:
+   *                   success: false
+   *                   message: "Validation error: Please enter a valid sender phone number"
+   *               missingRequired:
+   *                 summary: Missing required field
+   *                 value:
+   *                   success: false
+   *                   message: "Validation error: Sender name is required"
    *       401:
    *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "User not authenticated"
    *       404:
    *         description: Route not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *             examples:
+   *               fromRouteNotFound:
+   *                 summary: From route not found
+   *                 value:
+   *                   success: false
+   *                   message: "From route not found"
+   *               toRouteNotFound:
+   *                 summary: To route not found
+   *                 value:
+   *                   success: false
+   *                   message: "To route not found"
    */
   createMoneyDelivery = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
@@ -139,8 +352,108 @@ export class MoneyDeliveryController {
    *     responses:
    *       200:
    *         description: Money deliveries retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Money deliveries retrieved successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     moneyDeliveries:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                         properties:
+   *                           id:
+   *                             type: string
+   *                           code:
+   *                             type: string
+   *                           sender:
+   *                             type: object
+   *                           receiver:
+   *                             type: object
+   *                           sendMoneyAmount:
+   *                             type: number
+   *                           sendCost:
+   *                             type: number
+   *                           sendFee:
+   *                             type: number
+   *                           transferType:
+   *                             type: string
+   *                           totalCost:
+   *                             type: number
+   *                     count:
+   *                       type: number
+   *                       example: 2
+   *             examples:
+   *               multipleDeliveries:
+   *                 summary: Multiple money deliveries
+   *                 value:
+   *                   success: true
+   *                   message: "Money deliveries retrieved successfully"
+   *                   data:
+   *                     moneyDeliveries:
+   *                       - id: "507f1f77bcf86cd799439013"
+   *                         code: "2412170001"
+   *                         sender:
+   *                           id: "507f1f77bcf86cd799439014"
+   *                           name: "Nguyen Van A"
+   *                           phone: "+84123456789"
+   *                         receiver:
+   *                           id: "507f1f77bcf86cd799439015"
+   *                           name: "Tran Thi B"
+   *                           phone: "+84987654321"
+   *                         sendMoneyAmount: 1000000
+   *                         sendCost: 50000
+   *                         sendFee: 15000
+   *                         transferType: "regular"
+   *                         totalCost: 50000
+   *                         createdAt: "2024-12-17T10:00:00.000Z"
+   *                       - id: "507f1f77bcf86cd799439016"
+   *                         code: "2412170002"
+   *                         sender:
+   *                           id: "507f1f77bcf86cd799439017"
+   *                           name: "Le Van C"
+   *                           phone: "+84333444555"
+   *                         receiver:
+   *                           id: "507f1f77bcf86cd799439018"
+   *                           name: "Pham Thi D"
+   *                           phone: "+84666777888"
+   *                         sendMoneyAmount: 5000000
+   *                         sendCost: 100000
+   *                         sendFee: 30000
+   *                         transferType: "express"
+   *                         totalCost: 100000
+   *                         createdAt: "2024-12-17T11:00:00.000Z"
+   *                     count: 2
+   *               emptyList:
+   *                 summary: No money deliveries found
+   *                 value:
+   *                   success: true
+   *                   message: "Money deliveries retrieved successfully"
+   *                   data:
+   *                     moneyDeliveries: []
+   *                     count: 0
    *       401:
    *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "User not authenticated"
    */
   getAllMoneyDeliveries = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
@@ -292,37 +605,111 @@ export class MoneyDeliveryController {
    *               senderName:
    *                 type: string
    *                 description: Name of the sender
+   *                 example: "Nguyen Van A"
    *               senderPhone:
    *                 type: string
    *                 description: Phone number of the sender
+   *                 example: "+84123456789"
    *               receiverName:
    *                 type: string
    *                 description: Name of the receiver
+   *                 example: "Tran Thi B"
    *               receiverPhone:
    *                 type: string
    *                 description: Phone number of the receiver
+   *                 example: "+84987654321"
    *               fromRouteId:
    *                 type: string
    *                 description: ObjectId of the from route
+   *                 example: "507f1f77bcf86cd799439011"
    *               toRouteId:
    *                 type: string
    *                 description: ObjectId of the to route
+   *                 example: "507f1f77bcf86cd799439012"
    *               sendMoneyAmount:
    *                 type: number
    *                 description: Amount of money to send
+   *                 example: 2000000
    *               sendCost:
    *                 type: number
    *                 description: Service cost for money transfer
+   *                 example: 75000
+   *               transferType:
+   *                 type: string
+   *                 enum: [regular, express, free]
+   *                 description: Transfer type
+   *                 example: "express"
    *               notes:
    *                 type: string
    *                 description: Optional notes for the money delivery
+   *                 example: "Cập nhật thông tin"
+   *           examples:
+   *             updateTransferType:
+   *               summary: Update transfer type to express
+   *               value:
+   *                 transferType: "express"
+   *                 notes: "Chuyển sang gửi nhanh"
+   *             updateAmount:
+   *               summary: Update money amount
+   *               value:
+   *                 sendMoneyAmount: 3000000
+   *                 sendCost: 80000
    *     responses:
    *       200:
    *         description: Money delivery updated successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Money delivery updated successfully"
+   *                 data:
+   *                   type: object
+   *             examples:
+   *               updatedToExpress:
+   *                 summary: Updated to express transfer
+   *                 value:
+   *                   success: true
+   *                   message: "Money delivery updated successfully"
+   *                   data:
+   *                     id: "507f1f77bcf86cd799439013"
+   *                     code: "2412170001"
+   *                     sendMoneyAmount: 1000000
+   *                     sendCost: 50000
+   *                     sendFee: 30000
+   *                     transferType: "express"
+   *                     totalCost: 50000
    *       400:
    *         description: Validation error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Validation error: Invalid phone number"
    *       404:
    *         description: Money delivery not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Money delivery not found"
    *       401:
    *         description: Unauthorized
    */

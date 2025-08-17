@@ -189,7 +189,7 @@ draftDeliverySchema.index({ fromRoute: 1, createdByUser: 1, createdAt: -1 }); //
 draftDeliverySchema.index({ createdByUser: 1, createdAt: -1 }); // User's drafts
 draftDeliverySchema.index({ fromRoute: 1, createdAt: -1 }); // Route-based queries
 
-// TTL index to auto-delete old drafts after 30 days
-draftDeliverySchema.index({ createdAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
+// TTL index to auto-delete old drafts after 90 days
+draftDeliverySchema.index({ createdAt: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60 });
 
 export const DraftDelivery = mongoose.model<IDraftDelivery>('DraftDelivery', draftDeliverySchema);

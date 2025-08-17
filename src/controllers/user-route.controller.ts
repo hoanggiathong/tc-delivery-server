@@ -38,13 +38,103 @@ export class UserRouteController {
    *               routeId:
    *                 type: string
    *                 example: 507f1f77bcf86cd799439012
+   *           examples:
+   *             assignRoute:
+   *               summary: Assign route to user
+   *               value:
+   *                 userId: "507f1f77bcf86cd799439011"
+   *                 routeId: "507f1f77bcf86cd799439012"
    *     responses:
    *       201:
    *         description: Route assigned successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Route assigned to user successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     userRoute:
+   *                       type: object
+   *             examples:
+   *               assigned:
+   *                 summary: Route assigned
+   *                 value:
+   *                   success: true
+   *                   message: "Route assigned to user successfully"
+   *                   data:
+   *                     userRoute:
+   *                       id: "507f1f77bcf86cd799439020"
+   *                       user:
+   *                         id: "507f1f77bcf86cd799439011"
+   *                         username: "user123"
+   *                       route:
+   *                         id: "507f1f77bcf86cd799439012"
+   *                         code: "T1"
+   *                         name: "TP.HCM"
+   *                       assignedBy: "507f1f77bcf86cd799439010"
+   *                       assignedAt: "2024-12-17T10:00:00.000Z"
    *       400:
-   *         description: Validation error or route already assigned
+   *         description: Validation error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *             examples:
+   *               invalidUserId:
+   *                 summary: Invalid user ID
+   *                 value:
+   *                   success: false
+   *                   message: "Validation error: Invalid user ID format"
    *       404:
    *         description: User or route not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *             examples:
+   *               userNotFound:
+   *                 summary: User not found
+   *                 value:
+   *                   success: false
+   *                   message: "User not found"
+   *               routeNotFound:
+   *                 summary: Route not found
+   *                 value:
+   *                   success: false
+   *                   message: "Route not found"
+   *       409:
+   *         description: Route already assigned
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Route already assigned to this user"
    *       403:
    *         description: Insufficient permissions
    */
@@ -116,9 +206,59 @@ export class UserRouteController {
    *                 items:
    *                   type: string
    *                 example: ["507f1f77bcf86cd799439012", "507f1f77bcf86cd799439013"]
+   *           examples:
+   *             assignMultiple:
+   *               summary: Assign multiple routes
+   *               value:
+   *                 userId: "507f1f77bcf86cd799439011"
+   *                 routeIds:
+   *                   - "507f1f77bcf86cd799439012"
+   *                   - "507f1f77bcf86cd799439013"
+   *                   - "507f1f77bcf86cd799439014"
    *     responses:
    *       201:
    *         description: Routes assigned successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "3 routes assigned to user successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     userRoutes:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                     count:
+   *                       type: integer
+   *             examples:
+   *               assigned:
+   *                 summary: Multiple routes assigned
+   *                 value:
+   *                   success: true
+   *                   message: "3 routes assigned to user successfully"
+   *                   data:
+   *                     userRoutes:
+   *                       - id: "507f1f77bcf86cd799439020"
+   *                         user: "507f1f77bcf86cd799439011"
+   *                         route: "507f1f77bcf86cd799439012"
+   *                         assignedAt: "2024-12-17T10:00:00.000Z"
+   *                       - id: "507f1f77bcf86cd799439021"
+   *                         user: "507f1f77bcf86cd799439011"
+   *                         route: "507f1f77bcf86cd799439013"
+   *                         assignedAt: "2024-12-17T10:00:00.000Z"
+   *                       - id: "507f1f77bcf86cd799439022"
+   *                         user: "507f1f77bcf86cd799439011"
+   *                         route: "507f1f77bcf86cd799439014"
+   *                         assignedAt: "2024-12-17T10:00:00.000Z"
+   *                     count: 3
    *       400:
    *         description: Validation error or routes already assigned
    *       404:
@@ -187,11 +327,40 @@ export class UserRouteController {
    *         schema:
    *           type: string
    *         description: User route assignment ID
+   *         example: "507f1f77bcf86cd799439020"
    *     responses:
    *       200:
    *         description: Route assignment removed successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Route assignment removed successfully"
+   *             examples:
+   *               removed:
+   *                 summary: Assignment removed
+   *                 value:
+   *                   success: true
+   *                   message: "Route assignment removed successfully"
    *       404:
    *         description: User route assignment not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "User route assignment not found"
    *       403:
    *         description: Insufficient permissions
    */
@@ -256,11 +425,47 @@ export class UserRouteController {
    *                 items:
    *                   type: string
    *                 example: ["507f1f77bcf86cd799439012", "507f1f77bcf86cd799439013"]
+   *           examples:
+   *             removeMultiple:
+   *               summary: Remove multiple assignments
+   *               value:
+   *                 userId: "507f1f77bcf86cd799439011"
+   *                 routeIds:
+   *                   - "507f1f77bcf86cd799439012"
+   *                   - "507f1f77bcf86cd799439013"
    *     responses:
    *       200:
    *         description: Route assignments removed successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Route assignments removed successfully"
+   *             examples:
+   *               removed:
+   *                 summary: Assignments removed
+   *                 value:
+   *                   success: true
+   *                   message: "Route assignments removed successfully"
    *       400:
    *         description: No route assignments found to remove
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "No route assignments found to remove"
    *       403:
    *         description: Insufficient permissions
    */
@@ -314,9 +519,65 @@ export class UserRouteController {
    *         schema:
    *           type: string
    *         description: User ID
+   *         example: "507f1f77bcf86cd799439011"
    *     responses:
    *       200:
    *         description: User route assignments retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "User route assignments retrieved successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     userRoutes:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                     count:
+   *                       type: integer
+   *             examples:
+   *               withRoutes:
+   *                 summary: User has routes
+   *                 value:
+   *                   success: true
+   *                   message: "User route assignments retrieved successfully"
+   *                   data:
+   *                     userRoutes:
+   *                       - id: "507f1f77bcf86cd799439020"
+   *                         user:
+   *                           id: "507f1f77bcf86cd799439011"
+   *                           username: "user123"
+   *                         route:
+   *                           id: "507f1f77bcf86cd799439012"
+   *                           code: "T1"
+   *                           name: "TP.HCM"
+   *                         assignedAt: "2024-12-17T10:00:00.000Z"
+   *                       - id: "507f1f77bcf86cd799439021"
+   *                         user:
+   *                           id: "507f1f77bcf86cd799439011"
+   *                           username: "user123"
+   *                         route:
+   *                           id: "507f1f77bcf86cd799439013"
+   *                           code: "T2"
+   *                           name: "Hà Nội"
+   *                         assignedAt: "2024-12-17T11:00:00.000Z"
+   *                     count: 2
+   *               noRoutes:
+   *                 summary: User has no routes
+   *                 value:
+   *                   success: true
+   *                   message: "User route assignments retrieved successfully"
+   *                   data:
+   *                     userRoutes: []
+   *                     count: 0
    *       404:
    *         description: User not found
    *       403:
@@ -372,9 +633,45 @@ export class UserRouteController {
    *         schema:
    *           type: string
    *         description: User ID
+   *         example: "507f1f77bcf86cd799439011"
    *     responses:
    *       200:
    *         description: User routes retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "User routes retrieved successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     routes:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                     count:
+   *                       type: integer
+   *             examples:
+   *               withRoutes:
+   *                 summary: Routes found
+   *                 value:
+   *                   success: true
+   *                   message: "User routes retrieved successfully"
+   *                   data:
+   *                     routes:
+   *                       - id: "507f1f77bcf86cd799439012"
+   *                         code: "T1"
+   *                         name: "TP.HCM"
+   *                       - id: "507f1f77bcf86cd799439013"
+   *                         code: "T2"
+   *                         name: "Hà Nội"
+   *                     count: 2
    *       403:
    *         description: Insufficient permissions
    */
@@ -428,9 +725,59 @@ export class UserRouteController {
    *         schema:
    *           type: string
    *         description: Route ID
+   *         example: "507f1f77bcf86cd799439012"
    *     responses:
    *       200:
    *         description: Users for route retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Users for route retrieved successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     userRoutes:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                     count:
+   *                       type: integer
+   *             examples:
+   *               withUsers:
+   *                 summary: Users found
+   *                 value:
+   *                   success: true
+   *                   message: "Users for route retrieved successfully"
+   *                   data:
+   *                     userRoutes:
+   *                       - id: "507f1f77bcf86cd799439020"
+   *                         user:
+   *                           id: "507f1f77bcf86cd799439011"
+   *                           username: "user123"
+   *                           role: "user"
+   *                         route:
+   *                           id: "507f1f77bcf86cd799439012"
+   *                           code: "T1"
+   *                           name: "TP.HCM"
+   *                         assignedAt: "2024-12-17T10:00:00.000Z"
+   *                       - id: "507f1f77bcf86cd799439021"
+   *                         user:
+   *                           id: "507f1f77bcf86cd799439015"
+   *                           username: "user456"
+   *                           role: "user"
+   *                         route:
+   *                           id: "507f1f77bcf86cd799439012"
+   *                           code: "T1"
+   *                           name: "TP.HCM"
+   *                         assignedAt: "2024-12-17T11:00:00.000Z"
+   *                     count: 2
    *       403:
    *         description: Insufficient permissions
    */
@@ -480,6 +827,53 @@ export class UserRouteController {
    *     responses:
    *       200:
    *         description: All user route assignments retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "All user route assignments retrieved successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     userRoutes:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                     count:
+   *                       type: integer
+   *             examples:
+   *               allAssignments:
+   *                 summary: All assignments
+   *                 value:
+   *                   success: true
+   *                   message: "All user route assignments retrieved successfully"
+   *                   data:
+   *                     userRoutes:
+   *                       - id: "507f1f77bcf86cd799439020"
+   *                         user:
+   *                           id: "507f1f77bcf86cd799439011"
+   *                           username: "user123"
+   *                         route:
+   *                           id: "507f1f77bcf86cd799439012"
+   *                           code: "T1"
+   *                           name: "TP.HCM"
+   *                         assignedAt: "2024-12-17T10:00:00.000Z"
+   *                       - id: "507f1f77bcf86cd799439021"
+   *                         user:
+   *                           id: "507f1f77bcf86cd799439015"
+   *                           username: "user456"
+   *                         route:
+   *                           id: "507f1f77bcf86cd799439013"
+   *                           code: "T2"
+   *                           name: "Hà Nội"
+   *                         assignedAt: "2024-12-17T11:00:00.000Z"
+   *                     count: 2
    *       403:
    *         description: Insufficient permissions
    */

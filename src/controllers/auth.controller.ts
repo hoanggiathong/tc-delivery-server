@@ -93,15 +93,112 @@ export class AuthController {
    *             properties:
    *               username:
    *                 type: string
+   *                 example: "user123"
    *               password:
    *                 type: string
+   *                 example: "Password123!"
+   *           examples:
+   *             userLogin:
+   *               summary: User login
+   *               value:
+   *                 username: "user123"
+   *                 password: "Password123!"
+   *             adminLogin:
+   *               summary: Admin login
+   *               value:
+   *                 username: "admin"
+   *                 password: "AdminPass123!"
    *     responses:
    *       200:
    *         description: Login successful
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Login successful"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     user:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                         username:
+   *                           type: string
+   *                         role:
+   *                           type: string
+   *                         selectedRouteId:
+   *                           type: string
+   *                     token:
+   *                       type: string
+   *             examples:
+   *               userLogin:
+   *                 summary: Regular user login
+   *                 value:
+   *                   success: true
+   *                   message: "Login successful"
+   *                   data:
+   *                     user:
+   *                       id: "507f1f77bcf86cd799439040"
+   *                       username: "user123"
+   *                       role: "user"
+   *                       selectedRouteId: "507f1f77bcf86cd799439011"
+   *                     token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+   *               adminLogin:
+   *                 summary: Admin login
+   *                 value:
+   *                   success: true
+   *                   message: "Login successful"
+   *                   data:
+   *                     user:
+   *                       id: "507f1f77bcf86cd799439041"
+   *                       username: "admin"
+   *                       role: "admin"
+   *                       selectedRouteId: null
+   *                     token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
    *       401:
    *         description: Invalid credentials
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *             examples:
+   *               invalidPassword:
+   *                 summary: Wrong password
+   *                 value:
+   *                   success: false
+   *                   message: "Invalid credentials"
+   *               userNotFound:
+   *                 summary: User doesn't exist
+   *                 value:
+   *                   success: false
+   *                   message: "Invalid credentials"
    *       500:
    *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Login failed"
    */
   login = async (req: Request, res: Response): Promise<void> => {
     try {

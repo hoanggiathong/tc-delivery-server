@@ -36,6 +36,8 @@ export const createMockMoneyDelivery = (
     },
     sendMoneyAmount: 1000000,
     sendCost: 50000,
+    sendFee: 15000,
+    transferType: 'regular' as const,
     totalCost: 50000, // sendCost only
     createdByUser: 'testuser',
     createdAt: new Date('2023-01-01'),
@@ -74,11 +76,13 @@ export const createMockMoneyDeliveryList = (count: number = 3): IMoneyDeliveryRe
   return Array.from({ length: count }, (_, index) => {
     const sendMoneyAmount = 500000 + index * 100000;
     const sendCost = 25000 + index * 5000;
+    const sendFee = 10000 + index * 2000;
     return createMockMoneyDelivery({
       id: `money-delivery-id-${index + 1}`,
       code: `240125000${index + 1}`,
       sendMoneyAmount,
       sendCost,
+      sendFee,
       totalCost: sendCost,
     });
   });
@@ -123,6 +127,8 @@ export const mockMoneyDeliveryForIntegration = {
   },
   sendMoneyAmount: 1000000,
   sendCost: 50000,
+  sendFee: 15000,
+  transferType: 'regular' as const,
   totalCost: 50000,
   notes: 'Ghi chú chuyển tiền',
   createdByUser: 'user123',
