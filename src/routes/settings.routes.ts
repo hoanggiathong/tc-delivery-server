@@ -400,7 +400,7 @@ router.post(
 
 /**
  * @swagger
- * /api/settings/shipping-rates:
+ * /api/settings/shipping_rates:
  *   get:
  *     summary: Get shipping rates
  *     tags: [Settings]
@@ -410,11 +410,11 @@ router.post(
  *       200:
  *         description: Shipping rates retrieved successfully
  */
-router.get('/shipping-rates', authenticateToken, getShippingRates);
+router.get('/shipping_rates', authenticateToken, getShippingRates);
 
 /**
  * @swagger
- * /api/settings/shipping-rates:
+ * /api/settings/shipping_rates:
  *   put:
  *     summary: Update shipping rates with default units (Admin/Superadmin only)
  *     tags: [Settings]
@@ -436,7 +436,7 @@ router.get('/shipping-rates', authenticateToken, getShippingRates);
  *         description: Shipping rates updated successfully
  */
 router.put(
-  '/shipping-rates',
+  '/shipping_rates',
   authenticateToken,
   requireRole([UserRole.ADMIN, UserRole.SUPERADMIN]),
   updateShippingRates

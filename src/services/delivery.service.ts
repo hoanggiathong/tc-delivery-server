@@ -18,6 +18,9 @@ import {
   IDeliveryCostReport,
   IDeliveryReportItem,
   IDeliveryCostReportSummary,
+  ITodayDeliveryReport,
+  ITodayDeliverySummary,
+  ITodayDeliveryItem,
 } from '@/types/delivery.type';
 import { ICustomerResponse } from '@/types/customer.type';
 import Logger from '@/utils/logger';
@@ -1094,6 +1097,197 @@ export class DeliveryService {
         endDate,
         page,
         limit,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get today's delivery report (no pagination)
+   */
+  async getTodayReport(userId: string): Promise<ITodayDeliveryReport> {
+    try {
+      // Get user with selectedRouteId
+      const user = await User.findById(userId).select('selectedRouteId').lean();
+      if (!user || !user.selectedRouteId) {
+        throw new Error('User does not have a selected route');
+      }
+
+      // Get the selected route information
+      const fromRoute = await Route.findById(user.selectedRouteId).lean();
+      if (!fromRoute) {
+        throw new Error('Selected route not found');
+      }
+
+      // Set today's date range (from start of day to end of day)
+      const today = new Date();
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
+      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+
+      // Build aggregation pipeline for today's deliveries
+      const pipeline: PipelineStage[] = [
+        // Match by fromRoute and today's date
+        {
+          $match: {
+            fromRoute: new Types.ObjectId(user.selectedRouteId),
+            createdAt: {
+              $gte: startOfDay,
+              $lte: endOfDay,
+            },
+          },
+        },
+        // Lookup related collections
+        {
+          $lookup: {
+            from: 'customers',
+            localField: 'sender',
+            foreignField: '_id',
+            as: 'senderData',
+          },
+        },
+        {
+          $lookup: {
+            from: 'customers',
+            localField: 'receiver',
+            foreignField: '_id',
+            as: 'receiverData',
+          },
+        },
+        {
+          $lookup: {
+            from: 'routes',
+            localField: 'toRoute',
+            foreignField: '_id',
+            as: 'toRouteData',
+          },
+        },
+        // Unwind arrays
+        { $unwind: '$senderData' },
+        { $unwind: '$receiverData' },
+        { $unwind: '$toRouteData' },
+        // Project required fields
+        {
+          $project: {
+            _id: 1,
+            code: 1,
+            createdAt: 1,
+            sender: {
+              name: '$senderData.name',
+              phone: '$senderData.phone',
+            },
+            receiver: {
+              name: '$receiverData.name',
+              phone: '$receiverData.phone',
+            },
+            toRoute: {
+              id: '$toRouteData._id',
+              code: '$toRouteData.code',
+              name: '$toRouteData.name',
+            },
+            cost: 1,
+            homeDeliveryCost: 1,
+            itemCost: 1,
+            itemValue: 1,
+            collectCost: 1,
+            collectForCustomer: 1,
+            collectForCustomerCost: 1,
+            totalCost: 1,
+            paymentType: 1,
+            notes: 1,
+          },
+        },
+        // Facet for data and summary (no pagination needed)
+        {
+          $facet: {
+            // Get all data sorted by creation time (newest first)
+            data: [{ $sort: { createdAt: -1 } }],
+            // Get summary statistics
+            summary: [
+              {
+                $group: {
+                  _id: null,
+                  totalDeliveries: { $sum: 1 },
+                  totalCost: { $sum: '$totalCost' },
+                  totalItemCost: { $sum: '$itemCost' },
+                  totalCollectForCustomer: { $sum: '$collectForCustomer' },
+                },
+              },
+            ],
+          },
+        },
+      ];
+
+      // Execute aggregation
+      const result = await Delivery.aggregate(pipeline);
+
+      // Extract results
+      const deliveries = result[0]?.data || [];
+      const summaryData = result[0]?.summary[0] || {};
+
+      // Transform deliveries to simplified items
+      const deliveryItems: ITodayDeliveryItem[] = deliveries.map(
+        (d: {
+          _id: Types.ObjectId;
+          code: string;
+          createdAt: Date;
+          sender: { name: string; phone: string };
+          receiver: { name: string; phone: string };
+          toRoute: { id: Types.ObjectId; code: string; name: string };
+          cost: number;
+          itemCost: number;
+          totalCost: number;
+          paymentType: 'debt' | 'free' | null;
+          notes?: string;
+        }) => ({
+          id: d._id.toString(),
+          code: d.code,
+          sender: d.sender,
+          receiver: d.receiver,
+          toRoute: {
+            id: d.toRoute.id.toString(),
+            code: d.toRoute.code,
+            name: d.toRoute.name,
+          },
+          cost: d.cost,
+          itemCost: d.itemCost,
+          totalCost: d.totalCost,
+          paymentType: d.paymentType,
+          createdAt: d.createdAt,
+        })
+      );
+
+      // Build summary
+      const summary: ITodayDeliverySummary = {
+        totalDeliveries: summaryData.totalDeliveries || 0,
+        totalCost: summaryData.totalCost || 0,
+        totalItemCost: summaryData.totalItemCost || 0,
+        totalCollectForCustomer: summaryData.totalCollectForCustomer || 0,
+        date: today.toISOString().split('T')[0], // Format as YYYY-MM-DD
+      };
+
+      // Build route info
+      const routeInfo = {
+        route: {
+          id: fromRoute._id.toString(),
+          code: fromRoute.code,
+          name: fromRoute.name,
+        },
+        routeCode: fromRoute.code,
+        routeName: fromRoute.name,
+      };
+
+      // Build final response
+      const report: ITodayDeliveryReport = {
+        summary,
+        deliveries: deliveryItems,
+        routeInfo,
+      };
+
+      return report;
+    } catch (error) {
+      Logger.error("Failed to generate today's delivery report", {
+        error: error instanceof Error ? error.message : error,
+        userId,
       });
       throw error;
     }

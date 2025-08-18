@@ -218,6 +218,9 @@ router.get('/next-code', validate(getNextCodeSchema), deliveryController.getNext
 // Cost report route (must be before /:id to avoid conflicts)
 router.get('/cost-report', validate(deliveryCostReportSchema), deliveryController.getCostReport);
 
+// Today report route (must be before /:id to avoid conflicts)
+router.get('/today-report', authenticateToken, deliveryController.getTodayReport);
+
 // Get delivery by code route (must be before /:id to avoid conflicts)
 router.get(
   '/code/:deliveryIdentifier',

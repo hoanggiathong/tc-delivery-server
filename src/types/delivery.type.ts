@@ -299,3 +299,49 @@ export interface IDeliveryCostReport {
   deliveries: IDeliveryReportItem[];
   pagination: IDeliveryCostReportPagination;
 }
+
+// Today Report Interfaces (simplified, no pagination)
+export interface ITodayDeliverySummary {
+  totalDeliveries: number;
+  totalCost: number;
+  totalItemCost: number;
+  totalCollectForCustomer: number;
+  date: string; // YYYY-MM-DD format
+}
+
+export interface ITodayDeliveryItem {
+  id: string;
+  code: string;
+  sender: {
+    name: string;
+    phone: string;
+  };
+  receiver: {
+    name: string;
+    phone: string;
+  };
+  toRoute: {
+    id: string;
+    code: string;
+    name: string;
+  };
+  cost: number;
+  itemCost: number;
+  totalCost: number;
+  paymentType: 'debt' | 'free' | null;
+  createdAt: Date;
+}
+
+export interface ITodayDeliveryReport {
+  summary: ITodayDeliverySummary;
+  deliveries: ITodayDeliveryItem[];
+  routeInfo: {
+    route: {
+      id: string;
+      code: string;
+      name: string;
+    };
+    routeCode: string;
+    routeName: string;
+  };
+}

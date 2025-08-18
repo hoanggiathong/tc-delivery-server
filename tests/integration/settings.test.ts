@@ -40,17 +40,17 @@ describe('Settings API Integration Tests', () => {
     jest.clearAllMocks();
     adminToken = jwt.sign(
       { userId: 'admin123', username: 'admin', role: 'admin' },
-      'test-jwt-secret',
+      'test-jwt-secret-key-for-testing-only',
       { expiresIn: '1h' }
     );
     superadminToken = jwt.sign(
       { userId: 'superadmin123', username: 'superadmin', role: 'superadmin' },
-      'test-jwt-secret',
+      'test-jwt-secret-key-for-testing-only',
       { expiresIn: '1h' }
     );
     userToken = jwt.sign(
       { userId: 'user123', username: 'testuser', role: 'user' },
-      'test-jwt-secret',
+      'test-jwt-secret-key-for-testing-only',
       { expiresIn: '1h' }
     );
   });
@@ -174,8 +174,8 @@ describe('Settings API Integration Tests', () => {
     });
 
     it('should return 404 if settings not found', async () => {
-      const error = new Error('Settings with name "shipping_rates" not found');
-      (error as any).statusCode = 404;
+      const { AppError } = require('@/middlewares/error.middleware');
+      const error = new AppError('Settings with name "shipping_rates" not found', 404);
       MockedSettingsService.prototype.getByName.mockRejectedValue(error);
 
       const response = await request(app)

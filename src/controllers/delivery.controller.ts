@@ -1087,4 +1087,171 @@ export class DeliveryController {
       res.status(statusCode).json(response);
     }
   };
+
+  /**
+   * @swagger
+   * /api/delivery/today-report:
+   *   get:
+   *     summary: Get delivery report for current day (no pagination)
+   *     tags: [Delivery]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Today's delivery report retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Today's delivery report retrieved successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     summary:
+   *                       type: object
+   *                       properties:
+   *                         totalDeliveries:
+   *                           type: number
+   *                           example: 25
+   *                         totalCost:
+   *                           type: number
+   *                           example: 750000
+   *                         totalItemCost:
+   *                           type: number
+   *                           example: 125000
+   *                         totalCollectForCustomer:
+   *                           type: number
+   *                           example: 2500000
+   *                         date:
+   *                           type: string
+   *                           format: date
+   *                           example: "2024-12-17"
+   *                     deliveries:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                         properties:
+   *                           id:
+   *                             type: string
+   *                           code:
+   *                             type: string
+   *                           sender:
+   *                             type: object
+   *                           receiver:
+   *                             type: object
+   *                           cost:
+   *                             type: number
+   *                           itemCost:
+   *                             type: number
+   *                           totalCost:
+   *                             type: number
+   *                           createdAt:
+   *                             type: string
+   *                             format: date-time
+   *                     routeInfo:
+   *                       type: object
+   *                       properties:
+   *                         route:
+   *                           type: object
+   *                         routeCode:
+   *                           type: string
+   *                         routeName:
+   *                           type: string
+   *             examples:
+   *               todayReport:
+   *                 summary: Today's delivery report
+   *                 value:
+   *                   success: true
+   *                   message: "Today's delivery report retrieved successfully"
+   *                   data:
+   *                     summary:
+   *                       totalDeliveries: 25
+   *                       totalCost: 750000
+   *                       totalItemCost: 125000
+   *                       totalCollectForCustomer: 2500000
+   *                       date: "2024-12-17"
+   *                     deliveries: []
+   *                     routeInfo:
+   *                       route:
+   *                         id: "507f1f77bcf86cd799439011"
+   *                         code: "T1"
+   *                         name: "Tuyến 1"
+   *                       routeCode: "T1"
+   *                       routeName: "Tuyến 1"
+   *       400:
+   *         description: User has no selected route
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "User has no selected route"
+   *       401:
+   *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Unauthorized"
+   */
+  getTodayReport = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      // Call service to get today's delivery report
+      const report = await this.deliveryService.getTodayReport(req.user.userId);
+
+      const response: ApiResponse = {
+        success: true,
+        message: "Today's delivery report retrieved successfully",
+        data: report,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error("Failed to generate today's delivery report", {
+        error: error instanceof Error ? error.message : error,
+        userId: req.user?.userId,
+      });
+
+      const message = error instanceof Error ? error.message : "Failed to generate today's report";
+
+      // Determine appropriate status code
+      let statusCode = 500;
+      if (message.includes('selected route')) {
+        statusCode = 400;
+      }
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(statusCode).json(response);
+    }
+  };
 }

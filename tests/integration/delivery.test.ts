@@ -650,7 +650,7 @@ describe('Delivery Endpoints', () => {
         new Date(validQuery.startDate),
         new Date(validQuery.endDate),
         1, // default page
-        20 // default limit
+        100 // default limit
       );
     });
   });

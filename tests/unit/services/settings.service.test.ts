@@ -174,6 +174,10 @@ describe('SettingsService', () => {
         toAmount: 2000000,
         regularShippingFee: 15000,
         expressShippingFee: 30000,
+        fromAmountUnit: 'VND',
+        toAmountUnit: 'VND',
+        regularShippingFeeUnit: 'VND',
+        expressShippingFeeUnit: 'VND',
       });
     });
 
