@@ -209,3 +209,129 @@ export interface UpdateMoneyDeliveryRequest {
   transferType?: 'regular' | 'express' | 'free';
   notes?: string;
 }
+
+// Today Report Interfaces (simplified, no pagination)
+export interface ITodayMoneyDeliverySummary {
+  totalMoneyDeliveries: number;
+  totalSendMoneyAmount: number;
+  totalSendCost: number;
+  totalSendFee: number;
+  date: string; // YYYY-MM-DD format
+}
+
+export interface ITodayMoneyDeliveryItem {
+  id: string;
+  code: string;
+  sender: {
+    name: string;
+    phone: string;
+  };
+  receiver: {
+    name: string;
+    phone: string;
+  };
+  toRoute: {
+    id: string;
+    code: string;
+    name: string;
+  };
+  sendMoneyAmount: number;
+  sendCost: number;
+  sendFee: number;
+  totalCost: number;
+  transferType: 'regular' | 'express' | 'free';
+  createdAt: Date;
+}
+
+export interface ITodayMoneyDeliveryReport {
+  summary: ITodayMoneyDeliverySummary;
+  moneyDeliveries: ITodayMoneyDeliveryItem[];
+  routeInfo: {
+    route: {
+      id: string;
+      code: string;
+      name: string;
+    };
+    routeCode: string;
+    routeName: string;
+  };
+}
+
+// Cost Report Interfaces (with pagination)
+export interface IMoneyDeliveryCostReportSummary {
+  totalMoneyDeliveries: number;
+  totalSendMoneyAmount: number;
+  totalSendCost: number;
+  totalSendFee: number;
+  totalCost: number; // Total revenue from money deliveries
+
+  // Phân loại theo transferType
+  regularTransferCount: number;
+  regularTransferAmount: number;
+  regularTransferFee: number;
+  expressTransferCount: number;
+  expressTransferAmount: number;
+  expressTransferFee: number;
+  freeTransferCount: number;
+  freeTransferAmount: number;
+
+  // Thống kê
+  averageSendAmountPerDelivery: number;
+  averageFeePerDelivery: number;
+}
+
+export interface IMoneyDeliveryReportItem {
+  id: string;
+  code: string;
+  date: Date;
+  sender: {
+    name: string;
+    phone: string;
+  };
+  receiver: {
+    name: string;
+    phone: string;
+  };
+  toRoute: {
+    id: string;
+    code: string;
+    name: string;
+  };
+
+  // Chi tiết chi phí
+  sendMoneyAmount: number;
+  sendCost: number;
+  sendFee: number;
+  totalCost: number;
+
+  transferType: 'regular' | 'express' | 'free';
+  notes?: string;
+}
+
+export interface IMoneyDeliveryCostReportPagination {
+  currentPage: number;
+  totalPages: number;
+  totalRecords: number;
+  limit: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
+
+export interface IMoneyDeliveryCostReportFilter {
+  dateRange: {
+    from: Date;
+    to: Date;
+  };
+  fromRoute: {
+    id: string;
+    code: string;
+    name: string;
+  };
+}
+
+export interface IMoneyDeliveryCostReport {
+  summary: IMoneyDeliveryCostReportSummary;
+  moneyDeliveries: IMoneyDeliveryReportItem[];
+  pagination: IMoneyDeliveryCostReportPagination;
+  filter: IMoneyDeliveryCostReportFilter;
+}

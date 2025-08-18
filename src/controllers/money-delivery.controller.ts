@@ -1087,4 +1087,498 @@ export class MoneyDeliveryController {
       res.status(statusCode).json(response);
     }
   };
+
+  /**
+   * @swagger
+   * /api/money-deliveries/today-report:
+   *   get:
+   *     summary: Get money delivery report for current day (no pagination)
+   *     tags: [MoneyDelivery]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Today's money delivery report retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Today's money delivery report retrieved successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     summary:
+   *                       type: object
+   *                       properties:
+   *                         totalDeliveries:
+   *                           type: number
+   *                           example: 15
+   *                         totalSendMoneyAmount:
+   *                           type: number
+   *                           example: 25000000
+   *                         totalSendCost:
+   *                           type: number
+   *                           example: 375000
+   *                         totalSendFee:
+   *                           type: number
+   *                           example: 225000
+   *                         regularTransferCount:
+   *                           type: number
+   *                           example: 10
+   *                         expressTransferCount:
+   *                           type: number
+   *                           example: 3
+   *                         freeTransferCount:
+   *                           type: number
+   *                           example: 2
+   *                         date:
+   *                           type: string
+   *                           format: date
+   *                           example: "2024-12-17"
+   *                     deliveries:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                         properties:
+   *                           id:
+   *                             type: string
+   *                           code:
+   *                             type: string
+   *                           sender:
+   *                             type: object
+   *                           receiver:
+   *                             type: object
+   *                           sendMoneyAmount:
+   *                             type: number
+   *                           sendCost:
+   *                             type: number
+   *                           sendFee:
+   *                             type: number
+   *                           transferType:
+   *                             type: string
+   *                           totalCost:
+   *                             type: number
+   *                           createdAt:
+   *                             type: string
+   *                             format: date-time
+   *                     routeInfo:
+   *                       type: object
+   *                       properties:
+   *                         route:
+   *                           type: object
+   *                         routeCode:
+   *                           type: string
+   *                         routeName:
+   *                           type: string
+   *             examples:
+   *               todayReport:
+   *                 summary: Today's money delivery report
+   *                 value:
+   *                   success: true
+   *                   message: "Today's money delivery report retrieved successfully"
+   *                   data:
+   *                     summary:
+   *                       totalDeliveries: 15
+   *                       totalSendMoneyAmount: 25000000
+   *                       totalSendCost: 375000
+   *                       totalSendFee: 225000
+   *                       regularTransferCount: 10
+   *                       expressTransferCount: 3
+   *                       freeTransferCount: 2
+   *                       date: "2024-12-17"
+   *                     deliveries: []
+   *                     routeInfo:
+   *                       route:
+   *                         id: "507f1f77bcf86cd799439011"
+   *                         code: "T1"
+   *                         name: "Tuyến 1"
+   *                       routeCode: "T1"
+   *                       routeName: "Tuyến 1"
+   *       400:
+   *         description: User has no selected route
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "User has no selected route"
+   *       401:
+   *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "User not authenticated"
+   */
+  getTodayReport = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'User not authenticated',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      // Call service to get today's money delivery report
+      const report = await this.moneyDeliveryService.getTodayReport(req.user.userId);
+
+      const response: ApiResponse = {
+        success: true,
+        message: "Today's money delivery report retrieved successfully",
+        data: report,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      logger.error("Failed to generate today's money delivery report", error);
+
+      const message = error instanceof Error ? error.message : "Failed to generate today's report";
+
+      // Determine appropriate status code
+      let statusCode = 500;
+      if (message.includes('selected route')) {
+        statusCode = 400;
+      }
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(statusCode).json(response);
+    }
+  };
+
+  /**
+   * Get money delivery cost report
+   * GET /api/money-deliveries/cost-report
+   * @swagger
+   * /api/money-deliveries/cost-report:
+   *   get:
+   *     summary: Get money delivery cost report with date range filtering and pagination
+   *     tags: [MoneyDelivery]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: startDate
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: date-time
+   *           example: "2024-01-01T00:00:00.000Z"
+   *         description: Start date for the report (ISO format)
+   *       - in: query
+   *         name: endDate
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: date-time
+   *           example: "2024-01-31T23:59:59.999Z"
+   *         description: End date for the report (ISO format)
+   *       - in: query
+   *         name: page
+   *         required: false
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *           example: 1
+   *         description: Page number for pagination
+   *       - in: query
+   *         name: limit
+   *         required: false
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           maximum: 100
+   *           default: 100
+   *           example: 50
+   *         description: Number of items per page
+   *     responses:
+   *       200:
+   *         description: Money delivery cost report retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Money delivery cost report retrieved successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     summary:
+   *                       type: object
+   *                       properties:
+   *                         totalMoneyDeliveries:
+   *                           type: integer
+   *                           example: 150
+   *                         totalSendMoneyAmount:
+   *                           type: number
+   *                           example: 15000000
+   *                         totalSendCost:
+   *                           type: number
+   *                           example: 75000
+   *                         totalSendFee:
+   *                           type: number
+   *                           example: 25000
+   *                         totalCost:
+   *                           type: number
+   *                           example: 100000
+   *                         regularTransferCount:
+   *                           type: integer
+   *                           example: 100
+   *                         regularTransferAmount:
+   *                           type: number
+   *                           example: 10000000
+   *                         regularTransferFee:
+   *                           type: number
+   *                           example: 15000
+   *                         expressTransferCount:
+   *                           type: integer
+   *                           example: 40
+   *                         expressTransferAmount:
+   *                           type: number
+   *                           example: 4000000
+   *                         expressTransferFee:
+   *                           type: number
+   *                           example: 8000
+   *                         freeTransferCount:
+   *                           type: integer
+   *                           example: 10
+   *                         freeTransferAmount:
+   *                           type: number
+   *                           example: 1000000
+   *                         averageSendAmountPerDelivery:
+   *                           type: number
+   *                           example: 100000
+   *                         averageFeePerDelivery:
+   *                           type: number
+   *                           example: 167
+   *                     moneyDeliveries:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                         properties:
+   *                           id:
+   *                             type: string
+   *                             example: "507f1f77bcf86cd799439011"
+   *                           code:
+   *                             type: string
+   *                             example: "2412170001"
+   *                           date:
+   *                             type: string
+   *                             format: date-time
+   *                             example: "2024-12-17T08:30:00.000Z"
+   *                           sender:
+   *                             type: object
+   *                             properties:
+   *                               name:
+   *                                 type: string
+   *                                 example: "Nguyễn Văn A"
+   *                               phone:
+   *                                 type: string
+   *                                 example: "+84123456789"
+   *                           receiver:
+   *                             type: object
+   *                             properties:
+   *                               name:
+   *                                 type: string
+   *                                 example: "Trần Thị B"
+   *                               phone:
+   *                                 type: string
+   *                                 example: "+84987654321"
+   *                           toRoute:
+   *                             type: object
+   *                             properties:
+   *                               id:
+   *                                 type: string
+   *                                 example: "507f1f77bcf86cd799439012"
+   *                               code:
+   *                                 type: string
+   *                                 example: "T2"
+   *                               name:
+   *                                 type: string
+   *                                 example: "Route 2"
+   *                           sendMoneyAmount:
+   *                             type: number
+   *                             example: 1000000
+   *                           sendCost:
+   *                             type: number
+   *                             example: 5000
+   *                           sendFee:
+   *                             type: number
+   *                             example: 2000
+   *                           totalCost:
+   *                             type: number
+   *                             example: 7000
+   *                           transferType:
+   *                             type: string
+   *                             enum: [regular, express, free]
+   *                             example: "regular"
+   *                           notes:
+   *                             type: string
+   *                             example: "Ghi chú chuyển tiền"
+   *                     pagination:
+   *                       type: object
+   *                       properties:
+   *                         currentPage:
+   *                           type: integer
+   *                           example: 1
+   *                         totalPages:
+   *                           type: integer
+   *                           example: 3
+   *                         totalRecords:
+   *                           type: integer
+   *                           example: 150
+   *                         limit:
+   *                           type: integer
+   *                           example: 50
+   *                         hasNextPage:
+   *                           type: boolean
+   *                           example: true
+   *                         hasPrevPage:
+   *                           type: boolean
+   *                           example: false
+   *                     filter:
+   *                       type: object
+   *                       properties:
+   *                         dateRange:
+   *                           type: object
+   *                           properties:
+   *                             from:
+   *                               type: string
+   *                               format: date-time
+   *                               example: "2024-01-01T00:00:00.000Z"
+   *                             to:
+   *                               type: string
+   *                               format: date-time
+   *                               example: "2024-01-31T23:59:59.999Z"
+   *                         fromRoute:
+   *                           type: object
+   *                           properties:
+   *                             id:
+   *                               type: string
+   *                               example: "507f1f77bcf86cd799439013"
+   *                             code:
+   *                               type: string
+   *                               example: "T1"
+   *                             name:
+   *                               type: string
+   *                               example: "Route 1"
+   *       400:
+   *         description: Invalid request parameters
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Validation failed: startDate is required"
+   *       401:
+   *         description: Unauthorized - User not authenticated
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "User not authenticated"
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Failed to generate cost report"
+   */
+  getCostReport = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'User not authenticated',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { startDate, endDate, page, limit } = req.query as any;
+
+      // Call service to get cost report
+      const report = await this.moneyDeliveryService.getCostReport(
+        req.user.userId,
+        startDate,
+        endDate,
+        page,
+        limit
+      );
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Money delivery cost report retrieved successfully',
+        data: report,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      logger.error('Failed to generate money delivery cost report', error);
+
+      const message = error instanceof Error ? error.message : 'Failed to generate cost report';
+
+      // Determine appropriate status code
+      let statusCode = 500;
+      if (
+        message.includes('User route not found') ||
+        message.includes('Selected route not found')
+      ) {
+        statusCode = 400;
+      }
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(statusCode).json(response);
+    }
+  };
 }

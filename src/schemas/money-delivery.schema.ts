@@ -152,9 +152,45 @@ export const frequentMoneyCustomersSchema = z.object({
   }),
 });
 
+// Schema for money delivery cost report
+export const moneyDeliveryCostReportSchema = z
+  .object({
+    query: z.object({
+      startDate: z
+        .string()
+        .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid start date in ISO format')
+        .transform(val => new Date(val))
+        .refine(val => {
+          const oneMonthAgo = new Date();
+          oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+          return val >= oneMonthAgo;
+        }, 'Start date cannot be more than 1 month in the past'),
+      endDate: z
+        .string()
+        .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid end date in ISO format')
+        .transform(val => new Date(val))
+        .refine(val => val <= new Date(), 'End date cannot be in the future'),
+      page: z
+        .string()
+        .optional()
+        .transform(val => (val ? parseInt(val) : 1))
+        .refine(val => val >= 1, 'Page must be greater than 0'),
+      limit: z
+        .string()
+        .optional()
+        .transform(val => (val ? parseInt(val) : 100))
+        .refine(val => val >= 1 && val <= 100, 'Limit must be between 1 and 100'),
+    }),
+  })
+  .refine(data => data.query.startDate <= data.query.endDate, {
+    message: 'Start date must be before or equal to end date',
+    path: ['query', 'startDate'],
+  });
+
 export type CreateMoneyDeliveryRequest = z.infer<typeof createMoneyDeliverySchema>['body'];
 export type UpdateMoneyDeliveryRequest = z.infer<typeof updateMoneyDeliverySchema>['body'];
 export type GetNextMoneyDeliveryCodeRequest = z.infer<
   typeof getNextMoneyDeliveryCodeSchema
 >['query'];
 export type MoneyDeliveryCodeParams = z.infer<typeof moneyDeliveryCodeSchema>['params'];
+export type MoneyDeliveryCostReportQuery = z.infer<typeof moneyDeliveryCostReportSchema>['query'];

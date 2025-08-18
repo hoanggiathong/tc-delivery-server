@@ -37,6 +37,12 @@ import {
   INextMoneyDeliveryCodeResponse,
   IFrequentMoneyCustomersResponse,
   IFrequentMoneyCustomer,
+  ITodayMoneyDeliveryReport,
+  ITodayMoneyDeliverySummary,
+  ITodayMoneyDeliveryItem,
+  IMoneyDeliveryCostReport,
+  IMoneyDeliveryCostReportSummary,
+  IMoneyDeliveryReportItem,
 } from '@/types/money-delivery.type';
 
 export class MoneyDeliveryService {
@@ -731,6 +737,429 @@ export class MoneyDeliveryService {
         limit,
       });
       throw new Error('Failed to get frequent money customers');
+    }
+  }
+
+  /**
+   * Get today's money delivery report for a specific user
+   */
+  async getTodayReport(userId: string): Promise<ITodayMoneyDeliveryReport> {
+    try {
+      // Get user's selectedRouteId to filter by fromRoute
+      const user = await User.findById(userId).select('selectedRouteId').lean();
+      if (!user || !user.selectedRouteId) {
+        throw new Error('User route not found');
+      }
+
+      // Get route information
+      const route = await Route.findById(user.selectedRouteId).select('_id code name').lean();
+      if (!route) {
+        throw new Error('Selected route not found');
+      }
+
+      // Get today's date range (00:00:00 to 23:59:59)
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      // Aggregation pipeline for today's money deliveries
+      const pipeline: PipelineStage[] = [
+        {
+          $match: {
+            fromRoute: new Types.ObjectId(user.selectedRouteId),
+            createdAt: {
+              $gte: today,
+              $lt: tomorrow,
+            },
+          },
+        },
+        {
+          $lookup: {
+            from: 'customers',
+            localField: 'sender',
+            foreignField: '_id',
+            as: 'sender',
+          },
+        },
+        {
+          $lookup: {
+            from: 'customers',
+            localField: 'receiver',
+            foreignField: '_id',
+            as: 'receiver',
+          },
+        },
+        {
+          $lookup: {
+            from: 'routes',
+            localField: 'toRoute',
+            foreignField: '_id',
+            as: 'toRoute',
+          },
+        },
+        { $unwind: '$sender' },
+        { $unwind: '$receiver' },
+        { $unwind: '$toRoute' },
+        {
+          $facet: {
+            summary: [
+              {
+                $group: {
+                  _id: null,
+                  totalMoneyDeliveries: { $sum: 1 },
+                  totalSendMoneyAmount: { $sum: '$sendMoneyAmount' },
+                  totalSendCost: { $sum: '$sendCost' },
+                  totalSendFee: { $sum: '$sendFee' },
+                },
+              },
+            ],
+            deliveries: [
+              {
+                $project: {
+                  _id: 1,
+                  code: 1,
+                  sender: {
+                    name: '$sender.name',
+                    phone: '$sender.phone',
+                  },
+                  receiver: {
+                    name: '$receiver.name',
+                    phone: '$receiver.phone',
+                  },
+                  toRoute: {
+                    id: { $toString: '$toRoute._id' },
+                    code: '$toRoute.code',
+                    name: '$toRoute.name',
+                  },
+                  sendMoneyAmount: 1,
+                  sendCost: 1,
+                  sendFee: 1,
+                  totalCost: 1,
+                  transferType: 1,
+                  createdAt: 1,
+                },
+              },
+              { $sort: { createdAt: -1 } },
+            ],
+          },
+        },
+      ];
+
+      const result = await MoneyDelivery.aggregate(pipeline);
+      const summaryData = result[0]?.summary[0] || {
+        totalMoneyDeliveries: 0,
+        totalSendMoneyAmount: 0,
+        totalSendCost: 0,
+        totalSendFee: 0,
+      };
+      const deliveriesData = result[0]?.deliveries || [];
+
+      // Format summary
+      const summary: ITodayMoneyDeliverySummary = {
+        totalMoneyDeliveries: summaryData.totalMoneyDeliveries,
+        totalSendMoneyAmount: summaryData.totalSendMoneyAmount,
+        totalSendCost: summaryData.totalSendCost,
+        totalSendFee: summaryData.totalSendFee,
+        date: today.toISOString().split('T')[0], // YYYY-MM-DD format
+      };
+
+      // Format money deliveries
+      const moneyDeliveries: ITodayMoneyDeliveryItem[] = deliveriesData.map((item: any) => ({
+        id: item._id.toString(),
+        code: item.code,
+        sender: item.sender,
+        receiver: item.receiver,
+        toRoute: item.toRoute,
+        sendMoneyAmount: item.sendMoneyAmount,
+        sendCost: item.sendCost,
+        sendFee: item.sendFee,
+        totalCost: item.totalCost,
+        transferType: item.transferType,
+        createdAt: item.createdAt,
+      }));
+
+      // Format route info
+      const routeInfo = {
+        route: {
+          id: route._id.toString(),
+          code: route.code,
+          name: route.name,
+        },
+        routeCode: route.code,
+        routeName: route.name,
+      };
+
+      return {
+        summary,
+        moneyDeliveries,
+        routeInfo,
+      };
+    } catch (error) {
+      Logger.error('Failed to get today money delivery report', {
+        error: error instanceof Error ? error.message : error,
+        userId,
+      });
+      throw new Error('Failed to get today money delivery report');
+    }
+  }
+
+  /**
+   * Get money delivery cost report with date range filtering and pagination
+   */
+  async getCostReport(
+    userId: string,
+    startDate: Date,
+    endDate: Date,
+    page: number = 1,
+    limit: number = 100
+  ): Promise<IMoneyDeliveryCostReport> {
+    try {
+      // Get user's selectedRouteId to filter by fromRoute
+      const user = await User.findById(userId).select('selectedRouteId').lean();
+      if (!user || !user.selectedRouteId) {
+        throw new Error('User route not found');
+      }
+
+      // Get route information
+      const route = await Route.findById(user.selectedRouteId).select('_id code name').lean();
+      if (!route) {
+        throw new Error('Selected route not found');
+      }
+
+      const skip = (page - 1) * limit;
+
+      // Set end date to end of day
+      const endOfDay = new Date(endDate);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      // Aggregation pipeline for money deliveries cost report
+      const pipeline: PipelineStage[] = [
+        {
+          $match: {
+            fromRoute: new Types.ObjectId(user.selectedRouteId),
+            createdAt: {
+              $gte: startDate,
+              $lte: endOfDay,
+            },
+          },
+        },
+        {
+          $lookup: {
+            from: 'customers',
+            localField: 'sender',
+            foreignField: '_id',
+            as: 'sender',
+          },
+        },
+        {
+          $lookup: {
+            from: 'customers',
+            localField: 'receiver',
+            foreignField: '_id',
+            as: 'receiver',
+          },
+        },
+        {
+          $lookup: {
+            from: 'routes',
+            localField: 'toRoute',
+            foreignField: '_id',
+            as: 'toRoute',
+          },
+        },
+        { $unwind: '$sender' },
+        { $unwind: '$receiver' },
+        { $unwind: '$toRoute' },
+        {
+          $facet: {
+            summary: [
+              {
+                $group: {
+                  _id: null,
+                  totalMoneyDeliveries: { $sum: 1 },
+                  totalSendMoneyAmount: { $sum: '$sendMoneyAmount' },
+                  totalSendCost: { $sum: '$sendCost' },
+                  totalSendFee: { $sum: '$sendFee' },
+                  totalCost: { $sum: '$totalCost' },
+
+                  // Transfer type breakdown
+                  regularTransferCount: {
+                    $sum: { $cond: [{ $eq: ['$transferType', 'regular'] }, 1, 0] },
+                  },
+                  regularTransferAmount: {
+                    $sum: { $cond: [{ $eq: ['$transferType', 'regular'] }, '$sendMoneyAmount', 0] },
+                  },
+                  regularTransferFee: {
+                    $sum: { $cond: [{ $eq: ['$transferType', 'regular'] }, '$sendFee', 0] },
+                  },
+                  expressTransferCount: {
+                    $sum: { $cond: [{ $eq: ['$transferType', 'express'] }, 1, 0] },
+                  },
+                  expressTransferAmount: {
+                    $sum: { $cond: [{ $eq: ['$transferType', 'express'] }, '$sendMoneyAmount', 0] },
+                  },
+                  expressTransferFee: {
+                    $sum: { $cond: [{ $eq: ['$transferType', 'express'] }, '$sendFee', 0] },
+                  },
+                  freeTransferCount: {
+                    $sum: { $cond: [{ $eq: ['$transferType', 'free'] }, 1, 0] },
+                  },
+                  freeTransferAmount: {
+                    $sum: { $cond: [{ $eq: ['$transferType', 'free'] }, '$sendMoneyAmount', 0] },
+                  },
+                },
+              },
+              {
+                $addFields: {
+                  averageSendAmountPerDelivery: {
+                    $cond: [
+                      { $gt: ['$totalMoneyDeliveries', 0] },
+                      { $divide: ['$totalSendMoneyAmount', '$totalMoneyDeliveries'] },
+                      0,
+                    ],
+                  },
+                  averageFeePerDelivery: {
+                    $cond: [
+                      { $gt: ['$totalMoneyDeliveries', 0] },
+                      { $divide: ['$totalSendFee', '$totalMoneyDeliveries'] },
+                      0,
+                    ],
+                  },
+                },
+              },
+            ],
+            totalCount: [{ $count: 'count' }],
+            data: [
+              {
+                $project: {
+                  _id: 1,
+                  code: 1,
+                  sender: {
+                    name: '$sender.name',
+                    phone: '$sender.phone',
+                  },
+                  receiver: {
+                    name: '$receiver.name',
+                    phone: '$receiver.phone',
+                  },
+                  toRoute: {
+                    id: { $toString: '$toRoute._id' },
+                    code: '$toRoute.code',
+                    name: '$toRoute.name',
+                  },
+                  sendMoneyAmount: 1,
+                  sendCost: 1,
+                  sendFee: 1,
+                  totalCost: 1,
+                  transferType: 1,
+                  notes: 1,
+                  createdAt: 1,
+                },
+              },
+              { $sort: { createdAt: -1 } },
+              { $skip: skip },
+              { $limit: limit },
+            ],
+          },
+        },
+      ];
+
+      const result = await MoneyDelivery.aggregate(pipeline);
+      const summaryData = result[0]?.summary[0] || {
+        totalMoneyDeliveries: 0,
+        totalSendMoneyAmount: 0,
+        totalSendCost: 0,
+        totalSendFee: 0,
+        totalCost: 0,
+        regularTransferCount: 0,
+        regularTransferAmount: 0,
+        regularTransferFee: 0,
+        expressTransferCount: 0,
+        expressTransferAmount: 0,
+        expressTransferFee: 0,
+        freeTransferCount: 0,
+        freeTransferAmount: 0,
+        averageSendAmountPerDelivery: 0,
+        averageFeePerDelivery: 0,
+      };
+      const totalCount = result[0]?.totalCount[0]?.count || 0;
+      const dataItems = result[0]?.data || [];
+
+      // Format summary
+      const summary: IMoneyDeliveryCostReportSummary = {
+        totalMoneyDeliveries: summaryData.totalMoneyDeliveries,
+        totalSendMoneyAmount: summaryData.totalSendMoneyAmount,
+        totalSendCost: summaryData.totalSendCost,
+        totalSendFee: summaryData.totalSendFee,
+        totalCost: summaryData.totalCost,
+        regularTransferCount: summaryData.regularTransferCount,
+        regularTransferAmount: summaryData.regularTransferAmount,
+        regularTransferFee: summaryData.regularTransferFee,
+        expressTransferCount: summaryData.expressTransferCount,
+        expressTransferAmount: summaryData.expressTransferAmount,
+        expressTransferFee: summaryData.expressTransferFee,
+        freeTransferCount: summaryData.freeTransferCount,
+        freeTransferAmount: summaryData.freeTransferAmount,
+        averageSendAmountPerDelivery:
+          Math.round(summaryData.averageSendAmountPerDelivery * 100) / 100,
+        averageFeePerDelivery: Math.round(summaryData.averageFeePerDelivery * 100) / 100,
+      };
+
+      // Format money deliveries
+      const moneyDeliveries: IMoneyDeliveryReportItem[] = dataItems.map((item: any) => ({
+        id: item._id.toString(),
+        code: item.code,
+        date: item.createdAt,
+        sender: item.sender,
+        receiver: item.receiver,
+        toRoute: item.toRoute,
+        sendMoneyAmount: item.sendMoneyAmount,
+        sendCost: item.sendCost,
+        sendFee: item.sendFee,
+        totalCost: item.totalCost,
+        transferType: item.transferType,
+        notes: item.notes,
+      }));
+
+      // Calculate pagination
+      const totalPages = Math.ceil(totalCount / limit);
+      const hasNextPage = page < totalPages;
+      const hasPrevPage = page > 1;
+
+      return {
+        summary,
+        moneyDeliveries,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalRecords: totalCount,
+          limit,
+          hasNextPage,
+          hasPrevPage,
+        },
+        filter: {
+          dateRange: {
+            from: startDate,
+            to: endOfDay,
+          },
+          fromRoute: {
+            id: route._id.toString(),
+            code: route.code,
+            name: route.name,
+          },
+        },
+      };
+    } catch (error) {
+      Logger.error('Failed to generate cost report', {
+        error: error instanceof Error ? error.message : error,
+        userId,
+        startDate,
+        endDate,
+        page,
+        limit,
+      });
+      throw new Error('Failed to generate cost report');
     }
   }
 }

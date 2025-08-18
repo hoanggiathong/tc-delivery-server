@@ -9,6 +9,7 @@ import {
   getNextMoneyDeliveryCodeSchema,
   moneyDeliveryCodeSchema,
   frequentMoneyCustomersSchema,
+  moneyDeliveryCostReportSchema,
 } from '@/schemas/money-delivery.schema';
 
 const router = Router();
@@ -136,6 +137,16 @@ router.get(
   validate(getNextMoneyDeliveryCodeSchema),
   moneyDeliveryController.getNextCode
 );
+
+// Cost report route (must be before /:id to avoid conflicts)
+router.get(
+  '/cost-report',
+  validate(moneyDeliveryCostReportSchema),
+  moneyDeliveryController.getCostReport
+);
+
+// Today report route (must be before /:id to avoid conflicts)
+router.get('/today-report', moneyDeliveryController.getTodayReport);
 
 // Get money delivery by code route (must be before /:id to avoid conflicts)
 router.get(
