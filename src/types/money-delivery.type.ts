@@ -240,6 +240,7 @@ export interface ITodayMoneyDeliveryItem {
   sendFee: number;
   totalCost: number;
   transferType: 'regular' | 'express' | 'free';
+  notes: string;
   createdAt: Date;
 }
 

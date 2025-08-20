@@ -837,6 +837,7 @@ export class MoneyDeliveryService {
                   sendFee: 1,
                   totalCost: 1,
                   transferType: 1,
+                  notes: 1,
                   createdAt: 1,
                 },
               },
@@ -876,6 +877,7 @@ export class MoneyDeliveryService {
         sendFee: item.sendFee,
         totalCost: item.totalCost,
         transferType: item.transferType,
+        notes: item.notes,
         createdAt: item.createdAt,
       }));
 
