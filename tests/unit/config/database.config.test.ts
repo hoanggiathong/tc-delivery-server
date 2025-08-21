@@ -3,15 +3,29 @@ import { connectDB, disconnectDB } from '@/config/database';
 import Logger from '@/utils/logger';
 
 // Mock mongoose
-jest.mock('mongoose', () => ({
-  connect: jest.fn(),
-  disconnect: jest.fn(),
-  set: jest.fn(),
-  connection: {
-    host: 'localhost',
-    on: jest.fn(),
-  },
-}));
+jest.mock('mongoose', () => {
+  const mockSchema = jest.fn().mockImplementation(() => ({
+    pre: jest.fn(),
+    index: jest.fn(),
+    virtual: jest.fn(),
+    methods: {},
+  }));
+  mockSchema.Types = {
+    ObjectId: jest.fn(),
+  };
+  
+  return {
+    connect: jest.fn(),
+    disconnect: jest.fn(),
+    set: jest.fn(),
+    connection: {
+      host: 'localhost',
+      on: jest.fn(),
+    },
+    Schema: mockSchema,
+    model: jest.fn(),
+  };
+});
 
 // Mock Logger
 jest.mock('@/utils/logger', () => ({
@@ -60,7 +74,7 @@ describe('Database Config', () => {
 
       // Verify
       expect(mockedMongoose.connect).toHaveBeenCalledWith('mongodb://localhost:27017/test');
-      expect(mockedLogger.info).toHaveBeenCalledWith('✅ MongoDB Connected: localhost:27017');
+      expect(mockedLogger.info).toHaveBeenCalledWith('MongoDB Connected: localhost:27017');
       expect(mockedMongoose.connection.on).toHaveBeenCalledWith('connected', expect.any(Function));
       expect(mockedMongoose.connection.on).toHaveBeenCalledWith(
         'disconnected',
@@ -137,7 +151,7 @@ describe('Database Config', () => {
       }).rejects.toThrow('process.exit() was called.');
 
       expect(mockedLogger.error).toHaveBeenCalledWith(
-        `❌ Error connecting to MongoDB: ${connectionError}`
+        `Error connecting to MongoDB: ${connectionError}`
       );
       expect(mockExit).toHaveBeenCalledWith(1);
     });
@@ -175,10 +189,10 @@ describe('Database Config', () => {
       errorHandler?.(new Error('Test error'));
 
       // Verify handler calls
-      expect(mockedLogger.info).toHaveBeenCalledWith('🔸 MongoDB connected');
-      expect(mockedLogger.warn).toHaveBeenCalledWith('🔸 MongoDB disconnected');
+      expect(mockedLogger.info).toHaveBeenCalledWith('MongoDB connected');
+      expect(mockedLogger.warn).toHaveBeenCalledWith('MongoDB disconnected');
       expect(mockedLogger.error).toHaveBeenCalledWith(
-        '❌ MongoDB connection error: Error: Test error'
+        'MongoDB connection error: Error: Test error'
       );
     });
   });
@@ -193,7 +207,7 @@ describe('Database Config', () => {
 
       // Verify
       expect(mockedMongoose.disconnect).toHaveBeenCalled();
-      expect(mockedLogger.info).toHaveBeenCalledWith('🔸 MongoDB disconnected successfully');
+      expect(mockedLogger.info).toHaveBeenCalledWith('MongoDB disconnected successfully');
     });
 
     it('should handle disconnection error', async () => {
@@ -207,7 +221,7 @@ describe('Database Config', () => {
       // Verify
       expect(mockedMongoose.disconnect).toHaveBeenCalled();
       expect(mockedLogger.error).toHaveBeenCalledWith(
-        `❌ Error disconnecting from MongoDB: ${disconnectionError}`
+        `Error disconnecting from MongoDB: ${disconnectionError}`
       );
     });
   });
