@@ -216,3 +216,17 @@ export type DeliveryCodeParams = z.infer<typeof deliveryCodeSchema>['params'];
 export type FrequentCustomersParams = z.infer<typeof frequentCustomersSchema>['params'];
 export type FrequentCustomersQuery = z.infer<typeof frequentCustomersSchema>['query'];
 export type DeliveryCostReportQuery = z.infer<typeof deliveryCostReportSchema>['query'];
+
+// Schema for delivery receipt by code
+export const deliveryReceiptSchema = z.object({
+  params: z.object({
+    code: z
+      .string()
+      .min(10, 'Delivery code must be at least 10 characters')
+      .max(10, 'Delivery code must be exactly 10 characters')
+      .regex(/^\d{10}$/, 'Invalid delivery code format. Expected: 10 digits (e.g., 2412170001)')
+      .trim(),
+  }),
+});
+
+export type DeliveryReceiptParams = z.infer<typeof deliveryReceiptSchema>['params'];

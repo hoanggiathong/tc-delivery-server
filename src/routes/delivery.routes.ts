@@ -10,6 +10,7 @@ import {
   deliveryCodeSchema,
   frequentCustomersSchema,
   deliveryCostReportSchema,
+  deliveryReceiptSchema,
 } from '@/schemas/delivery.schema';
 
 const router = Router();
@@ -205,40 +206,43 @@ const deliveryController = new DeliveryController();
  *           description: Note for customer collection
  */
 
-// All delivery routes require authentication (any role)
 router.use(authenticateToken);
 
-// Delivery routes
 router.post('/', validate(createDeliverySchema), deliveryController.createDelivery);
 router.get('/', deliveryController.getAllDeliveries);
 
-// Next code route (must be before /:id to avoid conflicts)
 router.get('/next-code', validate(getNextCodeSchema), deliveryController.getNextCode);
 
-// Cost report route (must be before /:id to avoid conflicts)
 router.get('/cost-report', validate(deliveryCostReportSchema), deliveryController.getCostReport);
 
-// Today report route (must be before /:id to avoid conflicts)
 router.get('/today-report', authenticateToken, deliveryController.getTodayReport);
 
-// Get delivery by code route (must be before /:id to avoid conflicts)
 router.get(
   '/code/:deliveryIdentifier',
   validate(deliveryCodeSchema),
   deliveryController.getDeliveryByCode
 );
 
-// Related deliveries route (must be before /:id to avoid conflicts)
 router.get('/related/:senderName', deliveryController.getRelatedDeliveriesBySender);
 
-// Frequent customers route (must be before /:id to avoid conflicts)
 router.get(
   '/frequent-customers/:senderIdentifier',
   validate(frequentCustomersSchema),
   deliveryController.getFrequentCustomers
 );
 
-router.get('/:id', validate(deliveryParamsSchema), deliveryController.getDeliveryById);
+router.get(
+  '/receipt/:code',
+  validate(deliveryReceiptSchema),
+  deliveryController.generateDeliveryReceiptByCode
+);
+
+router.get(
+  '/receipt-preview/:code',
+  validate(deliveryReceiptSchema),
+  deliveryController.generateDeliveryReceiptPreview
+);
+
 router.put(
   '/:id',
   validate(deliveryParamsSchema),
