@@ -140,6 +140,7 @@ const draftDeliverySchema = new Schema<IDraftDelivery>(
   },
   {
     timestamps: true,
+    collection: 'draftDelivery',
     toJSON: {
       transform: function (doc, ret) {
         const { _id, __v, ...rest } = ret;

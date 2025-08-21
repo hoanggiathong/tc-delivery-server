@@ -37,6 +37,7 @@ erDiagram
         ObjectId _id PK
         string code UK "duy nhất, định dạng: [A-Z][0-9]+, chữ hoa, trim"
         string name "bắt buộc, tối đa 100 ký tự, trim"
+        string address "tùy chọn, tối đa 200 ký tự, trim"
         datetime createdAt "tự động tạo"
         datetime updatedAt "tự động cập nhật"
     }
@@ -194,6 +195,7 @@ erDiagram
 #### Bảng ROUTES
 - **Định dạng mã**: Phải khớp với pattern `[A-Z]\d+` (ví dụ: T1, T2, A1)
 - **Tự động chuyển đổi**: Mã được tự động chuyển thành chữ hoa
+- **Địa chỉ**: Trường tùy chọn, tối đa 200 ký tự, lưu thông tin địa chỉ tuyến đường
 
 #### Bảng USER_ROUTES
 - **Ràng buộc duy nhất**: Mỗi người dùng chỉ có thể được phân công vào một tuyến đường một lần (userId + routeId)

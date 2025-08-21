@@ -4,6 +4,7 @@ export interface IRoute extends Document {
   _id: string;
   code: string;
   name: string;
+  address?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -23,6 +24,12 @@ const routeSchema = new Schema<IRoute>(
       required: [true, 'Name is required'],
       trim: true,
       maxlength: [100, 'Name must not exceed 100 characters'],
+    },
+    address: {
+      type: String,
+      required: false,
+      trim: true,
+      maxlength: [200, 'Address must not exceed 200 characters'],
     },
   },
   {

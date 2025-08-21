@@ -111,11 +111,21 @@ export class DraftDeliveryController {
    *                     senderPhone: "+84901234567"
    *                     receiverName: "Trần Thị Bình"
    *                     receiverPhone: "+84907654321"
-   *                     fromRouteId: "507f1f77bcf86cd799439011"
-   *                     toRouteId: "507f1f77bcf86cd799439012"
+   *                     fromRoute: "507f1f77bcf86cd799439011"
+   *                     toRoute: "507f1f77bcf86cd799439012"
    *                     name: "Quần áo"
    *                     cost: 30000
-   *                     status: "draft"
+   *                     homeDelivery: null
+   *                     homeDeliveryCost: 0
+   *                     itemValue: 500000
+   *                     itemCost: 5000
+   *                     collectCost: 0
+   *                     collectForCustomer: 0
+   *                     collectForCustomerCost: 0
+   *                     collectForCustomerNote: null
+   *                     notes: null
+   *                     totalCost: 35000
+   *                     paymentType: null
    *                     createdByUser: "507f1f77bcf86cd799439040"
    *                     createdAt: "2024-12-17T10:00:00.000Z"
    *                     updatedAt: "2024-12-17T10:00:00.000Z"
@@ -258,8 +268,23 @@ export class DraftDeliveryController {
    *                     senderPhone: "+84901234567"
    *                     receiverName: "Phạm Văn Đức"
    *                     receiverPhone: "+84906666666"
+   *                     fromRoute: "507f1f77bcf86cd799439011"
+   *                     toRoute: "507f1f77bcf86cd799439012"
+   *                     name: "Quần áo"
    *                     cost: 45000
-   *                     status: "draft"
+   *                     homeDelivery: null
+   *                     homeDeliveryCost: 0
+   *                     itemValue: 500000
+   *                     itemCost: 5000
+   *                     collectCost: 0
+   *                     collectForCustomer: 0
+   *                     collectForCustomerCost: 0
+   *                     collectForCustomerNote: null
+   *                     notes: "Đã cập nhật phí giao hàng"
+   *                     totalCost: 50000
+   *                     paymentType: null
+   *                     createdByUser: "507f1f77bcf86cd799439040"
+   *                     createdAt: "2024-12-17T10:00:00.000Z"
    *                     updatedAt: "2024-12-17T11:00:00.000Z"
    *       400:
    *         description: Validation error
@@ -365,18 +390,50 @@ export class DraftDeliveryController {
    *                     drafts:
    *                       - id: "507f1f77bcf86cd799439030"
    *                         senderName: "Nguyễn Văn An"
+   *                         senderPhone: "+84901234567"
    *                         receiverName: "Trần Thị Bình"
+   *                         receiverPhone: "+84907654321"
+   *                         fromRoute: "507f1f77bcf86cd799439011"
+   *                         toRoute: "507f1f77bcf86cd799439012"
    *                         name: "Quần áo"
    *                         cost: 30000
-   *                         status: "draft"
+   *                         homeDelivery: null
+   *                         homeDeliveryCost: 0
+   *                         itemValue: 500000
+   *                         itemCost: 5000
+   *                         collectCost: 0
+   *                         collectForCustomer: 0
+   *                         collectForCustomerCost: 0
+   *                         collectForCustomerNote: null
+   *                         notes: null
+   *                         totalCost: 35000
+   *                         paymentType: null
+   *                         createdByUser: "507f1f77bcf86cd799439040"
    *                         createdAt: "2024-12-17T10:00:00.000Z"
+   *                         updatedAt: "2024-12-17T10:00:00.000Z"
    *                       - id: "507f1f77bcf86cd799439031"
    *                         senderName: "Shop ABC"
+   *                         senderPhone: "+84908888888"
    *                         receiverName: "Lê Văn Cường"
+   *                         receiverPhone: "+84909999999"
+   *                         fromRoute: "507f1f77bcf86cd799439011"
+   *                         toRoute: "507f1f77bcf86cd799439012"
    *                         name: "Điện thoại"
    *                         cost: 50000
-   *                         status: "draft"
+   *                         homeDelivery: "123 Nguyễn Văn Linh, Q7"
+   *                         homeDeliveryCost: 15000
+   *                         itemValue: 15000000
+   *                         itemCost: 150000
+   *                         collectCost: 0
+   *                         collectForCustomer: 15000000
+   *                         collectForCustomerCost: 150000
+   *                         collectForCustomerNote: "Thu hộ tiền bán hàng"
+   *                         notes: "Hàng giá trị cao, cẩn thận"
+   *                         totalCost: 350000
+   *                         paymentType: null
+   *                         createdByUser: "507f1f77bcf86cd799439041"
    *                         createdAt: "2024-12-17T09:00:00.000Z"
+   *                         updatedAt: "2024-12-17T09:00:00.000Z"
    *                     total: 2
    *               noDrafts:
    *                 summary: No drafts found
@@ -474,12 +531,21 @@ export class DraftDeliveryController {
    *                     senderPhone: "+84901234567"
    *                     receiverName: "Trần Thị Bình"
    *                     receiverPhone: "+84907654321"
-   *                     fromRouteId: "507f1f77bcf86cd799439011"
-   *                     toRouteId: "507f1f77bcf86cd799439012"
+   *                     fromRoute: "507f1f77bcf86cd799439011"
+   *                     toRoute: "507f1f77bcf86cd799439012"
    *                     name: "Quần áo"
    *                     cost: 30000
+   *                     homeDelivery: null
+   *                     homeDeliveryCost: 0
    *                     itemValue: 500000
-   *                     status: "draft"
+   *                     itemCost: 5000
+   *                     collectCost: 0
+   *                     collectForCustomer: 0
+   *                     collectForCustomerCost: 0
+   *                     collectForCustomerNote: null
+   *                     notes: null
+   *                     totalCost: 35000
+   *                     paymentType: null
    *                     createdByUser: "507f1f77bcf86cd799439040"
    *                     createdAt: "2024-12-17T10:00:00.000Z"
    *                     updatedAt: "2024-12-17T10:00:00.000Z"

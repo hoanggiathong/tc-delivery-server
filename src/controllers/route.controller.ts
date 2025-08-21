@@ -37,22 +37,29 @@ export class RouteController {
    *                 type: string
    *                 maxLength: 100
    *                 example: TP.HCM
+   *               address:
+   *                 type: string
+   *                 maxLength: 200
+   *                 example: 123 Nguyễn Văn Linh, Quận 7, TP.HCM
    *           examples:
    *             hcmRoute:
    *               summary: Create HCM route
    *               value:
    *                 code: "T1"
    *                 name: "TP.HCM"
+   *                 address: "123 Nguyễn Văn Linh, Quận 7, TP.HCM"
    *             hanoiRoute:
    *               summary: Create Hanoi route
    *               value:
    *                 code: "T2"
    *                 name: "Hà Nội"
+   *                 address: "456 Hoàng Quốc Việt, Cầu Giấy, Hà Nội"
    *             danangRoute:
    *               summary: Create Da Nang route
    *               value:
    *                 code: "T3"
    *                 name: "Đà Nẵng"
+   *                 address: "789 Lê Duẩn, Hải Châu, Đà Nẵng"
    *     responses:
    *       201:
    *         description: Route created successfully
@@ -79,6 +86,8 @@ export class RouteController {
    *                           type: string
    *                         name:
    *                           type: string
+   *                         address:
+   *                           type: string
    *                         createdAt:
    *                           type: string
    *                         updatedAt:
@@ -94,6 +103,7 @@ export class RouteController {
    *                       id: "507f1f77bcf86cd799439011"
    *                       code: "T1"
    *                       name: "TP.HCM"
+   *                       address: "123 Nguyễn Văn Linh, Quận 7, TP.HCM"
    *                       createdAt: "2024-12-17T10:00:00.000Z"
    *                       updatedAt: "2024-12-17T10:00:00.000Z"
    *       400:
@@ -518,7 +528,7 @@ export class RouteController {
    *                   type: string
    *                   example: "Insufficient permissions"
    */
-  getAllRoutes = async (req: Request, res: Response): Promise<void> => {
+  getAllRoutes = async (_req: Request, res: Response): Promise<void> => {
     try {
       const routes = await this.routeService.getAllRoutes();
 
