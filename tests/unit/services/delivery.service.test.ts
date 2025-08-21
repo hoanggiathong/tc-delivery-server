@@ -141,7 +141,7 @@ describe('DeliveryService', () => {
       collectForCustomerCost: 40,
       collectForCustomerNote: 'Test note',
       totalCost: 190, // 100 + 50 + 40 (cost + itemCost + collectForCustomerCost, homeDeliveryCost excluded)
-      paymentType: null,
+      paymentType: 'paid',
       createdByUser: 'user123',
       createdAt: new Date('2023-01-01'),
       updatedAt: new Date('2023-01-01'),
@@ -178,7 +178,7 @@ describe('DeliveryService', () => {
       collectForCustomerCost: 40,
       collectForCustomerNote: 'Test note',
       totalCost: 190, // 100 + 50 + 40 (cost + itemCost + collectForCustomerCost, homeDeliveryCost excluded)
-      paymentType: null,
+      paymentType: 'paid',
       createdByUser: 'testuser',
       createdAt: new Date('2023-01-01'),
       updatedAt: new Date('2023-01-01'),
@@ -413,7 +413,7 @@ describe('DeliveryService', () => {
       collectForCustomerCost: 40,
       collectForCustomerNote: 'Test note',
       totalCost: 190, // 100 + 50 + 40 (cost + itemCost + collectForCustomerCost, homeDeliveryCost excluded)
-      paymentType: null,
+      paymentType: 'paid',
       createdByUser: 'testuser',
       createdAt: new Date('2023-01-01'),
       updatedAt: new Date('2023-01-01'),
@@ -604,7 +604,7 @@ describe('DeliveryService', () => {
       collectForCustomerCost: 40,
       collectForCustomerNote: 'Test note',
       totalCost: 190, // 100 + 50 + 40 (cost + itemCost + collectForCustomerCost, homeDeliveryCost excluded)
-      paymentType: null,
+      paymentType: 'paid',
       createdByUser: 'testuser',
       createdAt: new Date('2023-01-01'),
       updatedAt: new Date('2023-01-01'),
@@ -981,7 +981,7 @@ describe('DeliveryService', () => {
       collectForCustomerCost: 40,
       collectForCustomerNote: 'Test note',
       totalCost: 190, // 100 + 50 + 40 (cost + itemCost + collectForCustomerCost, homeDeliveryCost excluded)
-      paymentType: null,
+      paymentType: 'paid',
       createdByUser: 'testuser',
       createdAt: new Date('2023-01-01'),
       updatedAt: new Date('2023-01-01'),

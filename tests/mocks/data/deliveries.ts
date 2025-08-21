@@ -46,7 +46,7 @@ export const createMockDelivery = (
     collectForCustomerNote: 'Test note',
     notes: 'Test delivery notes',
     totalCost: 58000, // 50000 + 5000 + 3000 (cost + itemCost + collectForCustomerCost, homeDeliveryCost excluded)
-    paymentType: null,
+    paymentType: 'paid',
     createdByUser: 'testuser',
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2023-01-01'),
@@ -73,7 +73,7 @@ export const createMockDeliveryRequest = (overrides: any = {}) => {
     collectForCustomerCost: 3000,
     collectForCustomerNote: 'Test note',
     notes: 'Test delivery notes',
-    paymentType: null,
+    paymentType: 'paid',
     ...overrides,
   };
 };
@@ -95,7 +95,7 @@ export const createMockDeliveryRequestWithoutHome = (overrides: any = {}) => {
     collectForCustomer: 50000,
     collectForCustomerCost: 3000,
     notes: 'Test delivery notes',
-    paymentType: null,
+    paymentType: 'paid',
     ...overrides,
   };
 };
@@ -204,7 +204,7 @@ export const mockCostReportForIntegration = {
       collectForCustomerCost: 4000,
       collectForCustomer: 60000,
       totalCost: 70000,
-      paymentType: null,
+      paymentType: 'paid' as const,
       notes: 'Test delivery 2',
     },
   ],

@@ -25,7 +25,7 @@ export interface IDeliveryResponse extends BaseEntity {
   collectForCustomerNote?: string;
   notes?: string;
   totalCost: number;
-  paymentType?: 'debt' | 'free' | null;
+  paymentType?: 'paid' | 'debt' | 'free';
   createdByUser: string;
 }
 
@@ -48,7 +48,7 @@ export interface IDeliveryCreateRequest {
   collectForCustomerCost: number;
   collectForCustomerNote?: string;
   notes?: string;
-  paymentType?: 'debt' | 'free' | null;
+  paymentType?: 'paid' | 'debt' | 'free';
 }
 
 // Delivery update request interface
@@ -70,7 +70,7 @@ export interface IDeliveryUpdateRequest {
   collectForCustomerCost?: number;
   collectForCustomerNote?: string;
   notes?: string;
-  paymentType?: 'debt' | 'free' | null;
+  paymentType?: 'paid' | 'debt' | 'free';
 }
 
 // Interface for populated delivery (when sender, receiver, fromRoute, toRoute, createdByUser are populated)
@@ -103,7 +103,7 @@ export interface IDeliveryWithPopulatedRefs {
   collectForCustomerNote?: string;
   notes?: string;
   totalCost: number;
-  paymentType?: 'debt' | 'free' | null;
+  paymentType?: 'paid' | 'debt' | 'free';
   createdByUser: {
     _id: string;
     username: string;
@@ -177,7 +177,7 @@ export interface IDeliveryLeanPopulated {
   collectForCustomerNote?: string;
   notes?: string;
   totalCost: number;
-  paymentType?: 'debt' | 'free' | null;
+  paymentType?: 'paid' | 'debt' | 'free';
   createdByUser: {
     _id: string;
     username: string;
@@ -269,7 +269,7 @@ export interface IDeliveryReportItem {
   collectForCustomerCost: number;
   totalCost: number;
 
-  paymentType: 'debt' | 'free' | null;
+  paymentType?: 'paid' | 'debt' | 'free';
   notes?: string;
 }
 
@@ -328,7 +328,7 @@ export interface ITodayDeliveryItem {
   cost: number;
   itemCost: number;
   totalCost: number;
-  paymentType: 'debt' | 'free' | null;
+  paymentType?: 'paid' | 'debt' | 'free';
   createdAt: Date;
 }
 

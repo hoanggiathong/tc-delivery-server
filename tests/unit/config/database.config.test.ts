@@ -10,10 +10,10 @@ jest.mock('mongoose', () => {
     virtual: jest.fn(),
     methods: {},
   }));
-  mockSchema.Types = {
+  (mockSchema as any).Types = {
     ObjectId: jest.fn(),
   };
-  
+
   return {
     connect: jest.fn(),
     disconnect: jest.fn(),

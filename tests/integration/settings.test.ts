@@ -174,8 +174,7 @@ describe('Settings API Integration Tests', () => {
     });
 
     it('should return 404 if settings not found', async () => {
-      const { AppError } = require('@/middlewares/error.middleware');
-      const error = new AppError('Settings with name "shipping_rates" not found', 404);
+      const error = new Error('Settings with name "shipping_rates" not found');
       MockedSettingsService.prototype.getByName.mockRejectedValue(error);
 
       const response = await request(app)

@@ -95,8 +95,9 @@ export class DeliveryController {
    *                 example: "Thu tiền hàng"
    *               paymentType:
    *                 type: string
-   *                 enum: [null, debt, free]
-   *                 example: null
+   *                 enum: [paid, debt, free]
+   *                 default: paid
+   *                 example: "paid"
    *               notes:
    *                 type: string
    *                 example: "Hàng dễ vỡ, vui lòng cẩn thận"
@@ -193,6 +194,7 @@ export class DeliveryController {
    *                     collectForCustomer: 500000
    *                     collectForCustomerCost: 5000
    *                     totalCost: 45000
+   *                     paymentType: "paid"
    *                     createdAt: "2024-12-17T10:00:00.000Z"
    *       400:
    *         description: Validation error

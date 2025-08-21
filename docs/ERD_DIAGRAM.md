@@ -78,7 +78,7 @@ erDiagram
         number totalCost "tính toán: cost+itemCost(phí trị giá)+collectForCustomerCost"
         string collectForCustomerNote "tùy chọn, trim"
         string notes "tùy chọn, trim"
-        enum paymentType "null|debt|free, mặc định null, loại thanh toán"
+        enum paymentType "paid|debt|free, mặc định paid, loại thanh toán"
         ObjectId createdByUser FK "tham chiếu: USERS, bắt buộc"
         datetime createdAt "tự động tạo"
         datetime updatedAt "tự động cập nhật"
@@ -132,7 +132,7 @@ erDiagram
         number totalCost "tính toán: cost+itemCost+collectForCustomerCost"
         string collectForCustomerNote "tùy chọn, trim"
         string notes "tùy chọn, trim"
-        enum paymentType "null|debt|free, mặc định null"
+        enum paymentType "paid|debt|free, mặc định paid"
         ObjectId createdByUser FK "tham chiếu: USERS, bắt buộc"
         datetime createdAt "tự động tạo, TTL 30 ngày"
         datetime updatedAt "tự động cập nhật"
@@ -416,8 +416,8 @@ erDiagram
   - Atomic `findOneAndUpdate` operations
   - Retry mechanism với fallback strategy
   - Type safety với required toRouteId validation
-- **Field PaymentType**: Thêm trường `paymentType` vào bảng DELIVERIES với 3 giá trị:
-  - `null` (mặc định): Thanh toán bình thường
+- **Field PaymentType**: Trường `paymentType` trong bảng DELIVERIES với 3 giá trị:
+  - `paid` (mặc định): Thanh toán bình thường, khách hàng đã thanh toán
   - `debt`: Thanh toán nợ (khách hàng sẽ trả sau)
   - `free`: Giao hàng miễn phí
 - **Cập Nhật Công Thức TotalCost**: Loại bỏ `homeDeliveryCost` khỏi tính toán tổng chi phí

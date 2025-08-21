@@ -19,7 +19,7 @@ export interface IDelivery extends Document {
   collectForCustomerNote?: string;
   notes?: string;
   totalCost: number;
-  paymentType?: 'debt' | 'free' | null; // null (default), 'debt' (nợ), 'free' (miễn phí)
+  paymentType: 'paid' | 'debt' | 'free'; // 'paid' (default), 'debt' (nợ), 'free' (miễn phí)
   createdByUser: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -117,9 +117,9 @@ const deliverySchema = new Schema<IDelivery>(
     },
     paymentType: {
       type: String,
-      enum: ['debt', 'free', null],
-      default: null,
-      required: false,
+      enum: ['paid', 'debt', 'free'],
+      default: 'paid',
+      required: true,
     },
     createdByUser: {
       type: Schema.Types.ObjectId,

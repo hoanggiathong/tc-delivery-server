@@ -21,7 +21,7 @@ export interface IDraftDelivery extends Document {
   collectForCustomerNote?: string;
   notes?: string;
   totalCost: number;
-  paymentType?: 'debt' | 'free' | null;
+  paymentType: 'paid' | 'debt' | 'free';
   createdByUser: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -128,9 +128,9 @@ const draftDeliverySchema = new Schema<IDraftDelivery>(
     },
     paymentType: {
       type: String,
-      enum: ['debt', 'free', null],
-      default: null,
-      required: false,
+      enum: ['paid', 'debt', 'free'],
+      default: 'paid',
+      required: true,
     },
     createdByUser: {
       type: Schema.Types.ObjectId,

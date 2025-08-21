@@ -43,7 +43,7 @@ export const createDeliverySchema = z.object({
     collectForCustomerCost: z.number().min(0, 'Collect for customer cost must be positive'),
     collectForCustomerNote: z.string().trim().optional(),
     notes: z.string().trim().optional(),
-    paymentType: z.enum(['debt', 'free']).nullable().optional(),
+    paymentType: z.enum(['paid', 'debt', 'free']).default('paid').optional(),
   }),
 });
 
@@ -106,7 +106,7 @@ export const updateDeliverySchema = z.object({
       .optional(),
     collectForCustomerNote: z.string().trim().optional(),
     notes: z.string().trim().optional(),
-    paymentType: z.enum(['debt', 'free']).nullable().optional(),
+    paymentType: z.enum(['paid', 'debt', 'free']).optional(),
   }),
 });
 
