@@ -1,7 +1,7 @@
-import puppeteer from 'puppeteer';
 import QRCode from 'qrcode';
 import JsBarcode from 'jsbarcode';
 import { createCanvas } from 'canvas';
+import htmlPdf from 'html-pdf-node';
 import { IDelivery } from '@/models/delivery.model';
 import { ICustomer } from '@/models/customer.model';
 import { IRoute } from '@/models/route.model';
@@ -10,9 +10,11 @@ export interface DeliveryReceiptData {
   // Basic info
   receiptNumber: string;
   date: string;
+  expiryDate: string;
   barcode: string;
   trackingCode: string;
-
+  fromRoute: IRoute;
+  toRoute: IRoute;
   // Sender info
   sender: {
     name: string;
@@ -32,16 +34,17 @@ export interface DeliveryReceiptData {
     description: string;
     quantity: number;
     value: number;
-    totalCost: number;
     isFragile: boolean;
+    homeDeliveryCost: number;
     specialInstructions: string[];
   };
 
   // Payment info
   payment: {
-    cashOnDelivery: number;
     shippingFee: number;
     total: number;
+    totalCost: number;
+    collectCost: number;
     paymentType: 'paid' | 'debt' | 'free';
   };
 
@@ -105,15 +108,23 @@ export class DeliveryReceiptService {
     const currentDate = new Date();
     const dateStr = `${currentDate.getDate().toString().padStart(2, '0')}/${(currentDate.getMonth() + 1).toString().padStart(2, '0')}/${currentDate.getFullYear().toString().slice(-2)}`;
 
+    // Calculate expiry date (current date + 7 days)
+    const expiryDate = new Date(currentDate);
+    expiryDate.setDate(currentDate.getDate() + 7);
+    const expiryDateStr = `ngày ${expiryDate.getDate()} tháng ${expiryDate.getMonth() + 1} năm ${expiryDate.getFullYear()}`;
+
     return {
       receiptNumber: delivery.code,
       date: dateStr,
+      expiryDate: expiryDateStr,
       barcode: delivery.code,
       trackingCode: delivery.code,
+      fromRoute: delivery.fromRoute,
+      toRoute: delivery.toRoute,
       sender: {
         name: delivery.sender.name,
         phone: delivery.sender.phone,
-        address: delivery.fromRoute.name, // Using route name as address for now
+        address: delivery.fromRoute.address || '',
       },
       recipient: {
         name: delivery.receiver.name,
@@ -124,14 +135,15 @@ export class DeliveryReceiptService {
         description: delivery.name,
         quantity: 1,
         value: delivery.itemValue,
-        totalCost: delivery.totalCost,
+        homeDeliveryCost: delivery.homeDeliveryCost,
         isFragile: delivery.notes?.toLowerCase().includes('dễ vỡ') || false,
         specialInstructions: delivery.notes ? [delivery.notes] : [],
       },
       payment: {
-        cashOnDelivery: delivery.collectCost,
         shippingFee: delivery.cost + delivery.itemCost,
         total: delivery.totalCost,
+        totalCost: delivery.totalCost,
+        collectCost: delivery.collectCost,
         paymentType: delivery.paymentType,
       },
       company: {
@@ -161,116 +173,128 @@ export class DeliveryReceiptService {
           padding: 0;
           box-sizing: border-box;
         }
-        
+
         body {
           font-family: 'Arial', sans-serif;
-          font-size: 11px;
-          line-height: 1.2;
+          font-size: 9px;
+          line-height: 1.1;
           color: #000;
           background: white;
         }
-        
+
         .receipt {
           width: 210mm;
           max-width: 210mm;
           margin: 0 auto;
           background: white;
-          padding: 5mm;
+          padding: 3mm;
         }
-        
+
         .header {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: 3mm;
-          border-bottom: 1px solid #000;
-          padding-bottom: 3mm;
+          margin-bottom: 2mm;
+          padding-bottom: 1mm;
+          font-size: 13px;
         }
-        
+
         .header-left {
           flex: 1;
         }
-        
+
         .header-center {
-          flex: 2;
+          flex: 1;
           text-align: center;
         }
-        
+
         .header-right {
           flex: 1;
           text-align: right;
         }
-        
+
         .receipt-number {
-          font-size: 48px;
+          font-size: 32px;
           font-weight: bold;
-          margin: 5mm 0;
+          margin: 2mm 0;
         }
-        
+
         .company-name {
-          font-size: 16px;
+          font-size: 14px;
           font-weight: bold;
-          margin-bottom: 2mm;
+          margin-bottom: 1mm;
         }
-        
+
         .barcode {
-          margin: 5mm 0;
+          margin: 2mm 0;
         }
-        
+
         .barcode img {
           max-width: 100%;
           height: auto;
         }
-        
+
         .customer-section {
           display: flex;
-          gap: 10mm;
-          margin: 5mm 0;
+          gap: 5mm;
+          margin: 2mm 0;
           border: 1px solid #000;
-          padding: 3mm;
+          padding: 2mm;
+          font-size: 13px;
         }
-        
+
         .sender, .recipient {
           flex: 1;
           border: 1px dashed #000;
-          padding: 2mm;
+          padding: 1mm;
         }
-        
+
         .section-title {
           font-weight: bold;
-          margin-bottom: 2mm;
+          margin-bottom: 1mm;
         }
-        
+
         .package-info {
-          margin: 3mm 0;
+          margin: 2mm 0;
           border: 1px solid #000;
-          padding: 3mm;
+          padding: 2mm;
+          font-size: 13px;
         }
-        
+
         .payment-info {
           display: flex;
           justify-content: space-between;
-          margin: 3mm 0;
+          margin: 2mm 0;
+          font-size: 13px;
         }
-        
+
         .qr-code {
-          text-align: right;
-          margin: 3mm 0;
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          gap: 3px;
+          margin: 1mm 0;
         }
-        
+
+        .qr-code span {
+          margin: 0;
+          font-size: 10px;
+          font-weight: bold;
+        }
+
         .qr-code img {
-          width: 60px;
-          height: 60px;
+          width: 40px;
+          height: 40px;
         }
-        
+
         .divider {
           border-top: 2px dashed #000;
-          margin: 10mm 0;
+          margin: 3mm 0;
           position: relative;
         }
-        
+
         .divider::before {
-          content: "✂️ CẮT THEO ĐƯỜNG NÀY";
+          content: "--- CẮT THEO ĐƯỜNG NÀY ---";
           position: absolute;
           top: -10px;
           left: 50%;
@@ -280,54 +304,91 @@ export class DeliveryReceiptService {
           font-size: 10px;
           font-weight: bold;
         }
-        
+
+        .divider::after {
+          content: "CUT";
+          position: absolute;
+          top: -10px;
+          right: 0;
+          background: white;
+          padding: 0 2mm;
+          font-size: 10px;
+          font-weight: bold;
+          border: 1px solid #000;
+        }
+
         .package-label {
           border: 1px solid #000;
           padding: 5mm;
           margin-top: 5mm;
         }
-        
+
         .label-header {
           text-align: center;
           font-size: 14px;
           font-weight: bold;
           margin-bottom: 3mm;
         }
-        
+
         .recipient-info {
           font-size: 12px;
           margin: 3mm 0;
         }
-        
+
         .special-instructions {
           margin: 3mm 0;
           padding: 2mm;
           border: 1px dashed #000;
           background: #f9f9f9;
         }
-        
+
         .stamp-area {
           text-align: right;
-          margin: 5mm 0;
+          margin: 2mm 0;
           border: 1px solid #000;
-          padding: 3mm;
-          height: 40mm;
+          padding: 2mm;
+          height: 25mm;
+          font-size: 11px;
         }
-        
+
         @media print {
           .receipt {
             margin: 0;
             padding: 0;
           }
         }
-        
+
         .info-row {
           margin: 1mm 0;
         }
-        
+
         .amount {
           font-weight: bold;
           color: #d32f2f;
+        }
+
+        .notification {
+          margin: 2mm 0;
+          padding: 2mm;
+          border: 1px solid #000;
+          background: #f8f8f8;
+          font-size: 11px;
+          line-height: 1.2;
+        }
+
+        .notification strong {
+          font-size: 12px;
+          color: #d32f2f;
+        }
+
+        .notification ul {
+          margin: 1mm 0 0 3mm;
+          padding: 0;
+        }
+
+        .notification li {
+          margin: 0.5mm 0;
+          text-align: justify;
         }
       </style>
     </head>
@@ -336,34 +397,51 @@ export class DeliveryReceiptService {
         <!-- Header Section -->
         <div class="header">
           <div class="header-left">
-            <div>Người nhận: ${data.date}</div>
-            <div>ĐT: ${data.sender.phone}</div>
-            <div>${data.sender.address}</div>
+            <div>Người nhận: ${data.recipient.name}</div>
+            ${data.payment.collectCost > 0 ? `<div>Thu hộ: <span class="amount">${data.payment.collectCost.toLocaleString('vi-VN')}</span> đồng</div>` : ''}
+            <div>ĐT: ${data.recipient.phone}</div>
+            <div>Địa chỉ: ${data.recipient.address}</div>
           </div>
-          
+
           <div class="header-center">
-            <div class="receipt-number">${data.receiptNumber}</div>
+            <div class="receipt-number">${data.receiptNumber.slice(-4)}</div>
             <div class="barcode">
               <img src="${barcodeDataURL}" alt="Barcode">
             </div>
           </div>
-          
+
           <div class="header-right">
             <div>SL: 1</div>
-            <div>(GTN) Nợ cước</div>
-            <div>(${data.payment.total.toLocaleString('vi-VN')})</div>
-            <div>SĐ-TP.HCM</div>
-            <div>Tr.G:${data.payment.total.toLocaleString('vi-VN')}</div>
+            <div>GTN: <span class="amount">${data.packageInfo.homeDeliveryCost.toLocaleString('vi-VN')} đồng</span></div>
+            <div>Nợ cước: <span class="amount">${data.payment.total.toLocaleString('vi-VN')} đồng</span></div>
+            <div>${data.fromRoute.name}-${data.toRoute.name}</div>
+            <div>Tr.G:<span class="amount">${data.packageInfo.value.toLocaleString('vi-VN')} đồng</span></div>
             <div class="qr-code">
+              <h3>${data.receiptNumber}</h3>
               <img src="${qrCodeDataURL}" alt="QR Code">
             </div>
           </div>
         </div>
 
+        <!-- Separator -->
+        <div class="divider"></div>
+
         <!-- Company Info -->
-        <div class="company-name">${data.company.name}</div>
-        <div>BIÊN NHẬN GỬI HÀNG</div>
-        <div>(Liên 2: Giao cho khách hàng)</div>
+        <div class="header">
+          <div class="header-left">
+            <div class="company-name">${data.company.name}</div>
+          </div>
+          <div class="header-center">
+            <div style="font-size: 18px; font-weight: bold;">BIÊN NHẬN GỬI HÀNG</div>
+            <div>(Liên 2: Giao cho khách hàng)</div>
+          </div>
+          <div class="header-right">
+            <div class="qr-code">
+              <h3>${data.receiptNumber}</h3>
+              <img src="${qrCodeDataURL}" alt="QR Code">
+            </div>
+          </div>
+        </div>
 
         <!-- Customer Information -->
         <div class="customer-section">
@@ -372,7 +450,7 @@ export class DeliveryReceiptService {
             <div class="info-row">Điện thoại: ${data.sender.phone}</div>
             <div class="info-row">Địa chỉ: ${data.sender.address}</div>
           </div>
-          
+
           <div class="recipient">
             <div class="section-title">Người nhận: ${data.recipient.name}</div>
             <div class="info-row">Điện thoại: ${data.recipient.phone}</div>
@@ -385,7 +463,7 @@ export class DeliveryReceiptService {
           <div class="info-row">Tên hàng: ${data.packageInfo.description}</div>
           <div class="info-row">Số lượng: ${data.packageInfo.quantity}</div>
           <div class="info-row">Nợ cước: <span class="amount">${data.payment.total.toLocaleString('vi-VN')} đồng</span></div>
-          <div class="info-row">Hàng có khai giá trị: <span class="amount">${data.packageInfo.value.toLocaleString('vi-VN')}</span></div>
+          <div class="info-row">Hàng có khai giá trị: <span class="amount">${data.packageInfo.value.toLocaleString('vi-VN')} đồng</span></div>
           <div class="info-row">Ghi chú: ${data.sender.address}</div>
         </div>
 
@@ -395,37 +473,30 @@ export class DeliveryReceiptService {
           <div>${new Date().toLocaleTimeString('vi-VN')} ngày ${data.date}</div>
         </div>
 
-        <!-- Separator -->
-        <div class="divider"></div>
-
-        <!-- Package Label Section -->
-        <div class="package-label">
-          <div class="label-header">NHÃN KIỆN HÀNG</div>
-          
-          <div class="recipient-info">
-            <div><strong>Người nhận: ${data.recipient.name}</strong></div>
-            <div>Điện thoại: ${data.recipient.phone}</div>
-            <div>Địa chỉ: ${data.recipient.address}</div>
-          </div>
-
-          <div class="info-row">Tên hàng: ${data.packageInfo.description}</div>
-          ${data.payment.cashOnDelivery > 0 ? `<div class="info-row">Thu hộ: <span class="amount">${data.payment.cashOnDelivery.toLocaleString('vi-VN')} đồng</span></div>` : ''}
-
-          ${
-            data.packageInfo.isFragile || data.packageInfo.specialInstructions.length > 0
-              ? `
-          <div class="special-instructions">
-            <strong>Lưu ý đặc biệt:</strong>
-            ${data.packageInfo.isFragile ? '<div>❌ HÀNG DỄ VỠ - KHÔNG ĐỂ NGƯỢC</div>' : ''}
-            ${data.packageInfo.specialInstructions.map(instruction => `<div>${instruction}</div>`).join('')}
-          </div>
-          `
-              : ''
-          }
-
-          <div class="stamp-area">
-            <div>Xác nhận giao hàng</div>
+        <!-- Signature Section -->
+        <div style="display: flex; justify-content: space-between; gap: 20mm;">
+          <div class="stamp-area" style="flex: 1;">
+            <div>Người gửi</div>
             <div>(Ký, ghi rõ họ tên)</div>
+          </div>
+          <div class="stamp-area" style="flex: 1;">
+            <div>Nhân viên nhận hàng</div>
+            <div>(Ký, ghi rõ họ tên)</div>
+          </div>
+        </div>
+        <!-- Notification for customer -->
+        <div class="notification">
+          <div>
+            <strong>Lưu ý:</strong>
+            <ul>
+              <li>Kiểm tra kỹ thông tin, địa chỉ GTN trên biên nhận, khách không kiểm tra khi sai thông tin sẽ không được khiểu nại.</li>
+              <li>Hàng nhập lậu hoặc không hóa đơn chứng từ cơ quan chức năng kiêm tra khách tự chịu trách nhiệm.</li>
+              <li>Khách tư đóng gói, bảo quản kỹ trước khi gửi. Hàng hóa trong quá trinh vận chuyển bị hư, môp, méo, xi, sốc, bê, đặp, gãy, ướt, rớt, rách, chuột cắn, động vật chết thông cảm không đền.</li>
+              <li style="font-weight: bold;">Công ty chí giải quyết khiếu nại với người trực tiếp gửi hàng ghi trên Biên nhận này.</li>
+              <li>Hàng vận chuyên qua ngày sẽ co, thông cảm nếu châm 2 - 3 ngày, trường hợp quá 3 ngày vui lòng liên hệ với sđt 0909090909</li>
+              <li>Trường hợp thất lạc hàng hoá có kê khai trị giá (trong 7 ngày kể từ ngày gửi) công ty sẽ bồi thường đúng với giá trị kê khai là ${data.packageInfo.value.toLocaleString('vi-VN')} đồng (không có phí GTN)</li>
+              <li>Khi nhận hàng, tiền vui lòng đem CCCD, GPL xe hoặc hộ chiếu. Biên nhận này có giá trị đến ${data.expiryDate}</li>
+            </ul>
           </div>
         </div>
       </div>
@@ -438,58 +509,57 @@ export class DeliveryReceiptService {
    * Generate PDF receipt for a delivery
    */
   public async generateReceiptPDF(delivery: PopulatedDelivery): Promise<Buffer> {
-    let browser: any = null;
-
     try {
-      console.log('Starting PDF generation for delivery:', delivery.code);
-      
       // Transform delivery data
       const receiptData = this.transformDeliveryData(delivery);
-      console.log('Receipt data transformed successfully');
 
-      // Generate barcode and QR code
+      // Generate barcode and QR code with fallbacks
       const barcodeDataURL = await this.generateBarcode(delivery.code);
       const qrCodeDataURL = await this.generateQRCode(delivery.code);
-      console.log('Barcode and QR code generated successfully');
+
+      // Validate that we have valid data URLs
+      if (!barcodeDataURL.startsWith('data:image/') || !qrCodeDataURL.startsWith('data:image/')) {
+        console.warn('Invalid barcode or QR code data URL, using fallbacks');
+      }
 
       // Generate HTML
       const html = this.generateReceiptHTML(receiptData, barcodeDataURL, qrCodeDataURL);
-      console.log('HTML template generated, length:', html.length);
 
-      // Launch puppeteer
-      browser = await puppeteer.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      });
-      console.log('Puppeteer browser launched');
+      // Basic HTML validation
+      if (!html.includes('</html>') || !html.includes('<body>')) {
+        throw new Error('Generated HTML appears to be malformed');
+      }
 
-      const page = await browser.newPage();
-
-      // Set content and generate PDF
-      await page.setContent(html, { waitUntil: 'networkidle0' });
-      console.log('HTML content set in browser');
-
-      const pdfBuffer = await page.pdf({
+      // Generate PDF from HTML
+      const options = {
         format: 'A4',
-        printBackground: true,
-        margin: {
+        width: '210mm',
+        height: '297mm',
+        border: {
           top: '10mm',
           right: '10mm',
           bottom: '10mm',
           left: '10mm',
         },
-      });
-      console.log('PDF generated successfully, size:', pdfBuffer.length);
+        printBackground: true,
+        displayHeaderFooter: false,
+      };
 
-      return pdfBuffer;
+      const file = { content: html };
+
+      return new Promise<Buffer>((resolve, reject) => {
+        htmlPdf.generatePdf(file, options, (err: any, buffer: Buffer) => {
+          if (err) {
+            reject(err);
+          } else {
+            console.log('PDF generated successfully, size:', buffer.length);
+            resolve(buffer);
+          }
+        });
+      });
     } catch (error) {
       console.error('PDF generation error:', error);
       throw new Error(`Failed to generate PDF receipt: ${error}`);
-    } finally {
-      if (browser) {
-        await browser.close();
-        console.log('Browser closed');
-      }
     }
   }
 
