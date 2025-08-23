@@ -9,6 +9,8 @@ import { IRoute } from '@/models/route.model';
 // Delivery response interface
 export interface IDeliveryResponse extends BaseEntity {
   code: string;
+  fullCode: string;
+  subCode: string;
   sender: ICustomerResponse;
   receiver: ICustomerResponse;
   fromRoute: IRouteResponse;
@@ -87,6 +89,8 @@ export interface IDeliveryPopulated
 export interface IDeliveryWithPopulatedRefs {
   _id: string;
   code: string;
+  fullCode: string;
+  subCode: string;
   sender: ICustomer;
   receiver: ICustomer;
   fromRoute: IRoute;
@@ -119,7 +123,10 @@ export interface INextCodeRequest {
 
 export interface INextCodeResponse {
   nextCode: string;
+  fullCode: string;
+  subCode: string;
   toRoute: IRouteResponse;
+  fromRoute: IRouteResponse;
 }
 
 // Interface for delivery code lookup (code + fromRoute + toRoute)
@@ -137,6 +144,8 @@ export interface ICodeGenerationData {
 export interface IDeliveryLeanPopulated {
   _id: string;
   code: string;
+  fullCode: string;
+  subCode: string;
   sender: {
     _id: string;
     name: string;

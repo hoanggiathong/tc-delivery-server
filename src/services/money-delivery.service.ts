@@ -139,6 +139,8 @@ export class MoneyDeliveryService {
     return {
       id: populated._id,
       code: populated.code,
+      fullCode: populated.fullCode,
+      subCode: populated.subCode,
       sender: {
         id: populated.sender._id,
         name: populated.sender.name,
@@ -188,6 +190,8 @@ export class MoneyDeliveryService {
     return {
       id: moneyDelivery._id,
       code: moneyDelivery.code,
+      fullCode: moneyDelivery.fullCode,
+      subCode: moneyDelivery.subCode,
       sender: {
         id: moneyDelivery.sender._id,
         name: moneyDelivery.sender.name,
@@ -245,20 +249,29 @@ export class MoneyDeliveryService {
       data.receiverPhone
     );
 
-    // Validate fromRoute and toRoute exist
-    const fromRoute = await Route.findById(data.fromRouteId);
-    if (!fromRoute) {
-      throw new Error('From route not found');
+    // Get user's selected route as fromRoute
+    const user = await User.findById(userId).select('selectedRouteId');
+    if (!user || !user.selectedRouteId) {
+      throw new Error('User must have a selected route to create money deliveries');
     }
 
-    const toRoute = await Route.findById(data.toRouteId);
+    // Validate fromRoute and toRoute exist
+    const [fromRoute, toRoute] = await Promise.all([
+      Route.findById(user.selectedRouteId),
+      Route.findById(data.toRouteId),
+    ]);
+
+    if (!fromRoute) {
+      throw new Error('User selected route not found');
+    }
     if (!toRoute) {
       throw new Error('To route not found');
     }
 
-    // Generate money delivery code
-    const moneyDeliveryCode = await CodeGeneratorService.generateNextMoneyDeliveryCode(
-      data.toRouteId
+    // Generate money delivery code with new system
+    const codeData = await CodeGeneratorService.generateNextMoneyDeliveryCode(
+      data.toRouteId,
+      user.selectedRouteId.toString()
     );
 
     // Get transfer type (default to 'regular' if not specified)
@@ -269,10 +282,12 @@ export class MoneyDeliveryService {
 
     // Create money delivery
     const moneyDelivery = new MoneyDelivery({
-      code: moneyDeliveryCode,
+      code: codeData.code,
+      fullCode: codeData.fullCode,
+      subCode: codeData.subCode,
       sender: sender.id,
       receiver: receiver.id,
-      fromRoute: data.fromRouteId,
+      fromRoute: user.selectedRouteId,
       toRoute: data.toRouteId,
       sendMoneyAmount: data.sendMoneyAmount,
       sendCost: data.sendCost,
@@ -443,25 +458,51 @@ export class MoneyDeliveryService {
 
   /**
    * Get next money delivery code for a specific route
+   * fromRouteId is taken from user's selectedRouteId
    */
-  async getNextCode(toRouteId: string): Promise<INextMoneyDeliveryCodeResponse> {
-    // Validate toRoute exists
-    const toRoute = await Route.findById(toRouteId);
+  async getNextCode(toRouteId: string, userId: string): Promise<INextMoneyDeliveryCodeResponse> {
+    // Get user's selected route as fromRoute
+    const user = await User.findById(userId).select('selectedRouteId');
+    if (!user || !user.selectedRouteId) {
+      throw new Error('User must have a selected route to get next code');
+    }
+
+    // Validate routes exist
+    const [toRoute, fromRoute] = await Promise.all([
+      Route.findById(toRouteId),
+      Route.findById(user.selectedRouteId),
+    ]);
+
     if (!toRoute) {
       throw new Error('To route not found');
     }
+    if (!fromRoute) {
+      throw new Error('User selected route not found');
+    }
 
     // Generate next code
-    const nextCode = await CodeGeneratorService.generateNextMoneyDeliveryCode(toRouteId);
+    const codeData = await CodeGeneratorService.generateNextMoneyDeliveryCode(
+      toRouteId,
+      user.selectedRouteId.toString()
+    );
 
     return {
-      nextCode,
+      nextCode: codeData.code,
+      fullCode: codeData.fullCode,
+      subCode: codeData.subCode,
       toRoute: {
         id: toRoute._id,
         code: toRoute.code,
         name: toRoute.name,
         createdAt: toRoute.createdAt,
         updatedAt: toRoute.updatedAt,
+      },
+      fromRoute: {
+        id: fromRoute._id,
+        code: fromRoute.code,
+        name: fromRoute.name,
+        createdAt: fromRoute.createdAt,
+        updatedAt: fromRoute.updatedAt,
       },
     };
   }

@@ -3,6 +3,8 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface IDelivery extends Document {
   _id: string;
   code: string;
+  fullCode: string;
+  subCode: string;
   sender: mongoose.Types.ObjectId;
   receiver: mongoose.Types.ObjectId;
   fromRoute: mongoose.Types.ObjectId;
@@ -30,9 +32,19 @@ const deliverySchema = new Schema<IDelivery>(
     code: {
       type: String,
       required: [true, 'Delivery code is required'],
+      trim: true,
+      match: [/^\d{6}\d{4}$/, 'Code must be 10 digits in format YYMMDD + sequence (0001-9999)'],
+    },
+    fullCode: {
+      type: String,
+      required: [true, 'Full code is required'],
       unique: true,
       trim: true,
-      match: [/^\d{6}\d{4}$/, 'Code must be 10 digits in format DDMMYY + sequence (0001-9999)'],
+    },
+    subCode: {
+      type: String,
+      required: [true, 'Sub code is required'],
+      trim: true,
     },
     sender: {
       type: Schema.Types.ObjectId,
@@ -213,8 +225,9 @@ deliverySchema.index({ fromRoute: 1, toRoute: 1, createdAt: -1 }); // Route anal
 deliverySchema.index({ sender: 1, createdAt: -1 }); // Sender history
 deliverySchema.index({ receiver: 1, createdAt: -1 }); // Receiver history
 deliverySchema.index({ code: 1, fromRoute: 1, toRoute: 1 });
-// Additional unique compound index for code generation safety
-deliverySchema.index({ code: 1, toRoute: 1 }, { unique: true });
+deliverySchema.index({ subCode: 1 });
+// Additional unique index for fullCode
+deliverySchema.index({ fullCode: 1 }, { unique: true });
 deliverySchema.index({ sender: 1, receiver: 1, toRoute: 1 });
 deliverySchema.index({ receiver: 1, toRoute: 1 });
 // Optimized index for cost report queries

@@ -9,6 +9,8 @@ import { IRoute } from '@/models/route.model';
 // MoneyDelivery response interface
 export interface IMoneyDeliveryResponse extends BaseEntity {
   code: string;
+  fullCode: string;
+  subCode: string;
   sender: ICustomerResponse;
   receiver: ICustomerResponse;
   fromRoute: IRouteResponse;
@@ -64,6 +66,8 @@ export interface IMoneyDeliveryPopulated
 export interface IMoneyDeliveryWithPopulatedRefs {
   _id: string;
   code: string;
+  fullCode: string;
+  subCode: string;
   sender: ICustomer;
   receiver: ICustomer;
   fromRoute: IRoute;
@@ -89,7 +93,10 @@ export interface INextMoneyDeliveryCodeRequest {
 
 export interface INextMoneyDeliveryCodeResponse {
   nextCode: string;
+  fullCode: string;
+  subCode: string;
   toRoute: IRouteResponse;
+  fromRoute: IRouteResponse;
 }
 
 // Interface for money delivery code lookup
@@ -107,6 +114,8 @@ export interface IMoneyDeliveryCodeGenerationData {
 export interface IMoneyDeliveryLeanPopulated {
   _id: string;
   code: string;
+  fullCode: string;
+  subCode: string;
   sender: {
     _id: string;
     name: string;

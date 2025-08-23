@@ -17,7 +17,6 @@ erDiagram
     ROUTES ||--o{ MONEY_DELIVERIES : "đến tuyến"
     ROUTES ||--o{ DRAFT_DELIVERIES : "từ tuyến"
     ROUTES ||--o{ DRAFT_DELIVERIES : "đến tuyến"
-    ROUTES ||--o{ DELIVERY_COUNTERS : "sequence tracking"
     CUSTOMERS ||--o{ DELIVERIES : "người gửi"
     CUSTOMERS ||--o{ DELIVERIES : "người nhận"
     CUSTOMERS ||--o{ MONEY_DELIVERIES : "người gửi"
@@ -61,10 +60,12 @@ erDiagram
 
     DELIVERIES {
         ObjectId _id PK
-        string code UK "duy nhất, 10 chữ số: DDMMYY+số thứ tự(0001-9999)"
+        string code "10 chữ số: YYMMDD+random sequence(0001-9999)"
+        string fullCode UK "duy nhất: code+fromRouteCode+toRouteCode"
+        string subCode "timestamp/1000+sequence"
         ObjectId sender FK "tham chiếu: CUSTOMERS, bắt buộc"
         ObjectId receiver FK "tham chiếu: CUSTOMERS, bắt buộc"
-        ObjectId fromRoute FK "tham chiếu: ROUTES, bắt buộc"
+        ObjectId fromRoute FK "tham chiếu: ROUTES, bắt buộc (từ user.selectedRouteId)"
         ObjectId toRoute FK "tham chiếu: ROUTES, bắt buộc"
         string name "tên hàng hóa, bắt buộc, trim"
         number cost "phí vận chuyển, bắt buộc, tối thiểu 0"
@@ -86,10 +87,12 @@ erDiagram
 
     MONEY_DELIVERIES {
         ObjectId _id PK
-        string code UK "duy nhất, 10 chữ số: DDMMYY+số thứ tự(0001-9999)"
+        string code "10 chữ số: YYMMDD+random sequence(0001-9999)"
+        string fullCode UK "duy nhất: code+fromRouteCode+toRouteCode"
+        string subCode "timestamp/1000+sequence"
         ObjectId sender FK "tham chiếu: CUSTOMERS, bắt buộc"
         ObjectId receiver FK "tham chiếu: CUSTOMERS, bắt buộc"
-        ObjectId fromRoute FK "tham chiếu: ROUTES, bắt buộc"
+        ObjectId fromRoute FK "tham chiếu: ROUTES, bắt buộc (từ user.selectedRouteId)"
         ObjectId toRoute FK "tham chiếu: ROUTES, bắt buộc"
         number sendMoneyAmount "số tiền gửi, bắt buộc, tối thiểu 0"
         number sendCost "phí dịch vụ, bắt buộc, tối thiểu 0"
@@ -102,15 +105,6 @@ erDiagram
         datetime updatedAt "tự động cập nhật"
     }
 
-    DELIVERY_COUNTERS {
-        ObjectId _id PK
-        string datePrefix "DDMMYY format, bắt buộc, regex: /^\\d{6}$/"
-        ObjectId toRoute FK "tham chiếu: ROUTES, bắt buộc"
-        number deliverySequence "sequence cho deliveries, mặc định 0, min:0, max:9999"
-        number moneyDeliverySequence "sequence cho money deliveries, mặc định 0, min:0, max:9999"
-        datetime createdAt "tự động tạo, TTL 90 ngày"
-        datetime updatedAt "tự động cập nhật"
-    }
 
     DRAFT_DELIVERIES {
         ObjectId _id PK
@@ -175,7 +169,6 @@ erDiagram
 - `deliveries` - Giao dịch vận chuyển thông thường
 - `moneydeliveries` - Giao dịch chuyển tiền
 - `draftdeliveries` - Bản nháp delivery (lưu tạm thông tin chưa hoàn tất)
-- `deliveryCounters` - Bộ đếm atomic cho code generation
 - `settings` - Cấu hình hệ thống linh hoạt (shipping rates, product list, custom configs)
 
 ### Ràng Buộc và Xác Thực Chính
@@ -203,7 +196,14 @@ erDiagram
 - **Index hiệu suất**: Index riêng biệt trên userId và routeId để tối ưu truy vấn
 
 #### Bảng DELIVERIES
-- **Định dạng mã**: Định dạng 10 số DDMMYY + số thứ tự (0001-9999)
+- **Định dạng mã mới**: 
+  - `code`: 10 chữ số YYMMDD + random sequence (0001-9999)
+  - `fullCode`: code + fromRouteCode + toRouteCode (duy nhất trong toàn hệ thống)
+  - `subCode`: timestamp/1000 + sequence
+- **Code Generation Logic**:
+  - Random sequence thay vì sequential để tránh collision
+  - fullCode uniqueness check across cả delivery và money-delivery collections
+  - fromRoute lấy từ user's selectedRouteId thay vì truyền từ client
 - **Quy tắc nghiệp vụ**:
   - Người gửi và người nhận không thể là cùng một khách hàng
   - Tuyến đi và tuyến đến không thể giống nhau
@@ -220,7 +220,11 @@ erDiagram
   - `{code: 1, fromRoute: 1, toRoute: 1}` - Index cho code + route lookup
 
 #### Bảng MONEY_DELIVERIES
-- **Định dạng mã**: Cùng định dạng 10 chữ số như deliveries
+- **Định dạng mã mới**: Cùng logic với deliveries:
+  - `code`: YYMMDD + random sequence (0001-9999)
+  - `fullCode`: code + fromRouteCode + toRouteCode (duy nhất)
+  - `subCode`: timestamp/1000 + sequence
+- **Shared uniqueness**: fullCode phải unique across cả delivery và money-delivery
 - **Quy tắc nghiệp vụ**: Cùng các ràng buộc người gửi/nhận và tuyến đường như deliveries
 - **Hình thức chuyển tiền (transferType)**:
   - `regular` (mặc định): Chuyển tiền thường, sendFee tính theo regularShippingFee
@@ -235,17 +239,6 @@ erDiagram
   - `totalCost = 0` cho free
 - **Index hiệu suất**: Cùng pattern tối ưu như deliveries
 
-#### Bảng DELIVERY_COUNTERS
-
-- **Ràng buộc duy nhất**: Tổ hợp datePrefix + toRoute phải duy nhất (mỗi ngày mỗi route có 1 counter)
-- **Atomic Operations**: Sử dụng MongoDB `findOneAndUpdate` với `$inc` để đảm bảo thread-safe sequence generation
-- **TTL Auto-cleanup**: Documents tự động expire sau 90 ngày để giữ database size tối ưu
-- **Sequence Range**: Mỗi sequence field giới hạn từ 0-9999 (4 chữ số cuối trong delivery code)
-- **Date Format**: datePrefix phải đúng format DDMMYY (6 chữ số)
-- **Index Strategy**:
-  - Compound unique index: `{datePrefix: 1, toRoute: 1}`
-  - Individual index: `{toRoute: 1}` cho route-only queries
-  - TTL index: `{createdAt: 1}` với expiration 90 ngày
 
 #### Bảng DRAFT_DELIVERIES
 
@@ -310,6 +303,8 @@ erDiagram
    - `{receiver: 1, toRoute: 1}` - Index hỗ trợ cho receiver lookups
    - `{phone: 1}` - Index cho exact phone search trong customers
    - `{name: "text"}` - Text search index cho tìm kiếm tên khách hàng
+   - `{fullCode: 1}` - Unique index cho new code system (deliveries & money-deliveries)
+   - `{subCode: 1}` - Index cho tracking và debug purposes
 6. **Settings Index**: `{name: 1}` - Unique index cho settings name lookup
 7. **Settings Performance**: `{isActive: 1}` - Index cho active settings filter
 
@@ -339,13 +334,20 @@ erDiagram
 - Thời gian hết hạn token có thể cấu hình qua biến môi trường `JWT_EXPIRES_IN`
 - Kiểm soát truy cập dựa trên vai trò được thực thi ở mức middleware
 
-#### Tạo Mã
-- **Endpoint Mã Tiếp Theo**: `GET /api/delivery/next-code?toRouteId={ObjectId}`
-- **Mã Chuyển Tiền**: `GET /api/money-deliveries/next-code?toRouteId={ObjectId}`
-- **Atomic Code Generation**: Sử dụng bảng `deliveryCounters` với atomic operations để đảm bảo unique codes
-- **Concurrency Safe**: Hỗ trợ multiple concurrent requests mà không sinh duplicate codes
-- **Fallback Strategy**: Có retry mechanism và legacy fallback khi atomic operations fail
-- **Performance**: Reduced database round trips với single atomic operation thay vì multiple queries
+#### Tạo Mã Mới (Code Generation)
+- **Endpoint Mã Tiếp Theo**: 
+  - `GET /api/delivery/next-code?toRouteId={ObjectId}` - Chỉ cần toRouteId
+  - `GET /api/money-deliveries/next-code?toRouteId={ObjectId}` - fromRouteId lấy từ user.selectedRouteId
+- **Random Sequence Generation**: 
+  - Không còn sử dụng sequential counter
+  - Random sequence (0001-9999) để tránh collision và tang bảo mật
+  - Format mới: YYMMDD + random sequence
+- **FullCode Uniqueness**: 
+  - fullCode = code + fromRouteCode + toRouteCode
+  - Unique constraint across cả delivery và money-delivery collections
+  - Retry mechanism (max 50 attempts) khi gặp collision
+- **SubCode Tracking**: timestamp/1000 + sequence cho tracking và debug
+- **Performance**: Parallel existence checks với Promise.all, optimized route fetching
 
 #### Money Delivery APIs
 - **Create Money Delivery**: `POST /api/money-deliveries`
@@ -399,10 +401,10 @@ erDiagram
   - Auto TTL cleanup sau 30 ngày
   - Chỉ owner mới có thể thao tác
   - Có thể convert thành delivery chính thức
-- **New Table: DELIVERY_COUNTERS**: Thêm bảng atomic counter cho code generation
-  - Đảm bảo thread-safe sequence generation
-  - Auto TTL cleanup sau 90 ngày
-  - Compound unique indexes cho performance
+- **Removed Table: DELIVERY_COUNTERS**: Xóa bảng atomic counter (không còn cần thiết)
+  - Thay thế bằng random sequence generation
+  - Giảm phức tạp database schema
+  - Tăng hiệu suất với ít database operations hơn
 - **Enhanced Table: SETTINGS**: Nâng cấp bảng cấu hình với flexible metadata
   - **Flexible Metadata**: Hỗ trợ nhiều loại settings (shipping_rates, product_list)
   - **Unit Support**: Thêm unit fields cho shipping rates (VND, USD, %)
@@ -412,10 +414,14 @@ erDiagram
   - **Enhanced APIs**: Specialized endpoints cho từng loại setting
   - Role-based access control (Admin/Superadmin only)
   - Validation rules đảm bảo tính toàn vẹn dữ liệu
-- **Improved Code Generation**: Cải thiện CodeGeneratorService với atomic operations
-  - Atomic `findOneAndUpdate` operations
-  - Retry mechanism với fallback strategy
-  - Type safety với required toRouteId validation
+- **Completely New Code Generation**: Hoàn toàn mới CodeGeneratorService
+  - **Random Sequence**: Thay thế sequential bằng random (0001-9999)
+  - **FullCode System**: code + fromRouteCode + toRouteCode cho uniqueness
+  - **SubCode Tracking**: timestamp + sequence cho debug và tracking
+  - **Cross-Collection Uniqueness**: Kiểm tra fullCode trên cả 2 collections
+  - **User Route Integration**: fromRoute lấy từ user.selectedRouteId tự động
+  - **Format Change**: DDMMYY → YYMMDD cho chuẩn hóa
+  - **Retry Logic**: Lên tới 50 attempts để tránh collision
 - **Field PaymentType**: Trường `paymentType` trong bảng DELIVERIES với 3 giá trị:
   - `paid` (mặc định): Thanh toán bình thường, khách hàng đã thanh toán
   - `debt`: Thanh toán nợ (khách hàng sẽ trả sau)
@@ -432,6 +438,19 @@ erDiagram
   - Express: Sử dụng expressShippingFee từ settings
 
 ### Cân Nhắc Migration và Mở Rộng
+
+#### Migration Cần Thiết Cho Code Generation Mới
+- **Database Migration**: Cần thêm `fullCode` và `subCode` cho tất cả delivery và money-delivery hiện tại
+- **Index Updates**: 
+  - Thêm unique index trên `fullCode` field
+  - Thêm index trên `subCode` field cho tracking
+  - Xóa các index liên quan đến delivery-counter
+- **API Breaking Changes**:
+  - `GET /api/delivery/next-code` response bây giờ bao gồm `fullCode`, `subCode`, `fromRoute`
+  - `GET /api/money-deliveries/next-code` tương tự
+  - Tất cả delivery/money-delivery responses có thêm 2 fields mới
+- **User Requirements**: User phải có `selectedRouteId` để tạo deliveries
+- **Data Integrity**: Cần script để generate `fullCode` cho records cũ dựa trên existing code + route codes
 
 #### Mục Tiêu Quy Mô Hiện Tại
 - Thiết kế cho 10M+ bản ghi delivery

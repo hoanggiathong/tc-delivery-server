@@ -6,6 +6,8 @@ export const createMockMoneyDelivery = (
   return {
     id: 'money-delivery-id-1',
     code: '2401250001',
+    fullCode: '2401250001T1T2',
+    subCode: '17031750001',
     sender: {
       id: 'customer-id-1',
       name: 'John Doe',

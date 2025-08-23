@@ -745,7 +745,10 @@ export class DeliveryController {
       }
 
       const { toRouteId } = req.query;
-      const nextCodeData = await this.deliveryService.getNextCode(toRouteId as string);
+      const nextCodeData = await this.deliveryService.getNextCode(
+        toRouteId as string,
+        req.user.userId
+      );
 
       Logger.info('Next delivery code retrieved successfully', {
         nextCode: nextCodeData.nextCode,

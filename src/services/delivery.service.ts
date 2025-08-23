@@ -137,6 +137,8 @@ export class DeliveryService {
     return {
       id: populated._id,
       code: populated.code,
+      fullCode: populated.fullCode,
+      subCode: populated.subCode,
       sender: {
         id: populated.sender._id,
         name: populated.sender.name,
@@ -193,6 +195,8 @@ export class DeliveryService {
     return {
       id: delivery._id,
       code: delivery.code,
+      fullCode: delivery.fullCode,
+      subCode: delivery.subCode,
       sender: {
         id: delivery.sender._id,
         name: delivery.sender.name,
@@ -257,26 +261,39 @@ export class DeliveryService {
       data.receiverPhone
     );
 
-    // Validate fromRoute and toRoute exist
-    const fromRoute = await Route.findById(data.fromRouteId);
-    if (!fromRoute) {
-      throw new Error('From route not found');
+    // Get user's selected route as fromRoute
+    const user = await User.findById(userId).select('selectedRouteId');
+    if (!user || !user.selectedRouteId) {
+      throw new Error('User must have a selected route to create deliveries');
     }
 
-    const toRoute = await Route.findById(data.toRouteId);
+    // Validate fromRoute and toRoute exist
+    const [fromRoute, toRoute] = await Promise.all([
+      Route.findById(user.selectedRouteId),
+      Route.findById(data.toRouteId),
+    ]);
+
+    if (!fromRoute) {
+      throw new Error('User selected route not found');
+    }
     if (!toRoute) {
       throw new Error('To route not found');
     }
 
-    // Generate delivery code
-    const deliveryCode = await CodeGeneratorService.generateNextCode(data.toRouteId);
+    // Generate delivery code with new system
+    const codeData = await CodeGeneratorService.generateNextCode(
+      data.toRouteId,
+      user.selectedRouteId.toString()
+    );
 
     // Create delivery
     const delivery = new Delivery({
-      code: deliveryCode,
+      code: codeData.code,
+      fullCode: codeData.fullCode,
+      subCode: codeData.subCode,
       sender: sender.id,
       receiver: receiver.id,
-      fromRoute: data.fromRouteId,
+      fromRoute: user.selectedRouteId,
       toRoute: data.toRouteId,
       name: data.name,
       cost: data.cost,
@@ -572,25 +589,51 @@ export class DeliveryService {
 
   /**
    * Get next delivery code for a specific route
+   * fromRouteId is taken from user's selectedRouteId
    */
-  async getNextCode(toRouteId: string): Promise<INextCodeResponse> {
-    // Validate toRoute exists
-    const toRoute = await Route.findById(toRouteId);
+  async getNextCode(toRouteId: string, userId: string): Promise<INextCodeResponse> {
+    // Get user's selected route as fromRoute
+    const user = await User.findById(userId).select('selectedRouteId');
+    if (!user || !user.selectedRouteId) {
+      throw new Error('User must have a selected route to get next code');
+    }
+
+    // Validate routes exist
+    const [toRoute, fromRoute] = await Promise.all([
+      Route.findById(toRouteId),
+      Route.findById(user.selectedRouteId),
+    ]);
+
     if (!toRoute) {
       throw new Error('To route not found');
     }
+    if (!fromRoute) {
+      throw new Error('User selected route not found');
+    }
 
     // Get next code preview
-    const nextCode = await CodeGeneratorService.getNextCodePreview(toRouteId);
+    const codeData = await CodeGeneratorService.getNextCodePreview(
+      toRouteId,
+      user.selectedRouteId.toString()
+    );
 
     return {
-      nextCode,
+      nextCode: codeData.code,
+      fullCode: codeData.fullCode,
+      subCode: codeData.subCode,
       toRoute: {
         id: toRoute._id,
         code: toRoute.code,
         name: toRoute.name,
         createdAt: toRoute.createdAt,
         updatedAt: toRoute.updatedAt,
+      },
+      fromRoute: {
+        id: fromRoute._id,
+        code: fromRoute.code,
+        name: fromRoute.name,
+        createdAt: fromRoute.createdAt,
+        updatedAt: fromRoute.updatedAt,
       },
     };
   }

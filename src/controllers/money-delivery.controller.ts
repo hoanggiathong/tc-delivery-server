@@ -886,7 +886,10 @@ export class MoneyDeliveryController {
       }
 
       const { toRouteId } = req.query;
-      const result = await this.moneyDeliveryService.getNextCode(toRouteId as string);
+      const result = await this.moneyDeliveryService.getNextCode(
+        toRouteId as string,
+        req.user.userId
+      );
 
       logger.info(
         `Generated next money delivery code: ${result.nextCode} for route: ${result.toRoute.code}`

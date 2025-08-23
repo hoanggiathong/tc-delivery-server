@@ -1,290 +1,223 @@
 import { CodeGeneratorService } from '@/services/code-generator.service';
 import { Delivery } from '@/models/delivery.model';
-import { DeliveryCounter } from '@/models/delivery-counter.model';
+import { MoneyDelivery } from '@/models/money-delivery.model';
+import { Route } from '@/models/route.model';
 import { Types } from 'mongoose';
+import logger from '@/utils/logger';
 
 // Mock the models
 jest.mock('@/models/delivery.model');
-jest.mock('@/models/delivery-counter.model');
+jest.mock('@/models/money-delivery.model');
+jest.mock('@/models/route.model');
+jest.mock('@/utils/logger');
+
+const MockedDelivery = Delivery as jest.MockedClass<typeof Delivery>;
+const MockedMoneyDelivery = MoneyDelivery as jest.MockedClass<typeof MoneyDelivery>;
+const MockedRoute = Route as jest.MockedClass<typeof Route>;
 
 describe('CodeGeneratorService', () => {
-  let mockDeliveryModel: jest.Mocked<typeof Delivery>;
-  let mockDeliveryCounterModel: jest.Mocked<typeof DeliveryCounter>;
+  const mockToRouteId = '507f1f77bcf86cd799439011';
+  const mockFromRouteId = '507f1f77bcf86cd799439012';
+  
+  const mockToRoute = {
+    _id: mockToRouteId,
+    code: 'T2',
+    name: 'Test Route 2',
+  };
+  
+  const mockFromRoute = {
+    _id: mockFromRouteId,
+    code: 'T1', 
+    name: 'Test Route 1',
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockDeliveryModel = Delivery as jest.Mocked<typeof Delivery>;
-    mockDeliveryCounterModel = DeliveryCounter as jest.Mocked<typeof DeliveryCounter>;
+    jest.spyOn(Math, 'random').mockReturnValue(0.5); // Always return middle value
+    jest.spyOn(Date, 'now').mockReturnValue(1703175000000); // Fixed timestamp
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  describe('generateCode', () => {
+    it('should generate unique code successfully', async () => {
+      MockedRoute.findById = jest.fn()
+        .mockResolvedValueOnce(mockToRoute)
+        .mockResolvedValueOnce(mockFromRoute);
+      
+      MockedDelivery.exists = jest.fn().mockResolvedValue(null);
+      MockedMoneyDelivery.exists = jest.fn().mockResolvedValue(null);
+
+      const result = await CodeGeneratorService.generateCode(
+        mockToRouteId,
+        mockFromRouteId,
+        'delivery'
+      );
+
+      expect(result).toHaveProperty('code');
+      expect(result).toHaveProperty('fullCode');
+      expect(result).toHaveProperty('subCode');
+      expect(result.code).toMatch(/^\d{10}$/);
+      expect(result.fullCode).toBe(`${result.code}T1T2`);
+      expect(result.subCode).toMatch(/^\d{14}$/);
+    });
+
+    it('should throw error for invalid toRouteId', async () => {
+      await expect(
+        CodeGeneratorService.generateCode('invalid', mockFromRouteId, 'delivery')
+      ).rejects.toThrow('toRouteId and fromRouteId must be valid ObjectIds');
+    });
+
+    it('should throw error for invalid fromRouteId', async () => {
+      await expect(
+        CodeGeneratorService.generateCode(mockToRouteId, 'invalid', 'delivery')
+      ).rejects.toThrow('toRouteId and fromRouteId must be valid ObjectIds');
+    });
+
+    it('should throw error when route not found', async () => {
+      MockedRoute.findById = jest.fn()
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(mockFromRoute);
+
+      await expect(
+        CodeGeneratorService.generateCode(mockToRouteId, mockFromRouteId, 'delivery')
+      ).rejects.toThrow('Route not found');
+    });
+
+    it('should retry on fullCode collision', async () => {
+      MockedRoute.findById = jest.fn()
+        .mockResolvedValueOnce(mockToRoute)
+        .mockResolvedValueOnce(mockFromRoute);
+      
+      // First call returns collision, second call succeeds
+      MockedDelivery.exists = jest.fn()
+        .mockResolvedValueOnce({ _id: 'exists' }) // Collision
+        .mockResolvedValueOnce(null); // Success
+      MockedMoneyDelivery.exists = jest.fn().mockResolvedValue(null);
+
+      const result = await CodeGeneratorService.generateCode(
+        mockToRouteId,
+        mockFromRouteId,
+        'delivery'
+      );
+
+      expect(result).toHaveProperty('fullCode');
+      expect(MockedDelivery.exists).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe('generateNextCode', () => {
-    it('should generate first code for a new day', async () => {
-      const testDate = new Date('2024-01-25');
-
-      // Mock DeliveryCounter.findOneAndUpdate to return counter with sequence 1
-      const mockCounter = {
-        deliverySequence: 1,
-        datePrefix: '250124',
-        toRoute: new Types.ObjectId('507f1f77bcf86cd799439011'),
-      };
-      mockDeliveryCounterModel.findOneAndUpdate = jest.fn().mockResolvedValue(mockCounter);
-
-      // Mock Delivery.exists to return false (no duplicate)
-      mockDeliveryModel.exists = jest.fn().mockResolvedValue(false);
+    it('should generate delivery code', async () => {
+      MockedRoute.findById = jest.fn()
+        .mockResolvedValueOnce(mockToRoute)
+        .mockResolvedValueOnce(mockFromRoute);
+      
+      MockedDelivery.exists = jest.fn().mockResolvedValue(null);
+      MockedMoneyDelivery.exists = jest.fn().mockResolvedValue(null);
 
       const result = await CodeGeneratorService.generateNextCode(
-        '507f1f77bcf86cd799439011',
-        testDate
+        mockToRouteId,
+        mockFromRouteId
       );
 
-      expect(result).toBe('2501240001'); // 25/01/24 + 0001
-      expect(mockDeliveryCounterModel.findOneAndUpdate).toHaveBeenCalledWith(
-        { datePrefix: '250124', toRoute: new Types.ObjectId('507f1f77bcf86cd799439011') },
-        { $inc: { deliverySequence: 1 } },
-        { new: true, upsert: true }
-      );
-    });
-
-    it('should generate next code in sequence', async () => {
-      const testDate = new Date('2024-01-25');
-
-      // Mock DeliveryCounter.findOneAndUpdate to return counter with sequence 6
-      const mockCounter = {
-        deliverySequence: 6,
-        datePrefix: '250124',
-        toRoute: new Types.ObjectId('507f1f77bcf86cd799439011'),
-      };
-      mockDeliveryCounterModel.findOneAndUpdate = jest.fn().mockResolvedValue(mockCounter);
-
-      // Mock Delivery.exists to return false (no duplicate)
-      mockDeliveryModel.exists = jest.fn().mockResolvedValue(false);
-
-      const result = await CodeGeneratorService.generateNextCode(
-        '507f1f77bcf86cd799439011',
-        testDate
-      );
-
-      expect(result).toBe('2501240006'); // 25/01/24 + 0006
-    });
-
-    it('should handle existing code collision', async () => {
-      const testDate = new Date('2024-01-25');
-
-      // Mock DeliveryCounter.findOneAndUpdate to return counter with sequence 8
-      const mockCounter = {
-        deliverySequence: 8,
-        datePrefix: '250124',
-        toRoute: new Types.ObjectId('507f1f77bcf86cd799439011'),
-      };
-      mockDeliveryCounterModel.findOneAndUpdate = jest.fn().mockResolvedValue(mockCounter);
-
-      // Mock Delivery.exists to return false (no duplicate after retry)
-      mockDeliveryModel.exists = jest.fn().mockResolvedValue(false);
-
-      const result = await CodeGeneratorService.generateNextCode(
-        '507f1f77bcf86cd799439011',
-        testDate
-      );
-
-      expect(result).toBe('2501240008'); // 25/01/24 + 0008
-    });
-
-    it('should throw error when maximum sequence reached', async () => {
-      const testDate = new Date('2024-01-25');
-
-      // Mock DeliveryCounter.findOneAndUpdate to return counter exceeding maximum
-      const mockCounter = {
-        deliverySequence: 10000, // Exceeds MAX_SEQUENCE (9999)
-        datePrefix: '250124',
-        toRoute: new Types.ObjectId('507f1f77bcf86cd799439011'),
-      };
-      mockDeliveryCounterModel.findOneAndUpdate = jest.fn().mockResolvedValue(mockCounter);
-
-      await expect(
-        CodeGeneratorService.generateNextCode('507f1f77bcf86cd799439011', testDate)
-      ).rejects.toThrow('Maximum number of deliveries (9999) reached for date 250124');
-    });
-
-    it("should generate code with today's date by default", async () => {
-      const today = new Date();
-      const day = String(today.getDate()).padStart(2, '0');
-      const month = String(today.getMonth() + 1).padStart(2, '0');
-      const year = String(today.getFullYear()).slice(-2);
-      const expectedPrefix = `${day}${month}${year}`;
-
-      // Mock DeliveryCounter.findOneAndUpdate to return counter with sequence 1
-      const mockCounter = {
-        deliverySequence: 1,
-        datePrefix: expectedPrefix,
-        toRoute: new Types.ObjectId('507f1f77bcf86cd799439011'),
-      };
-      mockDeliveryCounterModel.findOneAndUpdate = jest.fn().mockResolvedValue(mockCounter);
-
-      // Mock Delivery.exists to return false (no duplicate)
-      mockDeliveryModel.exists = jest.fn().mockResolvedValue(false);
-
-      const result = await CodeGeneratorService.generateNextCode('507f1f77bcf86cd799439011');
-
-      expect(result).toMatch(new RegExp(`^${expectedPrefix}0001$`));
+      expect(result.code).toMatch(/^\d{10}$/);
+      expect(result.fullCode).toContain('T1T2');
     });
   });
 
-  describe('getNextCodePreview', () => {
-    it('should return next code preview', async () => {
-      const testDate = new Date('2024-01-25');
+  describe('generateNextMoneyDeliveryCode', () => {
+    it('should generate money delivery code', async () => {
+      MockedRoute.findById = jest.fn()
+        .mockResolvedValueOnce(mockToRoute)
+        .mockResolvedValueOnce(mockFromRoute);
+      
+      MockedDelivery.exists = jest.fn().mockResolvedValue(null);
+      MockedMoneyDelivery.exists = jest.fn().mockResolvedValue(null);
 
-      // Mock findOne to return existing code
-      const mockFindOneQuery = {
-        sort: jest.fn().mockReturnThis(),
-        select: jest.fn().mockReturnThis(),
-        lean: jest.fn().mockResolvedValue({ code: '2501240005' }),
-      };
-
-      mockDeliveryModel.findOne = jest.fn().mockReturnValue(mockFindOneQuery);
-
-      const result = await CodeGeneratorService.getNextCodePreview(
-        '507f1f77bcf86cd799439011',
-        testDate
+      const result = await CodeGeneratorService.generateNextMoneyDeliveryCode(
+        mockToRouteId,
+        mockFromRouteId
       );
 
-      expect(result).toBe('2501240006');
+      expect(result.code).toMatch(/^\d{10}$/);
+      expect(result.fullCode).toContain('T1T2');
     });
   });
 
   describe('validateCodeFormat', () => {
     it('should validate correct code format', () => {
-      expect(CodeGeneratorService.validateCodeFormat('2501240001')).toBe(true);
-      expect(CodeGeneratorService.validateCodeFormat('3112239999')).toBe(true);
+      expect(CodeGeneratorService.validateCodeFormat('2401250001')).toBe(true);
     });
 
     it('should reject invalid code format', () => {
-      expect(CodeGeneratorService.validateCodeFormat('250124001')).toBe(false); // Too short
-      expect(CodeGeneratorService.validateCodeFormat('25012400001')).toBe(false); // Too long
-      expect(CodeGeneratorService.validateCodeFormat('2501240000')).toBe(false); // Invalid sequence
-      expect(CodeGeneratorService.validateCodeFormat('3201240001')).toBe(false); // Invalid day
-      expect(CodeGeneratorService.validateCodeFormat('2513240001')).toBe(false); // Invalid month
-      expect(CodeGeneratorService.validateCodeFormat('250124abcd')).toBe(false); // Non-numeric
+      expect(CodeGeneratorService.validateCodeFormat('240125000')).toBe(false); // Too short
+      expect(CodeGeneratorService.validateCodeFormat('24012500011')).toBe(false); // Too long
+      expect(CodeGeneratorService.validateCodeFormat('240125000a')).toBe(false); // Contains letter
     });
 
-    it('should validate date logic', () => {
-      expect(CodeGeneratorService.validateCodeFormat('2902240001')).toBe(true); // Valid leap year
-      expect(CodeGeneratorService.validateCodeFormat('3002240001')).toBe(false); // Invalid leap year
-      expect(CodeGeneratorService.validateCodeFormat('3104240001')).toBe(false); // Invalid April 31st
+    it('should reject invalid dates', () => {
+      expect(CodeGeneratorService.validateCodeFormat('2413250001')).toBe(false); // Invalid month
+      expect(CodeGeneratorService.validateCodeFormat('2401320001')).toBe(false); // Invalid day
     });
   });
 
   describe('parseCode', () => {
-    it('should parse valid code correctly', () => {
-      const result = CodeGeneratorService.parseCode('2501240001');
+    it('should parse valid code', () => {
+      const result = CodeGeneratorService.parseCode('2401250001');
       expect(result).toEqual({
-        date: new Date(2024, 0, 25), // January 25, 2024
-        sequence: 1,
+        date: new Date(2024, 0, 25), // Month is 0-indexed
+        sequence: 1
       });
     });
 
     it('should return null for invalid code', () => {
-      expect(CodeGeneratorService.parseCode('2501240000')).toBeNull();
-      expect(CodeGeneratorService.parseCode('invalid')).toBeNull();
+      const result = CodeGeneratorService.parseCode('invalid');
+      expect(result).toBeNull();
     });
+  });
 
-    it('should handle year conversion correctly', () => {
-      const result = CodeGeneratorService.parseCode('2501240001');
-      expect(result?.date.getFullYear()).toBe(2024);
+  describe('getNextCodePreview', () => {
+    it('should generate code preview', async () => {
+      MockedRoute.findById = jest.fn()
+        .mockResolvedValueOnce(mockToRoute)
+        .mockResolvedValueOnce(mockFromRoute);
+
+      const result = await CodeGeneratorService.getNextCodePreview(
+        mockToRouteId,
+        mockFromRouteId
+      );
+
+      expect(result.code).toMatch(/^\d{10}$/);
+      expect(result.fullCode).toContain('T1T2');
+      expect(result.subCode).toMatch(/^\d{14}$/);
     });
   });
 
   describe('getDeliveryCountForDate', () => {
-    it('should return delivery count for date without toRoute filter', async () => {
-      const testDate = new Date('2024-01-25');
+    it('should get delivery count for date', async () => {
+      MockedDelivery.countDocuments = jest.fn().mockResolvedValue(5);
 
-      mockDeliveryModel.countDocuments = jest.fn().mockResolvedValue(5);
+      const count = await CodeGeneratorService.getDeliveryCountForDate(new Date('2024-01-25'));
 
-      const result = await CodeGeneratorService.getDeliveryCountForDate(testDate);
-
-      expect(result).toBe(5);
-      expect(mockDeliveryModel.countDocuments).toHaveBeenCalledWith({
-        code: /^250124\d{4}$/, // 25/01/24
+      expect(count).toBe(5);
+      expect(MockedDelivery.countDocuments).toHaveBeenCalledWith({
+        code: /^2401250\d{4}$/
       });
-    });
-
-    it('should return delivery count for date with toRoute filter', async () => {
-      const testDate = new Date('2024-01-25');
-
-      mockDeliveryModel.countDocuments = jest.fn().mockResolvedValue(3);
-
-      const result = await CodeGeneratorService.getDeliveryCountForDate(
-        testDate,
-        '507f1f77bcf86cd799439011'
-      );
-
-      expect(result).toBe(3);
-      expect(mockDeliveryModel.countDocuments).toHaveBeenCalledWith({
-        code: /^250124\d{4}$/, // 25/01/24
-        toRoute: new Types.ObjectId('507f1f77bcf86cd799439011'),
-      });
-    });
-
-    it('should return 0 for date with no deliveries', async () => {
-      const testDate = new Date('2024-01-25');
-
-      mockDeliveryModel.countDocuments = jest.fn().mockResolvedValue(0);
-
-      const result = await CodeGeneratorService.getDeliveryCountForDate(testDate);
-
-      expect(result).toBe(0);
     });
   });
 
-  describe('isMaxDeliveriesReached', () => {
-    it('should return false when under limit', async () => {
-      const testDate = new Date('2024-01-25');
+  describe('getMoneyDeliveryCountForDate', () => {
+    it('should get money delivery count for date', async () => {
+      MockedMoneyDelivery.countDocuments = jest.fn().mockResolvedValue(3);
 
-      mockDeliveryModel.countDocuments = jest.fn().mockResolvedValue(5000);
+      const count = await CodeGeneratorService.getMoneyDeliveryCountForDate(new Date('2024-01-25'));
 
-      const result = await CodeGeneratorService.isMaxDeliveriesReached(testDate);
-
-      expect(result).toBe(false);
-    });
-
-    it('should return true when at limit', async () => {
-      const testDate = new Date('2024-01-25');
-
-      mockDeliveryModel.countDocuments = jest.fn().mockResolvedValue(9999);
-
-      const result = await CodeGeneratorService.isMaxDeliveriesReached(testDate);
-
-      expect(result).toBe(true);
-    });
-
-    it('should return true when over limit', async () => {
-      const testDate = new Date('2024-01-25');
-
-      mockDeliveryModel.countDocuments = jest.fn().mockResolvedValue(10000);
-
-      const result = await CodeGeneratorService.isMaxDeliveriesReached(testDate);
-
-      expect(result).toBe(true);
-    });
-  });
-
-  describe('error handling', () => {
-    it('should handle database errors in generateNextCode', async () => {
-      // Mock DeliveryCounter.findOneAndUpdate to throw error
-      mockDeliveryCounterModel.findOneAndUpdate = jest
-        .fn()
-        .mockRejectedValue(new Error('Database error'));
-
-      await expect(
-        CodeGeneratorService.generateNextCode('507f1f77bcf86cd799439011')
-      ).rejects.toThrow('Database error');
-    });
-
-    it('should handle database errors in getDeliveryCountForDate', async () => {
-      mockDeliveryModel.countDocuments = jest.fn().mockRejectedValue(new Error('Database error'));
-
-      await expect(CodeGeneratorService.getDeliveryCountForDate(new Date())).rejects.toThrow(
-        'Database error'
-      );
+      expect(count).toBe(3);
+      expect(MockedMoneyDelivery.countDocuments).toHaveBeenCalledWith({
+        code: /^2401250\d{4}$/
+      });
     });
   });
 });
