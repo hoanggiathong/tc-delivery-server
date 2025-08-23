@@ -21,6 +21,7 @@ export const createDraftDeliverySchema = z.object({
     fromRouteId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format'),
     toRouteId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format'),
     name: z.string().min(1, 'Item name is required').max(200, 'Item name is too long'),
+    quantity: z.number().min(1, 'Quantity must be at least 1').default(1).optional(),
     cost: z.number().min(0, 'Cost must be non-negative'),
     homeDelivery: z.string().max(500, 'Home delivery address is too long').optional(),
     homeDeliveryCost: z.number().min(0, 'Home delivery cost must be non-negative').default(0),
@@ -36,8 +37,18 @@ export const createDraftDeliverySchema = z.object({
       .min(0, 'Collect for customer cost must be non-negative')
       .default(0),
     collectForCustomerNote: z.string().max(500, 'Note is too long').optional(),
+    details: z
+      .object({
+        weight: z.number().min(0, 'Weight must be positive').optional(),
+        length: z.number().min(0, 'Length must be positive').optional(),
+        width: z.number().min(0, 'Width must be positive').optional(),
+        height: z.number().min(0, 'Height must be positive').optional(),
+        isOverweight: z.boolean().default(false).optional(),
+        convertedWeight: z.number().min(0, 'Converted weight must be positive').optional(),
+      })
+      .optional(),
     notes: z.string().max(1000, 'Notes are too long').optional(),
-    paymentType: z.enum(['debt', 'free']).nullable().optional(),
+    paymentType: z.enum(['paid', 'debt', 'free']).default('paid').optional(),
   }),
 });
 
@@ -59,6 +70,7 @@ export const updateDraftDeliverySchema = z.object({
       .regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format')
       .optional(),
     name: z.string().min(1).max(200).optional(),
+    quantity: z.number().min(1, 'Quantity must be at least 1').optional(),
     cost: z.number().min(0).optional(),
     homeDelivery: z.string().max(500).optional(),
     homeDeliveryCost: z.number().min(0).optional(),
@@ -68,8 +80,18 @@ export const updateDraftDeliverySchema = z.object({
     collectForCustomer: z.number().min(0).optional(),
     collectForCustomerCost: z.number().min(0).optional(),
     collectForCustomerNote: z.string().max(500).optional(),
+    details: z
+      .object({
+        weight: z.number().min(0, 'Weight must be positive').optional(),
+        length: z.number().min(0, 'Length must be positive').optional(),
+        width: z.number().min(0, 'Width must be positive').optional(),
+        height: z.number().min(0, 'Height must be positive').optional(),
+        isOverweight: z.boolean().optional(),
+        convertedWeight: z.number().min(0, 'Converted weight must be positive').optional(),
+      })
+      .optional(),
     notes: z.string().max(1000).optional(),
-    paymentType: z.enum(['debt', 'free']).nullable().optional(),
+    paymentType: z.enum(['paid', 'debt', 'free']).optional(),
   }),
 });
 

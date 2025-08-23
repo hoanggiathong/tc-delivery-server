@@ -63,10 +63,19 @@ export const createMockMoneyDeliveryRequest = (overrides: any = {}) => {
 export const createMockNextCodeResult = (overrides: any = {}) => {
   return {
     nextCode: '2401250001',
+    fullCode: '2401250001T1T2',
+    subCode: '17031750001',
     toRoute: {
       id: 'route-id-1',
       code: 'T1',
       name: 'Test Route 1',
+      createdAt: new Date('2023-01-01'),
+      updatedAt: new Date('2023-01-01'),
+    },
+    fromRoute: {
+      id: 'route-id-2',
+      code: 'T2',
+      name: 'Test Route 2',
       createdAt: new Date('2023-01-01'),
       updatedAt: new Date('2023-01-01'),
     },
@@ -99,6 +108,8 @@ export const createMockMoneyDeliveryList = (count: number = 3): IMoneyDeliveryRe
 export const mockMoneyDeliveryForIntegration = {
   id: 'moneyDelivery123',
   code: '2401250001',
+  fullCode: '2401250001T1T2',
+  subCode: '17031750001',
   sender: {
     id: 'customer123',
     name: 'John Doe',
@@ -141,12 +152,21 @@ export const mockMoneyDeliveryForIntegration = {
 /**
  * Mock next code response for money delivery integration tests
  */
-export const mockNextCodeResponseForIntegration = {
+export const mockMoneyDeliveryNextCodeResponseForIntegration = {
   nextCode: '2407240001',
+  fullCode: '2407240001T1T2',
+  subCode: '17031750001',
   toRoute: {
     id: 'route-id',
     code: 'T1',
     name: 'Test Route',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  fromRoute: {
+    id: 'route-id-2',
+    code: 'T2',
+    name: 'Test Route 2',
     createdAt: new Date(),
     updatedAt: new Date(),
   },

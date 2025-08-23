@@ -10,6 +10,7 @@ export interface IDelivery extends Document {
   fromRoute: mongoose.Types.ObjectId;
   toRoute: mongoose.Types.ObjectId;
   name: string;
+  quantity: number;
   cost: number;
   homeDelivery?: string;
   homeDeliveryCost: number;
@@ -19,6 +20,14 @@ export interface IDelivery extends Document {
   collectForCustomer: number; // Thu dùm
   collectForCustomerCost: number; // Phụ phí
   collectForCustomerNote?: string;
+  details?: {
+    weight?: number; // Khối lượng (kg)
+    length?: number; // Dài (cm)
+    width?: number; // Rộng (cm)
+    height?: number; // Cao (cm)
+    isOverweight?: boolean; // Quá tải
+    convertedWeight?: number; // Khối lượng quy đổi
+  };
   notes?: string;
   totalCost: number;
   paymentType: 'paid' | 'debt' | 'free'; // 'paid' (default), 'debt' (nợ), 'free' (miễn phí)
@@ -71,6 +80,12 @@ const deliverySchema = new Schema<IDelivery>(
       required: [true, 'Item name is required'],
       trim: true,
     },
+    quantity: {
+      type: Number,
+      required: [true, 'Quantity is required'],
+      min: [1, 'Quantity must be at least 1'],
+      default: 1,
+    },
     cost: {
       type: Number,
       required: [true, 'Cost is required'],
@@ -122,6 +137,35 @@ const deliverySchema = new Schema<IDelivery>(
     collectForCustomerNote: {
       type: String,
       trim: true,
+    },
+    details: {
+      type: {
+        weight: {
+          type: Number,
+          min: [0, 'Weight must be positive'],
+        },
+        length: {
+          type: Number,
+          min: [0, 'Length must be positive'],
+        },
+        width: {
+          type: Number,
+          min: [0, 'Width must be positive'],
+        },
+        height: {
+          type: Number,
+          min: [0, 'Height must be positive'],
+        },
+        isOverweight: {
+          type: Boolean,
+          default: false,
+        },
+        convertedWeight: {
+          type: Number,
+          min: [0, 'Converted weight must be positive'],
+        },
+      },
+      required: false,
     },
     notes: {
       type: String,

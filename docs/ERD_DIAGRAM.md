@@ -68,6 +68,7 @@ erDiagram
         ObjectId fromRoute FK "tham chiếu: ROUTES, bắt buộc (từ user.selectedRouteId)"
         ObjectId toRoute FK "tham chiếu: ROUTES, bắt buộc"
         string name "tên hàng hóa, bắt buộc, trim"
+        number quantity "số lượng hàng hóa, bắt buộc, tối thiểu 1, mặc định 1"
         number cost "phí vận chuyển, bắt buộc, tối thiểu 0"
         string homeDelivery "địa chỉ giao hàng, tùy chọn, trim"
         number homeDeliveryCost "bắt buộc, tối thiểu 0, mặc định 0"
@@ -78,6 +79,13 @@ erDiagram
         number collectForCustomerCost "phí phụ thu, bắt buộc, tối thiểu 0"
         number totalCost "tính toán: cost+itemCost(phí trị giá)+collectForCustomerCost"
         string collectForCustomerNote "tùy chọn, trim"
+        object details "thông tin chi tiết hàng hóa, tùy chọn"
+        number details.weight "khối lượng (kg), tùy chọn, tối thiểu 0"
+        number details.length "chiều dài (cm), tùy chọn, tối thiểu 0"
+        number details.width "chiều rộng (cm), tùy chọn, tối thiểu 0"
+        number details.height "chiều cao (cm), tùy chọn, tối thiểu 0"
+        boolean details.isOverweight "quá tải, mặc định false"
+        number details.convertedWeight "khối lượng quy đổi, tùy chọn, tối thiểu 0"
         string notes "tùy chọn, trim"
         enum paymentType "paid|debt|free, mặc định paid, loại thanh toán"
         ObjectId createdByUser FK "tham chiếu: USERS, bắt buộc"
@@ -115,6 +123,7 @@ erDiagram
         ObjectId fromRoute FK "tham chiếu: ROUTES, bắt buộc, khớp selectedRoute của user"
         ObjectId toRoute FK "tham chiếu: ROUTES, bắt buộc"
         string name "tên hàng hóa, bắt buộc, trim"
+        number quantity "số lượng hàng hóa, bắt buộc, tối thiểu 1, mặc định 1"
         number cost "phí vận chuyển, bắt buộc, tối thiểu 0"
         string homeDelivery "địa chỉ giao hàng, tùy chọn, trim"
         number homeDeliveryCost "bắt buộc, tối thiểu 0, mặc định 0"
@@ -125,10 +134,17 @@ erDiagram
         number collectForCustomerCost "phí phụ thu, bắt buộc, tối thiểu 0"
         number totalCost "tính toán: cost+itemCost+collectForCustomerCost"
         string collectForCustomerNote "tùy chọn, trim"
+        object details "thông tin chi tiết hàng hóa, tùy chọn"
+        number details.weight "khối lượng (kg), tùy chọn, tối thiểu 0"
+        number details.length "chiều dài (cm), tùy chọn, tối thiểu 0"
+        number details.width "chiều rộng (cm), tùy chọn, tối thiểu 0"
+        number details.height "chiều cao (cm), tùy chọn, tối thiểu 0"
+        boolean details.isOverweight "quá tải, mặc định false"
+        number details.convertedWeight "khối lượng quy đổi, tùy chọn, tối thiểu 0"
         string notes "tùy chọn, trim"
         enum paymentType "paid|debt|free, mặc định paid"
         ObjectId createdByUser FK "tham chiếu: USERS, bắt buộc"
-        datetime createdAt "tự động tạo, TTL 30 ngày"
+        datetime createdAt "tự động tạo, TTL 90 ngày"
         datetime updatedAt "tự động cập nhật"
     }
 
@@ -208,9 +224,15 @@ erDiagram
   - Người gửi và người nhận không thể là cùng một khách hàng
   - Tuyến đi và tuyến đến không thể giống nhau
   - Tổng chi phí được tính tự động qua middleware
+  - Số lượng phải tối thiểu 1
 - **Tính toán chi phí**: `totalCost = cost + itemCost(phí trị giá) + collectForCustomerCost`
+- **Thông tin chi tiết hàng hóa (details)**:
+  - `weight`: Khối lượng thực tế của hàng hóa (kg)
+  - `length`, `width`, `height`: Kích thước hàng hóa (cm)
+  - `isOverweight`: Đánh dấu hàng hóa quá tải
+  - `convertedWeight`: Khối lượng quy đổi dựa trên kích thước
 - **Loại thanh toán**:
-  - `null` (mặc định): Thanh toán bình thường, khách hàng thanh toán đầy đủ
+  - `paid` (mặc định): Thanh toán bình thường, khách hàng đã thanh toán
   - `debt`: Khách hàng nợ tiền, sẽ thanh toán sau
   - `free`: Giao hàng miễn phí, không cần thanh toán
 - **Index hiệu suất**: Được tối ưu cho 10M+ records với compound indexes
@@ -246,13 +268,15 @@ erDiagram
 - **Quy tắc**:
   - `fromRoute` phải khớp với `selectedRouteId` của user hiện tại
   - Chỉ owner mới có thể xem/sửa/xóa draft
-  - Tự động xóa sau 30 ngày (TTL index)
-- **Chuyển đổi**: Có thể convert draft thành delivery chính thức với code
+  - Tự động xóa sau 90 ngày (TTL index)
+  - Số lượng phải tối thiểu 1
+  - Hỗ trợ thông tin chi tiết hàng hóa (weight, dimensions, overweight status)
+- **Chuyển đổi**: Có thể convert draft thành delivery chính thức với code và customer records
 - **Index Strategy**:
   - `{fromRoute: 1, createdByUser: 1, createdAt: -1}` - Query chính
   - `{createdByUser: 1, createdAt: -1}` - User's drafts
   - `{fromRoute: 1, createdAt: -1}` - Route-based queries
-  - TTL index: `{createdAt: 1}` với expiration 30 ngày
+  - TTL index: `{createdAt: 1}` với expiration 90 ngày
 
 #### Bảng SETTINGS
 - **Tên cấu hình**: Phải duy nhất, enum values: `shipping_rates`, `product_list`
@@ -398,9 +422,10 @@ erDiagram
 
 - **New Table: DRAFT_DELIVERIES**: Thêm bảng lưu tạm delivery
   - Lưu tạm thông tin delivery chưa hoàn tất (không có code)
-  - Auto TTL cleanup sau 30 ngày
+  - Auto TTL cleanup sau 90 ngày
   - Chỉ owner mới có thể thao tác
   - Có thể convert thành delivery chính thức
+  - Hỗ trợ quantity và details fields như delivery chính thức
 - **Removed Table: DELIVERY_COUNTERS**: Xóa bảng atomic counter (không còn cần thiết)
   - Thay thế bằng random sequence generation
   - Giảm phức tạp database schema
@@ -422,6 +447,14 @@ erDiagram
   - **User Route Integration**: fromRoute lấy từ user.selectedRouteId tự động
   - **Format Change**: DDMMYY → YYMMDD cho chuẩn hóa
   - **Retry Logic**: Lên tới 50 attempts để tránh collision
+- **Enhanced DELIVERIES & DRAFT_DELIVERIES**: Thêm quantity và details fields
+  - **Quantity field**: Số lượng hàng hóa (bắt buộc, tối thiểu 1, mặc định 1)
+  - **Details object**: Thông tin chi tiết hàng hóa (tùy chọn)
+    - `weight`: Khối lượng (kg)
+    - `length`, `width`, `height`: Kích thước (cm)
+    - `isOverweight`: Đánh dấu quá tải (boolean)
+    - `convertedWeight`: Khối lượng quy đổi
+  - Cả DELIVERIES và DRAFT_DELIVERIES đều có cấu trúc fields giống nhau
 - **Field PaymentType**: Trường `paymentType` trong bảng DELIVERIES với 3 giá trị:
   - `paid` (mặc định): Thanh toán bình thường, khách hàng đã thanh toán
   - `debt`: Thanh toán nợ (khách hàng sẽ trả sau)

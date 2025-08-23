@@ -10,6 +10,7 @@ export interface IDraftDelivery extends Document {
   fromRoute: mongoose.Types.ObjectId;
   toRoute: mongoose.Types.ObjectId;
   name: string;
+  quantity: number;
   cost: number;
   homeDelivery?: string;
   homeDeliveryCost: number;
@@ -19,6 +20,14 @@ export interface IDraftDelivery extends Document {
   collectForCustomer: number;
   collectForCustomerCost: number;
   collectForCustomerNote?: string;
+  details?: {
+    weight?: number;
+    length?: number;
+    width?: number;
+    height?: number;
+    isOverweight?: boolean;
+    convertedWeight?: number;
+  };
   notes?: string;
   totalCost: number;
   paymentType: 'paid' | 'debt' | 'free';
@@ -64,6 +73,12 @@ const draftDeliverySchema = new Schema<IDraftDelivery>(
       type: String,
       required: [true, 'Item name is required'],
       trim: true,
+    },
+    quantity: {
+      type: Number,
+      required: [true, 'Quantity is required'],
+      min: [1, 'Quantity must be at least 1'],
+      default: 1,
     },
     cost: {
       type: Number,
@@ -121,6 +136,35 @@ const draftDeliverySchema = new Schema<IDraftDelivery>(
     collectForCustomerNote: {
       type: String,
       trim: true,
+    },
+    details: {
+      type: {
+        weight: {
+          type: Number,
+          min: [0, 'Weight must be positive'],
+        },
+        length: {
+          type: Number,
+          min: [0, 'Length must be positive'],
+        },
+        width: {
+          type: Number,
+          min: [0, 'Width must be positive'],
+        },
+        height: {
+          type: Number,
+          min: [0, 'Height must be positive'],
+        },
+        isOverweight: {
+          type: Boolean,
+          default: false,
+        },
+        convertedWeight: {
+          type: Number,
+          min: [0, 'Converted weight must be positive'],
+        },
+      },
+      required: false,
     },
     notes: {
       type: String,

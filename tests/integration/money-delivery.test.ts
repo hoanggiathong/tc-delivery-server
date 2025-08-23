@@ -90,49 +90,12 @@ describe('Money Delivery API Integration Tests', () => {
       mockMoneyDeliveryForIntegration
     );
     MockedMoneyDeliveryService.prototype.getAllMoneyDeliveries.mockResolvedValue([
-      {
-        id: 'moneyDelivery123',
-        code: '2401250001',
-        sender: {
-          id: 'customer123',
-          name: 'John Doe',
-          phone: '+84123456789',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        receiver: {
-          id: 'customer456',
-          name: 'Jane Doe',
-          phone: '+84987654321',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        fromRoute: {
-          id: 'route123',
-          code: 'T1',
-          name: 'Test Route 1',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        toRoute: {
-          id: 'route456',
-          code: 'T2',
-          name: 'Test Route 2',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        sendMoneyAmount: 1000000,
-        sendCost: 50000,
-        sendFee: 15000,
-        transferType: 'regular' as const,
-        totalCost: 50000,
-        createdByUser: 'user123',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
+      mockMoneyDeliveryForIntegration,
       {
         id: 'moneyDelivery456',
         code: '2401250002',
+        fullCode: '2401250002T2T1',
+        subCode: '17031750002',
         sender: {
           id: 'customer456',
           name: 'Jane Doe',
@@ -175,6 +138,8 @@ describe('Money Delivery API Integration Tests', () => {
     MockedMoneyDeliveryService.prototype.getMoneyDeliveryById.mockResolvedValue({
       id: 'moneyDelivery123',
       code: '2401250001',
+      fullCode: '2401250001T1T2',
+      subCode: '17031750001',
       sender: {
         id: 'customer123',
         name: 'John Doe',

@@ -16,6 +16,7 @@ export interface IDeliveryResponse extends BaseEntity {
   fromRoute: IRouteResponse;
   toRoute: IRouteResponse;
   name: string;
+  quantity: number;
   cost: number;
   homeDelivery?: string;
   homeDeliveryCost: number;
@@ -25,6 +26,14 @@ export interface IDeliveryResponse extends BaseEntity {
   collectForCustomer: number;
   collectForCustomerCost: number;
   collectForCustomerNote?: string;
+  details?: {
+    weight?: number;
+    length?: number;
+    width?: number;
+    height?: number;
+    isOverweight?: boolean;
+    convertedWeight?: number;
+  };
   notes?: string;
   totalCost: number;
   paymentType?: 'paid' | 'debt' | 'free';
@@ -40,6 +49,7 @@ export interface IDeliveryCreateRequest {
   fromRouteId: string;
   toRouteId: string;
   name: string;
+  quantity?: number;
   cost: number;
   homeDelivery?: string;
   homeDeliveryCost: number;
@@ -49,6 +59,14 @@ export interface IDeliveryCreateRequest {
   collectForCustomer: number;
   collectForCustomerCost: number;
   collectForCustomerNote?: string;
+  details?: {
+    weight?: number;
+    length?: number;
+    width?: number;
+    height?: number;
+    isOverweight?: boolean;
+    convertedWeight?: number;
+  };
   notes?: string;
   paymentType?: 'paid' | 'debt' | 'free';
 }
@@ -62,6 +80,7 @@ export interface IDeliveryUpdateRequest {
   fromRouteId?: string;
   toRouteId?: string;
   name?: string;
+  quantity?: number;
   cost?: number;
   homeDelivery?: string;
   homeDeliveryCost?: number;
@@ -71,6 +90,14 @@ export interface IDeliveryUpdateRequest {
   collectForCustomer?: number;
   collectForCustomerCost?: number;
   collectForCustomerNote?: string;
+  details?: {
+    weight?: number;
+    length?: number;
+    width?: number;
+    height?: number;
+    isOverweight?: boolean;
+    convertedWeight?: number;
+  };
   notes?: string;
   paymentType?: 'paid' | 'debt' | 'free';
 }
@@ -96,6 +123,7 @@ export interface IDeliveryWithPopulatedRefs {
   fromRoute: IRoute;
   toRoute: IRoute;
   name: string;
+  quantity: number;
   cost: number;
   homeDelivery?: string;
   homeDeliveryCost: number;
@@ -105,6 +133,14 @@ export interface IDeliveryWithPopulatedRefs {
   collectForCustomer: number;
   collectForCustomerCost: number;
   collectForCustomerNote?: string;
+  details?: {
+    weight?: number;
+    length?: number;
+    width?: number;
+    height?: number;
+    isOverweight?: boolean;
+    convertedWeight?: number;
+  };
   notes?: string;
   totalCost: number;
   paymentType?: 'paid' | 'debt' | 'free';
@@ -146,6 +182,15 @@ export interface IDeliveryLeanPopulated {
   code: string;
   fullCode: string;
   subCode: string;
+  quantity: number;
+  details?: {
+    weight?: number;
+    length?: number;
+    width?: number;
+    height?: number;
+    isOverweight?: boolean;
+    convertedWeight?: number;
+  };
   sender: {
     _id: string;
     name: string;

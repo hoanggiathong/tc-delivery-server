@@ -37,6 +37,7 @@ export const createMockDelivery = (
       updatedAt: new Date('2023-01-01'),
     },
     name: 'Test Package',
+    quantity: 1,
     cost: 50000,
     homeDelivery: 'Test Home Address',
     homeDeliveryCost: 10000,
@@ -121,10 +122,19 @@ export const createMockDeliveryList = (count: number = 3): IDeliveryResponse[] =
  */
 export const mockNextCodeResponseForIntegration = {
   nextCode: '2401250001',
+  fullCode: '2401250001T1T2',
+  subCode: '17031750001',
   toRoute: {
     id: '507f1f77bcf86cd799439012',
     code: 'T2',
     name: 'Ha Noi',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  fromRoute: {
+    id: '507f1f77bcf86cd799439011',
+    code: 'T1',
+    name: 'Ho Chi Minh',
     createdAt: new Date(),
     updatedAt: new Date(),
   },

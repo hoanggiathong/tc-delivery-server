@@ -69,6 +69,11 @@ export class DeliveryController {
    *               name:
    *                 type: string
    *                 example: "Quần áo"
+   *               quantity:
+   *                 type: number
+   *                 default: 1
+   *                 example: 2
+   *                 description: Number of packages
    *               cost:
    *                 type: number
    *                 example: 30000
@@ -104,6 +109,35 @@ export class DeliveryController {
    *               notes:
    *                 type: string
    *                 example: "Hàng dễ vỡ, vui lòng cẩn thận"
+   *               details:
+   *                 type: object
+   *                 description: Package details (optional)
+   *                 properties:
+   *                   weight:
+   *                     type: number
+   *                     description: Weight in kg
+   *                     example: 2.5
+   *                   length:
+   *                     type: number
+   *                     description: Length in cm
+   *                     example: 30
+   *                   width:
+   *                     type: number
+   *                     description: Width in cm
+   *                     example: 20
+   *                   height:
+   *                     type: number
+   *                     description: Height in cm
+   *                     example: 10
+   *                   isOverweight:
+   *                     type: boolean
+   *                     description: Whether package is overweight
+   *                     default: false
+   *                     example: false
+   *                   convertedWeight:
+   *                     type: number
+   *                     description: Converted weight in kg
+   *                     example: 3.0
    *           examples:
    *             normalDelivery:
    *               summary: Normal delivery with COD
@@ -115,6 +149,7 @@ export class DeliveryController {
    *                 fromRouteId: "507f1f77bcf86cd799439011"
    *                 toRouteId: "507f1f77bcf86cd799439012"
    *                 name: "Quần áo"
+   *                 quantity: 2
    *                 cost: 30000
    *                 homeDelivery: "123 Nguyễn Trãi, Q.5, TP.HCM"
    *                 homeDeliveryCost: 20000
@@ -125,6 +160,12 @@ export class DeliveryController {
    *                 collectForCustomerCost: 5000
    *                 collectForCustomerNote: "Thu tiền hàng"
    *                 notes: "Hàng dễ vỡ, vui lòng cẩn thận"
+   *                 details:
+   *                   weight: 2.5
+   *                   length: 30
+   *                   width: 20
+   *                   height: 10
+   *                   isOverweight: false
    *             freeDelivery:
    *               summary: Free delivery
    *               value:
@@ -135,6 +176,7 @@ export class DeliveryController {
    *                 fromRouteId: "507f1f77bcf86cd799439011"
    *                 toRouteId: "507f1f77bcf86cd799439012"
    *                 name: "Quà tặng"
+   *                 quantity: 1
    *                 cost: 0
    *                 itemValue: 100000
    *                 itemCost: 0
@@ -191,6 +233,7 @@ export class DeliveryController {
    *                       code: "T2"
    *                       name: "Tuyến 2"
    *                     name: "Quần áo"
+   *                     quantity: 2
    *                     cost: 30000
    *                     itemValue: 500000
    *                     itemCost: 10000
@@ -198,6 +241,12 @@ export class DeliveryController {
    *                     collectForCustomerCost: 5000
    *                     totalCost: 45000
    *                     paymentType: "paid"
+   *                     details:
+   *                       weight: 2.5
+   *                       length: 30
+   *                       width: 20
+   *                       height: 10
+   *                       isOverweight: false
    *                     createdAt: "2024-12-17T10:00:00.000Z"
    *       400:
    *         description: Validation error
@@ -348,6 +397,34 @@ export class DeliveryController {
    *                 type: number
    *               collectForCustomerNote:
    *                 type: string
+   *               paymentType:
+   *                 type: string
+   *                 enum: [paid, debt, free]
+   *                 description: Payment type
+   *               notes:
+   *                 type: string
+   *               details:
+   *                 type: object
+   *                 description: Package details (optional)
+   *                 properties:
+   *                   weight:
+   *                     type: number
+   *                     description: Weight in kg
+   *                   length:
+   *                     type: number
+   *                     description: Length in cm
+   *                   width:
+   *                     type: number
+   *                     description: Width in cm
+   *                   height:
+   *                     type: number
+   *                     description: Height in cm
+   *                   isOverweight:
+   *                     type: boolean
+   *                     description: Whether package is overweight
+   *                   convertedWeight:
+   *                     type: number
+   *                     description: Converted weight in kg
    *     responses:
    *       200:
    *         description: Delivery updated successfully

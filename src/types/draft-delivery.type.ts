@@ -6,6 +6,7 @@ export interface IDraftDeliveryInput {
   fromRouteId: string;
   toRouteId: string;
   name: string;
+  quantity?: number;
   cost: number;
   homeDelivery?: string;
   homeDeliveryCost: number;
@@ -15,8 +16,16 @@ export interface IDraftDeliveryInput {
   collectForCustomer: number;
   collectForCustomerCost: number;
   collectForCustomerNote?: string;
+  details?: {
+    weight?: number;
+    length?: number;
+    width?: number;
+    height?: number;
+    isOverweight?: boolean;
+    convertedWeight?: number;
+  };
   notes?: string;
-  paymentType?: 'debt' | 'free' | null;
+  paymentType?: 'paid' | 'debt' | 'free' | null;
 }
 
 export interface IDraftDeliveryResponse {
@@ -36,6 +45,7 @@ export interface IDraftDeliveryResponse {
     name: string;
   };
   name: string;
+  quantity: number;
   cost: number;
   homeDelivery?: string;
   homeDeliveryCost: number;
@@ -45,9 +55,17 @@ export interface IDraftDeliveryResponse {
   collectForCustomer: number;
   collectForCustomerCost: number;
   collectForCustomerNote?: string;
+  details?: {
+    weight?: number;
+    length?: number;
+    width?: number;
+    height?: number;
+    isOverweight?: boolean;
+    convertedWeight?: number;
+  };
   notes?: string;
   totalCost: number;
-  paymentType?: 'debt' | 'free' | null;
+  paymentType?: 'paid' | 'debt' | 'free' | null;
   createdByUser: {
     id: string;
     username: string;

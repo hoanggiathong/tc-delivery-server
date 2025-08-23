@@ -80,6 +80,7 @@ describe('DeliveryService', () => {
       fromRouteId: 'fromRoute123',
       toRouteId: 'toRoute123',
       name: 'Package Item',
+      quantity: 1,
       cost: 100,
       homeDelivery: '123 Main St',
       homeDeliveryCost: 20,
@@ -131,6 +132,7 @@ describe('DeliveryService', () => {
       fromRoute: 'fromRoute123',
       toRoute: 'toRoute123',
       name: 'Package Item',
+      quantity: 1,
       cost: 100,
       homeDelivery: '123 Main St',
       homeDeliveryCost: 20,
@@ -151,6 +153,8 @@ describe('DeliveryService', () => {
     const mockExpectedResponse: IDeliveryResponse = {
       id: 'delivery123',
       code: '2401250001',
+      fullCode: '2401250001T1T2',
+      subCode: '17031750001',
       sender: mockSender,
       receiver: mockReceiver,
       fromRoute: {
@@ -168,6 +172,7 @@ describe('DeliveryService', () => {
         updatedAt: new Date('2023-01-01'),
       },
       name: 'Package Item',
+      quantity: 1,
       cost: 100,
       homeDelivery: '123 Main St',
       homeDeliveryCost: 20,
@@ -197,7 +202,11 @@ describe('DeliveryService', () => {
         .mockResolvedValueOnce(mockToRoute);
 
       // Mock CodeGeneratorService
-      MockedCodeGeneratorService.generateNextCode.mockResolvedValue('2401250001');
+      MockedCodeGeneratorService.generateNextCode.mockResolvedValue({
+        code: '2401250001',
+        fullCode: '2401250001T1T2',
+        subCode: '17031750001',
+      });
 
       // Mock Delivery constructor and save
       MockedDelivery.mockImplementation(() => mockDelivery as any);
@@ -227,6 +236,7 @@ describe('DeliveryService', () => {
         fromRoute: 'fromRoute123',
         toRoute: 'toRoute123',
         name: 'Package Item',
+        quantity: 1,
         cost: 100,
         homeDelivery: '123 Main St',
         homeDeliveryCost: 20,
@@ -329,6 +339,7 @@ describe('DeliveryService', () => {
       fromRoute: 'fromRoute123',
       toRoute: 'toRoute123',
       name: 'Package Item',
+      quantity: 1,
       cost: 100,
     };
 
@@ -380,6 +391,8 @@ describe('DeliveryService', () => {
     const mockExpectedResponse: IDeliveryResponse = {
       id: 'delivery123',
       code: '2401250001',
+      fullCode: '2401250001T1T2',
+      subCode: '17031750001',
       sender: mockUpdatedSender,
       receiver: {
         id: 'receiver123',
@@ -403,6 +416,7 @@ describe('DeliveryService', () => {
         updatedAt: new Date('2023-01-01'),
       },
       name: 'Package Item',
+      quantity: 1,
       cost: 150,
       homeDelivery: '123 Main St',
       homeDeliveryCost: 20,
@@ -545,6 +559,7 @@ describe('DeliveryService', () => {
         updatedAt: new Date('2023-01-01'),
       },
       name: 'Package Item',
+      quantity: 1,
       cost: 100,
       homeDelivery: '123 Main St',
       homeDeliveryCost: 20,
@@ -565,6 +580,8 @@ describe('DeliveryService', () => {
     const mockExpectedResponse: IDeliveryResponse = {
       id: 'delivery123',
       code: '2401250001',
+      fullCode: '2401250001T1T2',
+      subCode: '17031750001',
       sender: {
         id: 'sender123',
         name: 'John Sender',
@@ -594,6 +611,7 @@ describe('DeliveryService', () => {
         updatedAt: new Date('2023-01-01'),
       },
       name: 'Package Item',
+      quantity: 1,
       cost: 100,
       homeDelivery: '123 Main St',
       homeDeliveryCost: 20,
@@ -694,6 +712,7 @@ describe('DeliveryService', () => {
           updatedAt: new Date('2023-01-01'),
         },
         name: 'Package Item',
+        quantity: 1,
         cost: 100,
         homeDelivery: '123 Main St',
         homeDeliveryCost: 20,
@@ -716,6 +735,8 @@ describe('DeliveryService', () => {
       {
         id: 'delivery123',
         code: '2401250001',
+        fullCode: '2401250001T1T2',
+        subCode: '17031750001',
         sender: {
           id: 'sender123',
           name: 'John Sender',
@@ -745,6 +766,7 @@ describe('DeliveryService', () => {
           updatedAt: new Date('2023-01-01'),
         },
         name: 'Package Item',
+        quantity: 1,
         cost: 100,
         homeDelivery: '123 Main St',
         homeDeliveryCost: 20,
@@ -848,9 +870,13 @@ describe('DeliveryService', () => {
       MockedRoute.findById = jest.fn().mockResolvedValue(mockToRoute);
 
       // Mock CodeGeneratorService
-      MockedCodeGeneratorService.getNextCodePreview.mockResolvedValue('2401250001');
+      MockedCodeGeneratorService.getNextCodePreview.mockResolvedValue({
+        code: '2401250001',
+        fullCode: '2401250001T1T2',
+        subCode: '17031750001',
+      });
 
-      const result = await deliveryService.getNextCode('toRoute123');
+      const result = await deliveryService.getNextCode('toRoute123', 'user123');
 
       expect(MockedRoute.findById).toHaveBeenCalledWith('toRoute123');
       expect(MockedCodeGeneratorService.getNextCodePreview).toHaveBeenCalled();
@@ -869,7 +895,9 @@ describe('DeliveryService', () => {
     it('should throw error when to route not found', async () => {
       MockedRoute.findById = jest.fn().mockResolvedValue(null);
 
-      await expect(deliveryService.getNextCode('toRoute123')).rejects.toThrow('To route not found');
+      await expect(deliveryService.getNextCode('toRoute123', 'user123')).rejects.toThrow(
+        'To route not found'
+      );
     });
   });
 
@@ -893,6 +921,8 @@ describe('DeliveryService', () => {
     const mockPopulatedDelivery = {
       _id: 'delivery123',
       code: '2401250001',
+      fullCode: '2401250001T1T2',
+      subCode: '17031750001',
       sender: {
         _id: 'sender123',
         name: 'John Sender',
@@ -922,6 +952,7 @@ describe('DeliveryService', () => {
         updatedAt: new Date('2023-01-01'),
       },
       name: 'Package Item',
+      quantity: 1,
       cost: 100,
       homeDelivery: '123 Main St',
       homeDeliveryCost: 20,
@@ -942,6 +973,8 @@ describe('DeliveryService', () => {
     const mockExpectedResponse: IDeliveryResponse = {
       id: 'delivery123',
       code: '2401250001',
+      fullCode: '2401250001T1T2',
+      subCode: '17031750001',
       sender: {
         id: 'sender123',
         name: 'John Sender',
@@ -971,6 +1004,7 @@ describe('DeliveryService', () => {
         updatedAt: new Date('2023-01-01'),
       },
       name: 'Package Item',
+      quantity: 1,
       cost: 100,
       homeDelivery: '123 Main St',
       homeDeliveryCost: 20,

@@ -46,12 +46,50 @@ export class DraftDeliveryController {
    *               name:
    *                 type: string
    *                 example: "Quần áo"
+   *               quantity:
+   *                 type: number
+   *                 default: 1
+   *                 example: 2
    *               cost:
    *                 type: number
    *                 example: 30000
    *               itemValue:
    *                 type: number
    *                 example: 500000
+   *               itemCost:
+   *                 type: number
+   *                 example: 5000
+   *               collectForCustomer:
+   *                 type: number
+   *                 example: 0
+   *               collectForCustomerCost:
+   *                 type: number
+   *                 example: 0
+   *               details:
+   *                 type: object
+   *                 properties:
+   *                   weight:
+   *                     type: number
+   *                     example: 2.5
+   *                   length:
+   *                     type: number
+   *                     example: 30
+   *                   width:
+   *                     type: number
+   *                     example: 20
+   *                   height:
+   *                     type: number
+   *                     example: 10
+   *                   isOverweight:
+   *                     type: boolean
+   *                     default: false
+   *                   convertedWeight:
+   *                     type: number
+   *                     example: 3.0
+   *               paymentType:
+   *                 type: string
+   *                 enum: [paid, debt, free]
+   *                 default: paid
    *               notes:
    *                 type: string
    *                 example: "Hàng dễ vỡ"
@@ -66,7 +104,13 @@ export class DraftDeliveryController {
    *                 fromRouteId: "507f1f77bcf86cd799439011"
    *                 toRouteId: "507f1f77bcf86cd799439012"
    *                 name: "Quần áo"
+   *                 quantity: 1
    *                 cost: 30000
+   *                 itemValue: 500000
+   *                 itemCost: 5000
+   *                 collectForCustomer: 0
+   *                 collectForCustomerCost: 0
+   *                 paymentType: "paid"
    *             detailedDraft:
    *               summary: Detailed draft
    *               value:
@@ -77,12 +121,21 @@ export class DraftDeliveryController {
    *                 fromRouteId: "507f1f77bcf86cd799439011"
    *                 toRouteId: "507f1f77bcf86cd799439012"
    *                 name: "Điện thoại"
+   *                 quantity: 2
    *                 cost: 50000
    *                 itemValue: 15000000
    *                 itemCost: 150000
    *                 collectForCustomer: 15000000
    *                 collectForCustomerCost: 150000
+   *                 details:
+   *                   weight: 0.8
+   *                   length: 15
+   *                   width: 8
+   *                   height: 2
+   *                   isOverweight: false
+   *                   convertedWeight: 1.2
    *                 notes: "Hàng giá trị cao, cẩn thận"
+   *                 paymentType: "paid"
    *     responses:
    *       201:
    *         description: Draft created successfully
@@ -114,6 +167,7 @@ export class DraftDeliveryController {
    *                     fromRoute: "507f1f77bcf86cd799439011"
    *                     toRoute: "507f1f77bcf86cd799439012"
    *                     name: "Quần áo"
+   *                     quantity: 1
    *                     cost: 30000
    *                     homeDelivery: null
    *                     homeDeliveryCost: 0
@@ -123,9 +177,10 @@ export class DraftDeliveryController {
    *                     collectForCustomer: 0
    *                     collectForCustomerCost: 0
    *                     collectForCustomerNote: null
+   *                     details: null
    *                     notes: null
    *                     totalCost: 35000
-   *                     paymentType: null
+   *                     paymentType: "paid"
    *                     createdByUser: "507f1f77bcf86cd799439040"
    *                     createdAt: "2024-12-17T10:00:00.000Z"
    *                     updatedAt: "2024-12-17T10:00:00.000Z"
@@ -225,8 +280,36 @@ export class DraftDeliveryController {
    *                 type: string
    *               name:
    *                 type: string
+   *               quantity:
+   *                 type: number
    *               cost:
    *                 type: number
+   *               itemValue:
+   *                 type: number
+   *               itemCost:
+   *                 type: number
+   *               collectForCustomer:
+   *                 type: number
+   *               collectForCustomerCost:
+   *                 type: number
+   *               details:
+   *                 type: object
+   *                 properties:
+   *                   weight:
+   *                     type: number
+   *                   length:
+   *                     type: number
+   *                   width:
+   *                     type: number
+   *                   height:
+   *                     type: number
+   *                   isOverweight:
+   *                     type: boolean
+   *                   convertedWeight:
+   *                     type: number
+   *               paymentType:
+   *                 type: string
+   *                 enum: [paid, debt, free]
    *               notes:
    *                 type: string
    *           examples:
@@ -239,6 +322,8 @@ export class DraftDeliveryController {
    *               summary: Update cost
    *               value:
    *                 cost: 45000
+   *                 quantity: 1
+   *                 paymentType: "debt"
    *                 notes: "Đã cập nhật phí giao hàng"
    *     responses:
    *       200:
@@ -271,6 +356,7 @@ export class DraftDeliveryController {
    *                     fromRoute: "507f1f77bcf86cd799439011"
    *                     toRoute: "507f1f77bcf86cd799439012"
    *                     name: "Quần áo"
+   *                     quantity: 1
    *                     cost: 45000
    *                     homeDelivery: null
    *                     homeDeliveryCost: 0
@@ -280,9 +366,10 @@ export class DraftDeliveryController {
    *                     collectForCustomer: 0
    *                     collectForCustomerCost: 0
    *                     collectForCustomerNote: null
+   *                     details: null
    *                     notes: "Đã cập nhật phí giao hàng"
    *                     totalCost: 50000
-   *                     paymentType: null
+   *                     paymentType: "debt"
    *                     createdByUser: "507f1f77bcf86cd799439040"
    *                     createdAt: "2024-12-17T10:00:00.000Z"
    *                     updatedAt: "2024-12-17T11:00:00.000Z"
@@ -396,6 +483,7 @@ export class DraftDeliveryController {
    *                         fromRoute: "507f1f77bcf86cd799439011"
    *                         toRoute: "507f1f77bcf86cd799439012"
    *                         name: "Quần áo"
+   *                         quantity: 1
    *                         cost: 30000
    *                         homeDelivery: null
    *                         homeDeliveryCost: 0
@@ -405,9 +493,10 @@ export class DraftDeliveryController {
    *                         collectForCustomer: 0
    *                         collectForCustomerCost: 0
    *                         collectForCustomerNote: null
+   *                         details: null
    *                         notes: null
    *                         totalCost: 35000
-   *                         paymentType: null
+   *                         paymentType: "paid"
    *                         createdByUser: "507f1f77bcf86cd799439040"
    *                         createdAt: "2024-12-17T10:00:00.000Z"
    *                         updatedAt: "2024-12-17T10:00:00.000Z"
@@ -419,6 +508,7 @@ export class DraftDeliveryController {
    *                         fromRoute: "507f1f77bcf86cd799439011"
    *                         toRoute: "507f1f77bcf86cd799439012"
    *                         name: "Điện thoại"
+   *                         quantity: 2
    *                         cost: 50000
    *                         homeDelivery: "123 Nguyễn Văn Linh, Q7"
    *                         homeDeliveryCost: 15000
@@ -428,9 +518,16 @@ export class DraftDeliveryController {
    *                         collectForCustomer: 15000000
    *                         collectForCustomerCost: 150000
    *                         collectForCustomerNote: "Thu hộ tiền bán hàng"
+   *                         details:
+   *                           weight: 0.8
+   *                           length: 15
+   *                           width: 8
+   *                           height: 2
+   *                           isOverweight: false
+   *                           convertedWeight: 1.2
    *                         notes: "Hàng giá trị cao, cẩn thận"
    *                         totalCost: 350000
-   *                         paymentType: null
+   *                         paymentType: "paid"
    *                         createdByUser: "507f1f77bcf86cd799439041"
    *                         createdAt: "2024-12-17T09:00:00.000Z"
    *                         updatedAt: "2024-12-17T09:00:00.000Z"
@@ -534,6 +631,7 @@ export class DraftDeliveryController {
    *                     fromRoute: "507f1f77bcf86cd799439011"
    *                     toRoute: "507f1f77bcf86cd799439012"
    *                     name: "Quần áo"
+   *                     quantity: 1
    *                     cost: 30000
    *                     homeDelivery: null
    *                     homeDeliveryCost: 0
@@ -543,9 +641,10 @@ export class DraftDeliveryController {
    *                     collectForCustomer: 0
    *                     collectForCustomerCost: 0
    *                     collectForCustomerNote: null
+   *                     details: null
    *                     notes: null
    *                     totalCost: 35000
-   *                     paymentType: null
+   *                     paymentType: "paid"
    *                     createdByUser: "507f1f77bcf86cd799439040"
    *                     createdAt: "2024-12-17T10:00:00.000Z"
    *                     updatedAt: "2024-12-17T10:00:00.000Z"
@@ -762,8 +861,16 @@ export class DraftDeliveryController {
    *                       code: "T2"
    *                       name: "Hà Nội"
    *                     name: "Quần áo"
+   *                     quantity: 1
    *                     cost: 30000
-   *                     totalCost: 30000
+   *                     itemValue: 500000
+   *                     itemCost: 5000
+   *                     collectCost: 0
+   *                     collectForCustomer: 0
+   *                     collectForCustomerCost: 0
+   *                     details: null
+   *                     totalCost: 35000
+   *                     paymentType: "paid"
    *                     createdAt: "2024-12-17T10:30:00.000Z"
    *       404:
    *         description: Draft not found

@@ -33,6 +33,7 @@ export const createDeliverySchema = z.object({
       .regex(/^[0-9a-fA-F]{24}$/, 'Please provide a valid to route ID')
       .trim(),
     name: z.string().min(1, 'Item name is required').trim(),
+    quantity: z.number().min(1, 'Quantity must be at least 1').default(1).optional(),
     cost: z.number().min(0, 'Cost must be positive'),
     homeDelivery: z.string().trim().optional(),
     homeDeliveryCost: z.number().min(0, 'Home delivery cost must be positive').default(0),
@@ -42,6 +43,16 @@ export const createDeliverySchema = z.object({
     collectForCustomer: z.number().min(0, 'Collect for customer amount must be positive'),
     collectForCustomerCost: z.number().min(0, 'Collect for customer cost must be positive'),
     collectForCustomerNote: z.string().trim().optional(),
+    details: z
+      .object({
+        weight: z.number().min(0, 'Weight must be positive').optional(),
+        length: z.number().min(0, 'Length must be positive').optional(),
+        width: z.number().min(0, 'Width must be positive').optional(),
+        height: z.number().min(0, 'Height must be positive').optional(),
+        isOverweight: z.boolean().default(false).optional(),
+        convertedWeight: z.number().min(0, 'Converted weight must be positive').optional(),
+      })
+      .optional(),
     notes: z.string().trim().optional(),
     paymentType: z.enum(['paid', 'debt', 'free']).default('paid').optional(),
   }),
@@ -86,6 +97,7 @@ export const updateDeliverySchema = z.object({
       .trim()
       .optional(),
     name: z.string().min(1, 'Item name is required').trim().optional(),
+    quantity: z.number().min(1, 'Quantity must be at least 1').optional(),
     cost: z.number().min(0, 'Cost must be positive').optional(),
     homeDelivery: z.string().trim().optional(),
     homeDeliveryCost: z
@@ -105,6 +117,16 @@ export const updateDeliverySchema = z.object({
       .min(0, 'Collect for customer cost must be positive')
       .optional(),
     collectForCustomerNote: z.string().trim().optional(),
+    details: z
+      .object({
+        weight: z.number().min(0, 'Weight must be positive').optional(),
+        length: z.number().min(0, 'Length must be positive').optional(),
+        width: z.number().min(0, 'Width must be positive').optional(),
+        height: z.number().min(0, 'Height must be positive').optional(),
+        isOverweight: z.boolean().optional(),
+        convertedWeight: z.number().min(0, 'Converted weight must be positive').optional(),
+      })
+      .optional(),
     notes: z.string().trim().optional(),
     paymentType: z.enum(['paid', 'debt', 'free']).optional(),
   }),

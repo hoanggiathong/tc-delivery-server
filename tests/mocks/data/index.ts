@@ -52,5 +52,5 @@ export {
 export {
   // Money Delivery integration test mocks
   mockMoneyDeliveryForIntegration,
-  mockNextCodeResponseForIntegration as mockMoneyDeliveryNextCodeResponseForIntegration,
+  mockMoneyDeliveryNextCodeResponseForIntegration,
 } from './money-deliveries';

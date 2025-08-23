@@ -382,7 +382,7 @@ describe('MoneyDeliveryService', () => {
 
   describe('getNextCode', () => {
     it('should return next code and route info', async () => {
-      const result = await moneyDeliveryService.getNextCode('route-id-1');
+      const result = await moneyDeliveryService.getNextCode('route-id-1', 'user123');
 
       expect(MockedRoute.findById).toHaveBeenCalledWith('route-id-1');
       expect(MockedCodeGeneratorService.generateNextMoneyDeliveryCode).toHaveBeenCalled();
@@ -394,9 +394,9 @@ describe('MoneyDeliveryService', () => {
     it('should throw error when toRoute not found', async () => {
       MockedRoute.findById = jest.fn().mockResolvedValue(null);
 
-      await expect(moneyDeliveryService.getNextCode('non-existent-route')).rejects.toThrow(
-        'To route not found'
-      );
+      await expect(
+        moneyDeliveryService.getNextCode('non-existent-route', 'user123')
+      ).rejects.toThrow('To route not found');
     });
   });
 

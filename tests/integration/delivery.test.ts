@@ -355,10 +355,19 @@ describe('Delivery Endpoints', () => {
     it('should get the next delivery code successfully', async () => {
       const mockNextCodeResponse = {
         nextCode: '2401250001',
+        fullCode: '2401250001T1T2',
+        subCode: '17031750001',
         toRoute: {
           id: '507f1f77bcf86cd799439012',
           code: 'T2',
           name: 'Ha Noi',
+          createdAt: new Date('2025-06-27'),
+          updatedAt: new Date('2025-06-27'),
+        },
+        fromRoute: {
+          id: '507f1f77bcf86cd799439011',
+          code: 'T1',
+          name: 'Ho Chi Minh',
           createdAt: new Date('2025-06-27'),
           updatedAt: new Date('2025-06-27'),
         },
