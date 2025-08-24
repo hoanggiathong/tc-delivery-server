@@ -17,7 +17,6 @@ export interface IMoneyDeliveryResponse extends BaseEntity {
   toRoute: IRouteResponse;
   sendMoneyAmount: number;
   sendCost: number;
-  sendFee: number;
   transferType: 'regular' | 'express' | 'free';
   totalCost: number;
   notes?: string;
@@ -74,7 +73,6 @@ export interface IMoneyDeliveryWithPopulatedRefs {
   toRoute: IRoute;
   sendMoneyAmount: number;
   sendCost: number;
-  sendFee: number;
   transferType: 'regular' | 'express' | 'free';
   totalCost: number;
   notes?: string;
@@ -146,7 +144,6 @@ export interface IMoneyDeliveryLeanPopulated {
   };
   sendMoneyAmount: number;
   sendCost: number;
-  sendFee: number;
   transferType: 'regular' | 'express' | 'free';
   totalCost: number;
   notes?: string;
@@ -224,7 +221,6 @@ export interface ITodayMoneyDeliverySummary {
   totalMoneyDeliveries: number;
   totalSendMoneyAmount: number;
   totalSendCost: number;
-  totalSendFee: number;
   date: string; // YYYY-MM-DD format
 }
 
@@ -246,7 +242,6 @@ export interface ITodayMoneyDeliveryItem {
   };
   sendMoneyAmount: number;
   sendCost: number;
-  sendFee: number;
   totalCost: number;
   transferType: 'regular' | 'express' | 'free';
   notes: string;
@@ -272,22 +267,19 @@ export interface IMoneyDeliveryCostReportSummary {
   totalMoneyDeliveries: number;
   totalSendMoneyAmount: number;
   totalSendCost: number;
-  totalSendFee: number;
   totalCost: number; // Total revenue from money deliveries
 
   // Phân loại theo transferType
   regularTransferCount: number;
   regularTransferAmount: number;
-  regularTransferFee: number;
   expressTransferCount: number;
   expressTransferAmount: number;
-  expressTransferFee: number;
   freeTransferCount: number;
   freeTransferAmount: number;
 
   // Thống kê
   averageSendAmountPerDelivery: number;
-  averageFeePerDelivery: number;
+  averageCostPerDelivery: number;
 }
 
 export interface IMoneyDeliveryReportItem {
@@ -311,7 +303,6 @@ export interface IMoneyDeliveryReportItem {
   // Chi tiết chi phí
   sendMoneyAmount: number;
   sendCost: number;
-  sendFee: number;
   totalCost: number;
 
   transferType: 'regular' | 'express' | 'free';

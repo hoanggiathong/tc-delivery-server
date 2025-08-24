@@ -166,8 +166,6 @@ export class MoneyDeliveryController {
    *                       type: number
    *                     sendCost:
    *                       type: number
-   *                     sendFee:
-   *                       type: number
    *                       description: Calculated fee based on shipping rates
    *                     transferType:
    *                       type: string
@@ -210,7 +208,6 @@ export class MoneyDeliveryController {
    *                       updatedAt: "2024-01-01T00:00:00.000Z"
    *                     sendMoneyAmount: 1000000
    *                     sendCost: 50000
-   *                     sendFee: 15000
    *                     transferType: "regular"
    *                     totalCost: 50000
    *                     notes: "Gửi tiền sinh nhật"
@@ -227,7 +224,6 @@ export class MoneyDeliveryController {
    *                     code: "2412170002"
    *                     sendMoneyAmount: 500000
    *                     sendCost: 0
-   *                     sendFee: 0
    *                     transferType: "free"
    *                     totalCost: 0
    *       400:
@@ -383,8 +379,6 @@ export class MoneyDeliveryController {
    *                             type: number
    *                           sendCost:
    *                             type: number
-   *                           sendFee:
-   *                             type: number
    *                           transferType:
    *                             type: string
    *                           totalCost:
@@ -412,7 +406,6 @@ export class MoneyDeliveryController {
    *                           phone: "+84987654321"
    *                         sendMoneyAmount: 1000000
    *                         sendCost: 50000
-   *                         sendFee: 15000
    *                         transferType: "regular"
    *                         totalCost: 50000
    *                         createdAt: "2024-12-17T10:00:00.000Z"
@@ -428,7 +421,6 @@ export class MoneyDeliveryController {
    *                           phone: "+84666777888"
    *                         sendMoneyAmount: 5000000
    *                         sendCost: 100000
-   *                         sendFee: 30000
    *                         transferType: "express"
    *                         totalCost: 100000
    *                         createdAt: "2024-12-17T11:00:00.000Z"
@@ -681,7 +673,6 @@ export class MoneyDeliveryController {
    *                     code: "2412170001"
    *                     sendMoneyAmount: 1000000
    *                     sendCost: 50000
-   *                     sendFee: 30000
    *                     transferType: "express"
    *                     totalCost: 50000
    *       400:
@@ -1161,8 +1152,6 @@ export class MoneyDeliveryController {
    *                             type: number
    *                           sendCost:
    *                             type: number
-   *                           sendFee:
-   *                             type: number
    *                           transferType:
    *                             type: string
    *                           totalCost:
@@ -1433,9 +1422,6 @@ export class MoneyDeliveryController {
    *                           sendCost:
    *                             type: number
    *                             example: 5000
-   *                           sendFee:
-   *                             type: number
-   *                             example: 2000
    *                           totalCost:
    *                             type: number
    *                             example: 7000

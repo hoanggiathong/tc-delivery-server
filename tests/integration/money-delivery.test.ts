@@ -126,7 +126,6 @@ describe('Money Delivery API Integration Tests', () => {
         },
         sendMoneyAmount: 2000000,
         sendCost: 75000,
-        sendFee: 20000,
         transferType: 'regular' as const,
         totalCost: 75000,
         createdByUser: 'user123',
@@ -170,7 +169,6 @@ describe('Money Delivery API Integration Tests', () => {
       },
       sendMoneyAmount: 1000000,
       sendCost: 50000,
-      sendFee: 15000,
       transferType: 'regular' as const,
       totalCost: 50000,
       createdByUser: 'user123',
@@ -550,7 +548,8 @@ describe('Money Delivery API Integration Tests', () => {
         mockMoneyDeliveryNextCodeResponseForIntegration.toRoute.name
       );
       expect(MockedMoneyDeliveryService.prototype.getNextCode).toHaveBeenCalledWith(
-        '507f1f77bcf86cd799439011'
+        '507f1f77bcf86cd799439011',
+        'user123'
       );
     });
 

@@ -55,9 +55,9 @@ export class MoneyDeliveryService {
   }
 
   /**
-   * Calculate sendFee based on transferType and sendMoneyAmount
+   * Calculate sendCost based on transferType and sendMoneyAmount
    */
-  private async calculateSendFee(
+  private async calculateSendCost(
     sendMoneyAmount: number,
     transferType: 'regular' | 'express' | 'free'
   ): Promise<number> {
@@ -78,7 +78,7 @@ export class MoneyDeliveryService {
       );
 
       if (!matchingRate) {
-        Logger.warn(`No matching rate found for amount ${sendMoneyAmount}, using 0 as sendFee`);
+        Logger.warn(`No matching rate found for amount ${sendMoneyAmount}, using 0 as sendCost`);
         return 0;
       }
 
@@ -100,7 +100,7 @@ export class MoneyDeliveryService {
       // For VND or USD, return the fixed amount
       return feeAmount;
     } catch (error) {
-      Logger.error('Error calculating sendFee:', error);
+      Logger.error('Error calculating sendCost:', error);
       return 0;
     }
   }
@@ -171,7 +171,6 @@ export class MoneyDeliveryService {
       },
       sendMoneyAmount: populated.sendMoneyAmount,
       sendCost: populated.sendCost,
-      sendFee: populated.sendFee,
       transferType: populated.transferType,
       totalCost: populated.totalCost,
       notes: populated.notes,
@@ -222,7 +221,6 @@ export class MoneyDeliveryService {
       },
       sendMoneyAmount: moneyDelivery.sendMoneyAmount,
       sendCost: moneyDelivery.sendCost,
-      sendFee: moneyDelivery.sendFee,
       transferType: moneyDelivery.transferType,
       totalCost: moneyDelivery.totalCost,
       notes: moneyDelivery.notes,
@@ -277,8 +275,24 @@ export class MoneyDeliveryService {
     // Get transfer type (default to 'regular' if not specified)
     const transferType = data.transferType || 'regular';
 
-    // Calculate sendFee based on transferType
-    const sendFee = await this.calculateSendFee(data.sendMoneyAmount, transferType);
+    // Calculate expected sendCost and validate
+    const expectedCost = await this.calculateSendCost(data.sendMoneyAmount, transferType);
+
+    // Require sendCost to be provided
+    if (data.sendCost === undefined) {
+      throw new Error(
+        `sendCost is required. Expected ${expectedCost} for transfer type '${transferType}' and amount ${data.sendMoneyAmount}`
+      );
+    }
+
+    // Validate provided sendCost matches expected cost
+    if (data.sendCost !== expectedCost) {
+      throw new Error(
+        `Invalid sendCost. Expected ${expectedCost} but received ${data.sendCost} for transfer type '${transferType}' and amount ${data.sendMoneyAmount}`
+      );
+    }
+
+    const sendCost = data.sendCost;
 
     // Create money delivery
     const moneyDelivery = new MoneyDelivery({
@@ -290,8 +304,7 @@ export class MoneyDeliveryService {
       fromRoute: user.selectedRouteId,
       toRoute: data.toRouteId,
       sendMoneyAmount: data.sendMoneyAmount,
-      sendCost: data.sendCost,
-      sendFee,
+      sendCost,
       transferType,
       notes: data.notes,
       createdByUser: userId,
@@ -362,19 +375,47 @@ export class MoneyDeliveryService {
       updateData.notes = data.notes;
     }
 
-    // Handle transferType update and recalculate sendFee
-    if (data.transferType !== undefined) {
-      updateData.transferType = data.transferType;
+    // Handle sendCost validation when transferType or sendMoneyAmount changes
+    if (data.transferType !== undefined || data.sendMoneyAmount !== undefined) {
+      const finalTransferType = data.transferType ?? moneyDelivery.transferType;
+      const finalSendMoneyAmount = data.sendMoneyAmount ?? moneyDelivery.sendMoneyAmount;
 
-      // Get the sendMoneyAmount for fee calculation
-      const sendMoneyAmount = data.sendMoneyAmount || moneyDelivery.sendMoneyAmount;
-      updateData.sendFee = await this.calculateSendFee(sendMoneyAmount, data.transferType);
-    } else if (data.sendMoneyAmount !== undefined) {
-      // If only sendMoneyAmount changed, recalculate sendFee with existing transferType
-      updateData.sendFee = await this.calculateSendFee(
-        data.sendMoneyAmount,
+      // Calculate expected cost for validation
+      const expectedCost = await this.calculateSendCost(finalSendMoneyAmount, finalTransferType);
+
+      // Require sendCost when transferType or sendMoneyAmount changes
+      if (data.sendCost === undefined) {
+        throw new Error(
+          `sendCost is required when updating transferType or sendMoneyAmount. Expected ${expectedCost} for transfer type '${finalTransferType}' and amount ${finalSendMoneyAmount}`
+        );
+      }
+
+      // Validate provided sendCost matches expected cost
+      if (data.sendCost !== expectedCost) {
+        throw new Error(
+          `Invalid sendCost. Expected ${expectedCost} but received ${data.sendCost} for transfer type '${finalTransferType}' and amount ${finalSendMoneyAmount}`
+        );
+      }
+
+      updateData.sendCost = data.sendCost;
+
+      if (data.transferType !== undefined) {
+        updateData.transferType = data.transferType;
+      }
+    } else if (data.sendCost !== undefined) {
+      // If only sendCost is provided, still validate it
+      const expectedCost = await this.calculateSendCost(
+        moneyDelivery.sendMoneyAmount,
         moneyDelivery.transferType
       );
+
+      if (data.sendCost !== expectedCost) {
+        throw new Error(
+          `Invalid sendCost. Expected ${expectedCost} but received ${data.sendCost} for transfer type '${moneyDelivery.transferType}' and amount ${moneyDelivery.sendMoneyAmount}`
+        );
+      }
+
+      updateData.sendCost = data.sendCost;
     }
 
     // Update money delivery
@@ -851,7 +892,6 @@ export class MoneyDeliveryService {
                   totalMoneyDeliveries: { $sum: 1 },
                   totalSendMoneyAmount: { $sum: '$sendMoneyAmount' },
                   totalSendCost: { $sum: '$sendCost' },
-                  totalSendFee: { $sum: '$sendFee' },
                 },
               },
             ],
@@ -875,7 +915,6 @@ export class MoneyDeliveryService {
                   },
                   sendMoneyAmount: 1,
                   sendCost: 1,
-                  sendFee: 1,
                   totalCost: 1,
                   transferType: 1,
                   notes: 1,
@@ -902,7 +941,6 @@ export class MoneyDeliveryService {
         totalMoneyDeliveries: summaryData.totalMoneyDeliveries,
         totalSendMoneyAmount: summaryData.totalSendMoneyAmount,
         totalSendCost: summaryData.totalSendCost,
-        totalSendFee: summaryData.totalSendFee,
         date: today.toISOString().split('T')[0], // YYYY-MM-DD format
       };
 
@@ -915,7 +953,6 @@ export class MoneyDeliveryService {
         toRoute: item.toRoute,
         sendMoneyAmount: item.sendMoneyAmount,
         sendCost: item.sendCost,
-        sendFee: item.sendFee,
         totalCost: item.totalCost,
         transferType: item.transferType,
         notes: item.notes,
@@ -1023,7 +1060,6 @@ export class MoneyDeliveryService {
                   totalMoneyDeliveries: { $sum: 1 },
                   totalSendMoneyAmount: { $sum: '$sendMoneyAmount' },
                   totalSendCost: { $sum: '$sendCost' },
-                  totalSendFee: { $sum: '$sendFee' },
                   totalCost: { $sum: '$totalCost' },
 
                   // Transfer type breakdown
@@ -1034,7 +1070,7 @@ export class MoneyDeliveryService {
                     $sum: { $cond: [{ $eq: ['$transferType', 'regular'] }, '$sendMoneyAmount', 0] },
                   },
                   regularTransferFee: {
-                    $sum: { $cond: [{ $eq: ['$transferType', 'regular'] }, '$sendFee', 0] },
+                    $sum: { $cond: [{ $eq: ['$transferType', 'regular'] }, '$sendCost', 0] },
                   },
                   expressTransferCount: {
                     $sum: { $cond: [{ $eq: ['$transferType', 'express'] }, 1, 0] },
@@ -1043,7 +1079,7 @@ export class MoneyDeliveryService {
                     $sum: { $cond: [{ $eq: ['$transferType', 'express'] }, '$sendMoneyAmount', 0] },
                   },
                   expressTransferFee: {
-                    $sum: { $cond: [{ $eq: ['$transferType', 'express'] }, '$sendFee', 0] },
+                    $sum: { $cond: [{ $eq: ['$transferType', 'express'] }, '$sendCost', 0] },
                   },
                   freeTransferCount: {
                     $sum: { $cond: [{ $eq: ['$transferType', 'free'] }, 1, 0] },
@@ -1093,7 +1129,6 @@ export class MoneyDeliveryService {
                   },
                   sendMoneyAmount: 1,
                   sendCost: 1,
-                  sendFee: 1,
                   totalCost: 1,
                   transferType: 1,
                   notes: 1,
@@ -1134,19 +1169,16 @@ export class MoneyDeliveryService {
         totalMoneyDeliveries: summaryData.totalMoneyDeliveries,
         totalSendMoneyAmount: summaryData.totalSendMoneyAmount,
         totalSendCost: summaryData.totalSendCost,
-        totalSendFee: summaryData.totalSendFee,
         totalCost: summaryData.totalCost,
         regularTransferCount: summaryData.regularTransferCount,
         regularTransferAmount: summaryData.regularTransferAmount,
-        regularTransferFee: summaryData.regularTransferFee,
         expressTransferCount: summaryData.expressTransferCount,
         expressTransferAmount: summaryData.expressTransferAmount,
-        expressTransferFee: summaryData.expressTransferFee,
         freeTransferCount: summaryData.freeTransferCount,
         freeTransferAmount: summaryData.freeTransferAmount,
         averageSendAmountPerDelivery:
           Math.round(summaryData.averageSendAmountPerDelivery * 100) / 100,
-        averageFeePerDelivery: Math.round(summaryData.averageFeePerDelivery * 100) / 100,
+        averageCostPerDelivery: Math.round(summaryData.averageCostPerDelivery * 100) / 100,
       };
 
       // Format money deliveries
@@ -1159,7 +1191,6 @@ export class MoneyDeliveryService {
         toRoute: item.toRoute,
         sendMoneyAmount: item.sendMoneyAmount,
         sendCost: item.sendCost,
-        sendFee: item.sendFee,
         totalCost: item.totalCost,
         transferType: item.transferType,
         notes: item.notes,

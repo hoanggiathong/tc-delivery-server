@@ -53,11 +53,11 @@ export class CodeGeneratorService {
         const sequence = this.generateRandomSequence();
         const sequenceStr = String(sequence).padStart(4, '0');
         const code = `${datePrefix}${sequenceStr}`;
-        
+
         // Generate fullCode based on type (MoneyDelivery gets -T suffix)
         const baseFullCode = `${code}${fromRoute.code}${toRoute.code}`;
         const fullCode = type === 'money-delivery' ? `${baseFullCode}-T` : baseFullCode;
-        
+
         // Generate subCode: timestamp + sequence from code (last 4 digits)
         const codeSequence = code.substring(6, 10); // Extract XXXX from YYMMDDXXXX
         const subCode = `${timestamp}${codeSequence}`;
@@ -277,10 +277,10 @@ export class CodeGeneratorService {
       const sequence = this.generateRandomSequence();
       const sequenceStr = String(sequence).padStart(4, '0');
       const code = `${datePrefix}${sequenceStr}`;
-      
+
       // Generate fullCode (Note: preview doesn't specify type, so assume delivery)
       const fullCode = `${code}${fromRoute.code}${toRoute.code}`;
-      
+
       // Generate subCode: timestamp + sequence from code (last 4 digits)
       const codeSequence = code.substring(6, 10); // Extract XXXX from YYMMDDXXXX
       const subCode = `${timestamp}${codeSequence}`;

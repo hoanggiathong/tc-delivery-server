@@ -1,6 +1,7 @@
 import { MoneyDeliveryService } from '@/services/money-delivery.service';
 import { CustomerService } from '@/services/customer.service';
 import { CodeGeneratorService } from '@/services/code-generator.service';
+import { SettingsService } from '@/services/settings.service';
 import { MoneyDelivery } from '@/models/money-delivery.model';
 import { Route } from '@/models/route.model';
 import { Customer } from '@/models/customer.model';
@@ -21,6 +22,7 @@ jest.mock('mongoose', () => ({
 // Mock all dependencies
 jest.mock('@/services/customer.service');
 jest.mock('@/services/code-generator.service');
+jest.mock('@/services/settings.service');
 jest.mock('@/models/money-delivery.model');
 jest.mock('@/models/route.model');
 jest.mock('@/models/customer.model');
@@ -32,6 +34,7 @@ const MockedUser = User as jest.MockedClass<typeof User>;
 const MockedRoute = Route as jest.MockedClass<typeof Route>;
 const MockedCodeGeneratorService = CodeGeneratorService as jest.Mocked<typeof CodeGeneratorService>;
 const MockedCustomerService = CustomerService as jest.MockedClass<typeof CustomerService>;
+const MockedSettingsService = SettingsService as jest.MockedClass<typeof SettingsService>;
 
 describe('MoneyDeliveryService', () => {
   let moneyDeliveryService: MoneyDeliveryService;
@@ -83,6 +86,23 @@ describe('MoneyDeliveryService', () => {
     }),
   };
 
+  const mockUser = {
+    _id: 'user-id-1',
+    selectedRouteId: 'route-id-1',
+    username: 'testuser',
+  };
+
+  const mockShippingRates = [
+    {
+      fromAmount: 0,
+      toAmount: 10000000,
+      regularShippingFee: 50000,
+      regularShippingFeeUnit: 'VND',
+      expressShippingFee: 100000,
+      expressShippingFeeUnit: 'VND',
+    },
+  ];
+
   beforeEach(() => {
     jest.clearAllMocks();
 
@@ -91,17 +111,29 @@ describe('MoneyDeliveryService', () => {
       .fn()
       .mockResolvedValue(mockCustomer);
 
+    // Mock SettingsService methods
+    MockedSettingsService.prototype.getShippingRates = jest
+      .fn()
+      .mockResolvedValue(mockShippingRates);
+
     // Create service
     moneyDeliveryService = new MoneyDeliveryService();
 
     // Mock CodeGeneratorService methods
-    MockedCodeGeneratorService.generateNextMoneyDeliveryCode = jest
-      .fn()
-      .mockResolvedValue('2401250001');
+    MockedCodeGeneratorService.generateNextMoneyDeliveryCode = jest.fn().mockResolvedValue({
+      code: '2401250001',
+      fullCode: '2401250001T1T1',
+      subCode: '0001',
+    });
 
     // Mock Mongoose models
     MockedRoute.findById = jest.fn().mockResolvedValue(mockRoute);
     MockedRoute.findOne = jest.fn().mockResolvedValue(mockRoute);
+
+    // Mock User model with select method
+    MockedUser.findById = jest.fn().mockReturnValue({
+      select: jest.fn().mockResolvedValue(mockUser),
+    });
   });
 
   describe('createMoneyDelivery', () => {
@@ -114,6 +146,7 @@ describe('MoneyDeliveryService', () => {
       toRouteId: 'route-id-2',
       sendMoneyAmount: 1000000,
       sendCost: 50000,
+      transferType: 'regular',
       notes: 'Ghi chú chuyển tiền',
     };
 
@@ -176,7 +209,7 @@ describe('MoneyDeliveryService', () => {
 
       await expect(
         moneyDeliveryService.createMoneyDelivery(createData, 'user-id-1')
-      ).rejects.toThrow('From route not found');
+      ).rejects.toThrow('User selected route not found');
     });
 
     it('should throw error when toRoute not found', async () => {
@@ -186,12 +219,99 @@ describe('MoneyDeliveryService', () => {
         moneyDeliveryService.createMoneyDelivery(createData, 'user-id-1')
       ).rejects.toThrow('To route not found');
     });
+
+    it('should throw error when sendCost is missing', async () => {
+      const dataWithoutSendCost = { ...createData };
+      delete (dataWithoutSendCost as any).sendCost;
+
+      await expect(
+        moneyDeliveryService.createMoneyDelivery(dataWithoutSendCost, 'user-id-1')
+      ).rejects.toThrow(
+        "sendCost is required. Expected 50000 for transfer type 'regular' and amount 1000000"
+      );
+    });
+
+    it('should throw error when sendCost is incorrect', async () => {
+      const dataWithWrongCost = { ...createData, sendCost: 999999 }; // Wrong amount
+
+      await expect(
+        moneyDeliveryService.createMoneyDelivery(dataWithWrongCost, 'user-id-1')
+      ).rejects.toThrow(
+        "Invalid sendCost. Expected 50000 but received 999999 for transfer type 'regular' and amount 1000000"
+      );
+    });
+
+    it('should pass validation with correct sendCost for express transfer', async () => {
+      const expressData = { ...createData, transferType: 'express' as const, sendCost: 100000 };
+
+      // Mock MoneyDelivery constructor
+      MockedMoneyDelivery.mockImplementation(() => mockMoneyDelivery as any);
+
+      // Mock the transformMoneyDeliveryToResponse method
+      jest
+        .spyOn(moneyDeliveryService as any, 'transformMoneyDeliveryToResponse')
+        .mockResolvedValue({
+          id: 'money-delivery-id-1',
+          code: '2401250001',
+          sender: mockCustomer,
+          receiver: mockCustomer,
+          fromRoute: mockRoute,
+          toRoute: mockRoute,
+          sendMoneyAmount: 1000000,
+          sendCost: 100000,
+          transferType: 'express',
+          createdByUser: 'testuser',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          notes: 'Ghi chú chuyển tiền',
+        });
+
+      const result = await moneyDeliveryService.createMoneyDelivery(expressData, 'user-id-1');
+
+      expect(result).toBeDefined();
+      expect(result.sendCost).toBe(100000);
+      expect(result.transferType).toBe('express');
+    });
+
+    it('should calculate sendCost correctly for free transfer', async () => {
+      const freeData = { ...createData, transferType: 'free' as const, sendCost: 0 };
+
+      // Mock MoneyDelivery constructor
+      MockedMoneyDelivery.mockImplementation(() => mockMoneyDelivery as any);
+
+      // Mock the transformMoneyDeliveryToResponse method
+      jest
+        .spyOn(moneyDeliveryService as any, 'transformMoneyDeliveryToResponse')
+        .mockResolvedValue({
+          id: 'money-delivery-id-1',
+          code: '2401250001',
+          sender: mockCustomer,
+          receiver: mockCustomer,
+          fromRoute: mockRoute,
+          toRoute: mockRoute,
+          sendMoneyAmount: 1000000,
+          sendCost: 0,
+          transferType: 'free',
+          createdByUser: 'testuser',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          notes: 'Ghi chú chuyển tiền',
+        });
+
+      const result = await moneyDeliveryService.createMoneyDelivery(freeData, 'user-id-1');
+
+      expect(result).toBeDefined();
+      expect(result.sendCost).toBe(0);
+      expect(result.transferType).toBe('free');
+    });
   });
 
   describe('updateMoneyDelivery', () => {
     const updateData: IMoneyDeliveryUpdateRequest = {
       senderName: 'Updated Sender',
       sendMoneyAmount: 2000000,
+      sendCost: 50000, // Required when updating sendMoneyAmount
+      transferType: 'regular', // Need to set transferType for validation
       notes: 'Ghi chú chuyển tiền update',
     };
 
@@ -269,6 +389,48 @@ describe('MoneyDeliveryService', () => {
       await expect(
         moneyDeliveryService.updateMoneyDelivery('money-delivery-id-1', updateDataWithRoute)
       ).rejects.toThrow('From route not found');
+    });
+
+    it('should throw error when sendCost is missing during sendMoneyAmount update', async () => {
+      const mockExistingMoneyDelivery = {
+        ...mockMoneyDelivery,
+        sendMoneyAmount: 1000000,
+        transferType: 'regular',
+      };
+
+      MockedMoneyDelivery.findById = jest.fn().mockResolvedValue(mockExistingMoneyDelivery);
+
+      const updateDataWithoutSendCost = {
+        sendMoneyAmount: 2000000,
+        // Missing sendCost when updating sendMoneyAmount
+      };
+
+      await expect(
+        moneyDeliveryService.updateMoneyDelivery('money-delivery-id-1', updateDataWithoutSendCost)
+      ).rejects.toThrow(
+        "sendCost is required when updating transferType or sendMoneyAmount. Expected 50000 for transfer type 'regular' and amount 2000000"
+      );
+    });
+
+    it('should throw error when sendCost is incorrect during transferType update', async () => {
+      const mockExistingMoneyDelivery = {
+        ...mockMoneyDelivery,
+        sendMoneyAmount: 1000000,
+        transferType: 'regular',
+      };
+
+      MockedMoneyDelivery.findById = jest.fn().mockResolvedValue(mockExistingMoneyDelivery);
+
+      const updateDataWithWrongSendCost = {
+        transferType: 'express' as const,
+        sendCost: 50000, // Should be 100000 for express
+      };
+
+      await expect(
+        moneyDeliveryService.updateMoneyDelivery('money-delivery-id-1', updateDataWithWrongSendCost)
+      ).rejects.toThrow(
+        "Invalid sendCost. Expected 100000 but received 50000 for transfer type 'express' and amount 1000000"
+      );
     });
   });
 
@@ -382,9 +544,15 @@ describe('MoneyDeliveryService', () => {
 
   describe('getNextCode', () => {
     it('should return next code and route info', async () => {
+      // Reset Route mock to handle Promise.all calls
+      MockedRoute.findById = jest
+        .fn()
+        .mockResolvedValueOnce(mockRoute) // toRoute
+        .mockResolvedValueOnce(mockRoute); // fromRoute (user's selected route)
+
       const result = await moneyDeliveryService.getNextCode('route-id-1', 'user123');
 
-      expect(MockedRoute.findById).toHaveBeenCalledWith('route-id-1');
+      expect(MockedRoute.findById).toHaveBeenCalledTimes(2);
       expect(MockedCodeGeneratorService.generateNextMoneyDeliveryCode).toHaveBeenCalled();
       expect(result).toHaveProperty('nextCode');
       expect(result).toHaveProperty('toRoute');
