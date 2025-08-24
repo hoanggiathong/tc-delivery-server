@@ -31,7 +31,6 @@ const moneyDeliverySchema = new Schema<IMoneyDelivery>(
     fullCode: {
       type: String,
       required: [true, 'Full code is required'],
-      unique: true,
       trim: true,
     },
     subCode: {

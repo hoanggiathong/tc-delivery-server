@@ -47,7 +47,6 @@ const deliverySchema = new Schema<IDelivery>(
     fullCode: {
       type: String,
       required: [true, 'Full code is required'],
-      unique: true,
       trim: true,
     },
     subCode: {

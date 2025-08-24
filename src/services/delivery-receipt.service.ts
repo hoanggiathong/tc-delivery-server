@@ -114,11 +114,11 @@ export class DeliveryReceiptService {
     const expiryDateStr = `ngày ${expiryDate.getDate()} tháng ${expiryDate.getMonth() + 1} năm ${expiryDate.getFullYear()}`;
 
     return {
-      receiptNumber: delivery.code,
+      receiptNumber: delivery.fullCode,
       date: dateStr,
       expiryDate: expiryDateStr,
-      barcode: delivery.code,
-      trackingCode: delivery.code,
+      barcode: delivery.fullCode,
+      trackingCode: delivery.fullCode,
       fromRoute: delivery.fromRoute,
       toRoute: delivery.toRoute,
       sender: {
@@ -133,7 +133,7 @@ export class DeliveryReceiptService {
       },
       packageInfo: {
         description: delivery.name,
-        quantity: 1,
+        quantity: delivery.quantity || 1,
         value: delivery.itemValue,
         homeDeliveryCost: delivery.homeDeliveryCost,
         isFragile: delivery.notes?.toLowerCase().includes('dễ vỡ') || false,
@@ -411,7 +411,7 @@ export class DeliveryReceiptService {
           </div>
 
           <div class="header-right">
-            <div>SL: 1</div>
+            <div>SL: ${data.packageInfo.quantity}</div>
             <div>GTN: <span class="amount">${data.packageInfo.homeDeliveryCost.toLocaleString('vi-VN')} đồng</span></div>
             <div>Nợ cước: <span class="amount">${data.payment.total.toLocaleString('vi-VN')} đồng</span></div>
             <div>${data.fromRoute.name}-${data.toRoute.name}</div>
@@ -514,8 +514,8 @@ export class DeliveryReceiptService {
       const receiptData = this.transformDeliveryData(delivery);
 
       // Generate barcode and QR code with fallbacks
-      const barcodeDataURL = await this.generateBarcode(delivery.code);
-      const qrCodeDataURL = await this.generateQRCode(delivery.code);
+      const barcodeDataURL = await this.generateBarcode(delivery.fullCode);
+      const qrCodeDataURL = await this.generateQRCode(delivery.fullCode);
 
       // Validate that we have valid data URLs
       if (!barcodeDataURL.startsWith('data:image/') || !qrCodeDataURL.startsWith('data:image/')) {
@@ -569,8 +569,8 @@ export class DeliveryReceiptService {
   public async generateReceiptHTMLPreview(delivery: PopulatedDelivery): Promise<string> {
     try {
       const receiptData = this.transformDeliveryData(delivery);
-      const barcodeDataURL = await this.generateBarcode(delivery.code);
-      const qrCodeDataURL = await this.generateQRCode(delivery.code);
+      const barcodeDataURL = await this.generateBarcode(delivery.fullCode);
+      const qrCodeDataURL = await this.generateQRCode(delivery.fullCode);
 
       return this.generateReceiptHTML(receiptData, barcodeDataURL, qrCodeDataURL);
     } catch (error) {
