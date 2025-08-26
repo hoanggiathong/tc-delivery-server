@@ -11,6 +11,7 @@ import {
   frequentCustomersSchema,
   deliveryCostReportSchema,
   deliveryReceiptSchema,
+  deliveryFullCodeSchema,
 } from '@/schemas/delivery.schema';
 
 const router = Router();
@@ -211,11 +212,17 @@ router.use(authenticateToken);
 router.post('/', validate(createDeliverySchema), deliveryController.createDelivery);
 router.get('/', deliveryController.getAllDeliveries);
 
+router.get(
+  '/search/:fullCode',
+  validate(deliveryFullCodeSchema),
+  deliveryController.getDeliveryByFullCodeFromUserRoute
+);
+
 router.get('/next-code', validate(getNextCodeSchema), deliveryController.getNextCode);
 
 router.get('/cost-report', validate(deliveryCostReportSchema), deliveryController.getCostReport);
 
-router.get('/today-report', authenticateToken, deliveryController.getTodayReport);
+router.get('/today-report', deliveryController.getTodayReport);
 
 router.get(
   '/code/:deliveryIdentifier',

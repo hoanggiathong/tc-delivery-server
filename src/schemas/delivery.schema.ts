@@ -251,4 +251,20 @@ export const deliveryReceiptSchema = z.object({
   }),
 });
 
+// Schema for delivery fullCode parameter
+export const deliveryFullCodeSchema = z.object({
+  params: z.object({
+    fullCode: z
+      .string()
+      .min(12, 'Delivery fullCode must be at least 12 characters') // 10 digits code + 2 route codes minimum
+      .max(20, 'Delivery fullCode must not exceed 20 characters')
+      .regex(
+        /^\d{10}[A-Z]\d+[A-Z]\d+$/,
+        'Invalid delivery fullCode format. Expected: codeFromRouteToRoute (e.g., 2401250001T1T2)'
+      )
+      .trim(),
+  }),
+});
+
 export type DeliveryReceiptParams = z.infer<typeof deliveryReceiptSchema>['params'];
+export type DeliveryFullCodeParams = z.infer<typeof deliveryFullCodeSchema>['params'];

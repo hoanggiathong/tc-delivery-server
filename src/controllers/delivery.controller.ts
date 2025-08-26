@@ -960,6 +960,147 @@ export class DeliveryController {
 
   /**
    * @swagger
+   * /api/delivery/search/{fullCode}:
+   *   get:
+   *     summary: Get delivery by fullCode using current user's selected route as fromRoute
+   *     tags: [Delivery]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: fullCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *           example: "2401250001T1T2"
+   *         description: Delivery full code in format codeFromRouteToRoute (e.g., 2401250001T1T2)
+   *     responses:
+   *       200:
+   *         description: Delivery retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Delivery retrieved successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     delivery:
+   *                       $ref: '#/components/schemas/Delivery'
+   *       400:
+   *         description: User has no selected route or invalid fullCode format
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "User must have a selected route to search for deliveries"
+   *       404:
+   *         description: Delivery not found or user cannot access delivery from different route
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Delivery not found"
+   *       401:
+   *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Unauthorized"
+   */
+  getDeliveryByFullCodeFromUserRoute = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { fullCode } = req.params;
+      const delivery = await this.deliveryService.getDeliveryByFullCodeFromUserRoute(
+        fullCode,
+        req.user.userId
+      );
+
+      if (!delivery) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Delivery not found',
+        };
+        res.status(404).json(response);
+        return;
+      }
+
+      Logger.info('Delivery retrieved by fullCode from user route successfully', {
+        fullCode,
+        deliveryId: delivery.id,
+        userId: req.user.userId,
+        fromRouteCode: delivery.fromRoute.code,
+      });
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Delivery retrieved successfully',
+        data: { delivery },
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Failed to get delivery by fullCode from user route', {
+        error: error instanceof Error ? error.message : error,
+        fullCode: req.params.fullCode,
+        userId: req.user?.userId,
+      });
+
+      const message = error instanceof Error ? error.message : 'Failed to get delivery by fullCode';
+
+      // Determine proper status code based on error type
+      let statusCode = 500; // Default to server error
+      if (error instanceof Error) {
+        if (error.message.includes('must have a selected route')) {
+          statusCode = 400; // Bad Request for user configuration issues
+        }
+      }
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(statusCode).json(response);
+    }
+  };
+
+  /**
+   * @swagger
    * /api/delivery/frequent-customers/{senderIdentifier}:
    *   get:
    *     summary: Get frequent customers for a sender with pagination

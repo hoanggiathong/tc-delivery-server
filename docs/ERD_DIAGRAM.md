@@ -104,7 +104,6 @@ erDiagram
         ObjectId toRoute FK "tham chiếu: ROUTES, bắt buộc"
         number sendMoneyAmount "số tiền gửi, bắt buộc, tối thiểu 0"
         number sendCost "phí dịch vụ, bắt buộc, tối thiểu 0"
-        number sendFee "phí giao dịch, tính theo shipping rates, mặc định 0"
         enum transferType "regular|express|free, mặc định regular"
         number totalCost "tính toán: sendCost (free thì = 0)"
         string notes "tùy chọn, trim"
@@ -249,10 +248,10 @@ erDiagram
 - **Shared uniqueness**: fullCode phải unique across cả delivery và money-delivery
 - **Quy tắc nghiệp vụ**: Cùng các ràng buộc người gửi/nhận và tuyến đường như deliveries
 - **Hình thức chuyển tiền (transferType)**:
-  - `regular` (mặc định): Chuyển tiền thường, sendFee tính theo regularShippingFee
-  - `express`: Chuyển tiền nhanh, sendFee tính theo expressShippingFee
-  - `free`: Miễn phí, sendFee = 0 và totalCost = 0
-- **Tính phí giao dịch (sendFee)**:
+  - `regular` (mặc định): Chuyển tiền thường, sendCost tính theo regularShippingFee
+  - `express`: Chuyển tiền nhanh, sendCost tính theo expressShippingFee
+  - `free`: Miễn phí, totalCost = 0
+- **Tính phí dịch vụ (sendCost)**:
   - Tính dựa trên sendMoneyAmount và shipping rates configuration
   - Hỗ trợ phí cố định (VND/USD) hoặc phần trăm (%)
   - Tự động cập nhật khi thay đổi transferType hoặc sendMoneyAmount
@@ -376,12 +375,12 @@ erDiagram
 #### Money Delivery APIs
 - **Create Money Delivery**: `POST /api/money-deliveries`
   - Request body bao gồm `transferType` (optional): 'regular', 'express', 'free'
-  - Tự động tính `sendFee` dựa trên `sendMoneyAmount` và `transferType`
+  - Tự động tính `sendCost` dựa trên `sendMoneyAmount` và `transferType`
   - `totalCost` = 0 khi `transferType` = 'free'
 - **Update Money Delivery**: `PUT /api/money-deliveries/:id`
   - Có thể cập nhật `transferType`
-  - Tự động tính lại `sendFee` khi thay đổi `transferType` hoặc `sendMoneyAmount`
-- **Response Format**: Bao gồm `sendFee` và `transferType` trong tất cả responses
+  - Tự động tính lại `sendCost` khi thay đổi `transferType` hoặc `sendMoneyAmount`
+- **Response Format**: Bao gồm `sendCost` và `transferType` trong tất cả responses
 
 #### Tính Phí Vận Chuyển
 - **API Endpoint**: `POST /api/settings/calculate-shipping-fee`
@@ -464,11 +463,10 @@ erDiagram
   - Công thức mới: `totalCost = cost + itemCost(phí trị giá) + collectForCustomerCost`
 - **Money Delivery Transfer Types**: Thêm hình thức chuyển tiền cho MONEY_DELIVERIES
   - Thêm field `transferType`: regular (mặc định), express, free
-  - Thêm field `sendFee`: Phí giao dịch tính theo shipping rates
-  - Tự động tính sendFee dựa trên sendMoneyAmount và transferType
-  - Free transfer: sendFee = 0, totalCost = 0
-  - Regular: Sử dụng regularShippingFee từ settings
-  - Express: Sử dụng expressShippingFee từ settings
+  - Tự động tính sendCost dựa trên sendMoneyAmount và transferType
+  - Free transfer: totalCost = 0
+  - Regular: Sử dụng regularShippingFee từ settings cho sendCost
+  - Express: Sử dụng expressShippingFee từ settings cho sendCost
 
 ### Cân Nhắc Migration và Mở Rộng
 

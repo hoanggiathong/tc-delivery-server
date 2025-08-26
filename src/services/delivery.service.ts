@@ -693,6 +693,63 @@ export class DeliveryService {
   }
 
   /**
+   * Get delivery by fullCode using user's selected route as fromRoute
+   * @param fullCode - The delivery full code (e.g., 2401250001T1T2)
+   * @param userId - The user ID to get selectedRouteId from
+   */
+  async getDeliveryByFullCodeFromUserRoute(
+    fullCode: string,
+    userId: string
+  ): Promise<IDeliveryResponse | null> {
+    // Parse fullCode to get code and route codes
+    const parsed = this.parseDeliveryIdentifier(fullCode);
+    if (!parsed) {
+      throw new Error(
+        'Invalid delivery identifier format. Expected: codeFromRouteToRoute (e.g., 2401250001T1T2)'
+      );
+    }
+
+    const { fromRouteCode } = parsed;
+
+    // Get user's selected route as fromRoute
+    const user = await User.findById(userId).select('selectedRouteId');
+    if (!user || !user.selectedRouteId) {
+      throw new Error('User must have a selected route to search for deliveries');
+    }
+
+    // Get user's selected route to compare with parsed fromRouteCode
+    const userSelectedRoute = await Route.findById(user.selectedRouteId).select('code');
+    if (!userSelectedRoute) {
+      throw new Error('User selected route not found');
+    }
+
+    // Verify that the fromRoute in fullCode matches user's selected route
+    if (userSelectedRoute.code !== fromRouteCode) {
+      return null; // User can only access deliveries from their selected route
+    }
+
+    // Find delivery by fullCode
+    const delivery = await Delivery.findOne({
+      fullCode: fullCode,
+      fromRoute: user.selectedRouteId,
+    })
+      .populate([
+        { path: 'sender', select: '_id name phone createdAt updatedAt' },
+        { path: 'receiver', select: '_id name phone createdAt updatedAt' },
+        { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
+        { path: 'toRoute', select: '_id code name createdAt updatedAt' },
+        { path: 'createdByUser', select: '_id username' },
+      ])
+      .lean();
+
+    if (!delivery) {
+      return null;
+    }
+
+    return this.transformDeliveryToResponseOptimized(this.toPopulatedDeliveryLean(delivery));
+  }
+
+  /**
    * Parse delivery identifier to extract code and route codes
    * @param deliveryIdentifier - Format: codeFromRouteToRoute (e.g., 2401250001T1T2)
    */

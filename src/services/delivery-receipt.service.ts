@@ -9,6 +9,7 @@ import { IRoute } from '@/models/route.model';
 export interface DeliveryReceiptData {
   // Basic info
   receiptNumber: string;
+  subCode: string;
   date: string;
   expiryDate: string;
   barcode: string;
@@ -115,6 +116,7 @@ export class DeliveryReceiptService {
 
     return {
       receiptNumber: delivery.fullCode,
+      subCode: delivery.subCode,
       date: dateStr,
       expiryDate: expiryDateStr,
       barcode: delivery.fullCode,
@@ -158,7 +160,8 @@ export class DeliveryReceiptService {
   private generateReceiptHTML(
     data: DeliveryReceiptData,
     barcodeDataURL: string,
-    qrCodeDataURL: string
+    qrCodeDataURL: string,
+    qrCodeSubDataURL: string
   ): string {
     return `
     <!DOCTYPE html>
@@ -417,8 +420,8 @@ export class DeliveryReceiptService {
             <div>${data.fromRoute.name}-${data.toRoute.name}</div>
             <div>Tr.G:<span class="amount">${data.packageInfo.value.toLocaleString('vi-VN')} đồng</span></div>
             <div class="qr-code">
-              <h3>${data.receiptNumber}</h3>
-              <img src="${qrCodeDataURL}" alt="QR Code">
+              <h3>${data.subCode}</h3>
+              <img src="${qrCodeSubDataURL}" alt="QR Code Sub Code">
             </div>
           </div>
         </div>
@@ -571,8 +574,9 @@ export class DeliveryReceiptService {
       const receiptData = this.transformDeliveryData(delivery);
       const barcodeDataURL = await this.generateBarcode(delivery.fullCode);
       const qrCodeDataURL = await this.generateQRCode(delivery.fullCode);
+      const qrCodeSubDataURL = await this.generateQRCode(delivery.subCode);
 
-      return this.generateReceiptHTML(receiptData, barcodeDataURL, qrCodeDataURL);
+      return this.generateReceiptHTML(receiptData, barcodeDataURL, qrCodeDataURL, qrCodeSubDataURL);
     } catch (error) {
       throw new Error(`Failed to generate HTML receipt: ${error}`);
     }
