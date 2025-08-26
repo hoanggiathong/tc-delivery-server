@@ -10,7 +10,7 @@ import { AppError } from '@/middlewares/error.middleware';
 export class SettingsService {
   async getSetting<T = SettingsMetadata>(name: string): Promise<T | null> {
     try {
-      const setting = await Settings.findOne({ name, isActive: true });
+      const setting = await Settings.findOne({ name, isActive: { $ne: false } });
       return setting ? (setting.metadata as T) : null;
     } catch (error) {
       throw new AppError('Failed to get setting', 500);

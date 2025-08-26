@@ -115,7 +115,7 @@ export class DeliveryReceiptService {
     const expiryDateStr = `ngày ${expiryDate.getDate()} tháng ${expiryDate.getMonth() + 1} năm ${expiryDate.getFullYear()}`;
 
     return {
-      receiptNumber: delivery.fullCode,
+      receiptNumber: delivery.code,
       subCode: delivery.subCode,
       date: dateStr,
       expiryDate: expiryDateStr,
@@ -519,6 +519,7 @@ export class DeliveryReceiptService {
       // Generate barcode and QR code with fallbacks
       const barcodeDataURL = await this.generateBarcode(delivery.fullCode);
       const qrCodeDataURL = await this.generateQRCode(delivery.fullCode);
+      const qrCodeSubDataURL = await this.generateQRCode(delivery.subCode);
 
       // Validate that we have valid data URLs
       if (!barcodeDataURL.startsWith('data:image/') || !qrCodeDataURL.startsWith('data:image/')) {
@@ -526,7 +527,12 @@ export class DeliveryReceiptService {
       }
 
       // Generate HTML
-      const html = this.generateReceiptHTML(receiptData, barcodeDataURL, qrCodeDataURL);
+      const html = this.generateReceiptHTML(
+        receiptData,
+        barcodeDataURL,
+        qrCodeDataURL,
+        qrCodeSubDataURL
+      );
 
       // Basic HTML validation
       if (!html.includes('</html>') || !html.includes('<body>')) {

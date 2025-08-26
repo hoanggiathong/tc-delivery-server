@@ -90,7 +90,7 @@ export class DeliveryService {
         const feeDisplay =
           unit === '%'
             ? `${matchingRate.regularShippingFee}% of item value (${expectedFee.toLocaleString()} VND)`
-            : `${expectedFee.toLocaleString()} ${unit}`;
+            : `${expectedFee.toLocaleString()} ${unit ?? ''}`;
 
         throw new Error(
           `Invalid item cost. Expected: ${feeDisplay}, but received: ${itemCost.toLocaleString()} VND. Please correct the item cost.`
