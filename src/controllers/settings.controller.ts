@@ -1,208 +1,240 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response } from 'express';
 import { SettingsService } from '@/services/settings.service';
 import {
-  CreateSettingsInput,
-  UpdateSettingsInput,
-  GetSettingsByNameInput,
-  DeleteSettingsInput,
   CalculateShippingFeeInput,
+  UpdateShippingRatesInput,
+  UpdateProductListInput,
 } from '@/schemas/settings.schema';
+import { AuthRequest, ApiResponse } from '@/types';
+import Logger from '@/utils/logger';
 
-const settingsService = new SettingsService();
+export class SettingsController {
+  private settingsService: SettingsService;
 
-export const createSettings = async (
-  req: Request<Record<string, never>, Record<string, never>, CreateSettingsInput['body']>,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const { name, metadata, description, isActive } = req.body;
-    const settings = await settingsService.create(name, metadata);
+  constructor() {
+    this.settingsService = new SettingsService();
+  }
 
-    if (description !== undefined || isActive !== undefined) {
-      await settingsService.update(name, {
-        ...metadata,
-        ...(description !== undefined && { description }),
-        ...(isActive !== undefined && { isActive }),
-      } as any);
+  getShippingRates = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const rates = await this.settingsService.getShippingRates();
+
+      Logger.info('Shipping rates retrieved successfully', {
+        userId: req.user.userId,
+      });
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Shipping rates retrieved successfully',
+        data: rates,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Failed to get shipping rates', {
+        error: error instanceof Error ? error.message : error,
+        userId: req.user?.userId,
+      });
+
+      const message = error instanceof Error ? error.message : 'Failed to get shipping rates';
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(500).json(response);
     }
+  };
 
-    res.status(201).json({
-      success: true,
-      message: 'Settings created successfully',
-      data: settings,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+  updateShippingRates = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
 
-export const getAllSettings = async (
-  _req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const settings = await settingsService.getAll();
+      const { rates }: UpdateShippingRatesInput['body'] = req.body;
+      const success = await this.settingsService.createShippingRatesWithDefaults(rates);
 
-    res.status(200).json({
-      success: true,
-      message: 'Settings retrieved successfully',
-      data: settings,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+      Logger.info('Shipping rates update attempted', {
+        success,
+        userId: req.user.userId,
+      });
 
-export const getSettingsByName = async (
-  req: Request<GetSettingsByNameInput['params']>,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const { name } = req.params;
-    const settings = await settingsService.getByName(name);
+      const response: ApiResponse = {
+        success,
+        message: success
+          ? 'Shipping rates updated successfully'
+          : 'Failed to update shipping rates',
+      };
 
-    res.status(200).json({
-      success: true,
-      message: 'Settings retrieved successfully',
-      data: settings,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Failed to update shipping rates', {
+        error: error instanceof Error ? error.message : error,
+        userId: req.user?.userId,
+        requestBody: req.body,
+      });
 
-export const updateSettings = async (
-  req: Request<UpdateSettingsInput['params'], Record<string, never>, UpdateSettingsInput['body']>,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const { name } = req.params;
-    const { metadata } = req.body;
-    const settings = await settingsService.update(name, metadata);
+      const message = error instanceof Error ? error.message : 'Failed to update shipping rates';
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
 
-    res.status(200).json({
-      success: true,
-      message: 'Settings updated successfully',
-      data: settings,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+      res.status(400).json(response);
+    }
+  };
 
-export const getShippingRates = async (
-  _req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const rates = await settingsService.getShippingRates();
+  getProductList = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
 
-    res.status(200).json({
-      success: true,
-      message: 'Shipping rates retrieved successfully',
-      data: rates,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+      const products = await this.settingsService.getProductList();
 
-export const updateShippingRates = async (
-  req: Request<Record<string, never>, Record<string, never>, { rates: any[] }>,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const { rates } = req.body;
-    const success = await settingsService.createShippingRatesWithDefaults(rates);
+      Logger.info('Product list retrieved successfully', {
+        userId: req.user.userId,
+      });
 
-    res.status(200).json({
-      success,
-      message: success ? 'Shipping rates updated successfully' : 'Failed to update shipping rates',
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+      const response: ApiResponse = {
+        success: true,
+        message: 'Product list retrieved successfully',
+        data: products,
+      };
 
-export const getProductList = async (
-  _req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const products = await settingsService.getProductList();
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Failed to get product list', {
+        error: error instanceof Error ? error.message : error,
+        userId: req.user?.userId,
+      });
 
-    res.status(200).json({
-      success: true,
-      message: 'Product list retrieved successfully',
-      data: products,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+      const message = error instanceof Error ? error.message : 'Failed to get product list';
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
 
-export const updateProductList = async (
-  req: Request<Record<string, never>, Record<string, never>, { products: any[] }>,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const { products } = req.body;
-    const success = await settingsService.updateProductList(products);
+      res.status(500).json(response);
+    }
+  };
 
-    res.status(200).json({
-      success,
-      message: success ? 'Product list updated successfully' : 'Failed to update product list',
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+  updateProductList = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
 
-export const deleteSettings = async (
-  req: Request<DeleteSettingsInput['params']>,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const { name } = req.params;
-    await settingsService.delete(name);
+      const { products }: UpdateProductListInput['body'] = req.body;
+      const success = await this.settingsService.updateProductList(products);
 
-    res.status(200).json({
-      success: true,
-      message: 'Settings deleted successfully',
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+      Logger.info('Product list update attempted', {
+        success,
+        userId: req.user.userId,
+      });
 
-export const calculateShippingFee = async (
-  req: Request<Record<string, never>, Record<string, never>, CalculateShippingFeeInput['body']>,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const { amount, isExpress } = req.body;
-    const fee = await settingsService.calculateShippingFee(amount, isExpress);
+      const response: ApiResponse = {
+        success,
+        message: success ? 'Product list updated successfully' : 'Failed to update product list',
+      };
 
-    res.status(200).json({
-      success: true,
-      message: 'Shipping fee calculated successfully',
-      data: {
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Failed to update product list', {
+        error: error instanceof Error ? error.message : error,
+        userId: req.user?.userId,
+        requestBody: req.body,
+      });
+
+      const message = error instanceof Error ? error.message : 'Failed to update product list';
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(400).json(response);
+    }
+  };
+
+  calculateShippingFee = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { amount, isExpress }: CalculateShippingFeeInput['body'] = req.body;
+      const fee = await this.settingsService.calculateShippingFee(amount, isExpress);
+
+      Logger.info('Shipping fee calculated successfully', {
         amount,
         isExpress,
-        shippingFee: fee,
-      },
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+        fee,
+        userId: req.user.userId,
+      });
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Shipping fee calculated successfully',
+        data: {
+          amount,
+          isExpress,
+          shippingFee: fee,
+        },
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Failed to calculate shipping fee', {
+        error: error instanceof Error ? error.message : error,
+        userId: req.user?.userId,
+        requestBody: req.body,
+      });
+
+      const message = error instanceof Error ? error.message : 'Failed to calculate shipping fee';
+
+      let statusCode = 400;
+      if (error instanceof Error) {
+        if (error.message.includes('not found')) {
+          statusCode = 404;
+        }
+      }
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(statusCode).json(response);
+    }
+  };
+}

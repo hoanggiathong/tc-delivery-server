@@ -19,7 +19,7 @@ export class UserRouteController {
    * /api/user-route/assign:
    *   post:
    *     summary: Assign a route to a user
-   *     tags: [UserRoute]
+   *     tags: [User Route]
    *     security:
    *       - bearerAuth: []
    *     requestBody:
@@ -185,7 +185,7 @@ export class UserRouteController {
    * /api/user-route/assign-multiple:
    *   post:
    *     summary: Assign multiple routes to a user
-   *     tags: [UserRoute]
+   *     tags: [User Route]
    *     security:
    *       - bearerAuth: []
    *     requestBody:
@@ -317,7 +317,7 @@ export class UserRouteController {
    * /api/user-route/{id}:
    *   delete:
    *     summary: Remove a route assignment from a user
-   *     tags: [UserRoute]
+   *     tags: [User Route]
    *     security:
    *       - bearerAuth: []
    *     parameters:
@@ -404,7 +404,7 @@ export class UserRouteController {
    * /api/user-route/remove-multiple:
    *   delete:
    *     summary: Remove multiple route assignments from a user
-   *     tags: [UserRoute]
+   *     tags: [User Route]
    *     security:
    *       - bearerAuth: []
    *     requestBody:
@@ -509,7 +509,7 @@ export class UserRouteController {
    * /api/user-route/user/{userId}:
    *   get:
    *     summary: Get all route assignments for a user
-   *     tags: [UserRoute]
+   *     tags: [User Route]
    *     security:
    *       - bearerAuth: []
    *     parameters:
@@ -623,7 +623,7 @@ export class UserRouteController {
    * /api/user-route/user/{userId}/routes:
    *   get:
    *     summary: Get routes assigned to a user (simplified)
-   *     tags: [UserRoute]
+   *     tags: [User Route]
    *     security:
    *       - bearerAuth: []
    *     parameters:
@@ -715,7 +715,7 @@ export class UserRouteController {
    * /api/user-route/route/{routeId}:
    *   get:
    *     summary: Get all users assigned to a route
-   *     tags: [UserRoute]
+   *     tags: [User Route]
    *     security:
    *       - bearerAuth: []
    *     parameters:
@@ -821,7 +821,7 @@ export class UserRouteController {
    * /api/user-route:
    *   get:
    *     summary: Get all user route assignments
-   *     tags: [UserRoute]
+   *     tags: [User Route]
    *     security:
    *       - bearerAuth: []
    *     responses:

@@ -31,7 +31,7 @@ const userRouteSchema = new Schema<IUserRoute>(
     timestamps: true,
     collection: 'userRoutes',
     toJSON: {
-      transform: function (doc, ret) {
+      transform: function (_doc, ret) {
         const { _id, __v, ...rest } = ret;
         return { id: _id, ...rest };
       },

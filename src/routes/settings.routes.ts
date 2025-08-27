@@ -1,29 +1,17 @@
 import { Router } from 'express';
-import {
-  createSettings,
-  getAllSettings,
-  getSettingsByName,
-  updateSettings,
-  deleteSettings,
-  calculateShippingFee,
-  getShippingRates,
-  updateShippingRates,
-  getProductList,
-  updateProductList,
-} from '@/controllers/settings.controller';
+import { SettingsController } from '@/controllers/settings.controller';
 import { authenticateToken } from '@/middlewares/auth.middleware';
 import { requireRole } from '@/middlewares/role.middleware';
 import { validate } from '@/middlewares/validation.middleware';
 import { UserRole } from '@/types/user.type';
 import {
-  createSettingsSchema,
-  updateSettingsSchema,
-  getSettingsByNameSchema,
-  deleteSettingsSchema,
   calculateShippingFeeSchema,
+  updateShippingRatesSchema,
+  updateProductListSchema,
 } from '@/schemas/settings.schema';
 
 const router = Router();
+const settingsController = new SettingsController();
 
 /**
  * @swagger
@@ -78,183 +66,6 @@ const router = Router();
  *           type: string
  *           format: date-time
  */
-
-/**
- * @swagger
- * /api/settings:
- *   post:
- *     summary: Create new settings (Admin/Superadmin only)
- *     tags: [Settings]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - name
- *               - metadata
- *             properties:
- *               name:
- *                 type: string
- *                 enum: [shipping_rates, other_settings]
- *               metadata:
- *                 type: array
- *                 items:
- *                   $ref: '#/components/schemas/ShippingRate'
- *     responses:
- *       201:
- *         description: Settings created successfully
- *       400:
- *         description: Invalid input data
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Insufficient permissions
- *       409:
- *         description: Settings already exists
- */
-router.post(
-  '/',
-  authenticateToken,
-  requireRole([UserRole.ADMIN, UserRole.SUPERADMIN]),
-  validate(createSettingsSchema),
-  createSettings
-);
-
-/**
- * @swagger
- * /api/settings:
- *   get:
- *     summary: Get all settings (Admin/Superadmin only)
- *     tags: [Settings]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Settings retrieved successfully
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Insufficient permissions
- */
-router.get(
-  '/',
-  authenticateToken,
-  requireRole([UserRole.ADMIN, UserRole.SUPERADMIN]),
-  getAllSettings
-);
-
-/**
- * @swagger
- * /api/settings/{name}:
- *   get:
- *     summary: Get settings by name
- *     tags: [Settings]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: name
- *         required: true
- *         schema:
- *           type: string
- *           enum: [shipping_rates, other_settings]
- *         description: Settings name
- *     responses:
- *       200:
- *         description: Settings retrieved successfully
- *       401:
- *         description: Unauthorized
- *       404:
- *         description: Settings not found
- */
-router.get('/:name', authenticateToken, validate(getSettingsByNameSchema), getSettingsByName);
-
-/**
- * @swagger
- * /api/settings/{name}:
- *   put:
- *     summary: Update settings (Admin/Superadmin only)
- *     tags: [Settings]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: name
- *         required: true
- *         schema:
- *           type: string
- *           enum: [shipping_rates, other_settings]
- *         description: Settings name
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - metadata
- *             properties:
- *               metadata:
- *                 type: array
- *                 items:
- *                   $ref: '#/components/schemas/ShippingRate'
- *     responses:
- *       200:
- *         description: Settings updated successfully
- *       400:
- *         description: Invalid input data
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Insufficient permissions
- *       404:
- *         description: Settings not found
- */
-router.put(
-  '/:name',
-  authenticateToken,
-  requireRole([UserRole.ADMIN, UserRole.SUPERADMIN]),
-  validate(updateSettingsSchema),
-  updateSettings
-);
-
-/**
- * @swagger
- * /api/settings/{name}:
- *   delete:
- *     summary: Delete settings (Superadmin only)
- *     tags: [Settings]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: name
- *         required: true
- *         schema:
- *           type: string
- *           enum: [shipping_rates, other_settings]
- *         description: Settings name
- *     responses:
- *       200:
- *         description: Settings deleted successfully
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Insufficient permissions
- *       404:
- *         description: Settings not found
- */
-router.delete(
-  '/:name',
-  authenticateToken,
-  requireRole([UserRole.SUPERADMIN]),
-  validate(deleteSettingsSchema),
-  deleteSettings
-);
 
 /**
  * @swagger
@@ -395,12 +206,12 @@ router.post(
   '/calculate-shipping-fee',
   authenticateToken,
   validate(calculateShippingFeeSchema),
-  calculateShippingFee
+  settingsController.calculateShippingFee
 );
 
 /**
  * @swagger
- * /api/settings/shipping_rates:
+ * /api/settings/shipping-rates:
  *   get:
  *     summary: Get shipping rates
  *     tags: [Settings]
@@ -410,11 +221,11 @@ router.post(
  *       200:
  *         description: Shipping rates retrieved successfully
  */
-router.get('/shipping_rates', authenticateToken, getShippingRates);
+router.get('/shipping-rates', authenticateToken, settingsController.getShippingRates);
 
 /**
  * @swagger
- * /api/settings/shipping_rates:
+ * /api/settings/shipping-rates:
  *   put:
  *     summary: Update shipping rates with default units (Admin/Superadmin only)
  *     tags: [Settings]
@@ -426,20 +237,105 @@ router.get('/shipping_rates', authenticateToken, getShippingRates);
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - rates
  *             properties:
  *               rates:
  *                 type: array
+ *                 minItems: 1
  *                 items:
- *                   type: object
+ *                   $ref: '#/components/schemas/ShippingRate'
+ *                 description: Array of shipping rate configurations with default units (VND)
+ *           examples:
+ *             updateRates:
+ *               summary: Update shipping rates example
+ *               value:
+ *                 rates:
+ *                   - fromAmount: 0
+ *                     toAmount: 500000
+ *                     regularShippingFee: 10000
+ *                     expressShippingFee: 20000
+ *                   - fromAmount: 500001
+ *                     toAmount: 1000000
+ *                     regularShippingFee: 15000
+ *                     expressShippingFee: 30000
+ *                   - fromAmount: 1000001
+ *                     toAmount: 2000000
+ *                     regularShippingFee: 0.02
+ *                     expressShippingFee: 0.04
+ *                     regularShippingFeeUnit: "%"
+ *                     expressShippingFeeUnit: "%"
  *     responses:
  *       200:
  *         description: Shipping rates updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Shipping rates updated successfully"
+ *             examples:
+ *               success:
+ *                 summary: Successful update
+ *                 value:
+ *                   success: true
+ *                   message: "Shipping rates updated successfully"
+ *               failure:
+ *                 summary: Update failure
+ *                 value:
+ *                   success: false
+ *                   message: "Failed to update shipping rates"
+ *       400:
+ *         description: Invalid request data or validation errors
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Validation error: At least one shipping rate is required"
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "No token provided"
+ *       403:
+ *         description: Insufficient privileges
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Access denied. Admin role required"
  */
 router.put(
-  '/shipping_rates',
+  '/shipping-rates',
   authenticateToken,
   requireRole([UserRole.ADMIN, UserRole.SUPERADMIN]),
-  updateShippingRates
+  validate(updateShippingRatesSchema),
+  settingsController.updateShippingRates
 );
 
 /**
@@ -454,7 +350,7 @@ router.put(
  *       200:
  *         description: Product list retrieved successfully
  */
-router.get('/products', authenticateToken, getProductList);
+router.get('/products', authenticateToken, settingsController.getProductList);
 
 /**
  * @swagger
@@ -488,7 +384,8 @@ router.put(
   '/products',
   authenticateToken,
   requireRole([UserRole.ADMIN, UserRole.SUPERADMIN]),
-  updateProductList
+  validate(updateProductListSchema),
+  settingsController.updateProductList
 );
 
 export default router;

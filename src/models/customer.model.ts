@@ -26,7 +26,7 @@ const customerSchema = new Schema<ICustomer>(
   {
     timestamps: true,
     toJSON: {
-      transform: function (doc, ret) {
+      transform: function (_doc, ret) {
         const { _id, __v, ...rest } = ret;
         return { id: _id, ...rest };
       },

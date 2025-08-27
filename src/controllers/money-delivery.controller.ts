@@ -21,7 +21,7 @@ export class MoneyDeliveryController {
    * /api/money-deliveries:
    *   post:
    *     summary: Create a new money delivery
-   *     tags: [MoneyDelivery]
+   *     tags: [Money Delivery]
    *     security:
    *       - bearerAuth: []
    *     requestBody:
@@ -342,7 +342,7 @@ export class MoneyDeliveryController {
    * /api/money-deliveries:
    *   get:
    *     summary: Get all money deliveries
-   *     tags: [MoneyDelivery]
+   *     tags: [Money Delivery]
    *     security:
    *       - bearerAuth: []
    *     responses:
@@ -498,7 +498,7 @@ export class MoneyDeliveryController {
    * /api/money-deliveries/{id}:
    *   get:
    *     summary: Get money delivery by ID
-   *     tags: [MoneyDelivery]
+   *     tags: [Money Delivery]
    *     security:
    *       - bearerAuth: []
    *     parameters:
@@ -577,7 +577,7 @@ export class MoneyDeliveryController {
    * /api/money-deliveries/{id}:
    *   put:
    *     summary: Update money delivery by ID
-   *     tags: [MoneyDelivery]
+   *     tags: [Money Delivery]
    *     security:
    *       - bearerAuth: []
    *     parameters:
@@ -754,7 +754,7 @@ export class MoneyDeliveryController {
    * /api/money-deliveries/{id}:
    *   delete:
    *     summary: Delete money delivery by ID
-   *     tags: [MoneyDelivery]
+   *     tags: [Money Delivery]
    *     security:
    *       - bearerAuth: []
    *     parameters:
@@ -817,7 +817,7 @@ export class MoneyDeliveryController {
    * /api/money-deliveries/next-code:
    *   get:
    *     summary: Get next available money delivery code
-   *     tags: [MoneyDelivery]
+   *     tags: [Money Delivery]
    *     security:
    *       - bearerAuth: []
    *     parameters:
@@ -916,7 +916,7 @@ export class MoneyDeliveryController {
    * /api/money-deliveries/code/{deliveryIdentifier}:
    *   get:
    *     summary: Get money delivery by code and route combination
-   *     tags: [MoneyDelivery]
+   *     tags: [Money Delivery]
    *     security:
    *       - bearerAuth: []
    *     parameters:
@@ -998,7 +998,7 @@ export class MoneyDeliveryController {
    * /api/money-deliveries/frequent-customers/{senderIdentifier}:
    *   get:
    *     summary: Get frequent customers for a sender with pagination
-   *     tags: [MoneyDelivery]
+   *     tags: [Money Delivery]
    *     security:
    *       - bearerAuth: []
    *     parameters:
@@ -1087,7 +1087,7 @@ export class MoneyDeliveryController {
    * /api/money-deliveries/today-report:
    *   get:
    *     summary: Get money delivery report for current day (no pagination)
-   *     tags: [MoneyDelivery]
+   *     tags: [Money Delivery]
    *     security:
    *       - bearerAuth: []
    *     responses:
@@ -1267,7 +1267,7 @@ export class MoneyDeliveryController {
    * /api/money-deliveries/cost-report:
    *   get:
    *     summary: Get money delivery cost report with date range filtering and pagination
-   *     tags: [MoneyDelivery]
+   *     tags: [Money Delivery]
    *     security:
    *       - bearerAuth: []
    *     parameters:

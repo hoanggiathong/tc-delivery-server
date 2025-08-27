@@ -105,8 +105,46 @@ export const calculateShippingFeeSchema = z.object({
   }),
 });
 
+export const updateShippingRatesSchema = z.object({
+  body: z.object({
+    rates: z
+      .array(shippingRateSchema)
+      .min(1, 'At least one shipping rate is required')
+      .refine(
+        rates => {
+          for (let i = 0; i < rates.length; i++) {
+            const rate = rates[i];
+            if (rate.toAmount <= rate.fromAmount) {
+              return false;
+            }
+            if (i > 0) {
+              const prevRate = rates[i - 1];
+              if (rate.fromAmount !== prevRate.toAmount + 1) {
+                return false;
+              }
+            }
+          }
+          return true;
+        },
+        {
+          message: 'Invalid shipping rates: ranges must be continuous and non-overlapping',
+        }
+      ),
+  }),
+});
+
+export const updateProductListSchema = z.object({
+  body: z.object({
+    products: z.array(productSchema).min(1, 'At least one product is required'),
+  }),
+});
+
 export type CreateSettingsInput = z.infer<typeof createSettingsSchema>;
 export type UpdateSettingsInput = z.infer<typeof updateSettingsSchema>;
 export type GetSettingsByNameInput = z.infer<typeof getSettingsByNameSchema>;
 export type DeleteSettingsInput = z.infer<typeof deleteSettingsSchema>;
 export type CalculateShippingFeeInput = z.infer<typeof calculateShippingFeeSchema>;
+export type UpdateShippingRatesInput = z.infer<typeof updateShippingRatesSchema>;
+export type UpdateProductListInput = z.infer<typeof updateProductListSchema>;
+export type ShippingRate = z.infer<typeof shippingRateSchema>;
+export type Product = z.infer<typeof productSchema>;

@@ -34,18 +34,19 @@ app.use(
       filter: true,
       showRequestHeaders: true,
       url: '/swagger.json',
+      persistAuthorization: true,
     },
   })
 );
 
 // Debug endpoint for Swagger spec
-app.get('/swagger.json', (req, res) => {
+app.get('/swagger.json', (_req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.send(swaggerSpec);
 });
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.status(200).json({
     success: true,
     message: 'Server is running',

@@ -118,6 +118,12 @@ const settingsSchema = new Schema<ISettings>(
   },
   {
     timestamps: true,
+    toJSON: {
+      transform: function (_doc, ret) {
+        const { _id, __v, ...rest } = ret;
+        return { id: _id, ...rest };
+      },
+    },
   }
 );
 
