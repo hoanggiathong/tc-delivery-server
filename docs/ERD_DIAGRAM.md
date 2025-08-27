@@ -158,6 +158,7 @@ erDiagram
     }
 
     SHIPPING_RATE_CONFIG {
+        ObjectId _id "unique identifier cho mỗi shipping rate"
         number fromAmount "số tiền bắt đầu, tối thiểu 0"
         number toAmount "số tiền kết thúc, > fromAmount"
         number regularShippingFee "phí gửi thường, tối thiểu 0"
@@ -169,7 +170,8 @@ erDiagram
     }
 
     PRODUCT_CONFIG {
-        string name "tên hàng hóa, bắt buộc, trim"
+        ObjectId _id "unique identifier cho mỗi product"
+        string name "tên hàng hóa, bắt buộc, trim, không trùng lặp (case-insensitive)"
         number cost "chi phí hàng hóa, tối thiểu 0"
     }
 ```
@@ -289,9 +291,15 @@ erDiagram
     - `cost`: Chi phí hàng hóa (≥ 0)
   - **Record<string, unknown>**: Custom settings cho tương lai
 - **Quy tắc nghiệp vụ**:
-  - **Shipping Rates**: Các khoảng giá phải liên tục và không chồng lấp
-  - Rate tiếp theo phải có fromAmount = rate trước.toAmount + 1
-  - **Product List**: Mỗi product phải có tên và cost hợp lệ
+  - **Shipping Rates**: 
+    - Các khoảng giá phải liên tục và không chồng lấp
+    - Rate tiếp theo phải có fromAmount = rate trước.toAmount + 1
+    - Mỗi rate có unique ObjectId để hỗ trợ CRUD operations
+    - Không được có duplicate ranges (cùng fromAmount và toAmount)
+  - **Product List**: 
+    - Mỗi product phải có tên và cost hợp lệ
+    - Tên product không được trùng lặp (case-insensitive)
+    - Mỗi product có unique ObjectId để hỗ trợ CRUD operations
   - Dynamic validation dựa trên setting name
 - **Default Unit Handling**: Tất cả unit fields mặc định là VND
 - **Quyền truy cập**:
@@ -299,16 +307,17 @@ erDiagram
   - Xóa: Superadmin only
   - Đọc: Tất cả authenticated users
 - **API Endpoints**:
-  - `POST /api/settings` - Tạo settings mới với metadata linh hoạt
-  - `GET /api/settings` - Lấy tất cả settings (Admin/Superadmin)
-  - `GET /api/settings/:name` - Lấy settings theo tên
-  - `PUT /api/settings/:name` - Cập nhật settings
-  - `DELETE /api/settings/:name` - Xóa settings (Superadmin)
-  - `POST /api/settings/calculate-shipping-fee` - Tính phí vận chuyển
-  - `GET /api/settings/shipping-rates` - Lấy shipping rates
-  - `PUT /api/settings/shipping-rates` - Cập nhật shipping rates với default VND
-  - `GET /api/settings/products` - Lấy danh sách hàng hóa
-  - `PUT /api/settings/products` - Cập nhật danh sách hàng hóa
+  - **Shipping Rates Management**:
+    - `GET /api/settings/shipping-rates` - Lấy tất cả shipping rates (với default VND units)
+    - `POST /api/settings/shipping-rates` - Tạo mới/thay thế tất cả shipping rates
+    - `PUT /api/settings/shipping-rates` - Append thêm shipping rates vào existing
+    - `DELETE /api/settings/shipping-rates/{id}` - Xóa 1 shipping rate theo ObjectId
+    - `POST /api/settings/calculate-shipping-fee` - Tính phí vận chuyển theo amount
+  - **Products Management**:
+    - `GET /api/settings/products` - Lấy tất cả products
+    - `POST /api/settings/products` - Tạo mới/thay thế tất cả products
+    - `PUT /api/settings/products` - Append thêm products vào existing
+    - `DELETE /api/settings/products/{id}` - Xóa 1 product theo ObjectId
 - **Index hiệu suất**: Unique index trên trường `name`
 
 ### Tối Ưu Hóa Hiệu Suất
@@ -393,11 +402,17 @@ erDiagram
 #### Quản Lý Hàng Hóa
 
 - **API Endpoints**:
-  - `GET /api/settings/products` - Lấy danh sách hàng hóa
-  - `PUT /api/settings/products` - Cập nhật danh sách hàng hóa
+  - `GET /api/settings/products` - Lấy danh sách hàng hóa (với ObjectId)
+  - `POST /api/settings/products` - Tạo mới/thay thế tất cả products
+  - `PUT /api/settings/products` - Append thêm products vào existing
+  - `DELETE /api/settings/products/{id}` - Xóa 1 product theo ObjectId
 - **Input**: `{products: [{name: string, cost: number}]}`
-- **Validation**: Tên hàng hóa bắt buộc, chi phí ≥ 0
-- **Use Case**: Quản lý danh mục hàng hóa với giá cố định
+- **Response**: Bao gồm ObjectId cho mỗi product để hỗ trợ operations
+- **Validation**: 
+  - Tên hàng hóa bắt buộc, chi phí ≥ 0
+  - Tên không được trùng lặp (case-insensitive)
+  - Tự động generate ObjectId cho products mới
+- **Use Case**: Quản lý danh mục hàng hóa với CRUD operations
 
 #### Draft Delivery APIs
 
@@ -431,13 +446,16 @@ erDiagram
   - Tăng hiệu suất với ít database operations hơn
 - **Enhanced Table: SETTINGS**: Nâng cấp bảng cấu hình với flexible metadata
   - **Flexible Metadata**: Hỗ trợ nhiều loại settings (shipping_rates, product_list)
+  - **ObjectId Integration**: Mỗi item trong metadata có unique ObjectId
   - **Unit Support**: Thêm unit fields cho shipping rates (VND, USD, %)
   - **Default Unit**: Tất cả unit fields mặc định là VND theo yêu cầu
-  - **Product Management**: Quản lý danh sách hàng hóa với tên và chi phí
+  - **Product Management**: Quản lý danh sách hàng hóa với ObjectId, tên và chi phí
+  - **Duplicate Prevention**: Validation chống trùng lặp tên products và shipping rate ranges
+  - **CRUD Operations**: Full CRUD support cho individual items trong metadata
   - **Type Safety**: Union types với dynamic validation theo setting name
-  - **Enhanced APIs**: Specialized endpoints cho từng loại setting
-  - Role-based access control (Admin/Superadmin only)
-  - Validation rules đảm bảo tính toàn vẹn dữ liệu
+  - **Enhanced APIs**: Specialized endpoints cho từng loại setting với CRUD operations
+  - **Role-based access control**: Admin/Superadmin only cho tạo/sửa/xóa
+  - **Validation rules**: Đảm bảo tính toàn vẹn dữ liệu và business rules
 - **Completely New Code Generation**: Hoàn toàn mới CodeGeneratorService
   - **Random Sequence**: Thay thế sequential bằng random (0001-9999)
   - **FullCode System**: code + fromRouteCode + toRouteCode cho uniqueness

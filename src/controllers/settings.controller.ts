@@ -5,6 +5,7 @@ import {
   UpdateShippingRatesInput,
   UpdateProductListInput,
   DeleteShippingRateInput,
+  DeleteProductInput,
 } from '@/schemas/settings.schema';
 import { AuthRequest, ApiResponse } from '@/types';
 import Logger from '@/utils/logger';
@@ -152,7 +153,7 @@ export class SettingsController {
       }
 
       const { products }: UpdateProductListInput['body'] = req.body;
-      const success = await this.settingsService.updateProductList(products);
+      const success = await this.settingsService.appendProductsWithDefaults(products);
 
       Logger.info('Product list update attempted', {
         success,
@@ -161,24 +162,117 @@ export class SettingsController {
 
       const response: ApiResponse = {
         success,
-        message: success ? 'Product list updated successfully' : 'Failed to update product list',
+        message: success ? 'Products appended successfully' : 'Failed to append products',
       };
 
       res.status(200).json(response);
     } catch (error) {
-      Logger.error('Failed to update product list', {
+      Logger.error('Failed to append products', {
         error: error instanceof Error ? error.message : error,
         userId: req.user?.userId,
         requestBody: req.body,
       });
 
-      const message = error instanceof Error ? error.message : 'Failed to update product list';
+      const message = error instanceof Error ? error.message : 'Failed to append products';
       const response: ApiResponse = {
         success: false,
         message,
       };
 
       res.status(400).json(response);
+    }
+  };
+
+  createProducts = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { products }: UpdateProductListInput['body'] = req.body;
+      const success = await this.settingsService.createProductsWithDefaults(products);
+
+      Logger.info('Products creation attempted', {
+        success,
+        userId: req.user.userId,
+      });
+
+      const response: ApiResponse = {
+        success,
+        message: success ? 'Products created successfully' : 'Failed to create products',
+      };
+
+      res.status(201).json(response);
+    } catch (error) {
+      Logger.error('Failed to create products', {
+        error: error instanceof Error ? error.message : error,
+        userId: req.user?.userId,
+        requestBody: req.body,
+      });
+
+      const message = error instanceof Error ? error.message : 'Failed to create products';
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(400).json(response);
+    }
+  };
+
+  deleteProduct = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { id } = req.params as DeleteProductInput['params'];
+      const success = await this.settingsService.deleteProductById(id);
+
+      Logger.info('Product deletion attempted', {
+        success,
+        productId: id,
+        userId: req.user.userId,
+      });
+
+      const response: ApiResponse = {
+        success,
+        message: success ? 'Product deleted successfully' : 'Failed to delete product',
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Failed to delete product', {
+        error: error instanceof Error ? error.message : error,
+        userId: req.user?.userId,
+        productId: req.params.id,
+      });
+
+      const message = error instanceof Error ? error.message : 'Failed to delete product';
+
+      let statusCode = 400;
+      if (error instanceof Error) {
+        if (error.message.includes('not found')) {
+          statusCode = 404;
+        }
+      }
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(statusCode).json(response);
     }
   };
 

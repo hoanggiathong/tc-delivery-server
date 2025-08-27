@@ -9,6 +9,7 @@ import {
   updateShippingRatesSchema,
   updateProductListSchema,
   deleteShippingRateSchema,
+  deleteProductSchema,
 } from '@/schemas/settings.schema';
 
 const router = Router();
@@ -446,6 +447,135 @@ router.get('/products', authenticateToken, settingsController.getProductList);
  *       200:
  *         description: Product list updated successfully
  */
+/**
+ * @swagger
+ * /api/settings/products:
+ *   post:
+ *     summary: Create new products (replace all existing products) (Admin/Superadmin only)
+ *     tags: [Settings]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - products
+ *             properties:
+ *               products:
+ *                 type: array
+ *                 minItems: 1
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     name:
+ *                       type: string
+ *                       example: "Bánh mì"
+ *                     cost:
+ *                       type: number
+ *                       example: 25000
+ *           examples:
+ *             createProducts:
+ *               summary: Create products example
+ *               value:
+ *                 products:
+ *                   - name: "Bánh mì"
+ *                     cost: 25000
+ *                   - name: "Phở"
+ *                     cost: 50000
+ *                   - name: "Cà phê"
+ *                     cost: 30000
+ *     responses:
+ *       201:
+ *         description: Products created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Products created successfully"
+ *       400:
+ *         description: Invalid request data or validation errors
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Insufficient privileges
+ */
+router.post(
+  '/products',
+  authenticateToken,
+  requireRole([UserRole.ADMIN, UserRole.SUPERADMIN]),
+  validate(updateProductListSchema),
+  settingsController.createProducts
+);
+
+/**
+ * @swagger
+ * /api/settings/products:
+ *   put:
+ *     summary: Append new products to existing ones (Admin/Superadmin only)
+ *     tags: [Settings]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - products
+ *             properties:
+ *               products:
+ *                 type: array
+ *                 minItems: 1
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     name:
+ *                       type: string
+ *                       example: "Nước chanh"
+ *                     cost:
+ *                       type: number
+ *                       example: 20000
+ *                 description: Array of new products to append to existing products
+ *           examples:
+ *             appendProducts:
+ *               summary: Append products example
+ *               value:
+ *                 products:
+ *                   - name: "Nước chanh"
+ *                     cost: 20000
+ *                   - name: "Trà đá"
+ *                     cost: 15000
+ *     responses:
+ *       200:
+ *         description: Products appended successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Products appended successfully"
+ *       400:
+ *         description: Invalid request data or validation errors
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Insufficient privileges
+ */
 router.put(
   '/products',
   authenticateToken,
@@ -522,6 +652,65 @@ router.delete(
   requireRole([UserRole.ADMIN, UserRole.SUPERADMIN]),
   validate(deleteShippingRateSchema),
   settingsController.deleteShippingRate
+);
+
+/**
+ * @swagger
+ * /api/settings/products/{id}:
+ *   delete:
+ *     summary: Delete a specific product by ID (Admin/Superadmin only)
+ *     tags: [Settings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[0-9a-fA-F]{24}$'
+ *         description: MongoDB ObjectId of the product to delete
+ *         example: "68a160568473a7fad9b29821"
+ *     responses:
+ *       200:
+ *         description: Product deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Product deleted successfully"
+ *       400:
+ *         description: Invalid ObjectId format
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Insufficient privileges
+ *       404:
+ *         description: Product not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 'Product with id "68a160568473a7fad9b29821" not found'
+ */
+router.delete(
+  '/products/:id',
+  authenticateToken,
+  requireRole([UserRole.ADMIN, UserRole.SUPERADMIN]),
+  validate(deleteProductSchema),
+  settingsController.deleteProduct
 );
 
 export default router;

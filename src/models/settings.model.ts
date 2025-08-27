@@ -13,6 +13,7 @@ export interface IShippingRateConfig {
 }
 
 export type IProductConfig = {
+  _id?: mongoose.Types.ObjectId;
   name: string;
   cost: number;
 };
@@ -139,18 +140,39 @@ function validateShippingRates(rates: unknown): boolean {
   return true;
 }
 
+function validateNoDuplicateProductNames(products: IProductConfig[]): boolean {
+  // Check for duplicate product names (case-insensitive)
+  const names = products.map(product => product.name.toLowerCase().trim());
+  const uniqueNames = new Set(names);
+  return names.length === uniqueNames.size;
+}
+
 function validateProductConfig(products: unknown): boolean {
   if (!Array.isArray(products)) {
     return false;
   }
 
-  return products.every(
+  const typedProducts = products as IProductConfig[];
+
+  // Validate basic constraints
+  const basicValidation = typedProducts.every(
     (product: IProductConfig) =>
       typeof product.name === 'string' &&
       product.name.trim().length > 0 &&
       typeof product.cost === 'number' &&
       product.cost >= 0
   );
+
+  if (!basicValidation) {
+    return false;
+  }
+
+  // Validate no duplicate names
+  if (!validateNoDuplicateProductNames(typedProducts)) {
+    return false;
+  }
+
+  return true;
 }
 
 function validateMetadataByName(name: string, metadata: unknown): boolean {

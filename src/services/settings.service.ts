@@ -109,6 +109,94 @@ export class SettingsService {
   async updateProductList(products: IProductConfig[]): Promise<boolean> {
     return this.updateSetting('product_list', products);
   }
+
+  async appendProducts(newProducts: IProductConfig[]): Promise<boolean> {
+    try {
+      const existingProducts = await this.getProductList();
+
+      // Add _id to new products if not present
+      const newProductsWithIds = newProducts.map(product => ({
+        ...product,
+        _id: product._id || new mongoose.Types.ObjectId(),
+      }));
+
+      // Ensure existing products have _id
+      const existingProductsWithIds = existingProducts.map(product => ({
+        ...product,
+        _id: product._id || new mongoose.Types.ObjectId(),
+      }));
+
+      const combinedProducts = [...existingProductsWithIds, ...newProductsWithIds];
+      return this.updateSetting('product_list', combinedProducts);
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throw new AppError('Failed to append products', 500);
+    }
+  }
+
+  async appendProductsWithDefaults(products: Partial<IProductConfig>[]): Promise<boolean> {
+    try {
+      const productsWithDefaults = products.map(product => ({
+        _id: product._id || new mongoose.Types.ObjectId(),
+        name: product.name || '',
+        cost: product.cost ?? 0,
+      })) as IProductConfig[];
+
+      return this.appendProducts(productsWithDefaults);
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throw new AppError('Failed to append products with defaults', 500);
+    }
+  }
+
+  async createProductsWithDefaults(products: Partial<IProductConfig>[]): Promise<boolean> {
+    try {
+      const productsWithDefaults = products.map(product => ({
+        _id: product._id || new mongoose.Types.ObjectId(),
+        name: product.name || '',
+        cost: product.cost ?? 0,
+      })) as IProductConfig[];
+
+      return this.updateSetting('product_list', productsWithDefaults);
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throw new AppError('Failed to create products with defaults', 500);
+    }
+  }
+
+  async deleteProductById(productId: string): Promise<boolean> {
+    try {
+      const existingProducts = await this.getProductList();
+
+      // Find the product to delete
+      const productIndex = existingProducts.findIndex(
+        product => product._id?.toString() === productId
+      );
+
+      if (productIndex === -1) {
+        throw new AppError(`Product with id "${productId}" not found`, 404);
+      }
+
+      // Remove the product from array
+      const updatedProducts = existingProducts.filter(
+        product => product._id?.toString() !== productId
+      );
+
+      // Update with the filtered array
+      return this.updateSetting('product_list', updatedProducts);
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throw new AppError('Failed to delete product', 500);
+    }
+  }
   async create(name: string, metadata: SettingsMetadata): Promise<ISettings> {
     try {
       const existingSettings = await Settings.findOne({ name });

@@ -135,11 +135,29 @@ export const updateShippingRatesSchema = z.object({
 
 export const updateProductListSchema = z.object({
   body: z.object({
-    products: z.array(productSchema).min(1, 'At least one product is required'),
+    products: z
+      .array(productSchema)
+      .min(1, 'At least one product is required')
+      .refine(
+        products => {
+          const names = products.map(product => product.name.toLowerCase().trim());
+          const uniqueNames = new Set(names);
+          return names.length === uniqueNames.size;
+        },
+        {
+          message: 'Duplicate product names are not allowed',
+        }
+      ),
   }),
 });
 
 export const deleteShippingRateSchema = z.object({
+  params: z.object({
+    id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format'),
+  }),
+});
+
+export const deleteProductSchema = z.object({
   params: z.object({
     id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format'),
   }),
@@ -153,5 +171,6 @@ export type CalculateShippingFeeInput = z.infer<typeof calculateShippingFeeSchem
 export type UpdateShippingRatesInput = z.infer<typeof updateShippingRatesSchema>;
 export type UpdateProductListInput = z.infer<typeof updateProductListSchema>;
 export type DeleteShippingRateInput = z.infer<typeof deleteShippingRateSchema>;
+export type DeleteProductInput = z.infer<typeof deleteProductSchema>;
 export type ShippingRate = z.infer<typeof shippingRateSchema>;
 export type Product = z.infer<typeof productSchema>;
