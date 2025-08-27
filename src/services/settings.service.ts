@@ -6,6 +6,7 @@ import {
   IProductConfig,
 } from '@/models/settings.model';
 import { AppError } from '@/middlewares/error.middleware';
+import mongoose from 'mongoose';
 
 export class SettingsService {
   async getSetting<T = SettingsMetadata>(name: string): Promise<T | null> {
@@ -19,7 +20,19 @@ export class SettingsService {
 
   async getShippingRates(): Promise<IShippingRateConfig[]> {
     const rates = await this.getSetting<IShippingRateConfig[]>('shipping_rates');
-    return rates || [];
+
+    if (!rates) {
+      return [];
+    }
+
+    // Ensure all rates have default unit values
+    return rates.map(rate => ({
+      ...rate,
+      fromAmountUnit: rate.fromAmountUnit || 'VND',
+      toAmountUnit: rate.toAmountUnit || 'VND',
+      regularShippingFeeUnit: rate.regularShippingFeeUnit || 'VND',
+      expressShippingFeeUnit: rate.expressShippingFeeUnit || 'VND',
+    }));
   }
 
   async updateSetting<T extends SettingsMetadata>(name: string, metadata: T): Promise<boolean> {
@@ -37,6 +50,55 @@ export class SettingsService {
 
   async updateShippingRates(rates: IShippingRateConfig[]): Promise<boolean> {
     return this.updateSetting('shipping_rates', rates);
+  }
+
+  async appendShippingRates(newRates: IShippingRateConfig[]): Promise<boolean> {
+    try {
+      const existingRates = await this.getShippingRates();
+
+      // Add _id to new rates if not present
+      const newRatesWithIds = newRates.map(rate => ({
+        ...rate,
+        _id: rate._id || new mongoose.Types.ObjectId(),
+      }));
+
+      // Ensure existing rates have _id
+      const existingRatesWithIds = existingRates.map(rate => ({
+        ...rate,
+        _id: rate._id || new mongoose.Types.ObjectId(),
+      }));
+
+      const combinedRates = [...existingRatesWithIds, ...newRatesWithIds];
+      return this.updateSetting('shipping_rates', combinedRates);
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throw new AppError('Failed to append shipping rates', 500);
+    }
+  }
+
+  async appendShippingRatesWithDefaults(rates: Partial<IShippingRateConfig>[]): Promise<boolean> {
+    try {
+      const ratesWithDefaults = rates.map(rate => ({
+        _id: rate._id || new mongoose.Types.ObjectId(),
+        fromAmount: rate.fromAmount ?? 0,
+        toAmount: rate.toAmount ?? 0,
+        regularShippingFee: rate.regularShippingFee ?? 0,
+        expressShippingFee: rate.expressShippingFee ?? 0,
+        fromAmountUnit: rate.fromAmountUnit || 'VND',
+        toAmountUnit: rate.toAmountUnit || 'VND',
+        regularShippingFeeUnit: rate.regularShippingFeeUnit || 'VND',
+        expressShippingFeeUnit: rate.expressShippingFeeUnit || 'VND',
+      })) as IShippingRateConfig[];
+
+      return this.appendShippingRates(ratesWithDefaults);
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throw new AppError('Failed to append shipping rates with defaults', 500);
+    }
   }
 
   async getProductList(): Promise<IProductConfig[]> {
@@ -141,7 +203,18 @@ export class SettingsService {
         (rate: IShippingRateConfig) => amount >= rate.fromAmount && amount <= rate.toAmount
       );
 
-      return rate || null;
+      if (!rate) {
+        return null;
+      }
+
+      // Return rate with default unit values
+      return {
+        ...rate,
+        fromAmountUnit: rate.fromAmountUnit || 'VND',
+        toAmountUnit: rate.toAmountUnit || 'VND',
+        regularShippingFeeUnit: rate.regularShippingFeeUnit || 'VND',
+        expressShippingFeeUnit: rate.expressShippingFeeUnit || 'VND',
+      };
     } catch (error) {
       if (error instanceof AppError && error.statusCode === 404) {
         return null;
@@ -166,28 +239,50 @@ export class SettingsService {
     }
   }
 
-  private setDefaultUnits<T extends IShippingRateConfig[]>(rates: T): T {
-    return rates.map(rate => ({
-      ...rate,
-      fromAmountUnit: rate.fromAmountUnit || 'VND',
-      toAmountUnit: rate.toAmountUnit || 'VND',
-      regularShippingFeeUnit: rate.regularShippingFeeUnit || 'VND',
-      expressShippingFeeUnit: rate.expressShippingFeeUnit || 'VND',
-    })) as T;
+  async createShippingRatesWithDefaults(rates: Partial<IShippingRateConfig>[]): Promise<boolean> {
+    try {
+      const ratesWithDefaults = rates.map(rate => ({
+        _id: rate._id || new mongoose.Types.ObjectId(),
+        fromAmount: rate.fromAmount ?? 0,
+        toAmount: rate.toAmount ?? 0,
+        regularShippingFee: rate.regularShippingFee ?? 0,
+        expressShippingFee: rate.expressShippingFee ?? 0,
+        fromAmountUnit: rate.fromAmountUnit || 'VND',
+        toAmountUnit: rate.toAmountUnit || 'VND',
+        regularShippingFeeUnit: rate.regularShippingFeeUnit || 'VND',
+        expressShippingFeeUnit: rate.expressShippingFeeUnit || 'VND',
+      })) as IShippingRateConfig[];
+
+      return this.updateSetting('shipping_rates', ratesWithDefaults);
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throw new AppError('Failed to create shipping rates with defaults', 500);
+    }
   }
 
-  async createShippingRatesWithDefaults(rates: Partial<IShippingRateConfig>[]): Promise<boolean> {
-    const ratesWithDefaults = rates.map(rate => ({
-      fromAmount: rate.fromAmount || 0,
-      toAmount: rate.toAmount || 0,
-      regularShippingFee: rate.regularShippingFee || 0,
-      expressShippingFee: rate.expressShippingFee || 0,
-      fromAmountUnit: rate.fromAmountUnit || 'VND',
-      toAmountUnit: rate.toAmountUnit || 'VND',
-      regularShippingFeeUnit: rate.regularShippingFeeUnit || 'VND',
-      expressShippingFeeUnit: rate.expressShippingFeeUnit || 'VND',
-    })) as IShippingRateConfig[];
+  async deleteShippingRateById(rateId: string): Promise<boolean> {
+    try {
+      const existingRates = await this.getShippingRates();
 
-    return this.updateSetting('shipping_rates', ratesWithDefaults);
+      // Find the rate to delete
+      const rateIndex = existingRates.findIndex(rate => rate._id?.toString() === rateId);
+
+      if (rateIndex === -1) {
+        throw new AppError(`Shipping rate with id "${rateId}" not found`, 404);
+      }
+
+      // Remove the rate from array
+      const updatedRates = existingRates.filter(rate => rate._id?.toString() !== rateId);
+
+      // Update with the filtered array
+      return this.updateSetting('shipping_rates', updatedRates);
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throw new AppError('Failed to delete shipping rate', 500);
+    }
   }
 }

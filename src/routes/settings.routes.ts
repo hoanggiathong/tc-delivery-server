@@ -8,6 +8,7 @@ import {
   calculateShippingFeeSchema,
   updateShippingRatesSchema,
   updateProductListSchema,
+  deleteShippingRateSchema,
 } from '@/schemas/settings.schema';
 
 const router = Router();
@@ -227,7 +228,7 @@ router.get('/shipping-rates', authenticateToken, settingsController.getShippingR
  * @swagger
  * /api/settings/shipping-rates:
  *   put:
- *     summary: Update shipping rates with default units (Admin/Superadmin only)
+ *     summary: Append new shipping rates to existing ones (Admin/Superadmin only)
  *     tags: [Settings]
  *     security:
  *       - bearerAuth: []
@@ -245,10 +246,10 @@ router.get('/shipping-rates', authenticateToken, settingsController.getShippingR
  *                 minItems: 1
  *                 items:
  *                   $ref: '#/components/schemas/ShippingRate'
- *                 description: Array of shipping rate configurations with default units (VND)
+ *                 description: Array of new shipping rate configurations to append (with default units VND)
  *           examples:
- *             updateRates:
- *               summary: Update shipping rates example
+ *             appendRates:
+ *               summary: Append shipping rates example
  *               value:
  *                 rates:
  *                   - fromAmount: 0
@@ -278,18 +279,18 @@ router.get('/shipping-rates', authenticateToken, settingsController.getShippingR
  *                   example: true
  *                 message:
  *                   type: string
- *                   example: "Shipping rates updated successfully"
+ *                   example: "Shipping rates appended successfully"
  *             examples:
  *               success:
- *                 summary: Successful update
+ *                 summary: Successful append
  *                 value:
  *                   success: true
- *                   message: "Shipping rates updated successfully"
+ *                   message: "Shipping rates appended successfully"
  *               failure:
- *                 summary: Update failure
+ *                 summary: Append failure
  *                 value:
  *                   success: false
- *                   message: "Failed to update shipping rates"
+ *                   message: "Failed to append shipping rates"
  *       400:
  *         description: Invalid request data or validation errors
  *         content:
@@ -330,6 +331,71 @@ router.get('/shipping-rates', authenticateToken, settingsController.getShippingR
  *                   type: string
  *                   example: "Access denied. Admin role required"
  */
+/**
+ * @swagger
+ * /api/settings/shipping-rates:
+ *   post:
+ *     summary: Create new shipping rates (replace all existing rates) (Admin/Superadmin only)
+ *     tags: [Settings]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - rates
+ *             properties:
+ *               rates:
+ *                 type: array
+ *                 minItems: 1
+ *                 items:
+ *                   $ref: '#/components/schemas/ShippingRate'
+ *                 description: Array of shipping rate configurations to replace all existing rates
+ *           examples:
+ *             createRates:
+ *               summary: Create shipping rates example
+ *               value:
+ *                 rates:
+ *                   - fromAmount: 0
+ *                     toAmount: 500000
+ *                     regularShippingFee: 10000
+ *                     expressShippingFee: 20000
+ *                   - fromAmount: 500001
+ *                     toAmount: 1000000
+ *                     regularShippingFee: 15000
+ *                     expressShippingFee: 30000
+ *     responses:
+ *       201:
+ *         description: Shipping rates created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Shipping rates created successfully"
+ *       400:
+ *         description: Invalid request data or validation errors
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Insufficient privileges
+ */
+router.post(
+  '/shipping-rates',
+  authenticateToken,
+  requireRole([UserRole.ADMIN, UserRole.SUPERADMIN]),
+  validate(updateShippingRatesSchema),
+  settingsController.createShippingRates
+);
+
 router.put(
   '/shipping-rates',
   authenticateToken,
@@ -386,6 +452,76 @@ router.put(
   requireRole([UserRole.ADMIN, UserRole.SUPERADMIN]),
   validate(updateProductListSchema),
   settingsController.updateProductList
+);
+
+/**
+ * @swagger
+ * /api/settings/shipping-rates/{id}:
+ *   delete:
+ *     summary: Delete a specific shipping rate by ID (Admin/Superadmin only)
+ *     tags: [Settings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[0-9a-fA-F]{24}$'
+ *         description: MongoDB ObjectId of the shipping rate to delete
+ *         example: "68a160568473a7fad9b29821"
+ *     responses:
+ *       200:
+ *         description: Shipping rate deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Shipping rate deleted successfully"
+ *       400:
+ *         description: Invalid ObjectId format
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Invalid ObjectId format"
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Insufficient privileges
+ *       404:
+ *         description: Shipping rate not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 'Shipping rate with id "68a160568473a7fad9b29821" not found'
+ */
+router.delete(
+  '/shipping-rates/:id',
+  authenticateToken,
+  requireRole([UserRole.ADMIN, UserRole.SUPERADMIN]),
+  validate(deleteShippingRateSchema),
+  settingsController.deleteShippingRate
 );
 
 export default router;

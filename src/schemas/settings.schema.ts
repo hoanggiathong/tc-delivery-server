@@ -139,6 +139,12 @@ export const updateProductListSchema = z.object({
   }),
 });
 
+export const deleteShippingRateSchema = z.object({
+  params: z.object({
+    id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format'),
+  }),
+});
+
 export type CreateSettingsInput = z.infer<typeof createSettingsSchema>;
 export type UpdateSettingsInput = z.infer<typeof updateSettingsSchema>;
 export type GetSettingsByNameInput = z.infer<typeof getSettingsByNameSchema>;
@@ -146,5 +152,6 @@ export type DeleteSettingsInput = z.infer<typeof deleteSettingsSchema>;
 export type CalculateShippingFeeInput = z.infer<typeof calculateShippingFeeSchema>;
 export type UpdateShippingRatesInput = z.infer<typeof updateShippingRatesSchema>;
 export type UpdateProductListInput = z.infer<typeof updateProductListSchema>;
+export type DeleteShippingRateInput = z.infer<typeof deleteShippingRateSchema>;
 export type ShippingRate = z.infer<typeof shippingRateSchema>;
 export type Product = z.infer<typeof productSchema>;

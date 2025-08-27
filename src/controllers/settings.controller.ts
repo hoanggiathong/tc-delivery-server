@@ -4,6 +4,7 @@ import {
   CalculateShippingFeeInput,
   UpdateShippingRatesInput,
   UpdateProductListInput,
+  DeleteShippingRateInput,
 } from '@/schemas/settings.schema';
 import { AuthRequest, ApiResponse } from '@/types';
 import Logger from '@/utils/logger';
@@ -67,7 +68,7 @@ export class SettingsController {
       }
 
       const { rates }: UpdateShippingRatesInput['body'] = req.body;
-      const success = await this.settingsService.createShippingRatesWithDefaults(rates);
+      const success = await this.settingsService.appendShippingRatesWithDefaults(rates);
 
       Logger.info('Shipping rates update attempted', {
         success,
@@ -77,19 +78,19 @@ export class SettingsController {
       const response: ApiResponse = {
         success,
         message: success
-          ? 'Shipping rates updated successfully'
-          : 'Failed to update shipping rates',
+          ? 'Shipping rates appended successfully'
+          : 'Failed to append shipping rates',
       };
 
       res.status(200).json(response);
     } catch (error) {
-      Logger.error('Failed to update shipping rates', {
+      Logger.error('Failed to append shipping rates', {
         error: error instanceof Error ? error.message : error,
         userId: req.user?.userId,
         requestBody: req.body,
       });
 
-      const message = error instanceof Error ? error.message : 'Failed to update shipping rates';
+      const message = error instanceof Error ? error.message : 'Failed to append shipping rates';
       const response: ApiResponse = {
         success: false,
         message,
@@ -221,6 +222,101 @@ export class SettingsController {
       });
 
       const message = error instanceof Error ? error.message : 'Failed to calculate shipping fee';
+
+      let statusCode = 400;
+      if (error instanceof Error) {
+        if (error.message.includes('not found')) {
+          statusCode = 404;
+        }
+      }
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(statusCode).json(response);
+    }
+  };
+
+  createShippingRates = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { rates }: UpdateShippingRatesInput['body'] = req.body;
+      const success = await this.settingsService.createShippingRatesWithDefaults(rates);
+
+      Logger.info('Shipping rates creation attempted', {
+        success,
+        userId: req.user.userId,
+      });
+
+      const response: ApiResponse = {
+        success,
+        message: success
+          ? 'Shipping rates created successfully'
+          : 'Failed to create shipping rates',
+      };
+
+      res.status(201).json(response);
+    } catch (error) {
+      Logger.error('Failed to create shipping rates', {
+        error: error instanceof Error ? error.message : error,
+        userId: req.user?.userId,
+        requestBody: req.body,
+      });
+
+      const message = error instanceof Error ? error.message : 'Failed to create shipping rates';
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(400).json(response);
+    }
+  };
+
+  deleteShippingRate = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { id } = req.params as DeleteShippingRateInput['params'];
+      const success = await this.settingsService.deleteShippingRateById(id);
+
+      Logger.info('Shipping rate deletion attempted', {
+        success,
+        rateId: id,
+        userId: req.user.userId,
+      });
+
+      const response: ApiResponse = {
+        success,
+        message: success ? 'Shipping rate deleted successfully' : 'Failed to delete shipping rate',
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Failed to delete shipping rate', {
+        error: error instanceof Error ? error.message : error,
+        userId: req.user?.userId,
+        rateId: req.params.id,
+      });
+
+      const message = error instanceof Error ? error.message : 'Failed to delete shipping rate';
 
       let statusCode = 400;
       if (error instanceof Error) {
