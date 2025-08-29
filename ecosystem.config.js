@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: 'tc-delivery-server-prod',
-      script: 'dist/index.js',
+      script: 'dist/src/index.js',
       cwd: '/Users/nguyenquocbao/Desktop/tochau/tc-delivery-server',
       instances: 1, // Number of instances (can increase to 'max' or specific number)
       exec_mode: 'fork', // or 'cluster' for multi-instance
@@ -39,7 +39,7 @@ module.exports = {
     },
     {
       name: 'tc-delivery-server-uat',
-      script: 'dist/index.js',
+      script: 'dist/src/index.js',
       cwd: '/Users/nguyenquocbao/Desktop/tochau/tc-delivery-server',
       instances: 1, // Number of instances for UAT
       exec_mode: 'fork',
