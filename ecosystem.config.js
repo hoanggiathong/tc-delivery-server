@@ -12,7 +12,6 @@ module.exports = {
         NODE_ENV: 'production',
         PORT: 3011,
       },
-      env_file: '.env.production',
 
       // Logging
       log_file: './logs/prod-combined.log',
@@ -49,7 +48,6 @@ module.exports = {
         NODE_ENV: 'uat',
         PORT: 3010,
       },
-      env_file: '.env.uat',
 
       // Logging
       log_file: './logs/uat-combined.log',
