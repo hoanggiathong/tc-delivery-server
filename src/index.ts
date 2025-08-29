@@ -3,8 +3,10 @@ import dotenv from 'dotenv';
 import app from './app';
 import { connectDB, disconnectDB } from '@/config/database';
 
-// Load environment variables
-dotenv.config();
+// Load environment variables based on NODE_ENV
+const envFile = process.env.NODE_ENV === 'uat' ? '.env.uat' : 
+               process.env.NODE_ENV === 'production' ? '.env.production' : '.env';
+dotenv.config({ path: envFile });
 
 const PORT = process.env.PORT || 3000;
 
