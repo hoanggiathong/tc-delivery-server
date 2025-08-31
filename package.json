@@ -50,7 +50,7 @@
     "test:ci": "jest --ci --coverage --watchAll=false"
   },
   "_moduleAliases": {
-    "@": "dist/src"
+    "@": "src"
   },
   "keywords": [
     "express",

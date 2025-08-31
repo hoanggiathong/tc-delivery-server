@@ -16,6 +16,7 @@ export interface DeliveryReceiptData {
   trackingCode: string;
   fromRoute: IRoute;
   toRoute: IRoute;
+  fullCode: string;
   // Sender info
   sender: {
     name: string;
@@ -117,6 +118,7 @@ export class DeliveryReceiptService {
     return {
       receiptNumber: delivery.code,
       subCode: delivery.subCode,
+      fullCode: delivery.fullCode,
       date: dateStr,
       expiryDate: expiryDateStr,
       barcode: delivery.fullCode,
@@ -440,7 +442,7 @@ export class DeliveryReceiptService {
           </div>
           <div class="header-right">
             <div class="qr-code">
-              <h3>${data.receiptNumber}</h3>
+              <h3>${data.fullCode}</h3>
               <img src="${qrCodeDataURL}" alt="QR Code">
             </div>
           </div>

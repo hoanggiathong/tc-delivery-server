@@ -51,61 +51,6 @@ export class DeliveryService {
   }
 
   /**
-   * Validate itemCost against shipping rate configuration
-   */
-  private async validateItemCost(itemValue: number, itemCost: number): Promise<void> {
-    try {
-      // Get shipping rates from settings
-      const shippingRates = await this.settingsService.getShippingRates();
-
-      if (!shippingRates || shippingRates.length === 0) {
-        throw new Error('Shipping rate configuration not found. Please contact administrator.');
-      }
-
-      // Find matching shipping rate for itemValue
-      const matchingRate = shippingRates.find(
-        rate => itemValue >= rate.fromAmount && itemValue <= rate.toAmount
-      );
-
-      if (!matchingRate) {
-        throw new Error(
-          `No shipping rate found for item value ${itemValue.toLocaleString()} VND. Please check the item value.`
-        );
-      }
-
-      // Calculate expected fee based on unit
-      let expectedFee: number;
-
-      if (matchingRate.regularShippingFeeUnit === '%') {
-        // Calculate percentage fee: itemValue * (regularShippingFee / 100)
-        expectedFee = Math.round(itemValue * (matchingRate.regularShippingFee / 100));
-      } else {
-        // Fixed fee for VND/USD
-        expectedFee = matchingRate.regularShippingFee;
-      }
-
-      // Validate itemCost matches expected fee
-      if (itemCost !== expectedFee) {
-        const unit = matchingRate.regularShippingFeeUnit;
-        const feeDisplay =
-          unit === '%'
-            ? `${matchingRate.regularShippingFee}% of item value (${expectedFee.toLocaleString()} VND)`
-            : `${expectedFee.toLocaleString()} ${unit ?? ''}`;
-
-        throw new Error(
-          `Invalid item cost. Expected: ${feeDisplay}, but received: ${itemCost.toLocaleString()} VND. Please correct the item cost.`
-        );
-      }
-    } catch (error) {
-      // Re-throw with more context if it's our validation error
-      if (error instanceof Error) {
-        throw error;
-      }
-      throw new Error('Failed to validate item cost. Please try again or contact administrator.');
-    }
-  }
-
-  /**
    * Type assertion helper for populated delivery objects
    */
   private toPopulatedDelivery(delivery: unknown): IDeliveryWithPopulatedRefs {
@@ -252,9 +197,6 @@ export class DeliveryService {
    * Create a new delivery
    */
   async createDelivery(data: IDeliveryCreateRequest, userId: string): Promise<IDeliveryResponse> {
-    // Validate itemCost against shipping rate configuration
-    await this.validateItemCost(data.itemValue, data.itemCost);
-
     // Find or create sender and receiver
     const sender = await this.customerService.findOrCreateCustomer(
       data.senderName,
@@ -327,13 +269,6 @@ export class DeliveryService {
     const delivery = await Delivery.findById(id);
     if (!delivery) {
       throw new Error('Delivery not found');
-    }
-
-    // Validate itemCost if itemValue or itemCost is being updated
-    if (data.itemValue !== undefined || data.itemCost !== undefined) {
-      const itemValue = data.itemValue ?? delivery.itemValue;
-      const itemCost = data.itemCost ?? delivery.itemCost;
-      await this.validateItemCost(itemValue, itemCost);
     }
 
     const updateData: Record<string, unknown> = {};
