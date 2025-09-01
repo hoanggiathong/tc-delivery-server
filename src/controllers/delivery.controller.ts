@@ -1345,15 +1345,31 @@ export class DeliveryController {
    *                         totalDeliveries:
    *                           type: number
    *                           example: 25
+   *                           description: Total number of deliveries
+   *                         totalQuantity:
+   *                           type: number
+   *                           example: 45
+   *                           description: Total quantity of all deliveries
    *                         totalCost:
    *                           type: number
    *                           example: 750000
+   *                           description: Total shipping cost
    *                         totalItemCost:
    *                           type: number
    *                           example: 125000
+   *                           description: Total item cost
+   *                         totalCollectCost:
+   *                           type: number
+   *                           example: 25000
+   *                           description: Total collect cost
    *                         totalCollectForCustomer:
    *                           type: number
    *                           example: 2500000
+   *                           description: Total collect for customer amount
+   *                         totalCollectForCustomerCost:
+   *                           type: number
+   *                           example: 50000
+   *                           description: Total collect for customer cost
    *                         date:
    *                           type: string
    *                           format: date
@@ -1398,9 +1414,12 @@ export class DeliveryController {
    *                   data:
    *                     summary:
    *                       totalDeliveries: 25
+   *                       totalQuantity: 45
    *                       totalCost: 750000
    *                       totalItemCost: 125000
+   *                       totalCollectCost: 25000
    *                       totalCollectForCustomer: 2500000
+   *                       totalCollectForCustomerCost: 50000
    *                       date: "2024-12-17"
    *                     deliveries: []
    *                     routeInfo:

@@ -356,10 +356,13 @@ export interface IDeliveryCostReport {
 
 // Today Report Interfaces (simplified, no pagination)
 export interface ITodayDeliverySummary {
-  totalDeliveries: number;
-  totalCost: number;
+  totalDeliveries: number; // Total number of deliveries (count by delivery count)
+  totalQuantity: number; // Total quantity (sum of all delivery quantities)
+  totalCost: number; // Total shipping cost (sum of all totalCost)
   totalItemCost: number;
-  totalCollectForCustomer: number;
+  totalCollectCost: number; // Total collect cost
+  totalCollectForCustomer: number; // Total collect for customer amount
+  totalCollectForCustomerCost: number; // Total collect for customer cost (thu dùm)
   date: string; // YYYY-MM-DD format
 }
 

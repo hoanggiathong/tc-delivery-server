@@ -1327,9 +1327,12 @@ export class DeliveryService {
                 $group: {
                   _id: null,
                   totalDeliveries: { $sum: 1 },
+                  totalQuantity: { $sum: '$quantity' },
                   totalCost: { $sum: '$totalCost' },
                   totalItemCost: { $sum: '$itemCost' },
+                  totalCollectCost: { $sum: '$collectCost' },
                   totalCollectForCustomer: { $sum: '$collectForCustomer' },
+                  totalCollectForCustomerCost: { $sum: '$collectForCustomerCost' },
                 },
               },
             ],
@@ -1413,9 +1416,12 @@ export class DeliveryService {
       // Build summary
       const summary: ITodayDeliverySummary = {
         totalDeliveries: summaryData.totalDeliveries || 0,
+        totalQuantity: summaryData.totalQuantity || 0,
         totalCost: summaryData.totalCost || 0,
         totalItemCost: summaryData.totalItemCost || 0,
+        totalCollectCost: summaryData.totalCollectCost || 0,
         totalCollectForCustomer: summaryData.totalCollectForCustomer || 0,
+        totalCollectForCustomerCost: summaryData.totalCollectForCustomerCost || 0,
         date: today.toISOString().split('T')[0], // Format as YYYY-MM-DD
       };
 
