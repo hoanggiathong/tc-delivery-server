@@ -226,9 +226,7 @@ describe('MoneyDeliveryService', () => {
 
       await expect(
         moneyDeliveryService.createMoneyDelivery(dataWithoutSendCost, 'user-id-1')
-      ).rejects.toThrow(
-        "sendCost is required for transfer type 'regular' and amount 1000000"
-      );
+      ).rejects.toThrow("sendCost is required for transfer type 'regular' and amount 1000000");
     });
 
     it('should allow custom sendCost without validation', async () => {
@@ -237,8 +235,11 @@ describe('MoneyDeliveryService', () => {
       // Mock MoneyDelivery constructor
       MockedMoneyDelivery.mockImplementation(() => mockMoneyDelivery as any);
 
-      const result = await moneyDeliveryService.createMoneyDelivery(dataWithCustomCost, 'user-id-1');
-      
+      const result = await moneyDeliveryService.createMoneyDelivery(
+        dataWithCustomCost,
+        'user-id-1'
+      );
+
       expect(result).toBeDefined();
       expect(MockedMoneyDelivery).toHaveBeenCalled();
     });
@@ -409,9 +410,7 @@ describe('MoneyDeliveryService', () => {
 
       await expect(
         moneyDeliveryService.updateMoneyDelivery('money-delivery-id-1', updateDataWithoutSendCost)
-      ).rejects.toThrow(
-        "sendCost is required when updating transferType or sendMoneyAmount"
-      );
+      ).rejects.toThrow('sendCost is required when updating transferType or sendMoneyAmount');
     });
 
     it('should allow custom sendCost during transferType update', async () => {
@@ -429,8 +428,11 @@ describe('MoneyDeliveryService', () => {
         sendCost: 50000, // Custom amount allowed
       };
 
-      const result = await moneyDeliveryService.updateMoneyDelivery('money-delivery-id-1', updateDataWithCustomSendCost);
-      
+      const result = await moneyDeliveryService.updateMoneyDelivery(
+        'money-delivery-id-1',
+        updateDataWithCustomSendCost
+      );
+
       expect(result).toBeDefined();
       expect(MockedMoneyDelivery.findByIdAndUpdate).toHaveBeenCalled();
     });
