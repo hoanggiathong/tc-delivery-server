@@ -1282,7 +1282,12 @@ export class DeliveryService {
           $project: {
             _id: 1,
             code: 1,
+            fullCode: 1,
+            subCode: 1,
+            name: 1,
+            quantity: 1,
             createdAt: 1,
+            updatedAt: 1,
             sender: {
               name: '$senderData.name',
               phone: '$senderData.phone',
@@ -1297,15 +1302,18 @@ export class DeliveryService {
               name: '$toRouteData.name',
             },
             cost: 1,
+            homeDelivery: 1,
             homeDeliveryCost: 1,
-            itemCost: 1,
             itemValue: 1,
+            itemCost: 1,
             collectCost: 1,
             collectForCustomer: 1,
             collectForCustomerCost: 1,
+            collectForCustomerNote: 1,
             totalCost: 1,
             paymentType: 1,
             notes: 1,
+            details: 1,
           },
         },
         // Facet for data and summary (no pagination needed)
@@ -1341,18 +1349,42 @@ export class DeliveryService {
         (d: {
           _id: Types.ObjectId;
           code: string;
+          fullCode?: string;
+          subCode?: string;
+          name: string;
+          quantity?: number;
           createdAt: Date;
+          updatedAt?: Date;
           sender: { name: string; phone: string };
           receiver: { name: string; phone: string };
           toRoute: { id: Types.ObjectId; code: string; name: string };
           cost: number;
+          homeDelivery?: string;
+          homeDeliveryCost?: number;
+          itemValue: number;
           itemCost: number;
+          collectCost?: number;
+          collectForCustomer?: number;
+          collectForCustomerCost?: number;
+          collectForCustomerNote?: string;
           totalCost: number;
           paymentType: 'debt' | 'free' | null;
           notes?: string;
+          details?: {
+            weight?: number;
+            length?: number;
+            width?: number;
+            height?: number;
+            isOverweight?: boolean;
+            convertedWeight?: number;
+          };
         }) => ({
           id: d._id.toString(),
           code: d.code,
+          fullCode: d.fullCode,
+          subCode: d.subCode,
+          name: d.name,
+          quantity: d.quantity,
           sender: d.sender,
           receiver: d.receiver,
           toRoute: {
@@ -1361,10 +1393,20 @@ export class DeliveryService {
             name: d.toRoute.name,
           },
           cost: d.cost,
+          homeDelivery: d.homeDelivery,
+          homeDeliveryCost: d.homeDeliveryCost,
+          itemValue: d.itemValue,
           itemCost: d.itemCost,
+          collectCost: d.collectCost,
+          collectForCustomer: d.collectForCustomer,
+          collectForCustomerCost: d.collectForCustomerCost,
+          collectForCustomerNote: d.collectForCustomerNote,
           totalCost: d.totalCost,
           paymentType: d.paymentType,
+          notes: d.notes,
+          details: d.details,
           createdAt: d.createdAt,
+          updatedAt: d.updatedAt,
         })
       );
 

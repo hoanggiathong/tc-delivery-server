@@ -366,6 +366,10 @@ export interface ITodayDeliverySummary {
 export interface ITodayDeliveryItem {
   id: string;
   code: string;
+  fullCode?: string;
+  subCode?: string;
+  name: string;
+  quantity?: number;
   sender: {
     name: string;
     phone: string;
@@ -380,10 +384,27 @@ export interface ITodayDeliveryItem {
     name: string;
   };
   cost: number;
+  homeDelivery?: string;
+  homeDeliveryCost?: number;
+  itemValue: number;
   itemCost: number;
+  collectCost?: number;
+  collectForCustomer?: number;
+  collectForCustomerCost?: number;
+  collectForCustomerNote?: string;
   totalCost: number;
   paymentType?: 'paid' | 'debt' | 'free';
+  notes?: string;
+  details?: {
+    weight?: number;
+    length?: number;
+    width?: number;
+    height?: number;
+    isOverweight?: boolean;
+    convertedWeight?: number;
+  };
   createdAt: Date;
+  updatedAt?: Date;
 }
 
 export interface ITodayDeliveryReport {
