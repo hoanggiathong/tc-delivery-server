@@ -55,57 +55,6 @@ export class MoneyDeliveryService {
   }
 
   /**
-   * Calculate sendCost based on transferType and sendMoneyAmount
-   */
-  private async calculateSendCost(
-    sendMoneyAmount: number,
-    transferType: 'regular' | 'express' | 'free'
-  ): Promise<number> {
-    if (transferType === 'free') {
-      return 0;
-    }
-
-    try {
-      const shippingRates = await this.settingsService.getShippingRates();
-      if (!shippingRates || shippingRates.length === 0) {
-        Logger.warn('No shipping rates configured, using sendCost as default');
-        return 0;
-      }
-
-      // Find the matching rate range for the sendMoneyAmount
-      const matchingRate = shippingRates.find(
-        rate => sendMoneyAmount >= rate.fromAmount && sendMoneyAmount <= rate.toAmount
-      );
-
-      if (!matchingRate) {
-        Logger.warn(`No matching rate found for amount ${sendMoneyAmount}, using 0 as sendCost`);
-        return 0;
-      }
-
-      // Get the appropriate fee based on transferType
-      const feeAmount =
-        transferType === 'express'
-          ? matchingRate.expressShippingFee
-          : matchingRate.regularShippingFee;
-      const feeUnit =
-        transferType === 'express'
-          ? matchingRate.expressShippingFeeUnit || 'VND'
-          : matchingRate.regularShippingFeeUnit || 'VND';
-
-      // Calculate based on unit type
-      if (feeUnit === '%') {
-        return Math.round((sendMoneyAmount * feeAmount) / 100);
-      }
-
-      // For VND or USD, return the fixed amount
-      return feeAmount;
-    } catch (error) {
-      Logger.error('Error calculating sendCost:', error);
-      return 0;
-    }
-  }
-
-  /**
    * Type assertion helper for populated money delivery objects
    */
   private toPopulatedMoneyDelivery(moneyDelivery: unknown): IMoneyDeliveryWithPopulatedRefs {
@@ -275,20 +224,10 @@ export class MoneyDeliveryService {
     // Get transfer type (default to 'regular' if not specified)
     const transferType = data.transferType || 'regular';
 
-    // Calculate expected sendCost and validate
-    const expectedCost = await this.calculateSendCost(data.sendMoneyAmount, transferType);
-
     // Require sendCost to be provided
     if (data.sendCost === undefined) {
       throw new Error(
-        `sendCost is required. Expected ${expectedCost} for transfer type '${transferType}' and amount ${data.sendMoneyAmount}`
-      );
-    }
-
-    // Validate provided sendCost matches expected cost
-    if (data.sendCost !== expectedCost) {
-      throw new Error(
-        `Invalid sendCost. Expected ${expectedCost} but received ${data.sendCost} for transfer type '${transferType}' and amount ${data.sendMoneyAmount}`
+        `sendCost is required for transfer type '${transferType}' and amount ${data.sendMoneyAmount}`
       );
     }
 
@@ -377,24 +316,9 @@ export class MoneyDeliveryService {
 
     // Handle sendCost validation when transferType or sendMoneyAmount changes
     if (data.transferType !== undefined || data.sendMoneyAmount !== undefined) {
-      const finalTransferType = data.transferType ?? moneyDelivery.transferType;
-      const finalSendMoneyAmount = data.sendMoneyAmount ?? moneyDelivery.sendMoneyAmount;
-
-      // Calculate expected cost for validation
-      const expectedCost = await this.calculateSendCost(finalSendMoneyAmount, finalTransferType);
-
       // Require sendCost when transferType or sendMoneyAmount changes
       if (data.sendCost === undefined) {
-        throw new Error(
-          `sendCost is required when updating transferType or sendMoneyAmount. Expected ${expectedCost} for transfer type '${finalTransferType}' and amount ${finalSendMoneyAmount}`
-        );
-      }
-
-      // Validate provided sendCost matches expected cost
-      if (data.sendCost !== expectedCost) {
-        throw new Error(
-          `Invalid sendCost. Expected ${expectedCost} but received ${data.sendCost} for transfer type '${finalTransferType}' and amount ${finalSendMoneyAmount}`
-        );
+        throw new Error(`sendCost is required when updating transferType or sendMoneyAmount`);
       }
 
       updateData.sendCost = data.sendCost;
@@ -403,18 +327,7 @@ export class MoneyDeliveryService {
         updateData.transferType = data.transferType;
       }
     } else if (data.sendCost !== undefined) {
-      // If only sendCost is provided, still validate it
-      const expectedCost = await this.calculateSendCost(
-        moneyDelivery.sendMoneyAmount,
-        moneyDelivery.transferType
-      );
-
-      if (data.sendCost !== expectedCost) {
-        throw new Error(
-          `Invalid sendCost. Expected ${expectedCost} but received ${data.sendCost} for transfer type '${moneyDelivery.transferType}' and amount ${moneyDelivery.sendMoneyAmount}`
-        );
-      }
-
+      // If only sendCost is provided, accept it without validation
       updateData.sendCost = data.sendCost;
     }
 

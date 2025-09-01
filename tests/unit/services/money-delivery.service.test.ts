@@ -227,18 +227,20 @@ describe('MoneyDeliveryService', () => {
       await expect(
         moneyDeliveryService.createMoneyDelivery(dataWithoutSendCost, 'user-id-1')
       ).rejects.toThrow(
-        "sendCost is required. Expected 50000 for transfer type 'regular' and amount 1000000"
+        "sendCost is required for transfer type 'regular' and amount 1000000"
       );
     });
 
-    it('should throw error when sendCost is incorrect', async () => {
-      const dataWithWrongCost = { ...createData, sendCost: 999999 }; // Wrong amount
+    it('should allow custom sendCost without validation', async () => {
+      const dataWithCustomCost = { ...createData, sendCost: 999999 }; // Custom amount
 
-      await expect(
-        moneyDeliveryService.createMoneyDelivery(dataWithWrongCost, 'user-id-1')
-      ).rejects.toThrow(
-        "Invalid sendCost. Expected 50000 but received 999999 for transfer type 'regular' and amount 1000000"
-      );
+      // Mock MoneyDelivery constructor
+      MockedMoneyDelivery.mockImplementation(() => mockMoneyDelivery as any);
+
+      const result = await moneyDeliveryService.createMoneyDelivery(dataWithCustomCost, 'user-id-1');
+      
+      expect(result).toBeDefined();
+      expect(MockedMoneyDelivery).toHaveBeenCalled();
     });
 
     it('should pass validation with correct sendCost for express transfer', async () => {
@@ -408,11 +410,11 @@ describe('MoneyDeliveryService', () => {
       await expect(
         moneyDeliveryService.updateMoneyDelivery('money-delivery-id-1', updateDataWithoutSendCost)
       ).rejects.toThrow(
-        "sendCost is required when updating transferType or sendMoneyAmount. Expected 50000 for transfer type 'regular' and amount 2000000"
+        "sendCost is required when updating transferType or sendMoneyAmount"
       );
     });
 
-    it('should throw error when sendCost is incorrect during transferType update', async () => {
+    it('should allow custom sendCost during transferType update', async () => {
       const mockExistingMoneyDelivery = {
         ...mockMoneyDelivery,
         sendMoneyAmount: 1000000,
@@ -420,17 +422,17 @@ describe('MoneyDeliveryService', () => {
       };
 
       MockedMoneyDelivery.findById = jest.fn().mockResolvedValue(mockExistingMoneyDelivery);
+      MockedMoneyDelivery.findByIdAndUpdate = jest.fn().mockResolvedValue(mockMoneyDelivery);
 
-      const updateDataWithWrongSendCost = {
+      const updateDataWithCustomSendCost = {
         transferType: 'express' as const,
-        sendCost: 50000, // Should be 100000 for express
+        sendCost: 50000, // Custom amount allowed
       };
 
-      await expect(
-        moneyDeliveryService.updateMoneyDelivery('money-delivery-id-1', updateDataWithWrongSendCost)
-      ).rejects.toThrow(
-        "Invalid sendCost. Expected 100000 but received 50000 for transfer type 'express' and amount 1000000"
-      );
+      const result = await moneyDeliveryService.updateMoneyDelivery('money-delivery-id-1', updateDataWithCustomSendCost);
+      
+      expect(result).toBeDefined();
+      expect(MockedMoneyDelivery.findByIdAndUpdate).toHaveBeenCalled();
     });
   });
 
