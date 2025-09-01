@@ -35,20 +35,20 @@ jobs:
             # Load NVM and use default Node version
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-            
+
             echo "Current Node version:"
             node --version
-            
+
             nvm use default
 
             # Install dependencies
-            npm install
+            npm ci
 
             # Build and deploy UAT environment
             npm run deploy:uat
 
             # Show PM2 status
             pm2 status tc-delivery-server-uat
-            
+
             # Show logs (last 20 lines)
             pm2 logs tc-delivery-server-uat --lines 20 --nostream
