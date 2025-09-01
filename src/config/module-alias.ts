@@ -4,7 +4,7 @@ import path from 'path';
 // Setup module alias based on environment
 const setupModuleAlias = () => {
   const isDevelopment = process.env.NODE_ENV === 'development';
-  
+
   if (isDevelopment) {
     // Development: point to src directory from project root
     const rootDir = path.resolve(__dirname, '../..');
