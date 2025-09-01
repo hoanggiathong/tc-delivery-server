@@ -1,4 +1,7 @@
-import 'module-alias/register';
+// Setup dynamic module alias first
+import setupModuleAlias from './config/module-alias';
+setupModuleAlias();
+
 import dotenv from 'dotenv';
 import app from './app';
 import { connectDB, disconnectDB } from '@/config/database';

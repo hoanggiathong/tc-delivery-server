@@ -2,16 +2,16 @@
   "name": "tc-delivery-server",
   "version": "1.0.0",
   "description": "Express TypeScript API server with JWT authentication",
-  "main": "dist/index.js",
+  "main": "dist/src/index.js",
   "license": "UNLICENSED",
   "scripts": {
-    "dev": "npx tsx watch src/index.ts",
-    "dev:debug": "npx tsx watch --inspect src/index.ts",
-    "debug": "npx tsx --inspect-brk src/index.ts",
+    "dev": "NODE_ENV=development npx tsx watch src/index.ts",
+    "dev:debug": "NODE_ENV=development npx tsx watch --inspect src/index.ts",
+    "debug": "NODE_ENV=development npx tsx --inspect-brk src/index.ts",
     "build": "tsc",
     "build:prod": "npm run code-quality && npm run build",
-    "start": "node dist/index.js",
-    "start:debug": "node --inspect dist/index.js",
+    "start": "NODE_ENV=production node dist/src/index.js",
+    "start:debug": "NODE_ENV=production node --inspect dist/src/index.js",
     "pm2:start:prod": "pm2 start ecosystem.config.js --only tc-delivery-server-prod",
     "pm2:start:uat": "pm2 start ecosystem.config.js --only tc-delivery-server-uat",
     "pm2:start:all": "pm2 start ecosystem.config.js",
@@ -49,9 +49,6 @@
     "test:coverage": "jest --coverage",
     "test:ci": "jest --ci --coverage --watchAll=false"
   },
-  "_moduleAliases": {
-    "@": "src"
-  },
   "keywords": [
     "express",
     "typescript",
@@ -87,6 +84,7 @@
     "@types/jest": "^29.5.8",
     "@types/jsbarcode": "^3.11.4",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/module-alias": "^2.0.4",
     "@types/node": "^20.10.0",
     "@types/pdfkit": "^0.17.2",
     "@types/puppeteer": "^5.4.7",
