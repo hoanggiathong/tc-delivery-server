@@ -74,7 +74,7 @@ erDiagram
         number homeDeliveryCost "bắt buộc, tối thiểu 0, mặc định 0"
         number itemValue "giá trị hàng hóa, bắt buộc, tối thiểu 0"
         number itemCost "phí trị giá, bắt buộc, tối thiểu 0"
-        number collectCost "phí thu hộ, bắt buộc, tối thiểu 0"
+        number collectCost "thu hộ, bắt buộc, tối thiểu 0"
         number collectForCustomer "thu dùm khách hàng, bắt buộc, tối thiểu 0, mặc định 0"
         number collectForCustomerCost "phí phụ thu, bắt buộc, tối thiểu 0"
         number totalCost "tính toán: cost+itemCost(phí trị giá)+collectForCustomerCost"
@@ -128,7 +128,7 @@ erDiagram
         number homeDeliveryCost "bắt buộc, tối thiểu 0, mặc định 0"
         number itemValue "giá trị hàng hóa, bắt buộc, tối thiểu 0"
         number itemCost "phí trị giá, bắt buộc, tối thiểu 0"
-        number collectCost "phí thu hộ, bắt buộc, tối thiểu 0"
+        number collectCost "thu hộ, bắt buộc, tối thiểu 0"
         number collectForCustomer "thu dùm khách hàng, bắt buộc, tối thiểu 0, mặc định 0"
         number collectForCustomerCost "phí phụ thu, bắt buộc, tối thiểu 0"
         number totalCost "tính toán: cost+itemCost+collectForCustomerCost"
@@ -213,7 +213,7 @@ erDiagram
 - **Index hiệu suất**: Index riêng biệt trên userId và routeId để tối ưu truy vấn
 
 #### Bảng DELIVERIES
-- **Định dạng mã mới**: 
+- **Định dạng mã mới**:
   - `code`: 10 chữ số YYMMDD + random sequence (0001-9999)
   - `fullCode`: code + fromRouteCode + toRouteCode (duy nhất trong toàn hệ thống)
   - `subCode`: timestamp/1000 + sequence
@@ -257,7 +257,7 @@ erDiagram
   - Tính dựa trên sendMoneyAmount và shipping rates configuration
   - Hỗ trợ phí cố định (VND/USD) hoặc phần trăm (%)
   - Tự động cập nhật khi thay đổi transferType hoặc sendMoneyAmount
-- **Chi phí tổng**: 
+- **Chi phí tổng**:
   - `totalCost = sendCost` cho regular và express
   - `totalCost = 0` cho free
 - **Index hiệu suất**: Cùng pattern tối ưu như deliveries
@@ -291,12 +291,12 @@ erDiagram
     - `cost`: Chi phí hàng hóa (≥ 0)
   - **Record<string, unknown>**: Custom settings cho tương lai
 - **Quy tắc nghiệp vụ**:
-  - **Shipping Rates**: 
+  - **Shipping Rates**:
     - Các khoảng giá phải liên tục và không chồng lấp
     - Rate tiếp theo phải có fromAmount = rate trước.toAmount + 1
     - Mỗi rate có unique ObjectId để hỗ trợ CRUD operations
     - Không được có duplicate ranges (cùng fromAmount và toAmount)
-  - **Product List**: 
+  - **Product List**:
     - Mỗi product phải có tên và cost hợp lệ
     - Tên product không được trùng lặp (case-insensitive)
     - Mỗi product có unique ObjectId để hỗ trợ CRUD operations
@@ -367,14 +367,14 @@ erDiagram
 - Kiểm soát truy cập dựa trên vai trò được thực thi ở mức middleware
 
 #### Tạo Mã Mới (Code Generation)
-- **Endpoint Mã Tiếp Theo**: 
+- **Endpoint Mã Tiếp Theo**:
   - `GET /api/delivery/next-code?toRouteId={ObjectId}` - Chỉ cần toRouteId
   - `GET /api/money-deliveries/next-code?toRouteId={ObjectId}` - fromRouteId lấy từ user.selectedRouteId
-- **Random Sequence Generation**: 
+- **Random Sequence Generation**:
   - Không còn sử dụng sequential counter
   - Random sequence (0001-9999) để tránh collision và tang bảo mật
   - Format mới: YYMMDD + random sequence
-- **FullCode Uniqueness**: 
+- **FullCode Uniqueness**:
   - fullCode = code + fromRouteCode + toRouteCode
   - Unique constraint across cả delivery và money-delivery collections
   - Retry mechanism (max 50 attempts) khi gặp collision
@@ -408,7 +408,7 @@ erDiagram
   - `DELETE /api/settings/products/{id}` - Xóa 1 product theo ObjectId
 - **Input**: `{products: [{name: string, cost: number}]}`
 - **Response**: Bao gồm ObjectId cho mỗi product để hỗ trợ operations
-- **Validation**: 
+- **Validation**:
   - Tên hàng hóa bắt buộc, chi phí ≥ 0
   - Tên không được trùng lặp (case-insensitive)
   - Tự động generate ObjectId cho products mới
@@ -490,7 +490,7 @@ erDiagram
 
 #### Migration Cần Thiết Cho Code Generation Mới
 - **Database Migration**: Cần thêm `fullCode` và `subCode` cho tất cả delivery và money-delivery hiện tại
-- **Index Updates**: 
+- **Index Updates**:
   - Thêm unique index trên `fullCode` field
   - Thêm index trên `subCode` field cho tracking
   - Xóa các index liên quan đến delivery-counter
