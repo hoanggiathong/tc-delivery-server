@@ -11,6 +11,9 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 3011,
+        PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'true',
+        PUPPETEER_EXECUTABLE_PATH: '/usr/bin/chromium-browser',
+        PUPPETEER_ARGS: '--no-sandbox,--disable-setuid-sandbox,--disable-dev-shm-usage,--disable-extensions,--disable-plugins,--disable-images',
       },
 
       // Logging
@@ -47,6 +50,9 @@ module.exports = {
       env: {
         NODE_ENV: 'uat',
         PORT: 3010,
+        PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'true',
+        PUPPETEER_EXECUTABLE_PATH: '/usr/bin/chromium-browser',
+        PUPPETEER_ARGS: '--no-sandbox,--disable-setuid-sandbox,--disable-dev-shm-usage,--disable-extensions,--disable-plugins,--disable-images',
       },
 
       // Logging
