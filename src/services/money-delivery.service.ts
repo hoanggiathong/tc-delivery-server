@@ -509,12 +509,12 @@ export class MoneyDeliveryService {
   }
 
   /**
-   * Parse delivery identifier (e.g., "2401250001T1T2" -> { code: "2401250001", fromRouteCode: "T1", toRouteCode: "T2" })
+   * Parse delivery identifier (e.g., "0907250001T4T1" -> { code: "2401250001", fromRouteCode: "T1", toRouteCode: "T2" })
    */
   private parseDeliveryIdentifier(
     deliveryIdentifier: string
   ): { code: string; fromRouteCode: string; toRouteCode: string } | null {
-    // Expected format: 10 digits + route code + route code (e.g., 2401250001T1T2)
+    // Expected format: 10 digits + route code + route code (e.g., 0907250001T4T1)
     const match = deliveryIdentifier.match(/^(\d{10})([A-Z]\d+)([A-Z]\d+)$/);
     if (!match) {
       return null;
@@ -831,6 +831,7 @@ export class MoneyDeliveryService {
                   totalCost: 1,
                   transferType: 1,
                   notes: 1,
+                  fullCode: 1,
                   createdAt: 1,
                 },
               },
@@ -869,6 +870,7 @@ export class MoneyDeliveryService {
         totalCost: item.totalCost,
         transferType: item.transferType,
         notes: item.notes,
+        fullCode: item.fullCode,
         createdAt: item.createdAt,
       }));
 
@@ -1027,6 +1029,8 @@ export class MoneyDeliveryService {
                 $project: {
                   _id: 1,
                   code: 1,
+                  fullCode: 1,
+                  subCode: 1,
                   sender: {
                     name: '$sender.name',
                     phone: '$sender.phone',
@@ -1106,6 +1110,8 @@ export class MoneyDeliveryService {
         sendCost: item.sendCost,
         totalCost: item.totalCost,
         transferType: item.transferType,
+        fullCode: item.fullCode,
+        subCode: item.subCode,
         notes: item.notes,
       }));
 

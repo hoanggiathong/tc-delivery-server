@@ -167,7 +167,7 @@ export interface INextCodeResponse {
 
 // Interface for delivery code lookup (code + fromRoute + toRoute)
 export interface IDeliveryCodeRequest {
-  deliveryIdentifier: string; // Format: codeT1T2 (e.g., 2401250001T1T2)
+  deliveryIdentifier: string; // Format: codeT1T2 (e.g., 0907250001T4T1)
 }
 
 // Interface for code generation

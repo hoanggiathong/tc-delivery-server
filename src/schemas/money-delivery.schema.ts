@@ -110,7 +110,7 @@ export const moneyDeliveryCodeSchema = z.object({
       .max(20, 'Money delivery identifier must not exceed 20 characters')
       .regex(
         /^\d{10}[A-Z]\d+[A-Z]\d+$/,
-        'Invalid money delivery identifier format. Expected: codeFromRouteToRoute (e.g., 2401250001T1T2)'
+        'Invalid money delivery identifier format. Expected: codeFromRouteToRoute (e.g., 0907250001T4T1)'
       )
       .trim(),
   }),

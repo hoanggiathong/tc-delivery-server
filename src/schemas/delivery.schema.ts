@@ -158,7 +158,7 @@ export const deliveryCodeSchema = z.object({
       .max(20, 'Delivery identifier must not exceed 20 characters')
       .regex(
         /^\d{10}[A-Z]\d+[A-Z]\d+$/,
-        'Invalid delivery identifier format. Expected: codeFromRouteToRoute (e.g., 2401250001T1T2)'
+        'Invalid delivery identifier format. Expected: codeFromRouteToRoute (e.g., 0907250001T4T1)'
       )
       .trim(),
   }),
@@ -260,7 +260,7 @@ export const deliveryFullCodeSchema = z.object({
       .max(20, 'Delivery fullCode must not exceed 20 characters')
       .regex(
         /^\d{10}[A-Z]\d+[A-Z]\d+$/,
-        'Invalid delivery fullCode format. Expected: codeFromRouteToRoute (e.g., 2401250001T1T2)'
+        'Invalid delivery fullCode format. Expected: codeFromRouteToRoute (e.g., 0907250001T4T1)'
       )
       .trim(),
   }),

@@ -60,7 +60,7 @@ erDiagram
 
     DELIVERIES {
         ObjectId _id PK
-        string code "10 chữ số: YYMMDD+random sequence(0001-9999)"
+        string code "10 chữ số: DDMMYY+random sequence(0001-9999)"
         string fullCode UK "duy nhất: code+fromRouteCode+toRouteCode"
         string subCode "timestamp/1000+sequence"
         ObjectId sender FK "tham chiếu: CUSTOMERS, bắt buộc"
@@ -95,7 +95,7 @@ erDiagram
 
     MONEY_DELIVERIES {
         ObjectId _id PK
-        string code "10 chữ số: YYMMDD+random sequence(0001-9999)"
+        string code "10 chữ số: DDMMYY+random sequence(0001-9999)"
         string fullCode UK "duy nhất: code+fromRouteCode+toRouteCode-T"
         string subCode "timestamp/1000+sequence"
         ObjectId sender FK "tham chiếu: CUSTOMERS, bắt buộc"
@@ -214,7 +214,7 @@ erDiagram
 
 #### Bảng DELIVERIES
 - **Định dạng mã mới**:
-  - `code`: 10 chữ số YYMMDD + random sequence (0001-9999)
+  - `code`: 10 chữ số DDMMYY + random sequence (0001-9999)
   - `fullCode`: code + fromRouteCode + toRouteCode (duy nhất trong toàn hệ thống)
   - `subCode`: timestamp/1000 + sequence
 - **Code Generation Logic**:
@@ -244,8 +244,8 @@ erDiagram
 
 #### Bảng MONEY_DELIVERIES
 - **Định dạng mã mới**: Cùng logic với deliveries:
-  - `code`: YYMMDD + random sequence (0001-9999)
-  - `fullCode`: code + fromRouteCode + toRouteCode (duy nhất)
+  - `code`: DDMMYY + random sequence (0001-9999)
+  - `fullCode`: code + fromRouteCode + toRouteCode-T (duy nhất)
   - `subCode`: timestamp/1000 + sequence
 - **Shared uniqueness**: fullCode phải unique across cả delivery và money-delivery
 - **Quy tắc nghiệp vụ**: Cùng các ràng buộc người gửi/nhận và tuyến đường như deliveries
@@ -372,8 +372,8 @@ erDiagram
   - `GET /api/money-deliveries/next-code?toRouteId={ObjectId}` - fromRouteId lấy từ user.selectedRouteId
 - **Random Sequence Generation**:
   - Không còn sử dụng sequential counter
-  - Random sequence (0001-9999) để tránh collision và tang bảo mật
-  - Format mới: YYMMDD + random sequence
+  - Random sequence (0001-9999) để tránh collision và tăng bảo mật
+  - Format mới: DDMMYY + random sequence
 - **FullCode Uniqueness**:
   - fullCode = code + fromRouteCode + toRouteCode
   - Unique constraint across cả delivery và money-delivery collections
@@ -462,7 +462,7 @@ erDiagram
   - **SubCode Tracking**: timestamp + sequence cho debug và tracking
   - **Cross-Collection Uniqueness**: Kiểm tra fullCode trên cả 2 collections
   - **User Route Integration**: fromRoute lấy từ user.selectedRouteId tự động
-  - **Format Change**: DDMMYY → YYMMDD cho chuẩn hóa
+  - **Format Change**: YYMMDD → DDMMYY cho chuẩn hóa
   - **Retry Logic**: Lên tới 50 attempts để tránh collision
 - **Enhanced DELIVERIES & DRAFT_DELIVERIES**: Thêm quantity và details fields
   - **Quantity field**: Số lượng hàng hóa (bắt buộc, tối thiểu 1, mặc định 1)

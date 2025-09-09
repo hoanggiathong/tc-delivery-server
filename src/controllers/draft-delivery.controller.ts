@@ -843,7 +843,7 @@ export class DraftDeliveryController {
    *                   message: "Draft converted to delivery successfully"
    *                   data:
    *                     id: "507f1f77bcf86cd799439050"
-   *                     code: "2412170001"
+   *                     code: "0907250001"
    *                     sender:
    *                       id: "507f1f77bcf86cd799439051"
    *                       name: "Nguyễn Văn An"

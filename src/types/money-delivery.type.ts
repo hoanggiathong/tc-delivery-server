@@ -99,7 +99,7 @@ export interface INextMoneyDeliveryCodeResponse {
 
 // Interface for money delivery code lookup
 export interface IMoneyDeliveryCodeRequest {
-  deliveryIdentifier: string; // Format: codeT1T2 (e.g., 2401250001T1T2)
+  deliveryIdentifier: string; // Format: codeT1T2 (e.g., 0907250001T4T1)
 }
 
 // Interface for code generation
@@ -245,6 +245,7 @@ export interface ITodayMoneyDeliveryItem {
   totalCost: number;
   transferType: 'regular' | 'express' | 'free';
   notes: string;
+  fullCode: string;
   createdAt: Date;
 }
 

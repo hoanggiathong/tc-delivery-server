@@ -215,7 +215,7 @@ export class DeliveryController {
    *                   message: "Delivery created successfully"
    *                   data:
    *                     id: "507f1f77bcf86cd799439020"
-   *                     code: "2412170001"
+   *                     code: "0907250001"
    *                     sender:
    *                       id: "507f1f77bcf86cd799439021"
    *                       name: "Nguyễn Văn An"
@@ -783,7 +783,7 @@ export class DeliveryController {
    *                   properties:
    *                     nextCode:
    *                       type: string
-   *                       example: "2401250001"
+   *                       example: "0907250001"
    *                       description: The next available delivery code
    *                     toRoute:
    *                       type: object
@@ -880,8 +880,8 @@ export class DeliveryController {
    *         required: true
    *         schema:
    *           type: string
-   *           example: "2401250001T1T2"
-   *         description: Delivery identifier in format codeFromRouteToRoute (e.g., 2401250001T1T2)
+   *           example: "0907250001T4T1"
+   *         description: Delivery identifier in format codeFromRouteToRoute (e.g., 0907250001T4T1)
    *     responses:
    *       200:
    *         description: Delivery retrieved successfully
@@ -972,8 +972,8 @@ export class DeliveryController {
    *         required: true
    *         schema:
    *           type: string
-   *           example: "2401250001T1T2"
-   *         description: Delivery full code in format codeFromRouteToRoute (e.g., 2401250001T1T2)
+   *           example: "0907250001T4T1"
+   *         description: Delivery full code in format codeFromRouteToRoute (e.g., 0907250001T4T1)
    *     responses:
    *       200:
    *         description: Delivery retrieved successfully
@@ -1515,7 +1515,7 @@ export class DeliveryController {
    *         schema:
    *           type: string
    *         description: Delivery code
-   *         example: "2412170001"
+   *         example: "0907250001"
    *     responses:
    *       200:
    *         description: PDF receipt generated successfully
@@ -1528,7 +1528,7 @@ export class DeliveryController {
    *           Content-Disposition:
    *             schema:
    *               type: string
-   *               example: "attachment; filename=delivery-receipt-2412170001.pdf"
+   *               example: "attachment; filename=delivery-receipt-0907250001.pdf"
    *       404:
    *         description: Delivery not found
    *         content:
@@ -1626,7 +1626,7 @@ export class DeliveryController {
    *         schema:
    *           type: string
    *         description: Delivery code
-   *         example: "2412170001"
+   *         example: "0907250001"
    *     responses:
    *       200:
    *         description: HTML preview generated successfully

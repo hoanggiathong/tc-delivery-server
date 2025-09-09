@@ -581,14 +581,14 @@ export class DeliveryService {
 
   /**
    * Get delivery by code and route combination
-   * @param deliveryIdentifier - Format: codeFromRouteToRoute (e.g., 2401250001T1T2)
+   * @param deliveryIdentifier - Format: codeFromRouteToRoute (e.g., 0907250001T4T1)
    */
   async getDeliveryByCode(deliveryIdentifier: string): Promise<IDeliveryResponse | null> {
     // Parse delivery identifier
     const parsed = this.parseDeliveryIdentifier(deliveryIdentifier);
     if (!parsed) {
       throw new Error(
-        'Invalid delivery identifier format. Expected: codeFromRouteToRoute (e.g., 2401250001T1T2)'
+        'Invalid delivery identifier format. Expected: codeFromRouteToRoute (e.g., 0907250001T4T1)'
       );
     }
 
@@ -629,7 +629,7 @@ export class DeliveryService {
 
   /**
    * Get delivery by fullCode using user's selected route as fromRoute
-   * @param fullCode - The delivery full code (e.g., 2401250001T1T2)
+   * @param fullCode - The delivery full code (e.g., 0907250001T4T1)
    * @param userId - The user ID to get selectedRouteId from
    */
   async getDeliveryByFullCodeFromUserRoute(
@@ -640,7 +640,7 @@ export class DeliveryService {
     const parsed = this.parseDeliveryIdentifier(fullCode);
     if (!parsed) {
       throw new Error(
-        'Invalid delivery identifier format. Expected: codeFromRouteToRoute (e.g., 2401250001T1T2)'
+        'Invalid delivery identifier format. Expected: codeFromRouteToRoute (e.g., 0907250001T4T1)'
       );
     }
 
@@ -686,12 +686,12 @@ export class DeliveryService {
 
   /**
    * Parse delivery identifier to extract code and route codes
-   * @param deliveryIdentifier - Format: codeFromRouteToRoute (e.g., 2401250001T1T2)
+   * @param deliveryIdentifier - Format: codeFromRouteToRoute (e.g., 0907250001T4T1)
    */
   private parseDeliveryIdentifier(
     deliveryIdentifier: string
   ): { code: string; fromRouteCode: string; toRouteCode: string } | null {
-    // Expected format: 10 digits + route codes (e.g., 2401250001T1T2)
+    // Expected format: 10 digits + route codes (e.g., 0907250001T4T1)
     const match = deliveryIdentifier.match(/^(\d{10})([A-Z]\d+)([A-Z]\d+)$/);
 
     if (!match) {

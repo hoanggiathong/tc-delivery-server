@@ -925,8 +925,8 @@ export class MoneyDeliveryController {
    *         required: true
    *         schema:
    *           type: string
-   *           example: "2401250001T1T2"
-   *         description: Money delivery identifier in format codeFromRouteToRoute (e.g., 2401250001T1T2)
+   *           example: "0907250001T4T1"
+   *         description: Money delivery identifier in format codeFromRouteToRoute (e.g., 0907250001T4T1)
    *     responses:
    *       200:
    *         description: Money delivery retrieved successfully
@@ -1381,7 +1381,10 @@ export class MoneyDeliveryController {
    *                             example: "507f1f77bcf86cd799439011"
    *                           code:
    *                             type: string
-   *                             example: "2412170001"
+   *                             example: "0907250001"
+   *                           fullCode:
+   *                             type: string
+   *                             example: "0907250001T4T1-T"
    *                           date:
    *                             type: string
    *                             format: date-time
