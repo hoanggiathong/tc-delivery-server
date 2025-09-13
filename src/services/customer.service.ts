@@ -172,4 +172,48 @@ export class CustomerService {
       throw new Error('Failed to get customer by ID');
     }
   }
+
+  /**
+   * Update or create customer with partial data
+   * If both name and phone are provided, find or create customer
+   * If only one field is provided, get existing customer info and update with new field
+   */
+  async updateOrCreateCustomerWithPartialData(
+    currentCustomerId: string,
+    newName?: string,
+    newPhone?: string
+  ): Promise<ICustomerResponse> {
+    try {
+      // If both name and phone are provided, use findOrCreateCustomer
+      if (newName && newPhone) {
+        return await this.findOrCreateCustomer(newName, newPhone);
+      }
+
+      // If only one field is provided, get existing customer info and update
+      if (newName || newPhone) {
+        const currentCustomer = await Customer.findById(currentCustomerId);
+        if (!currentCustomer) {
+          throw new Error('Current customer not found');
+        }
+
+        return await this.findOrCreateCustomer(
+          newName || currentCustomer.name,
+          newPhone || currentCustomer.phone
+        );
+      }
+
+      // If no new data provided, return current customer
+      const currentCustomer = await this.getCustomerById(currentCustomerId);
+      if (!currentCustomer) {
+        throw new Error('Current customer not found');
+      }
+
+      return currentCustomer;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to update or create customer with partial data');
+    }
+  }
 }

@@ -311,8 +311,17 @@ export class SettingsService {
     }
   }
 
-  async calculateShippingFee(amount: number, isExpress: boolean = false): Promise<number> {
+  async calculateShippingFee(
+    amount: number,
+    isExpress: boolean = false,
+    isFree: boolean = false
+  ): Promise<number> {
     try {
+      // If isFree is true, return 0 regardless of amount or transfer type
+      if (isFree) {
+        return 0;
+      }
+
       const rate = await this.getShippingRate(amount);
       if (!rate) {
         throw new AppError('No shipping rate found for the given amount', 404);

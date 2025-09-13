@@ -102,6 +102,7 @@ export const calculateShippingFeeSchema = z.object({
   body: z.object({
     amount: z.number().min(0, 'Amount must be non-negative'),
     isExpress: z.boolean().optional().default(false),
+    isFree: z.boolean().optional().default(false),
   }),
 });
 

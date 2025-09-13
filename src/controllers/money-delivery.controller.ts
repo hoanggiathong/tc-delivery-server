@@ -3,6 +3,7 @@ import { MoneyDeliveryService } from '@/services/money-delivery.service';
 import {
   CreateMoneyDeliveryRequest,
   UpdateMoneyDeliveryRequest,
+  UpdateMoneyDeliveryByFullCodeRequest,
 } from '@/schemas/money-delivery.schema';
 import { AuthRequest, ApiResponse } from '@/types';
 import logger from '@/utils/logger';
@@ -74,9 +75,13 @@ export class MoneyDeliveryController {
    *                 example: 50000
    *               transferType:
    *                 type: string
-   *                 enum: [regular, express, free]
+   *                 enum: [regular, express]
    *                 description: Transfer type (default is regular)
    *                 example: "regular"
+   *               isFree:
+   *                 type: boolean
+   *                 description: Whether the transfer is free (default is false)
+   *                 example: false
    *               notes:
    *                 type: string
    *                 description: Optional notes for the money delivery
@@ -94,6 +99,7 @@ export class MoneyDeliveryController {
    *                 sendMoneyAmount: 1000000
    *                 sendCost: 50000
    *                 transferType: "regular"
+   *                 isFree: false
    *                 notes: "Gửi tiền sinh nhật"
    *             express:
    *               summary: Express money transfer
@@ -107,6 +113,7 @@ export class MoneyDeliveryController {
    *                 sendMoneyAmount: 5000000
    *                 sendCost: 100000
    *                 transferType: "express"
+   *                 isFree: false
    *                 notes: "Gửi tiền khẩn cấp"
    *             free:
    *               summary: Free money transfer
@@ -119,7 +126,8 @@ export class MoneyDeliveryController {
    *                 toRouteId: "507f1f77bcf86cd799439012"
    *                 sendMoneyAmount: 500000
    *                 sendCost: 0
-   *                 transferType: "free"
+   *                 transferType: "regular"
+   *                 isFree: true
    *                 notes: "Chuyển tiền miễn phí"
    *     responses:
    *       201:
@@ -169,7 +177,10 @@ export class MoneyDeliveryController {
    *                       description: Calculated fee based on shipping rates
    *                     transferType:
    *                       type: string
-   *                       enum: [regular, express, free]
+   *                       enum: [regular, express]
+   *                     isFree:
+   *                       type: boolean
+   *                       description: Whether the transfer is free
    *                     totalCost:
    *                       type: number
    *                       description: Total cost (0 for free transfers)
@@ -209,6 +220,7 @@ export class MoneyDeliveryController {
    *                     sendMoneyAmount: 1000000
    *                     sendCost: 50000
    *                     transferType: "regular"
+   *                     isFree: false
    *                     totalCost: 50000
    *                     notes: "Gửi tiền sinh nhật"
    *                     createdByUser: "testuser"
@@ -224,7 +236,8 @@ export class MoneyDeliveryController {
    *                     code: "2412170002"
    *                     sendMoneyAmount: 500000
    *                     sendCost: 0
-   *                     transferType: "free"
+   *                     transferType: "regular"
+   *                     isFree: true
    *                     totalCost: 0
    *       400:
    *         description: Validation error
@@ -407,6 +420,7 @@ export class MoneyDeliveryController {
    *                         sendMoneyAmount: 1000000
    *                         sendCost: 50000
    *                         transferType: "regular"
+   *                         isFree: false
    *                         totalCost: 50000
    *                         createdAt: "2024-12-17T10:00:00.000Z"
    *                       - id: "507f1f77bcf86cd799439016"
@@ -422,6 +436,7 @@ export class MoneyDeliveryController {
    *                         sendMoneyAmount: 5000000
    *                         sendCost: 100000
    *                         transferType: "express"
+   *                         isFree: false
    *                         totalCost: 100000
    *                         createdAt: "2024-12-17T11:00:00.000Z"
    *                     count: 2
@@ -628,9 +643,13 @@ export class MoneyDeliveryController {
    *                 example: 75000
    *               transferType:
    *                 type: string
-   *                 enum: [regular, express, free]
+   *                 enum: [regular, express]
    *                 description: Transfer type
    *                 example: "express"
+   *               isFree:
+   *                 type: boolean
+   *                 description: Whether the transfer is free
+   *                 example: false
    *               notes:
    *                 type: string
    *                 description: Optional notes for the money delivery
@@ -646,6 +665,11 @@ export class MoneyDeliveryController {
    *               value:
    *                 sendMoneyAmount: 3000000
    *                 sendCost: 80000
+   *             setFree:
+   *               summary: Set transfer as free
+   *               value:
+   *                 isFree: true
+   *                 notes: "Miễn phí phí chuyển tiền"
    *     responses:
    *       200:
    *         description: Money delivery updated successfully
@@ -674,6 +698,7 @@ export class MoneyDeliveryController {
    *                     sendMoneyAmount: 1000000
    *                     sendCost: 50000
    *                     transferType: "express"
+   *                     isFree: false
    *                     totalCost: 50000
    *       400:
    *         description: Validation error
@@ -925,8 +950,8 @@ export class MoneyDeliveryController {
    *         required: true
    *         schema:
    *           type: string
-   *           example: "0907250001T4T1"
-   *         description: Money delivery identifier in format codeFromRouteToRoute (e.g., 0907250001T4T1)
+   *           example: "0907250001T4T1-T"
+   *         description: Money delivery identifier in format codeFromRouteToRoute-T (e.g., 0907250001T4T1-T)
    *     responses:
    *       200:
    *         description: Money delivery retrieved successfully
@@ -1430,8 +1455,11 @@ export class MoneyDeliveryController {
    *                             example: 7000
    *                           transferType:
    *                             type: string
-   *                             enum: [regular, express, free]
+   *                             enum: [regular, express]
    *                             example: "regular"
+   *                           isFree:
+   *                             type: boolean
+   *                             example: false
    *                           notes:
    *                             type: string
    *                             example: "Ghi chú chuyển tiền"
@@ -1562,6 +1590,235 @@ export class MoneyDeliveryController {
         message.includes('User route not found') ||
         message.includes('Selected route not found')
       ) {
+        statusCode = 400;
+      }
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(statusCode).json(response);
+    }
+  };
+
+  /**
+   * Update money delivery by fullCode
+   * PUT /api/money-deliveries/code/:fullCode
+   * @swagger
+   * /api/money-deliveries/code/{fullCode}:
+   *   put:
+   *     summary: Update money delivery by fullCode - only sender, receiver, and toRoute fields
+   *     tags: [Money Delivery]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: fullCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *           example: "0907250001T4T1-T"
+   *         description: Money delivery fullCode in format codeFromRouteToRoute-T (e.g., 0907250001T4T1-T)
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               senderName:
+   *                 type: string
+   *                 description: Name of the sender
+   *                 example: "Nguyen Van A"
+   *               senderPhone:
+   *                 type: string
+   *                 description: Phone number of the sender
+   *                 example: "+84123456789"
+   *               receiverName:
+   *                 type: string
+   *                 description: Name of the receiver
+   *                 example: "Tran Thi B"
+   *               receiverPhone:
+   *                 type: string
+   *                 description: Phone number of the receiver
+   *                 example: "+84987654321"
+   *               toRouteId:
+   *                 type: string
+   *                 description: ObjectId of the to route
+   *                 example: "507f1f77bcf86cd799439012"
+   *           examples:
+   *             updateSender:
+   *               summary: Update sender information
+   *               value:
+   *                 senderName: "Nguyen Van C"
+   *                 senderPhone: "+84111222333"
+   *             updateReceiver:
+   *               summary: Update receiver information
+   *               value:
+   *                 receiverName: "Le Thi D"
+   *                 receiverPhone: "+84444555666"
+   *             updateRoute:
+   *               summary: Update to route
+   *               value:
+   *                 toRouteId: "507f1f77bcf86cd799439013"
+   *             updateAll:
+   *               summary: Update all allowed fields
+   *               value:
+   *                 senderName: "Pham Van E"
+   *                 senderPhone: "+84777888999"
+   *                 receiverName: "Vu Thi F"
+   *                 receiverPhone: "+84000111222"
+   *                 toRouteId: "507f1f77bcf86cd799439014"
+   *     responses:
+   *       200:
+   *         description: Money delivery updated successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Money delivery updated successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     id:
+   *                       type: string
+   *                     code:
+   *                       type: string
+   *                     fullCode:
+   *                       type: string
+   *                     sender:
+   *                       type: object
+   *                     receiver:
+   *                       type: object
+   *                     sendMoneyAmount:
+   *                       type: number
+   *                     sendCost:
+   *                       type: number
+   *                     transferType:
+   *                       type: string
+   *                     totalCost:
+   *                       type: number
+   *             examples:
+   *               successfulUpdate:
+   *                 summary: Successfully updated money delivery
+   *                 value:
+   *                   success: true
+   *                   message: "Money delivery updated successfully"
+   *                   data:
+   *                     id: "507f1f77bcf86cd799439013"
+   *                     code: "0907250001"
+   *                     fullCode: "0907250001T4T1-T"
+   *                     sender:
+   *                       id: "507f1f77bcf86cd799439014"
+   *                       name: "Pham Van E"
+   *                       phone: "+84777888999"
+   *                     receiver:
+   *                       id: "507f1f77bcf86cd799439015"
+   *                       name: "Vu Thi F"
+   *                       phone: "+84000111222"
+   *                     sendMoneyAmount: 1000000
+   *                     sendCost: 50000
+   *                     transferType: "regular"
+   *                     totalCost: 50000
+   *       400:
+   *         description: Validation error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *             examples:
+   *               invalidFullCode:
+   *                 summary: Invalid fullCode format
+   *                 value:
+   *                   success: false
+   *                   message: "Validation error: Invalid money delivery fullCode format"
+   *               invalidPhone:
+   *                 summary: Invalid phone number
+   *                 value:
+   *                   success: false
+   *                   message: "Validation error: Please enter a valid sender phone number"
+   *               noFieldsProvided:
+   *                 summary: No fields provided for update
+   *                 value:
+   *                   success: false
+   *                   message: "Validation error: At least one field must be provided"
+   *       404:
+   *         description: Money delivery not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *             examples:
+   *               deliveryNotFound:
+   *                 summary: Money delivery not found
+   *                 value:
+   *                   success: false
+   *                   message: "Money delivery not found"
+   *               routeNotFound:
+   *                 summary: Route not found
+   *                 value:
+   *                   success: false
+   *                   message: "To route not found"
+   *       401:
+   *         description: Unauthorized
+   */
+  updateMoneyDeliveryByFullCode = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'User not authenticated',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { fullCode } = req.params;
+      const updateData: UpdateMoneyDeliveryByFullCodeRequest['body'] = req.body;
+
+      const updatedMoneyDelivery = await this.moneyDeliveryService.updateMoneyDeliveryByFullCode(
+        fullCode,
+        updateData
+      );
+
+      logger.info(`Money delivery updated by fullCode: ${updatedMoneyDelivery.code}`);
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Money delivery updated successfully',
+        data: updatedMoneyDelivery,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      logger.error('Error updating money delivery by fullCode:', error);
+
+      const message = error instanceof Error ? error.message : 'Failed to update money delivery';
+
+      // Determine appropriate status code based on error message
+      let statusCode = 500;
+      if (message.includes('not found')) {
+        statusCode = 404;
+      } else if (message.includes('validation') || message.includes('invalid')) {
         statusCode = 400;
       }
 

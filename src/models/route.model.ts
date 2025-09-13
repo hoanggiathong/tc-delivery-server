@@ -5,6 +5,9 @@ export interface IRoute extends Document {
   code: string;
   name: string;
   address?: string;
+  distance?: number;
+  surcharge?: number;
+  surchargeUnit?: 'percentage' | 'fixed';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -30,6 +33,37 @@ const routeSchema = new Schema<IRoute>(
       required: false,
       trim: true,
       maxlength: [200, 'Address must not exceed 200 characters'],
+    },
+    distance: {
+      type: Number,
+      required: false,
+      min: [0, 'Distance must be a positive number'],
+      validate: {
+        validator: function (v: number) {
+          return v === null || v === undefined || v >= 0;
+        },
+        message: 'Distance must be a positive number',
+      },
+    },
+    surcharge: {
+      type: Number,
+      required: false,
+      min: [0, 'Surcharge must be a positive number'],
+      validate: {
+        validator: function (v: number) {
+          return v === null || v === undefined || v >= 0;
+        },
+        message: 'Surcharge must be a positive number',
+      },
+    },
+    surchargeUnit: {
+      type: String,
+      required: false,
+      enum: {
+        values: ['percentage', 'fixed'],
+        message: 'Surcharge unit must be either "percentage" or "fixed"',
+      },
+      default: 'percentage',
     },
   },
   {

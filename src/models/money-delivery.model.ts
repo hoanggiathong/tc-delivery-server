@@ -11,7 +11,8 @@ export interface IMoneyDelivery extends Document {
   toRoute: mongoose.Types.ObjectId;
   sendMoneyAmount: number;
   sendCost: number;
-  transferType: 'regular' | 'express' | 'free';
+  transferType: 'regular' | 'express';
+  isFree: boolean;
   totalCost: number;
   notes?: string;
   createdByUser: mongoose.Types.ObjectId;
@@ -69,8 +70,13 @@ const moneyDeliverySchema = new Schema<IMoneyDelivery>(
     },
     transferType: {
       type: String,
-      enum: ['regular', 'express', 'free'],
+      enum: ['regular', 'express'],
       default: 'regular',
+      required: true,
+    },
+    isFree: {
+      type: Boolean,
+      default: false,
       required: true,
     },
     totalCost: {
@@ -100,12 +106,12 @@ const moneyDeliverySchema = new Schema<IMoneyDelivery>(
   }
 );
 
-// Pre-save middleware to calculate totalCost based on transferType
+// Pre-save middleware to calculate totalCost based on isFree flag
 moneyDeliverySchema.pre('save', async function (next) {
-  if (this.transferType === 'free') {
+  if (this.isFree) {
     this.totalCost = 0;
   } else {
-    // For regular and express, totalCost = sendCost
+    // For paid transfers (regular/express), totalCost = sendCost
     this.totalCost = this.sendCost;
   }
   next();
@@ -142,11 +148,11 @@ moneyDeliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next)
       return next(new Error('From route and to route cannot be the same'));
     }
 
-    // Calculate totalCost based on transferType
-    if (update.transferType === 'free') {
+    // Calculate totalCost based on isFree flag
+    if (update.isFree === true) {
       update.totalCost = 0;
-    } else if (update.sendCost !== undefined || update.transferType !== undefined) {
-      // For regular and express, totalCost = sendCost
+    } else if (update.sendCost !== undefined || update.isFree === false) {
+      // For paid transfers (regular/express), totalCost = sendCost
       if (update.sendCost !== undefined) {
         update.totalCost = update.sendCost;
       }

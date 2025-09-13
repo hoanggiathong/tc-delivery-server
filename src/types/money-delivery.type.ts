@@ -17,7 +17,8 @@ export interface IMoneyDeliveryResponse extends BaseEntity {
   toRoute: IRouteResponse;
   sendMoneyAmount: number;
   sendCost: number;
-  transferType: 'regular' | 'express' | 'free';
+  transferType: 'regular' | 'express';
+  isFree: boolean;
   totalCost: number;
   notes?: string;
   createdByUser: string;
@@ -33,7 +34,8 @@ export interface IMoneyDeliveryCreateRequest {
   toRouteId: string;
   sendMoneyAmount: number;
   sendCost: number;
-  transferType?: 'regular' | 'express' | 'free';
+  transferType?: 'regular' | 'express';
+  isFree?: boolean;
   notes?: string;
 }
 
@@ -47,7 +49,8 @@ export interface IMoneyDeliveryUpdateRequest {
   toRouteId?: string;
   sendMoneyAmount?: number;
   sendCost?: number;
-  transferType?: 'regular' | 'express' | 'free';
+  transferType?: 'regular' | 'express';
+  isFree?: boolean;
   notes?: string;
 }
 
@@ -73,7 +76,8 @@ export interface IMoneyDeliveryWithPopulatedRefs {
   toRoute: IRoute;
   sendMoneyAmount: number;
   sendCost: number;
-  transferType: 'regular' | 'express' | 'free';
+  transferType: 'regular' | 'express';
+  isFree: boolean;
   totalCost: number;
   notes?: string;
   createdByUser: {
@@ -99,7 +103,7 @@ export interface INextMoneyDeliveryCodeResponse {
 
 // Interface for money delivery code lookup
 export interface IMoneyDeliveryCodeRequest {
-  deliveryIdentifier: string; // Format: codeT1T2 (e.g., 0907250001T4T1)
+  deliveryIdentifier: string; // Format: codeT1T2-T (e.g., 0907250001T4T1-T)
 }
 
 // Interface for code generation
@@ -144,7 +148,8 @@ export interface IMoneyDeliveryLeanPopulated {
   };
   sendMoneyAmount: number;
   sendCost: number;
-  transferType: 'regular' | 'express' | 'free';
+  transferType: 'regular' | 'express';
+  isFree: boolean;
   totalCost: number;
   notes?: string;
   createdByUser: {
@@ -199,7 +204,8 @@ export interface CreateMoneyDeliveryRequest {
   toRouteId: string;
   sendMoneyAmount: number;
   sendCost: number;
-  transferType?: 'regular' | 'express' | 'free';
+  transferType?: 'regular' | 'express';
+  isFree?: boolean;
   notes?: string;
 }
 
@@ -212,7 +218,8 @@ export interface UpdateMoneyDeliveryRequest {
   toRouteId?: string;
   sendMoneyAmount?: number;
   sendCost?: number;
-  transferType?: 'regular' | 'express' | 'free';
+  transferType?: 'regular' | 'express';
+  isFree?: boolean;
   notes?: string;
 }
 
@@ -243,7 +250,8 @@ export interface ITodayMoneyDeliveryItem {
   sendMoneyAmount: number;
   sendCost: number;
   totalCost: number;
-  transferType: 'regular' | 'express' | 'free';
+  transferType: 'regular' | 'express';
+  isFree: boolean;
   notes: string;
   fullCode: string;
   createdAt: Date;
@@ -306,7 +314,8 @@ export interface IMoneyDeliveryReportItem {
   sendCost: number;
   totalCost: number;
 
-  transferType: 'regular' | 'express' | 'free';
+  transferType: 'regular' | 'express';
+  isFree: boolean;
   notes?: string;
 }
 

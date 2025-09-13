@@ -233,6 +233,24 @@ describe('SettingsService', () => {
       expect(result).toBe(30000);
     });
 
+    it('should return 0 when isFree is true', async () => {
+      // Mock shouldn't be called when isFree is true
+      const mockGetShippingRate = jest.spyOn(settingsService, 'getShippingRate');
+
+      const result = await settingsService.calculateShippingFee(1500000, false, true);
+      expect(result).toBe(0);
+      expect(mockGetShippingRate).not.toHaveBeenCalled();
+    });
+
+    it('should return 0 when isFree is true even for express transfer', async () => {
+      // Mock shouldn't be called when isFree is true
+      const mockGetShippingRate = jest.spyOn(settingsService, 'getShippingRate');
+
+      const result = await settingsService.calculateShippingFee(1500000, true, true);
+      expect(result).toBe(0);
+      expect(mockGetShippingRate).not.toHaveBeenCalled();
+    });
+
     it('should throw error if no rate found', async () => {
       jest.spyOn(settingsService, 'getShippingRate').mockResolvedValue(null);
 

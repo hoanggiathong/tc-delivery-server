@@ -287,12 +287,13 @@ export class SettingsController {
         return;
       }
 
-      const { amount, isExpress }: CalculateShippingFeeInput['body'] = req.body;
-      const fee = await this.settingsService.calculateShippingFee(amount, isExpress);
+      const { amount, isExpress, isFree }: CalculateShippingFeeInput['body'] = req.body;
+      const fee = await this.settingsService.calculateShippingFee(amount, isExpress, isFree);
 
       Logger.info('Shipping fee calculated successfully', {
         amount,
         isExpress,
+        isFree,
         fee,
         userId: req.user.userId,
       });
@@ -303,6 +304,7 @@ export class SettingsController {
         data: {
           amount,
           isExpress,
+          isFree,
           shippingFee: fee,
         },
       };

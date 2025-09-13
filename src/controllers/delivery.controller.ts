@@ -103,9 +103,14 @@ export class DeliveryController {
    *                 example: "Thu tiền hàng"
    *               paymentType:
    *                 type: string
-   *                 enum: [paid, debt, free]
+   *                 enum: [paid, debt]
    *                 default: paid
    *                 example: "paid"
+   *               isFree:
+   *                 type: boolean
+   *                 default: false
+   *                 description: Whether delivery is free (totalCost will be 0)
+   *                 example: false
    *               notes:
    *                 type: string
    *                 example: "Hàng dễ vỡ, vui lòng cẩn thận"
@@ -159,6 +164,8 @@ export class DeliveryController {
    *                 collectForCustomer: 500000
    *                 collectForCustomerCost: 5000
    *                 collectForCustomerNote: "Thu tiền hàng"
+   *                 paymentType: "paid"
+   *                 isFree: false
    *                 notes: "Hàng dễ vỡ, vui lòng cẩn thận"
    *                 details:
    *                   weight: 2.5
@@ -182,7 +189,8 @@ export class DeliveryController {
    *                 itemCost: 0
    *                 collectForCustomer: 0
    *                 collectForCustomerCost: 0
-   *                 paymentType: "free"
+   *                 paymentType: "paid"
+   *                 isFree: true
    *                 notes: "Giao hàng miễn phí"
    *     responses:
    *       201:
@@ -241,6 +249,7 @@ export class DeliveryController {
    *                     collectForCustomerCost: 5000
    *                     totalCost: 45000
    *                     paymentType: "paid"
+   *                     isFree: false
    *                     details:
    *                       weight: 2.5
    *                       length: 30
@@ -399,8 +408,11 @@ export class DeliveryController {
    *                 type: string
    *               paymentType:
    *                 type: string
-   *                 enum: [paid, debt, free]
+   *                 enum: [paid, debt]
    *                 description: Payment type
+   *               isFree:
+   *                 type: boolean
+   *                 description: Whether delivery is free
    *               notes:
    *                 type: string
    *               details:

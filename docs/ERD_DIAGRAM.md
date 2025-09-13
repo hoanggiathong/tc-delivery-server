@@ -37,6 +37,9 @@ erDiagram
         string code UK "duy nhất, định dạng: [A-Z][0-9]+, chữ hoa, trim"
         string name "bắt buộc, tối đa 100 ký tự, trim"
         string address "tùy chọn, tối đa 200 ký tự, trim"
+        number distance "khoảng cách, tùy chọn, tối thiểu 0"
+        number surcharge "phụ phí, tùy chọn, tối thiểu 0"
+        enum surchargeUnit "percentage|fixed, mặc định percentage"
         datetime createdAt "tự động tạo"
         datetime updatedAt "tự động cập nhật"
     }
@@ -104,8 +107,9 @@ erDiagram
         ObjectId toRoute FK "tham chiếu: ROUTES, bắt buộc"
         number sendMoneyAmount "số tiền gửi, bắt buộc, tối thiểu 0"
         number sendCost "phí dịch vụ, bắt buộc, tối thiểu 0"
-        enum transferType "regular|express|free, mặc định regular"
-        number totalCost "tính toán: sendCost (free thì = 0)"
+        enum transferType "regular|express, mặc định regular"
+        boolean isFree "miễn phí, mặc định false"
+        number totalCost "tính toán: isFree ? 0 : sendCost"
         string notes "tùy chọn, trim"
         ObjectId createdByUser FK "tham chiếu: USERS, bắt buộc"
         datetime createdAt "tự động tạo"
@@ -206,6 +210,9 @@ erDiagram
 - **Định dạng mã**: Phải khớp với pattern `[A-Z]\d+` (ví dụ: T1, T2, A1)
 - **Tự động chuyển đổi**: Mã được tự động chuyển thành chữ hoa
 - **Địa chỉ**: Trường tùy chọn, tối đa 200 ký tự, lưu thông tin địa chỉ tuyến đường
+- **Khoảng cách**: Trường tùy chọn, số dương (≥ 0), đơn vị theo km
+- **Phụ phí**: Trường tùy chọn, số dương (≥ 0), áp dụng theo surchargeUnit
+- **Đơn vị phụ phí**: percentage (%) hoặc fixed (số tiền cố định), mặc định percentage
 
 #### Bảng USER_ROUTES
 - **Ràng buộc duy nhất**: Mỗi người dùng chỉ có thể được phân công vào một tuyến đường một lần (userId + routeId)
@@ -252,14 +259,16 @@ erDiagram
 - **Hình thức chuyển tiền (transferType)**:
   - `regular` (mặc định): Chuyển tiền thường, sendCost tính theo regularShippingFee
   - `express`: Chuyển tiền nhanh, sendCost tính theo expressShippingFee
-  - `free`: Miễn phí, totalCost = 0
+- **Chế độ miễn phí (isFree)**:
+  - `false` (mặc định): Tính phí bình thường theo transferType
+  - `true`: Miễn phí hoàn toàn, totalCost = 0
 - **Tính phí dịch vụ (sendCost)**:
   - Tính dựa trên sendMoneyAmount và shipping rates configuration
   - Hỗ trợ phí cố định (VND/USD) hoặc phần trăm (%)
   - Tự động cập nhật khi thay đổi transferType hoặc sendMoneyAmount
 - **Chi phí tổng**:
-  - `totalCost = sendCost` cho regular và express
-  - `totalCost = 0` cho free
+  - `totalCost = sendCost` khi isFree = false (regular/express)
+  - `totalCost = 0` khi isFree = true (miễn phí)
 - **Index hiệu suất**: Cùng pattern tối ưu như deliveries
 
 
@@ -479,12 +488,18 @@ erDiagram
 - **Cập Nhật Công Thức TotalCost**: Loại bỏ `homeDeliveryCost` khỏi tính toán tổng chi phí
   - Công thức cũ: `totalCost = cost + homeDeliveryCost + itemCost(phí trị giá) + collectForCustomerCost`
   - Công thức mới: `totalCost = cost + itemCost(phí trị giá) + collectForCustomerCost`
-- **Money Delivery Transfer Types**: Thêm hình thức chuyển tiền cho MONEY_DELIVERIES
-  - Thêm field `transferType`: regular (mặc định), express, free
+- **Money Delivery Transfer Types**: Cập nhật hình thức chuyển tiền cho MONEY_DELIVERIES
+  - Cập nhật field `transferType`: regular (mặc định), express (loại bỏ 'free')
+  - Thêm field `isFree`: boolean (mặc định false) - tách riêng logic miễn phí
   - Tự động tính sendCost dựa trên sendMoneyAmount và transferType
-  - Free transfer: totalCost = 0
-  - Regular: Sử dụng regularShippingFee từ settings cho sendCost
-  - Express: Sử dụng expressShippingFee từ settings cho sendCost
+  - Miễn phí: isFree = true → totalCost = 0
+  - Regular: isFree = false → sử dụng regularShippingFee từ settings
+  - Express: isFree = false → sử dụng expressShippingFee từ settings
+- **Routes Enhancement**: Thêm các trường mới cho bảng ROUTES
+  - `distance`: Khoảng cách tuyến đường (number, optional, ≥ 0)
+  - `surcharge`: Phụ phí tuyến đường (number, optional, ≥ 0)  
+  - `surchargeUnit`: Đơn vị phụ phí ('percentage' | 'fixed', mặc định 'percentage')
+  - Hỗ trợ tính phụ phí linh hoạt theo phần trăm hoặc số tiền cố định
 
 ### Cân Nhắc Migration và Mở Rộng
 

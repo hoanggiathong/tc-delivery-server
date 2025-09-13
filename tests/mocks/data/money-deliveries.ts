@@ -39,6 +39,7 @@ export const createMockMoneyDelivery = (
     sendMoneyAmount: 1000000,
     sendCost: 50000,
     transferType: 'regular' as const,
+    isFree: false,
     totalCost: 50000, // sendCost only
     createdByUser: 'testuser',
     createdAt: new Date('2023-01-01'),
@@ -138,6 +139,7 @@ export const mockMoneyDeliveryForIntegration = {
   sendMoneyAmount: 1000000,
   sendCost: 50000,
   transferType: 'regular' as const,
+  isFree: false,
   totalCost: 50000,
   notes: 'Ghi chú chuyển tiền',
   createdByUser: 'user123',

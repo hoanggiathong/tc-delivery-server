@@ -277,7 +277,12 @@ describe('MoneyDeliveryService', () => {
     });
 
     it('should calculate sendCost correctly for free transfer', async () => {
-      const freeData = { ...createData, transferType: 'free' as const, sendCost: 0 };
+      const freeData = {
+        ...createData,
+        transferType: 'regular' as const,
+        isFree: true,
+        sendCost: 0,
+      };
 
       // Mock MoneyDelivery constructor
       MockedMoneyDelivery.mockImplementation(() => mockMoneyDelivery as any);
@@ -294,7 +299,8 @@ describe('MoneyDeliveryService', () => {
           toRoute: mockRoute,
           sendMoneyAmount: 1000000,
           sendCost: 0,
-          transferType: 'free',
+          transferType: 'regular',
+          isFree: true,
           createdByUser: 'testuser',
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -305,7 +311,8 @@ describe('MoneyDeliveryService', () => {
 
       expect(result).toBeDefined();
       expect(result.sendCost).toBe(0);
-      expect(result.transferType).toBe('free');
+      expect(result.transferType).toBe('regular');
+      expect(result.isFree).toBe(true);
     });
   });
 

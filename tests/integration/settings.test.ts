@@ -296,6 +296,7 @@ describe('Settings API Integration Tests', () => {
       expect(response.body.data).toEqual({
         amount: 1500000,
         isExpress: false,
+        isFree: false,
         shippingFee: 15000,
       });
     });
@@ -316,7 +317,48 @@ describe('Settings API Integration Tests', () => {
       expect(response.body.data).toEqual({
         amount: 1500000,
         isExpress: true,
+        isFree: false,
         shippingFee: 30000,
+      });
+    });
+
+    it('should return 0 for free shipping', async () => {
+      MockedSettingsService.prototype.calculateShippingFee.mockResolvedValue(0);
+      const response = await request(app)
+        .post('/api/settings/calculate-shipping-fee')
+        .send({
+          amount: 1500000,
+          isExpress: false,
+          isFree: true,
+        })
+        .set('Authorization', `Bearer ${userToken}`)
+        .expect(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toEqual({
+        amount: 1500000,
+        isExpress: false,
+        isFree: true,
+        shippingFee: 0,
+      });
+    });
+
+    it('should return 0 for free express shipping', async () => {
+      MockedSettingsService.prototype.calculateShippingFee.mockResolvedValue(0);
+      const response = await request(app)
+        .post('/api/settings/calculate-shipping-fee')
+        .send({
+          amount: 1500000,
+          isExpress: true,
+          isFree: true,
+        })
+        .set('Authorization', `Bearer ${userToken}`)
+        .expect(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toEqual({
+        amount: 1500000,
+        isExpress: true,
+        isFree: true,
+        shippingFee: 0,
       });
     });
 

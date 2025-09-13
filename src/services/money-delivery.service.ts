@@ -121,6 +121,7 @@ export class MoneyDeliveryService {
       sendMoneyAmount: populated.sendMoneyAmount,
       sendCost: populated.sendCost,
       transferType: populated.transferType,
+      isFree: populated.isFree,
       totalCost: populated.totalCost,
       notes: populated.notes,
       createdByUser: populated.createdByUser.username,
@@ -171,6 +172,7 @@ export class MoneyDeliveryService {
       sendMoneyAmount: moneyDelivery.sendMoneyAmount,
       sendCost: moneyDelivery.sendCost,
       transferType: moneyDelivery.transferType,
+      isFree: moneyDelivery.isFree,
       totalCost: moneyDelivery.totalCost,
       notes: moneyDelivery.notes,
       createdByUser: moneyDelivery.createdByUser.username,
@@ -509,13 +511,13 @@ export class MoneyDeliveryService {
   }
 
   /**
-   * Parse delivery identifier (e.g., "0907250001T4T1" -> { code: "2401250001", fromRouteCode: "T1", toRouteCode: "T2" })
+   * Parse delivery identifier (e.g., "0907250001T4T1-T" -> { code: "2401250001", fromRouteCode: "T1", toRouteCode: "T2" })
    */
   private parseDeliveryIdentifier(
     deliveryIdentifier: string
   ): { code: string; fromRouteCode: string; toRouteCode: string } | null {
-    // Expected format: 10 digits + route code + route code (e.g., 0907250001T4T1)
-    const match = deliveryIdentifier.match(/^(\d{10})([A-Z]\d+)([A-Z]\d+)$/);
+    // Expected format: 10 digits + route code + route code + -T suffix (e.g., 0907250001T4T1-T)
+    const match = deliveryIdentifier.match(/^(\d{10})([A-Z]\d+)([A-Z]\d+)-T$/);
     if (!match) {
       return null;
     }
@@ -1153,6 +1155,105 @@ export class MoneyDeliveryService {
         limit,
       });
       throw new Error('Failed to generate cost report');
+    }
+  }
+
+  /**
+   * Update money delivery by fullCode (only sender, receiver, and route fields allowed)
+   */
+  async updateMoneyDeliveryByFullCode(
+    fullCode: string,
+    updateData: {
+      senderName?: string;
+      senderPhone?: string;
+      receiverName?: string;
+      receiverPhone?: string;
+      toRouteId?: string;
+    }
+  ): Promise<IMoneyDeliveryResponse> {
+    try {
+      // Parse fullCode to get code and route information
+      const parsed = this.parseDeliveryIdentifier(fullCode);
+      if (!parsed) {
+        throw new Error('Invalid fullCode format');
+      }
+
+      const { code, fromRouteCode, toRouteCode } = parsed;
+
+      // Find fromRoute and toRoute by codes
+      const [fromRoute, toRoute] = await Promise.all([
+        Route.findOne({ code: fromRouteCode }),
+        Route.findOne({ code: toRouteCode }),
+      ]);
+
+      if (!fromRoute || !toRoute) {
+        throw new Error('Routes not found for the given fullCode');
+      }
+
+      // Find existing money delivery
+      const existingMoneyDelivery = await MoneyDelivery.findOne({
+        code,
+        fromRoute: fromRoute._id,
+        toRoute: toRoute._id,
+      });
+
+      if (!existingMoneyDelivery) {
+        throw new Error('Money delivery not found');
+      }
+
+      // Prepare update object
+      const updates: any = {};
+
+      // Handle sender update (create if not exists)
+      if (updateData.senderName || updateData.senderPhone) {
+        const sender = await this.customerService.updateOrCreateCustomerWithPartialData(
+          existingMoneyDelivery.sender.toString(),
+          updateData.senderName,
+          updateData.senderPhone
+        );
+        updates.sender = sender.id;
+      }
+
+      // Handle receiver update (create if not exists)
+      if (updateData.receiverName || updateData.receiverPhone) {
+        const receiver = await this.customerService.updateOrCreateCustomerWithPartialData(
+          existingMoneyDelivery.receiver.toString(),
+          updateData.receiverName,
+          updateData.receiverPhone
+        );
+        updates.receiver = receiver.id;
+      }
+
+      // Handle route update
+      if (updateData.toRouteId) {
+        const newToRoute = await Route.findById(updateData.toRouteId);
+        if (!newToRoute) {
+          throw new Error('New to route not found');
+        }
+        updates.toRoute = newToRoute._id;
+        // Update subCode and fullCode when route changes
+        updates.subCode = `${fromRoute.code}${newToRoute.code}`;
+        updates.fullCode = `${code}${fromRoute.code}${newToRoute.code}`;
+      }
+
+      // Update the money delivery
+      const updatedMoneyDelivery = await MoneyDelivery.findByIdAndUpdate(
+        existingMoneyDelivery._id,
+        updates,
+        { new: true, runValidators: true }
+      );
+
+      if (!updatedMoneyDelivery) {
+        throw new Error('Failed to update money delivery');
+      }
+
+      return this.transformMoneyDeliveryToResponse(updatedMoneyDelivery);
+    } catch (error) {
+      Logger.error('Error updating money delivery by fullCode:', error);
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to update money delivery by fullCode');
     }
   }
 }

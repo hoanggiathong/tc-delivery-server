@@ -30,7 +30,8 @@ export interface IDelivery extends Document {
   };
   notes?: string;
   totalCost: number;
-  paymentType: 'paid' | 'debt' | 'free'; // 'paid' (default), 'debt' (nợ), 'free' (miễn phí)
+  paymentType: 'paid' | 'debt'; // 'paid' (default), 'debt' (nợ)
+  isFree: boolean; // Miễn phí (default false)
   createdByUser: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -172,8 +173,13 @@ const deliverySchema = new Schema<IDelivery>(
     },
     paymentType: {
       type: String,
-      enum: ['paid', 'debt', 'free'],
+      enum: ['paid', 'debt'],
       default: 'paid',
+      required: true,
+    },
+    isFree: {
+      type: Boolean,
+      default: false,
       required: true,
     },
     createdByUser: {
@@ -203,8 +209,12 @@ deliverySchema.pre('save', function (next) {
     return next(new Error('From route and to route cannot be the same'));
   }
 
-  // Calculate totalCost = cost + itemCost + collectForCustomerCost (homeDeliveryCost excluded)
-  this.totalCost = this.cost + this.itemCost + this.collectForCustomerCost;
+  // Calculate totalCost: if isFree, then 0; otherwise cost + itemCost + collectForCustomerCost
+  if (this.isFree) {
+    this.totalCost = 0;
+  } else {
+    this.totalCost = this.cost + this.itemCost + this.collectForCustomerCost;
+  }
   next();
 });
 
@@ -228,12 +238,13 @@ deliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next) {
       return next(new Error('From route and to route cannot be the same'));
     }
 
-    // Only calculate if at least one cost field is being updated
+    // Only calculate if at least one cost field or isFree is being updated
     if (
       update.cost !== undefined ||
       update.itemCost !== undefined ||
       update.collectCost !== undefined ||
-      update.collectForCustomerCost !== undefined
+      update.collectForCustomerCost !== undefined ||
+      update.isFree !== undefined
     ) {
       // Get current document to merge with updates
       const currentDoc = await this.model.findOne(this.getQuery());
@@ -244,9 +255,14 @@ deliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next) {
           update.collectForCustomerCost !== undefined
             ? update.collectForCustomerCost
             : currentDoc.collectForCustomerCost;
+        const isFree = update.isFree !== undefined ? update.isFree : currentDoc.isFree;
 
-        // Calculate totalCost = cost + itemCost + collectForCustomerCost (homeDeliveryCost excluded)
-        update.totalCost = cost + itemCost + collectForCustomerCost;
+        // Calculate totalCost: if isFree, then 0; otherwise cost + itemCost + collectForCustomerCost
+        if (isFree) {
+          update.totalCost = 0;
+        } else {
+          update.totalCost = cost + itemCost + collectForCustomerCost;
+        }
       }
     }
   }

@@ -10,6 +10,7 @@ import {
   moneyDeliveryCodeSchema,
   frequentMoneyCustomersSchema,
   moneyDeliveryCostReportSchema,
+  updateMoneyDeliveryByFullCodeSchema,
 } from '@/schemas/money-delivery.schema';
 
 const router = Router();
@@ -153,6 +154,13 @@ router.get(
   '/code/:deliveryIdentifier',
   validate(moneyDeliveryCodeSchema),
   moneyDeliveryController.getMoneyDeliveryByCode
+);
+
+// Update money delivery by fullCode route (must be before /:id to avoid conflicts)
+router.put(
+  '/code/:fullCode',
+  validate(updateMoneyDeliveryByFullCodeSchema),
+  moneyDeliveryController.updateMoneyDeliveryByFullCode
 );
 
 router.get(

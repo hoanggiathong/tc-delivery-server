@@ -96,17 +96,30 @@ const settingsController = new SettingsController();
  *                 default: false
  *                 description: Whether to calculate express shipping fee
  *                 example: false
+ *               isFree:
+ *                 type: boolean
+ *                 default: false
+ *                 description: Whether the shipping is free (returns 0 fee regardless of amount/type)
+ *                 example: false
  *           examples:
  *             regular:
  *               summary: Regular shipping fee
  *               value:
  *                 amount: 1000000
  *                 isExpress: false
+ *                 isFree: false
  *             express:
  *               summary: Express shipping fee
  *               value:
  *                 amount: 1000000
  *                 isExpress: true
+ *                 isFree: false
+ *             free:
+ *               summary: Free shipping
+ *               value:
+ *                 amount: 1000000
+ *                 isExpress: false
+ *                 isFree: true
  *     responses:
  *       200:
  *         description: Shipping fee calculated successfully
@@ -132,6 +145,10 @@ const settingsController = new SettingsController();
  *                       type: boolean
  *                       description: Whether express fee was calculated
  *                       example: false
+ *                     isFree:
+ *                       type: boolean
+ *                       description: Whether the shipping was free
+ *                       example: false
  *                     shippingFee:
  *                       type: number
  *                       description: The calculated shipping fee
@@ -145,6 +162,7 @@ const settingsController = new SettingsController();
  *                   data:
  *                     amount: 1000000
  *                     isExpress: false
+ *                     isFree: false
  *                     shippingFee: 15000
  *               expressFee:
  *                 summary: Express shipping fee response
@@ -154,6 +172,7 @@ const settingsController = new SettingsController();
  *                   data:
  *                     amount: 1000000
  *                     isExpress: true
+ *                     isFree: false
  *                     shippingFee: 30000
  *               percentageFee:
  *                 summary: Percentage-based fee response
@@ -163,7 +182,18 @@ const settingsController = new SettingsController();
  *                   data:
  *                     amount: 10000000
  *                     isExpress: false
+ *                     isFree: false
  *                     shippingFee: 100000
+ *               freeFee:
+ *                 summary: Free shipping response
+ *                 value:
+ *                   success: true
+ *                   message: "Shipping fee calculated successfully"
+ *                   data:
+ *                     amount: 1000000
+ *                     isExpress: false
+ *                     isFree: true
+ *                     shippingFee: 0
  *       400:
  *         description: Invalid input data
  *         content:
