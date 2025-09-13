@@ -1,9 +1,11 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Document, Schema, Types } from 'mongoose';
 
 export interface ICustomer extends Document {
   _id: string;
   name: string;
   phone: string;
+  fromRouteId: Types.ObjectId;
+  toRouteId: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -21,6 +23,16 @@ const customerSchema = new Schema<ICustomer>(
       required: [true, 'Phone is required'],
       trim: true,
       match: [/^\+?[1-9]\d{1,14}$/, 'Please enter a valid phone number'],
+    },
+    fromRouteId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Route',
+      required: [true, 'From route is required'],
+    },
+    toRouteId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Route',
+      required: [true, 'To route is required'],
     },
   },
   {

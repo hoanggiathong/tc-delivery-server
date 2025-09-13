@@ -129,6 +129,8 @@ describe('Customer Endpoints', () => {
         id: customerId,
         name: 'Jane Doe',
         phone: '+1987654321',
+        fromRouteId: '507f1f77bcf86cd799439011',
+        toRouteId: '507f1f77bcf86cd799439012',
         createdAt: new Date('2025-06-27T07:51:17.342Z'),
         updatedAt: new Date('2025-06-27T07:51:17.342Z'),
       };
@@ -185,6 +187,8 @@ describe('Customer Endpoints', () => {
         id: customerId,
         name: 'John Doe',
         phone: '+1234567890',
+        fromRouteId: '507f1f77bcf86cd799439011',
+        toRouteId: '507f1f77bcf86cd799439012',
         createdAt: new Date('2025-06-27T07:51:17.342Z'),
         updatedAt: new Date('2025-06-27T07:51:17.342Z'),
       };

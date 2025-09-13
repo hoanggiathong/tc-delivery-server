@@ -18,6 +18,8 @@ describe('CustomerService', () => {
       _id: 'customer123',
       name: 'John Doe',
       phone: '+1234567890',
+      fromRouteId: '507f1f77bcf86cd799439011',
+      toRouteId: '507f1f77bcf86cd799439012',
       createdAt: new Date(),
       updatedAt: new Date(),
       save: jest.fn(),
@@ -29,6 +31,8 @@ describe('CustomerService', () => {
       const customerData = {
         name: 'John Doe',
         phone: '+1234567890',
+        fromRouteId: '507f1f77bcf86cd799439011',
+        toRouteId: '507f1f77bcf86cd799439012',
       };
 
       // Mock findOne to return null (no existing customer)
@@ -63,6 +67,8 @@ describe('CustomerService', () => {
       const customerData = {
         name: 'John Doe',
         phone: '+1234567890',
+        fromRouteId: '507f1f77bcf86cd799439011',
+        toRouteId: '507f1f77bcf86cd799439012',
       };
 
       // Mock findOne to return existing customer
@@ -191,7 +197,12 @@ describe('CustomerService', () => {
       };
       MockedCustomer.findOne = jest.fn().mockReturnValue(mockFindOne);
 
-      const result = await customerService.findOrCreateCustomer(name, phone);
+      const result = await customerService.findOrCreateCustomer(
+        name,
+        phone,
+        '507f1f77bcf86cd799439011',
+        '507f1f77bcf86cd799439012'
+      );
 
       expect(MockedCustomer.findOne).toHaveBeenCalledWith({ name, phone });
       expect(mockFindOne.lean).toHaveBeenCalled();
@@ -222,7 +233,12 @@ describe('CustomerService', () => {
       MockedCustomer.mockImplementation(() => mockCustomerInstance);
       mockCustomerInstance.save.mockResolvedValue(mockCustomerInstance);
 
-      const result = await customerService.findOrCreateCustomer(name, phone);
+      const result = await customerService.findOrCreateCustomer(
+        name,
+        phone,
+        '507f1f77bcf86cd799439011',
+        '507f1f77bcf86cd799439012'
+      );
 
       expect(MockedCustomer.findOne).toHaveBeenCalledWith({ name, phone });
       expect(mockFindOne.lean).toHaveBeenCalled();

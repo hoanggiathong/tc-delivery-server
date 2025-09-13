@@ -1,32 +1,12 @@
 import { MoneyDelivery, IMoneyDelivery } from '@/models/money-delivery.model';
 import { Customer } from '@/models/customer.model';
 import { Route } from '@/models/route.model';
-import { User } from '@/models/user.model';
 import { Types, PipelineStage } from 'mongoose';
 import { CustomerService } from '@/services/customer.service';
 import { CodeGeneratorService } from '@/services/code-generator.service';
 import { SettingsService } from '@/services/settings.service';
+import { UserService } from '@/services/user.service';
 import Logger from '@/utils/logger';
-
-interface IMoneyAggregationResultItem {
-  _id: {
-    receiverName: string;
-    receiverPhone: string;
-    toRouteId: Types.ObjectId;
-    toRouteCode: string;
-    toRouteName: string;
-  };
-  deliveryCount: number;
-  totalSendMoneyAmount: number;
-  totalSendCost: number;
-  totalCost: number;
-  lastDeliveryDate: Date;
-  firstDeliveryDate: Date;
-  senderInfo: {
-    name: string;
-    phone: string;
-  };
-}
 
 import {
   IMoneyDeliveryCreateRequest,
@@ -43,15 +23,18 @@ import {
   IMoneyDeliveryCostReport,
   IMoneyDeliveryCostReportSummary,
   IMoneyDeliveryReportItem,
+  IMoneyAggregationResultItem,
 } from '@/types/money-delivery.type';
 
 export class MoneyDeliveryService {
   private customerService: CustomerService;
   private settingsService: SettingsService;
+  private userService: UserService;
 
   constructor() {
     this.customerService = new CustomerService();
     this.settingsService = new SettingsService();
+    this.userService = new UserService();
   }
 
   /**
@@ -76,8 +59,8 @@ export class MoneyDeliveryService {
   ): Promise<IMoneyDeliveryResponse> {
     // Populate sender, receiver, fromRoute, toRoute and createdByUser
     const populatedMoneyDelivery = await moneyDelivery.populate([
-      { path: 'sender', select: '_id name phone createdAt updatedAt' },
-      { path: 'receiver', select: '_id name phone createdAt updatedAt' },
+      { path: 'sender', select: '_id name phone fromRouteId toRouteId createdAt updatedAt' },
+      { path: 'receiver', select: '_id name phone fromRouteId toRouteId createdAt updatedAt' },
       { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
       { path: 'toRoute', select: '_id code name createdAt updatedAt' },
       { path: 'createdByUser', select: '_id username' },
@@ -94,6 +77,8 @@ export class MoneyDeliveryService {
         id: populated.sender._id,
         name: populated.sender.name,
         phone: populated.sender.phone,
+        fromRouteId: populated.sender.fromRouteId.toString(),
+        toRouteId: populated.sender.toRouteId.toString(),
         createdAt: populated.sender.createdAt,
         updatedAt: populated.sender.updatedAt,
       },
@@ -101,6 +86,8 @@ export class MoneyDeliveryService {
         id: populated.receiver._id,
         name: populated.receiver.name,
         phone: populated.receiver.phone,
+        fromRouteId: populated.receiver.fromRouteId.toString(),
+        toRouteId: populated.receiver.toRouteId.toString(),
         createdAt: populated.receiver.createdAt,
         updatedAt: populated.receiver.updatedAt,
       },
@@ -145,6 +132,8 @@ export class MoneyDeliveryService {
         id: moneyDelivery.sender._id,
         name: moneyDelivery.sender.name,
         phone: moneyDelivery.sender.phone,
+        fromRouteId: moneyDelivery.sender.fromRouteId.toString(),
+        toRouteId: moneyDelivery.sender.toRouteId.toString(),
         createdAt: moneyDelivery.sender.createdAt,
         updatedAt: moneyDelivery.sender.updatedAt,
       },
@@ -152,6 +141,8 @@ export class MoneyDeliveryService {
         id: moneyDelivery.receiver._id,
         name: moneyDelivery.receiver.name,
         phone: moneyDelivery.receiver.phone,
+        fromRouteId: moneyDelivery.receiver.fromRouteId.toString(),
+        toRouteId: moneyDelivery.receiver.toRouteId.toString(),
         createdAt: moneyDelivery.receiver.createdAt,
         updatedAt: moneyDelivery.receiver.updatedAt,
       },
@@ -188,25 +179,26 @@ export class MoneyDeliveryService {
     data: IMoneyDeliveryCreateRequest,
     userId: string
   ): Promise<IMoneyDeliveryResponse> {
+    // Get user's selected route as fromRoute
+    const fromRouteId = await this.userService.getUserSelectedRouteId(userId);
+
     // Find or create sender and receiver
     const sender = await this.customerService.findOrCreateCustomer(
       data.senderName,
-      data.senderPhone
+      data.senderPhone,
+      fromRouteId,
+      data.toRouteId
     );
     const receiver = await this.customerService.findOrCreateCustomer(
       data.receiverName,
-      data.receiverPhone
+      data.receiverPhone,
+      fromRouteId,
+      data.toRouteId
     );
-
-    // Get user's selected route as fromRoute
-    const user = await User.findById(userId).select('selectedRouteId');
-    if (!user || !user.selectedRouteId) {
-      throw new Error('User must have a selected route to create money deliveries');
-    }
 
     // Validate fromRoute and toRoute exist
     const [fromRoute, toRoute] = await Promise.all([
-      Route.findById(user.selectedRouteId),
+      Route.findById(fromRouteId),
       Route.findById(data.toRouteId),
     ]);
 
@@ -220,7 +212,7 @@ export class MoneyDeliveryService {
     // Generate money delivery code with new system
     const codeData = await CodeGeneratorService.generateNextMoneyDeliveryCode(
       data.toRouteId,
-      user.selectedRouteId.toString()
+      fromRouteId
     );
 
     // Get transfer type (default to 'regular' if not specified)
@@ -242,7 +234,7 @@ export class MoneyDeliveryService {
       subCode: codeData.subCode,
       sender: sender.id,
       receiver: receiver.id,
-      fromRoute: user.selectedRouteId,
+      fromRoute: fromRouteId,
       toRoute: data.toRouteId,
       sendMoneyAmount: data.sendMoneyAmount,
       sendCost,
@@ -273,7 +265,12 @@ export class MoneyDeliveryService {
     if (data.senderName || data.senderPhone) {
       const senderName = data.senderName || moneyDelivery.sender.toString();
       const senderPhone = data.senderPhone || moneyDelivery.sender.toString();
-      const sender = await this.customerService.findOrCreateCustomer(senderName, senderPhone);
+      const sender = await this.customerService.findOrCreateCustomer(
+        senderName,
+        senderPhone,
+        data.fromRouteId || moneyDelivery.fromRoute.toString(),
+        data.toRouteId || moneyDelivery.toRoute.toString()
+      );
       updateData.sender = sender.id;
     } else {
       updateData.sender = moneyDelivery.sender;
@@ -283,7 +280,12 @@ export class MoneyDeliveryService {
     if (data.receiverName || data.receiverPhone) {
       const receiverName = data.receiverName || moneyDelivery.receiver.toString();
       const receiverPhone = data.receiverPhone || moneyDelivery.receiver.toString();
-      const receiver = await this.customerService.findOrCreateCustomer(receiverName, receiverPhone);
+      const receiver = await this.customerService.findOrCreateCustomer(
+        receiverName,
+        receiverPhone,
+        data.fromRouteId || moneyDelivery.fromRoute.toString(),
+        data.toRouteId || moneyDelivery.toRoute.toString()
+      );
       updateData.receiver = receiver.id;
     } else {
       updateData.receiver = moneyDelivery.receiver;
@@ -418,15 +420,12 @@ export class MoneyDeliveryService {
    */
   async getNextCode(toRouteId: string, userId: string): Promise<INextMoneyDeliveryCodeResponse> {
     // Get user's selected route as fromRoute
-    const user = await User.findById(userId).select('selectedRouteId');
-    if (!user || !user.selectedRouteId) {
-      throw new Error('User must have a selected route to get next code');
-    }
+    const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
 
     // Validate routes exist
     const [toRoute, fromRoute] = await Promise.all([
       Route.findById(toRouteId),
-      Route.findById(user.selectedRouteId),
+      Route.findById(selectedRouteId),
     ]);
 
     if (!toRoute) {
@@ -439,7 +438,7 @@ export class MoneyDeliveryService {
     // Generate next code
     const codeData = await CodeGeneratorService.generateNextMoneyDeliveryCode(
       toRouteId,
-      user.selectedRouteId.toString()
+      selectedRouteId
     );
 
     return {
@@ -540,8 +539,10 @@ export class MoneyDeliveryService {
       const skip = (page - 1) * limit;
 
       // Get user's selectedRouteId to filter by fromRoute
-      const user = await User.findById(userId).select('selectedRouteId').lean();
-      if (!user || !user.selectedRouteId) {
+      let selectedRouteId: string;
+      try {
+        selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
+      } catch {
         return {
           senderIdentifier,
           senderInfo: null,
@@ -610,7 +611,7 @@ export class MoneyDeliveryService {
         {
           $match: {
             sender: { $in: senderIds },
-            fromRoute: new Types.ObjectId(user.selectedRouteId),
+            fromRoute: new Types.ObjectId(selectedRouteId),
           },
         },
 
@@ -742,14 +743,12 @@ export class MoneyDeliveryService {
    */
   async getTodayReport(userId: string): Promise<ITodayMoneyDeliveryReport> {
     try {
-      // Get user's selectedRouteId to filter by fromRoute
-      const user = await User.findById(userId).select('selectedRouteId').lean();
-      if (!user || !user.selectedRouteId) {
-        throw new Error('User route not found');
-      }
+      // Get user's selected route information
+      const userRouteInfo = await this.userService.getUserSelectedRoute(userId);
+      const selectedRouteId = userRouteInfo.selectedRouteId;
 
       // Get route information
-      const route = await Route.findById(user.selectedRouteId).select('_id code name').lean();
+      const route = await Route.findById(selectedRouteId).select('_id code name').lean();
       if (!route) {
         throw new Error('Selected route not found');
       }
@@ -764,7 +763,7 @@ export class MoneyDeliveryService {
       const pipeline: PipelineStage[] = [
         {
           $match: {
-            fromRoute: new Types.ObjectId(user.selectedRouteId),
+            fromRoute: new Types.ObjectId(selectedRouteId),
             createdAt: {
               $gte: today,
               $lt: tomorrow,
@@ -912,14 +911,12 @@ export class MoneyDeliveryService {
     limit: number = 100
   ): Promise<IMoneyDeliveryCostReport> {
     try {
-      // Get user's selectedRouteId to filter by fromRoute
-      const user = await User.findById(userId).select('selectedRouteId').lean();
-      if (!user || !user.selectedRouteId) {
-        throw new Error('User route not found');
-      }
+      // Get user's selected route information
+      const userRouteInfo = await this.userService.getUserSelectedRoute(userId);
+      const selectedRouteId = userRouteInfo.selectedRouteId;
 
       // Get route information
-      const route = await Route.findById(user.selectedRouteId).select('_id code name').lean();
+      const route = await Route.findById(selectedRouteId).select('_id code name').lean();
       if (!route) {
         throw new Error('Selected route not found');
       }
@@ -934,7 +931,7 @@ export class MoneyDeliveryService {
       const pipeline: PipelineStage[] = [
         {
           $match: {
-            fromRoute: new Types.ObjectId(user.selectedRouteId),
+            fromRoute: new Types.ObjectId(selectedRouteId),
             createdAt: {
               $gte: startDate,
               $lte: endOfDay,
@@ -1168,6 +1165,7 @@ export class MoneyDeliveryService {
       senderPhone?: string;
       receiverName?: string;
       receiverPhone?: string;
+      fromRouteId?: string;
       toRouteId?: string;
     }
   ): Promise<IMoneyDeliveryResponse> {
@@ -1209,7 +1207,9 @@ export class MoneyDeliveryService {
         const sender = await this.customerService.updateOrCreateCustomerWithPartialData(
           existingMoneyDelivery.sender.toString(),
           updateData.senderName,
-          updateData.senderPhone
+          updateData.senderPhone,
+          updateData.fromRouteId,
+          updateData.toRouteId
         );
         updates.sender = sender.id;
       }
@@ -1219,7 +1219,9 @@ export class MoneyDeliveryService {
         const receiver = await this.customerService.updateOrCreateCustomerWithPartialData(
           existingMoneyDelivery.receiver.toString(),
           updateData.receiverName,
-          updateData.receiverPhone
+          updateData.receiverPhone,
+          updateData.fromRouteId,
+          updateData.toRouteId
         );
         updates.receiver = receiver.id;
       }

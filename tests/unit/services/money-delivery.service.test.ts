@@ -44,6 +44,8 @@ describe('MoneyDeliveryService', () => {
     id: 'customer-id-1',
     name: 'John Doe',
     phone: '1234567890',
+    fromRouteId: '507f1f77bcf86cd799439011',
+    toRouteId: '507f1f77bcf86cd799439012',
     createdAt: new Date(),
     updatedAt: new Date(),
   };

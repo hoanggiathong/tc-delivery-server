@@ -36,7 +36,6 @@ export class MoneyDeliveryController {
    *               - senderPhone
    *               - receiverName
    *               - receiverPhone
-   *               - fromRouteId
    *               - toRouteId
    *               - sendMoneyAmount
    *               - sendCost
@@ -59,7 +58,7 @@ export class MoneyDeliveryController {
    *                 example: "+84987654321"
    *               fromRouteId:
    *                 type: string
-   *                 description: ObjectId of the from route
+   *                 description: ObjectId of the from route (automatically set from user's selectedRouteId - optional)
    *                 example: "507f1f77bcf86cd799439011"
    *               toRouteId:
    *                 type: string
@@ -94,7 +93,6 @@ export class MoneyDeliveryController {
    *                 senderPhone: "+84123456789"
    *                 receiverName: "Tran Thi B"
    *                 receiverPhone: "+84987654321"
-   *                 fromRouteId: "507f1f77bcf86cd799439011"
    *                 toRouteId: "507f1f77bcf86cd799439012"
    *                 sendMoneyAmount: 1000000
    *                 sendCost: 50000
@@ -108,7 +106,6 @@ export class MoneyDeliveryController {
    *                 senderPhone: "+84333444555"
    *                 receiverName: "Pham Thi D"
    *                 receiverPhone: "+84666777888"
-   *                 fromRouteId: "507f1f77bcf86cd799439011"
    *                 toRouteId: "507f1f77bcf86cd799439012"
    *                 sendMoneyAmount: 5000000
    *                 sendCost: 100000
@@ -122,7 +119,6 @@ export class MoneyDeliveryController {
    *                 senderPhone: "+84111222333"
    *                 receiverName: "Vu Thi F"
    *                 receiverPhone: "+84444555666"
-   *                 fromRouteId: "507f1f77bcf86cd799439011"
    *                 toRouteId: "507f1f77bcf86cd799439012"
    *                 sendMoneyAmount: 500000
    *                 sendCost: 0
@@ -627,7 +623,7 @@ export class MoneyDeliveryController {
    *                 example: "+84987654321"
    *               fromRouteId:
    *                 type: string
-   *                 description: ObjectId of the from route
+   *                 description: ObjectId of the from route (automatically set from user's selectedRouteId - optional)
    *                 example: "507f1f77bcf86cd799439011"
    *               toRouteId:
    *                 type: string

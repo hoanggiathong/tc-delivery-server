@@ -1,11 +1,11 @@
 import { Delivery, IDelivery } from '@/models/delivery.model';
 import { Customer } from '@/models/customer.model';
 import { Route } from '@/models/route.model';
-import { User } from '@/models/user.model';
 import { Types, PipelineStage } from 'mongoose';
 import { CustomerService } from '@/services/customer.service';
 import { CodeGeneratorService } from '@/services/code-generator.service';
 import { SettingsService } from '@/services/settings.service';
+import { UserService } from '@/services/user.service';
 import {
   IDeliveryCreateRequest,
   IDeliveryUpdateRequest,
@@ -44,10 +44,12 @@ interface IAggregationResultItem {
 export class DeliveryService {
   private customerService: CustomerService;
   private settingsService: SettingsService;
+  private userService: UserService;
 
   constructor() {
     this.customerService = new CustomerService();
     this.settingsService = new SettingsService();
+    this.userService = new UserService();
   }
 
   /**
@@ -70,8 +72,8 @@ export class DeliveryService {
   private async transformDeliveryToResponse(delivery: IDelivery): Promise<IDeliveryResponse> {
     // Populate sender, receiver, fromRoute, toRoute and createdByUser
     const populatedDelivery = await delivery.populate([
-      { path: 'sender', select: '_id name phone createdAt updatedAt' },
-      { path: 'receiver', select: '_id name phone createdAt updatedAt' },
+      { path: 'sender', select: '_id name phone fromRouteId toRouteId createdAt updatedAt' },
+      { path: 'receiver', select: '_id name phone fromRouteId toRouteId createdAt updatedAt' },
       { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
       { path: 'toRoute', select: '_id code name createdAt updatedAt' },
       { path: 'createdByUser', select: '_id username' },
@@ -88,6 +90,8 @@ export class DeliveryService {
         id: populated.sender._id,
         name: populated.sender.name,
         phone: populated.sender.phone,
+        fromRouteId: populated.sender.fromRouteId.toString(),
+        toRouteId: populated.sender.toRouteId.toString(),
         createdAt: populated.sender.createdAt,
         updatedAt: populated.sender.updatedAt,
       },
@@ -95,6 +99,8 @@ export class DeliveryService {
         id: populated.receiver._id,
         name: populated.receiver.name,
         phone: populated.receiver.phone,
+        fromRouteId: populated.receiver.fromRouteId.toString(),
+        toRouteId: populated.receiver.toRouteId.toString(),
         createdAt: populated.receiver.createdAt,
         updatedAt: populated.receiver.updatedAt,
       },
@@ -148,6 +154,8 @@ export class DeliveryService {
         id: delivery.sender._id,
         name: delivery.sender.name,
         phone: delivery.sender.phone,
+        fromRouteId: delivery.sender.fromRouteId.toString(),
+        toRouteId: delivery.sender.toRouteId.toString(),
         createdAt: delivery.sender.createdAt,
         updatedAt: delivery.sender.updatedAt,
       },
@@ -155,6 +163,8 @@ export class DeliveryService {
         id: delivery.receiver._id,
         name: delivery.receiver.name,
         phone: delivery.receiver.phone,
+        fromRouteId: delivery.receiver.fromRouteId.toString(),
+        toRouteId: delivery.receiver.toRouteId.toString(),
         createdAt: delivery.receiver.createdAt,
         updatedAt: delivery.receiver.updatedAt,
       },
@@ -197,25 +207,26 @@ export class DeliveryService {
    * Create a new delivery
    */
   async createDelivery(data: IDeliveryCreateRequest, userId: string): Promise<IDeliveryResponse> {
+    // Get user's selected route as fromRoute
+    const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
+
     // Find or create sender and receiver
     const sender = await this.customerService.findOrCreateCustomer(
       data.senderName,
-      data.senderPhone
+      data.senderPhone,
+      selectedRouteId,
+      data.toRouteId
     );
     const receiver = await this.customerService.findOrCreateCustomer(
       data.receiverName,
-      data.receiverPhone
+      data.receiverPhone,
+      selectedRouteId,
+      data.toRouteId
     );
-
-    // Get user's selected route as fromRoute
-    const user = await User.findById(userId).select('selectedRouteId');
-    if (!user || !user.selectedRouteId) {
-      throw new Error('User must have a selected route to create deliveries');
-    }
 
     // Validate fromRoute and toRoute exist
     const [fromRoute, toRoute] = await Promise.all([
-      Route.findById(user.selectedRouteId),
+      Route.findById(selectedRouteId),
       Route.findById(data.toRouteId),
     ]);
 
@@ -227,10 +238,7 @@ export class DeliveryService {
     }
 
     // Generate delivery code with new system
-    const codeData = await CodeGeneratorService.generateNextCode(
-      data.toRouteId,
-      user.selectedRouteId.toString()
-    );
+    const codeData = await CodeGeneratorService.generateNextCode(data.toRouteId, selectedRouteId);
 
     // Create delivery
     const delivery = new Delivery({
@@ -239,7 +247,7 @@ export class DeliveryService {
       subCode: codeData.subCode,
       sender: sender.id,
       receiver: receiver.id,
-      fromRoute: user.selectedRouteId,
+      fromRoute: selectedRouteId,
       toRoute: data.toRouteId,
       name: data.name,
       quantity: data.quantity || 1,
@@ -277,7 +285,12 @@ export class DeliveryService {
     if (data.senderName || data.senderPhone) {
       const senderName = data.senderName || delivery.sender.toString();
       const senderPhone = data.senderPhone || delivery.sender.toString();
-      const sender = await this.customerService.findOrCreateCustomer(senderName, senderPhone);
+      const sender = await this.customerService.findOrCreateCustomer(
+        senderName,
+        senderPhone,
+        data.fromRouteId || delivery.fromRoute.toString(),
+        data.toRouteId || delivery.toRoute.toString()
+      );
       updateData.sender = sender.id;
     } else {
       updateData.sender = delivery.sender;
@@ -287,7 +300,12 @@ export class DeliveryService {
     if (data.receiverName || data.receiverPhone) {
       const receiverName = data.receiverName || delivery.receiver.toString();
       const receiverPhone = data.receiverPhone || delivery.receiver.toString();
-      const receiver = await this.customerService.findOrCreateCustomer(receiverName, receiverPhone);
+      const receiver = await this.customerService.findOrCreateCustomer(
+        receiverName,
+        receiverPhone,
+        data.fromRouteId || delivery.fromRoute.toString(),
+        data.toRouteId || delivery.toRoute.toString()
+      );
       updateData.receiver = receiver.id;
     } else {
       updateData.receiver = delivery.receiver;
@@ -534,15 +552,12 @@ export class DeliveryService {
    */
   async getNextCode(toRouteId: string, userId: string): Promise<INextCodeResponse> {
     // Get user's selected route as fromRoute
-    const user = await User.findById(userId).select('selectedRouteId');
-    if (!user || !user.selectedRouteId) {
-      throw new Error('User must have a selected route to get next code');
-    }
+    const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
 
     // Validate routes exist
     const [toRoute, fromRoute] = await Promise.all([
       Route.findById(toRouteId),
-      Route.findById(user.selectedRouteId),
+      Route.findById(selectedRouteId),
     ]);
 
     if (!toRoute) {
@@ -553,10 +568,7 @@ export class DeliveryService {
     }
 
     // Get next code preview
-    const codeData = await CodeGeneratorService.getNextCodePreview(
-      toRouteId,
-      user.selectedRouteId.toString()
-    );
+    const codeData = await CodeGeneratorService.getNextCodePreview(toRouteId, selectedRouteId);
 
     return {
       nextCode: codeData.code,
@@ -612,8 +624,8 @@ export class DeliveryService {
       toRoute: toRoute._id,
     })
       .populate([
-        { path: 'sender', select: '_id name phone createdAt updatedAt' },
-        { path: 'receiver', select: '_id name phone createdAt updatedAt' },
+        { path: 'sender', select: '_id name phone fromRouteId toRouteId createdAt updatedAt' },
+        { path: 'receiver', select: '_id name phone fromRouteId toRouteId createdAt updatedAt' },
         { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
         { path: 'toRoute', select: '_id code name createdAt updatedAt' },
         { path: 'createdByUser', select: '_id username' },
@@ -646,14 +658,11 @@ export class DeliveryService {
 
     const { fromRouteCode } = parsed;
 
-    // Get user's selected route as fromRoute
-    const user = await User.findById(userId).select('selectedRouteId');
-    if (!user || !user.selectedRouteId) {
-      throw new Error('User must have a selected route to search for deliveries');
-    }
+    // Get user's selected route information
+    const userRouteInfo = await this.userService.getUserSelectedRoute(userId);
 
     // Get user's selected route to compare with parsed fromRouteCode
-    const userSelectedRoute = await Route.findById(user.selectedRouteId).select('code');
+    const userSelectedRoute = await Route.findById(userRouteInfo.selectedRouteId).select('code');
     if (!userSelectedRoute) {
       throw new Error('User selected route not found');
     }
@@ -666,11 +675,11 @@ export class DeliveryService {
     // Find delivery by fullCode
     const delivery = await Delivery.findOne({
       fullCode: fullCode,
-      fromRoute: user.selectedRouteId,
+      fromRoute: userRouteInfo.selectedRouteId,
     })
       .populate([
-        { path: 'sender', select: '_id name phone createdAt updatedAt' },
-        { path: 'receiver', select: '_id name phone createdAt updatedAt' },
+        { path: 'sender', select: '_id name phone fromRouteId toRouteId createdAt updatedAt' },
+        { path: 'receiver', select: '_id name phone fromRouteId toRouteId createdAt updatedAt' },
         { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
         { path: 'toRoute', select: '_id code name createdAt updatedAt' },
         { path: 'createdByUser', select: '_id username' },
@@ -726,8 +735,10 @@ export class DeliveryService {
       const skip = (page - 1) * limit;
 
       // Get user's selectedRouteId to filter by fromRoute
-      const user = await User.findById(userId).select('selectedRouteId').lean();
-      if (!user || !user.selectedRouteId) {
+      let selectedRouteId: string;
+      try {
+        selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
+      } catch {
         return {
           senderIdentifier,
           senderInfo: null,
@@ -796,7 +807,7 @@ export class DeliveryService {
         {
           $match: {
             sender: { $in: senderIds },
-            fromRoute: new Types.ObjectId(user.selectedRouteId),
+            fromRoute: new Types.ObjectId(selectedRouteId),
           },
         },
 
@@ -921,14 +932,12 @@ export class DeliveryService {
     limit: number = 20
   ): Promise<IDeliveryCostReport> {
     try {
-      // Get user with selectedRouteId
-      const user = await User.findById(userId).select('selectedRouteId').lean();
-      if (!user || !user.selectedRouteId) {
-        throw new Error('User does not have a selected route');
-      }
+      // Get user's selected route information
+      const userRouteInfo = await this.userService.getUserSelectedRoute(userId);
+      const selectedRouteId = userRouteInfo.selectedRouteId;
 
       // Get the selected route information
-      const fromRoute = await Route.findById(user.selectedRouteId).lean();
+      const fromRoute = await Route.findById(selectedRouteId).lean();
       if (!fromRoute) {
         throw new Error('Selected route not found');
       }
@@ -947,7 +956,7 @@ export class DeliveryService {
         // Match by fromRoute and date range
         {
           $match: {
-            fromRoute: new Types.ObjectId(user.selectedRouteId),
+            fromRoute: new Types.ObjectId(selectedRouteId),
             createdAt: {
               $gte: dateRange.from,
               $lte: dateRange.to,
@@ -1203,14 +1212,12 @@ export class DeliveryService {
    */
   async getTodayReport(userId: string): Promise<ITodayDeliveryReport> {
     try {
-      // Get user with selectedRouteId
-      const user = await User.findById(userId).select('selectedRouteId').lean();
-      if (!user || !user.selectedRouteId) {
-        throw new Error('User does not have a selected route');
-      }
+      // Get user's selected route information
+      const userRouteInfo = await this.userService.getUserSelectedRoute(userId);
+      const selectedRouteId = userRouteInfo.selectedRouteId;
 
       // Get the selected route information
-      const fromRoute = await Route.findById(user.selectedRouteId).lean();
+      const fromRoute = await Route.findById(selectedRouteId).lean();
       if (!fromRoute) {
         throw new Error('Selected route not found');
       }
@@ -1241,7 +1248,7 @@ export class DeliveryService {
         // Match by fromRoute and today's date
         {
           $match: {
-            fromRoute: new Types.ObjectId(user.selectedRouteId),
+            fromRoute: new Types.ObjectId(selectedRouteId),
             createdAt: {
               $gte: startOfDay,
               $lte: endOfDay,

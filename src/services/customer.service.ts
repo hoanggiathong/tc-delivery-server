@@ -11,6 +11,8 @@ export class CustomerService {
       id: customer._id.toString(),
       name: customer.name,
       phone: customer.phone,
+      fromRouteId: customer.fromRouteId.toString(),
+      toRouteId: customer.toRouteId.toString(),
       createdAt: customer.createdAt,
       updatedAt: customer.updatedAt,
     };
@@ -24,6 +26,8 @@ export class CustomerService {
       id: customer._id.toString(),
       name: customer.name,
       phone: customer.phone,
+      fromRouteId: customer.fromRouteId.toString(),
+      toRouteId: customer.toRouteId.toString(),
       createdAt: customer.createdAt,
       updatedAt: customer.updatedAt,
     };
@@ -47,6 +51,8 @@ export class CustomerService {
       const newCustomer = new Customer({
         name: data.name,
         phone: data.phone,
+        fromRouteId: data.fromRouteId,
+        toRouteId: data.toRouteId,
       });
 
       await newCustomer.save();
@@ -77,7 +83,12 @@ export class CustomerService {
   /**
    * Find or create customer by name and phone
    */
-  async findOrCreateCustomer(name: string, phone: string): Promise<ICustomerResponse> {
+  async findOrCreateCustomer(
+    name: string,
+    phone: string,
+    fromRouteId: string,
+    toRouteId: string
+  ): Promise<ICustomerResponse> {
     try {
       // Try to find existing customer
       const existingCustomer = await Customer.findOne({ name, phone }).lean();
@@ -87,7 +98,7 @@ export class CustomerService {
       }
 
       // Create new customer if not found
-      const newCustomer = new Customer({ name, phone });
+      const newCustomer = new Customer({ name, phone, fromRouteId, toRouteId });
       const savedCustomer = await newCustomer.save();
 
       return this.transformCustomerToResponse(savedCustomer);
@@ -149,6 +160,12 @@ export class CustomerService {
       if (data.phone !== undefined) {
         customer.phone = data.phone;
       }
+      if (data.fromRouteId !== undefined) {
+        customer.fromRouteId = data.fromRouteId as any;
+      }
+      if (data.toRouteId !== undefined) {
+        customer.toRouteId = data.toRouteId as any;
+      }
       await customer.save();
 
       return this.transformCustomerToResponse(customer);
@@ -181,16 +198,18 @@ export class CustomerService {
   async updateOrCreateCustomerWithPartialData(
     currentCustomerId: string,
     newName?: string,
-    newPhone?: string
+    newPhone?: string,
+    newFromRouteId?: string,
+    newToRouteId?: string
   ): Promise<ICustomerResponse> {
     try {
-      // If both name and phone are provided, use findOrCreateCustomer
-      if (newName && newPhone) {
-        return await this.findOrCreateCustomer(newName, newPhone);
+      // If name, phone, and route fields are provided, use findOrCreateCustomer
+      if (newName && newPhone && newFromRouteId && newToRouteId) {
+        return await this.findOrCreateCustomer(newName, newPhone, newFromRouteId, newToRouteId);
       }
 
-      // If only one field is provided, get existing customer info and update
-      if (newName || newPhone) {
+      // If any field is provided, get existing customer info and update with new fields
+      if (newName || newPhone || newFromRouteId || newToRouteId) {
         const currentCustomer = await Customer.findById(currentCustomerId);
         if (!currentCustomer) {
           throw new Error('Current customer not found');
@@ -198,7 +217,9 @@ export class CustomerService {
 
         return await this.findOrCreateCustomer(
           newName || currentCustomer.name,
-          newPhone || currentCustomer.phone
+          newPhone || currentCustomer.phone,
+          newFromRouteId || currentCustomer.fromRouteId.toString(),
+          newToRouteId || currentCustomer.toRouteId.toString()
         );
       }
 

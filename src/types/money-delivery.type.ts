@@ -1,3 +1,4 @@
+import { Types } from 'mongoose';
 import { BaseEntity } from '.';
 import { ICustomerResponse } from './customer.type';
 import { IRouteResponse } from './route.type';
@@ -30,7 +31,7 @@ export interface IMoneyDeliveryCreateRequest {
   senderPhone: string;
   receiverName: string;
   receiverPhone: string;
-  fromRouteId: string;
+  fromRouteId?: string;
   toRouteId: string;
   sendMoneyAmount: number;
   sendCost: number;
@@ -122,6 +123,8 @@ export interface IMoneyDeliveryLeanPopulated {
     _id: string;
     name: string;
     phone: string;
+    fromRouteId: Types.ObjectId;
+    toRouteId: Types.ObjectId;
     createdAt: Date;
     updatedAt: Date;
   };
@@ -129,6 +132,8 @@ export interface IMoneyDeliveryLeanPopulated {
     _id: string;
     name: string;
     phone: string;
+    fromRouteId: Types.ObjectId;
+    toRouteId: Types.ObjectId;
     createdAt: Date;
     updatedAt: Date;
   };
@@ -345,4 +350,25 @@ export interface IMoneyDeliveryCostReport {
   moneyDeliveries: IMoneyDeliveryReportItem[];
   pagination: IMoneyDeliveryCostReportPagination;
   filter: IMoneyDeliveryCostReportFilter;
+}
+
+// Interface for money delivery aggregation results
+export interface IMoneyAggregationResultItem {
+  _id: {
+    receiverName: string;
+    receiverPhone: string;
+    toRouteId: Types.ObjectId;
+    toRouteCode: string;
+    toRouteName: string;
+  };
+  deliveryCount: number;
+  totalSendMoneyAmount: number;
+  totalSendCost: number;
+  totalCost: number;
+  lastDeliveryDate: Date;
+  firstDeliveryDate: Date;
+  senderInfo: {
+    name: string;
+    phone: string;
+  };
 }

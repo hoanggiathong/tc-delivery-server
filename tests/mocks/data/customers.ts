@@ -7,6 +7,8 @@ export const createMockCustomer = (
     id: 'customer-id-1',
     name: 'John Doe',
     phone: '1234567890',
+    fromRouteId: '507f1f77bcf86cd799439011',
+    toRouteId: '507f1f77bcf86cd799439012',
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2023-01-01'),
     ...overrides,
@@ -17,6 +19,8 @@ export const createMockCustomerRequest = (overrides: any = {}) => {
   return {
     name: 'John Doe',
     phone: '1234567890',
+    fromRouteId: '507f1f77bcf86cd799439011',
+    toRouteId: '507f1f77bcf86cd799439012',
     ...overrides,
   };
 };
@@ -42,6 +46,8 @@ export const mockCustomersForIntegration = {
     id: 'customer123',
     name: 'Jane Doe',
     phone: '+1987654321',
+    fromRouteId: '507f1f77bcf86cd799439011',
+    toRouteId: '507f1f77bcf86cd799439012',
     createdAt: new Date('2025-06-27T07:51:17.342Z'),
     updatedAt: new Date('2025-06-27T07:51:17.342Z'),
   },
@@ -49,6 +55,8 @@ export const mockCustomersForIntegration = {
     id: 'customer123',
     name: 'John Doe',
     phone: '+1234567890',
+    fromRouteId: '507f1f77bcf86cd799439011',
+    toRouteId: '507f1f77bcf86cd799439012',
     createdAt: new Date('2025-06-27T07:51:17.342Z'),
     updatedAt: new Date('2025-06-27T07:51:17.342Z'),
   },

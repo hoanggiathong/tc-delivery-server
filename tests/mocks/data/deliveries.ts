@@ -12,6 +12,8 @@ export const createMockDelivery = (
       id: 'customer-id-1',
       name: 'John Doe',
       phone: '1234567890',
+      fromRouteId: '507f1f77bcf86cd799439011',
+      toRouteId: '507f1f77bcf86cd799439012',
       createdAt: new Date('2023-01-01'),
       updatedAt: new Date('2023-01-01'),
     },
@@ -19,6 +21,8 @@ export const createMockDelivery = (
       id: 'customer-id-2',
       name: 'Jane Doe',
       phone: '0987654321',
+      fromRouteId: '507f1f77bcf86cd799439011',
+      toRouteId: '507f1f77bcf86cd799439012',
       createdAt: new Date('2023-01-01'),
       updatedAt: new Date('2023-01-01'),
     },
@@ -170,10 +174,14 @@ export const mockCostReportForIntegration = {
       sender: {
         name: 'John Doe',
         phone: '1234567890',
+        fromRouteId: '507f1f77bcf86cd799439011',
+        toRouteId: '507f1f77bcf86cd799439012',
       },
       receiver: {
         name: 'Jane Doe',
         phone: '0987654321',
+        fromRouteId: '507f1f77bcf86cd799439011',
+        toRouteId: '507f1f77bcf86cd799439012',
       },
       toRoute: {
         id: 'route-2',
@@ -198,10 +206,14 @@ export const mockCostReportForIntegration = {
       sender: {
         name: 'Alice Smith',
         phone: '1111111111',
+        fromRouteId: '507f1f77bcf86cd799439011',
+        toRouteId: '507f1f77bcf86cd799439012',
       },
       receiver: {
         name: 'Bob Johnson',
         phone: '2222222222',
+        fromRouteId: '507f1f77bcf86cd799439011',
+        toRouteId: '507f1f77bcf86cd799439012',
       },
       toRoute: {
         id: 'route-3',

@@ -1,3 +1,4 @@
+import { Types } from 'mongoose';
 import { BaseEntity } from '.';
 import { ICustomerResponse } from './customer.type';
 import { IRouteResponse } from './route.type';
@@ -195,6 +196,8 @@ export interface IDeliveryLeanPopulated {
     _id: string;
     name: string;
     phone: string;
+    fromRouteId: Types.ObjectId;
+    toRouteId: Types.ObjectId;
     createdAt: Date;
     updatedAt: Date;
   };
@@ -202,6 +205,8 @@ export interface IDeliveryLeanPopulated {
     _id: string;
     name: string;
     phone: string;
+    fromRouteId: Types.ObjectId;
+    toRouteId: Types.ObjectId;
     createdAt: Date;
     updatedAt: Date;
   };

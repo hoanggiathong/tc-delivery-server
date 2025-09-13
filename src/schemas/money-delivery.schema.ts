@@ -26,7 +26,8 @@ export const createMoneyDeliverySchema = z.object({
       .string()
       .min(1, 'From route ID is required')
       .regex(/^[0-9a-fA-F]{24}$/, 'Please provide a valid from route ID')
-      .trim(),
+      .trim()
+      .optional(),
     toRouteId: z
       .string()
       .min(1, 'To route ID is required')
