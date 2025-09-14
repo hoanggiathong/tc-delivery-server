@@ -44,6 +44,9 @@ jobs:
             # Install dependencies
             npm ci
 
+            # Clean typescript build cache
+            rm -rf dist/
+
             # Build and deploy UAT environment
             npm run deploy:uat
 
