@@ -13,7 +13,6 @@ import {
   IDeliveryWithPopulatedRefs,
   IDeliveryLeanPopulated,
   INextCodeResponse,
-  IFrequentCustomersResponse,
   IFrequentCustomer,
   IDeliveryCostReport,
   IDeliveryReportItem,
@@ -722,36 +721,20 @@ export class DeliveryService {
   }
 
   /**
-   * Get frequent customers for a sender with pagination
+   * Get all frequent customers for a sender
    * Groups by receiver name, phone, and route to avoid duplicates
    */
   async getFrequentCustomers(
     senderIdentifier: string,
-    userId: string,
-    page: number = 1,
-    limit: number = 10
-  ): Promise<IFrequentCustomersResponse> {
+    userId: string
+  ): Promise<IFrequentCustomer[]> {
     try {
-      const skip = (page - 1) * limit;
-
       // Get user's selectedRouteId to filter by fromRoute
       let selectedRouteId: string;
       try {
         selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
       } catch {
-        return {
-          senderIdentifier,
-          senderInfo: null,
-          frequentCustomers: [],
-          pagination: {
-            currentPage: page,
-            totalPages: 0,
-            totalRecords: 0,
-            limit,
-            hasNextPage: false,
-            hasPrevPage: false,
-          },
-        };
+        return [];
       }
 
       // Find sender IDs first to reduce pipeline load
@@ -786,19 +769,7 @@ export class DeliveryService {
 
       // If no senders found, return empty result early
       if (senderIds.length === 0) {
-        return {
-          senderIdentifier,
-          senderInfo: null,
-          frequentCustomers: [],
-          pagination: {
-            currentPage: page,
-            totalPages: 0,
-            totalRecords: 0,
-            limit,
-            hasNextPage: false,
-            hasPrevPage: false,
-          },
-        };
+        return [];
       }
 
       // Optimized aggregation pipeline - filter first, then join
@@ -812,14 +783,6 @@ export class DeliveryService {
         },
 
         // Lookup only needed collections for filtered records
-        {
-          $lookup: {
-            from: 'customers',
-            localField: 'sender',
-            foreignField: '_id',
-            as: 'sender',
-          },
-        },
         {
           $lookup: {
             from: 'customers',
@@ -837,7 +800,6 @@ export class DeliveryService {
           },
         },
         // Unwind arrays
-        { $unwind: '$sender' },
         { $unwind: '$receiver' },
         { $unwind: '$toRoute' },
         // Group by receiver name, phone, and route to avoid duplicates
@@ -851,7 +813,6 @@ export class DeliveryService {
               toRouteName: '$toRoute.name',
             },
             deliveryCount: { $sum: 1 },
-            senderInfo: { $first: '$sender' },
           },
         },
         // Sort by delivery count (most frequent first)
@@ -860,21 +821,12 @@ export class DeliveryService {
             deliveryCount: -1,
           },
         },
-        // Add pagination fields
-        {
-          $facet: {
-            data: [{ $skip: skip }, { $limit: limit }],
-            totalCount: [{ $count: 'count' }],
-          },
-        },
       ];
 
       const result = await Delivery.aggregate(pipeline);
-      const data = result[0]?.data || [];
-      const total = result[0]?.totalCount[0]?.count || 0;
 
       // Transform the data to match the response interface
-      const frequentCustomers: IFrequentCustomer[] = data.map((item: IAggregationResultItem) => ({
+      const frequentCustomers: IFrequentCustomer[] = result.map((item: IAggregationResultItem) => ({
         receiverName: item._id.receiverName,
         receiverPhone: item._id.receiverPhone,
         toRoute: {
@@ -885,37 +837,11 @@ export class DeliveryService {
         deliveryCount: item.deliveryCount,
       }));
 
-      // Get sender info from the first record if available
-      const senderInfo = data.length > 0 ? data[0].senderInfo : null;
-
-      const totalPages = Math.ceil(total / limit);
-      const hasNextPage = page < totalPages;
-      const hasPrevPage = page > 1;
-
-      return {
-        senderIdentifier,
-        senderInfo: senderInfo
-          ? {
-              name: senderInfo.name,
-              phone: senderInfo.phone,
-            }
-          : null,
-        frequentCustomers,
-        pagination: {
-          currentPage: page,
-          totalPages,
-          totalRecords: total,
-          limit,
-          hasNextPage,
-          hasPrevPage,
-        },
-      };
+      return frequentCustomers;
     } catch (error) {
       Logger.error('Failed to get frequent customers', {
         error: error instanceof Error ? error.message : error,
         senderIdentifier,
-        page,
-        limit,
       });
       throw new Error('Failed to get frequent customers');
     }

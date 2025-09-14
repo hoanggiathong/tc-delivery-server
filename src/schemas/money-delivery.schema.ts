@@ -137,22 +137,6 @@ export const frequentMoneyCustomersSchema = z.object({
       .max(100, 'Sender identifier must not exceed 100 characters')
       .trim(),
   }),
-  query: z.object({
-    page: z
-      .string()
-      .regex(/^\d+$/, 'Page must be a positive integer')
-      .transform(val => parseInt(val, 10))
-      .refine(val => val >= 1, 'Page must be at least 1')
-      .optional()
-      .default('1'),
-    limit: z
-      .string()
-      .regex(/^\d+$/, 'Limit must be a positive integer')
-      .transform(val => parseInt(val, 10))
-      .refine(val => val >= 1 && val <= 100, 'Limit must be between 1 and 100')
-      .optional()
-      .default('10'),
-  }),
 });
 
 // Schema for money delivery cost report

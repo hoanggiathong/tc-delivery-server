@@ -1018,7 +1018,7 @@ export class MoneyDeliveryController {
    * @swagger
    * /api/money-deliveries/frequent-customers/{senderIdentifier}:
    *   get:
-   *     summary: Get frequent customers for a sender with pagination
+   *     summary: Get all frequent customers for a sender
    *     tags: [Money Delivery]
    *     security:
    *       - bearerAuth: []
@@ -1029,25 +1029,96 @@ export class MoneyDeliveryController {
    *         schema:
    *           type: string
    *         description: Sender name or phone number to search for
-   *       - in: query
-   *         name: page
-   *         schema:
-   *           type: integer
-   *           default: 1
-   *         description: Page number for pagination
-   *       - in: query
-   *         name: limit
-   *         schema:
-   *           type: integer
-   *           default: 10
-   *         description: Number of records per page
    *     responses:
    *       200:
    *         description: Frequent customers retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Frequent money customers retrieved successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     frequentCustomers:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                         properties:
+   *                           receiverName:
+   *                             type: string
+   *                             example: "Nguyễn Thị Mai"
+   *                           receiverPhone:
+   *                             type: string
+   *                             example: "+84901234567"
+   *                           toRoute:
+   *                             type: object
+   *                             properties:
+   *                               id:
+   *                                 type: string
+   *                                 example: "507f1f77bcf86cd799439011"
+   *                               code:
+   *                                 type: string
+   *                                 example: "T1"
+   *                               name:
+   *                                 type: string
+   *                                 example: "Tuyến Hà Nội"
+   *                           deliveryCount:
+   *                             type: number
+   *                             example: 8
+   *                             description: Number of money deliveries to this customer
+   *                           totalSendMoneyAmount:
+   *                             type: number
+   *                             example: 5000000
+   *                             description: Total money sent to this customer
+   *                           totalSendCost:
+   *                             type: number
+   *                             example: 75000
+   *                             description: Total cost for money transfers
+   *                           firstDeliveryDate:
+   *                             type: string
+   *                             format: date-time
+   *                             example: "2024-01-01T00:00:00.000Z"
+   *                           lastDeliveryDate:
+   *                             type: string
+   *                             format: date-time
+   *                             example: "2024-12-15T00:00:00.000Z"
+   *                     total:
+   *                       type: number
+   *                       example: 15
+   *                       description: Total number of frequent customers
    *       400:
    *         description: Validation error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Validation error"
    *       401:
    *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "User not authenticated"
    */
   getFrequentCustomers = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
@@ -1061,24 +1132,20 @@ export class MoneyDeliveryController {
       }
 
       const { senderIdentifier } = req.params;
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 10;
 
       const frequentCustomers = await this.moneyDeliveryService.getFrequentCustomers(
         senderIdentifier,
-        req.user.userId,
-        page,
-        limit
+        req.user.userId
       );
 
       logger.info(
-        `Frequent money customers retrieved for sender: ${senderIdentifier}, count: ${frequentCustomers.frequentCustomers.length}`
+        `Frequent money customers retrieved for sender: ${senderIdentifier}, count: ${frequentCustomers.length}`
       );
 
       const response: ApiResponse = {
         success: true,
         message: 'Frequent money customers retrieved successfully',
-        data: frequentCustomers,
+        data: { frequentCustomers, total: frequentCustomers.length },
       };
 
       res.status(200).json(response);

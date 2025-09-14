@@ -2,6 +2,7 @@ import { MoneyDeliveryService } from '@/services/money-delivery.service';
 import { CustomerService } from '@/services/customer.service';
 import { CodeGeneratorService } from '@/services/code-generator.service';
 import { SettingsService } from '@/services/settings.service';
+import { UserService } from '@/services/user.service';
 import { MoneyDelivery } from '@/models/money-delivery.model';
 import { Route } from '@/models/route.model';
 import { Customer } from '@/models/customer.model';
@@ -23,6 +24,7 @@ jest.mock('mongoose', () => ({
 jest.mock('@/services/customer.service');
 jest.mock('@/services/code-generator.service');
 jest.mock('@/services/settings.service');
+jest.mock('@/services/user.service');
 jest.mock('@/models/money-delivery.model');
 jest.mock('@/models/route.model');
 jest.mock('@/models/customer.model');
@@ -35,6 +37,7 @@ const MockedRoute = Route as jest.MockedClass<typeof Route>;
 const MockedCodeGeneratorService = CodeGeneratorService as jest.Mocked<typeof CodeGeneratorService>;
 const MockedCustomerService = CustomerService as jest.MockedClass<typeof CustomerService>;
 const MockedSettingsService = SettingsService as jest.MockedClass<typeof SettingsService>;
+const MockedUserService = UserService as jest.MockedClass<typeof UserService>;
 
 describe('MoneyDeliveryService', () => {
   let moneyDeliveryService: MoneyDeliveryService;
@@ -650,37 +653,25 @@ describe('MoneyDeliveryService', () => {
 
   describe('getFrequentCustomers', () => {
     it('should return frequent customers for a sender', async () => {
-      // Mock User.findById to return user with selectedRouteId
-      MockedUser.findById = jest.fn().mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          lean: jest.fn().mockResolvedValue({ _id: 'user123', selectedRouteId: 'route123' }),
-        }),
-      });
+      // Mock UserService.getUserSelectedRouteId
+      MockedUserService.prototype.getUserSelectedRouteId = jest.fn().mockResolvedValue('route123');
 
-      // Mock data
+      // Mock data - direct aggregation result without facet
       const mockAggregationResult = [
         {
-          data: [
-            {
-              _id: {
-                receiverName: 'John Doe',
-                receiverPhone: '1234567890',
-                toRouteId: 'route1',
-                toRouteCode: 'T1',
-                toRouteName: 'Route 1',
-              },
-              deliveryCount: 5,
-              totalSendMoneyAmount: 50000,
-              totalSendCost: 1000,
-              lastDeliveryDate: new Date('2024-01-15'),
-              firstDeliveryDate: new Date('2024-01-01'),
-              senderInfo: {
-                name: 'Sender Name',
-                phone: '0987654321',
-              },
-            },
-          ],
-          totalCount: [{ count: 1 }],
+          _id: {
+            receiverName: 'John Doe',
+            receiverPhone: '1234567890',
+            toRouteId: 'route1',
+            toRouteCode: 'T1',
+            toRouteName: 'Route 1',
+          },
+          deliveryCount: 5,
+          totalSendMoneyAmount: 50000,
+          totalSendCost: 1000,
+          totalCost: 1000,
+          lastDeliveryDate: new Date('2024-01-15'),
+          firstDeliveryDate: new Date('2024-01-01'),
         },
       ];
 
@@ -692,58 +683,35 @@ describe('MoneyDeliveryService', () => {
         }),
       });
 
-      // Mock the MoneyDelivery model
-      MockedMoneyDelivery.aggregate = jest.fn().mockResolvedValue(mockAggregationResult as any);
+      // Mock the MoneyDelivery model aggregation
+      jest.spyOn(MoneyDelivery, 'aggregate').mockResolvedValue(mockAggregationResult as any);
 
-      const result = await moneyDeliveryService.getFrequentCustomers(
-        'Sender Name',
-        'user123',
-        1,
-        10
-      );
+      const result = await moneyDeliveryService.getFrequentCustomers('Sender Name', 'user123');
 
-      expect(result).toEqual({
-        senderIdentifier: 'Sender Name',
-        senderInfo: {
-          name: 'Sender Name',
-          phone: '0987654321',
-        },
-        frequentCustomers: [
-          {
-            receiverName: 'John Doe',
-            receiverPhone: '1234567890',
-            toRoute: {
-              id: 'route1',
-              code: 'T1',
-              name: 'Route 1',
-            },
-            deliveryCount: 5,
-            totalSendMoneyAmount: 50000,
-            totalSendCost: 1000,
-            lastDeliveryDate: new Date('2024-01-15'),
-            firstDeliveryDate: new Date('2024-01-01'),
+      expect(result).toEqual([
+        {
+          receiverName: 'John Doe',
+          receiverPhone: '1234567890',
+          toRoute: {
+            id: 'route1',
+            code: 'T1',
+            name: 'Route 1',
           },
-        ],
-        pagination: {
-          currentPage: 1,
-          totalPages: 1,
-          totalRecords: 1,
-          limit: 10,
-          hasNextPage: false,
-          hasPrevPage: false,
+          deliveryCount: 5,
+          totalSendMoneyAmount: 50000,
+          totalSendCost: 1000,
+          totalCost: 1000,
+          lastDeliveryDate: new Date('2024-01-15'),
+          firstDeliveryDate: new Date('2024-01-01'),
         },
-      });
+      ]);
 
       expect(MockedMoneyDelivery.aggregate).toHaveBeenCalled();
     });
 
     it('should handle empty results', async () => {
-      // Mock User.findById to return user with selectedRouteId
-      MockedUser.findById = jest.fn().mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          lean: jest.fn().mockResolvedValue({ _id: 'user123', selectedRouteId: 'route123' }),
-        }),
-      });
+      // Mock UserService.getUserSelectedRouteId
+      MockedUserService.prototype.getUserSelectedRouteId = jest.fn().mockResolvedValue('route123');
 
       // Mock Customer.find to return empty array (no senders found)
       MockedCustomer.find = jest.fn().mockReturnValue({
@@ -754,33 +722,15 @@ describe('MoneyDeliveryService', () => {
 
       const result = await moneyDeliveryService.getFrequentCustomers(
         'NonExistentSender',
-        'user123',
-        1,
-        10
+        'user123'
       );
 
-      expect(result).toEqual({
-        senderIdentifier: 'NonExistentSender',
-        senderInfo: null,
-        frequentCustomers: [],
-        pagination: {
-          currentPage: 1,
-          totalPages: 0,
-          totalRecords: 0,
-          limit: 10,
-          hasNextPage: false,
-          hasPrevPage: false,
-        },
-      });
+      expect(result).toEqual([]);
     });
 
     it('should handle aggregation errors', async () => {
-      // Mock User.findById to return user with selectedRouteId
-      MockedUser.findById = jest.fn().mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          lean: jest.fn().mockResolvedValue({ _id: 'user123', selectedRouteId: 'route123' }),
-        }),
-      });
+      // Mock UserService.getUserSelectedRouteId
+      MockedUserService.prototype.getUserSelectedRouteId = jest.fn().mockResolvedValue('route123');
 
       // Mock Customer.find to return sender IDs
       const mockSenders = [{ _id: 'sender1' }];
@@ -793,7 +743,7 @@ describe('MoneyDeliveryService', () => {
       jest.spyOn(MoneyDelivery, 'aggregate').mockRejectedValue(new Error('Database error'));
 
       await expect(
-        moneyDeliveryService.getFrequentCustomers('Sender Name', 'user123', 1, 10)
+        moneyDeliveryService.getFrequentCustomers('Sender Name', 'user123')
       ).rejects.toThrow('Failed to get frequent money customers');
     });
   });

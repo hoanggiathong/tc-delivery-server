@@ -188,38 +188,23 @@ describe('Money Delivery API Integration Tests', () => {
       updatedAt: new Date(),
     });
 
-    MockedMoneyDeliveryService.prototype.getFrequentCustomers.mockResolvedValue({
-      senderIdentifier: 'John Doe',
-      senderInfo: {
-        name: 'John Doe',
-        phone: '+84123456789',
-      },
-      frequentCustomers: [
-        {
-          receiverName: 'Jane Doe',
-          receiverPhone: '+84987654321',
-          toRoute: {
-            id: 'route456',
-            code: 'T2',
-            name: 'Test Route 2',
-          },
-          deliveryCount: 5,
-          totalSendMoneyAmount: 5000000,
-          totalSendCost: 250000,
-          totalCost: 5250000,
-          lastDeliveryDate: new Date('2024-01-25'),
-          firstDeliveryDate: new Date('2024-01-20'),
+    MockedMoneyDeliveryService.prototype.getFrequentCustomers.mockResolvedValue([
+      {
+        receiverName: 'Jane Doe',
+        receiverPhone: '+84987654321',
+        toRoute: {
+          id: 'route456',
+          code: 'T2',
+          name: 'Test Route 2',
         },
-      ],
-      pagination: {
-        currentPage: 1,
-        totalPages: 1,
-        totalRecords: 1,
-        limit: 10,
-        hasNextPage: false,
-        hasPrevPage: false,
+        deliveryCount: 5,
+        totalSendMoneyAmount: 5000000,
+        totalSendCost: 250000,
+        totalCost: 250000,
+        lastDeliveryDate: new Date('2024-01-25'),
+        firstDeliveryDate: new Date('2024-01-20'),
       },
-    });
+    ]);
   });
 
   // In each test that expects a different result, override the mock at the start of the test
@@ -376,64 +361,47 @@ describe('Money Delivery API Integration Tests', () => {
 
   describe('GET /api/money-deliveries/frequent-customers/:senderIdentifier', () => {
     it('should get frequent customers successfully', async () => {
-      // Update mock to return ISO date strings
-      const mockFrequentCustomersResult = {
-        senderIdentifier: 'John Doe',
-        senderInfo: {
-          name: 'John Doe',
-          phone: '+84123456789',
-        },
-        frequentCustomers: [
-          {
-            receiverName: 'Jane Doe',
-            receiverPhone: '+84987654321',
-            toRoute: {
-              id: 'route456',
-              code: 'T2',
-              name: 'Test Route 2',
-            },
-            deliveryCount: 5,
-            totalSendMoneyAmount: 5000000,
-            totalSendCost: 250000,
-            totalCost: 250000,
-            lastDeliveryDate: new Date('2024-01-25'),
-            firstDeliveryDate: new Date('2024-01-20'),
+      const mockFrequentCustomersArray = [
+        {
+          receiverName: 'Jane Doe',
+          receiverPhone: '+84987654321',
+          toRoute: {
+            id: 'route456',
+            code: 'T2',
+            name: 'Test Route 2',
           },
-        ],
-        pagination: {
-          currentPage: 1,
-          totalPages: 1,
-          totalRecords: 1,
-          limit: 10,
-          hasNextPage: false,
-          hasPrevPage: false,
+          deliveryCount: 5,
+          totalSendMoneyAmount: 5000000,
+          totalSendCost: 250000,
+          totalCost: 250000,
+          lastDeliveryDate: new Date('2024-01-25'),
+          firstDeliveryDate: new Date('2024-01-20'),
         },
-      };
+      ];
       MockedMoneyDeliveryService.prototype.getFrequentCustomers.mockResolvedValue(
-        mockFrequentCustomersResult
+        mockFrequentCustomersArray
       );
 
       const response = await request(app)
         .get('/api/money-deliveries/frequent-customers/John%20Doe')
         .set('Authorization', `Bearer ${authToken}`)
-        .query({ page: 1, limit: 10 })
         .expect(200);
 
       expect(response.body.success).toBe(true);
       expect(response.body.message).toBe('Frequent money customers retrieved successfully');
-      expect(response.body.data).toEqualWithDateStrings(mockFrequentCustomersResult);
+      expect(response.body.data).toEqualWithDateStrings({
+        frequentCustomers: mockFrequentCustomersArray,
+        total: 1,
+      });
       expect(MockedMoneyDeliveryService.prototype.getFrequentCustomers).toHaveBeenCalledWith(
         'John Doe',
-        'user123',
-        1,
-        10
+        'user123'
       );
     });
 
     it('should handle unauthorized request', async () => {
       const response = await request(app)
         .get('/api/money-deliveries/frequent-customers/John%20Doe')
-        .query({ page: 1, limit: 10 })
         .expect(401);
 
       expect(response.body.success).toBe(false);
@@ -449,7 +417,6 @@ describe('Money Delivery API Integration Tests', () => {
       await request(app)
         .get('/api/money-deliveries/frequent-customers/nonexistent-sender')
         .set('Authorization', `Bearer ${authToken}`)
-        .query({ page: 1, limit: 10 })
         .expect(404);
     });
 
@@ -461,76 +428,38 @@ describe('Money Delivery API Integration Tests', () => {
       const response = await request(app)
         .get('/api/money-deliveries/frequent-customers/John%20Doe')
         .set('Authorization', `Bearer ${authToken}`)
-        .query({ page: 1, limit: 10 })
         .expect(500);
 
       expect(response.body.success).toBe(false);
       expect(response.body.message).toBe('Database error');
     });
 
-    it('should use default pagination values', async () => {
-      const mockFrequentCustomersResult = {
-        senderIdentifier: 'John Doe',
-        senderInfo: null,
-        frequentCustomers: [],
-        pagination: {
-          currentPage: 1,
-          totalPages: 0,
-          totalRecords: 0,
-          limit: 10,
-          hasNextPage: false,
-          hasPrevPage: false,
-        },
-      };
+    it('should return empty array when no customers found', async () => {
+      MockedMoneyDeliveryService.prototype.getFrequentCustomers.mockResolvedValue([]);
 
-      MockedMoneyDeliveryService.prototype.getFrequentCustomers.mockResolvedValue(
-        mockFrequentCustomersResult
-      );
-
-      await request(app)
+      const response = await request(app)
         .get('/api/money-deliveries/frequent-customers/John%20Doe')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toEqual({ frequentCustomers: [], total: 0 });
       expect(MockedMoneyDeliveryService.prototype.getFrequentCustomers).toHaveBeenCalledWith(
         'John Doe',
-        'user123',
-        1,
-        10
+        'user123'
       );
     });
 
-    it('should handle custom pagination values', async () => {
-      const mockFrequentCustomersResult = {
-        senderIdentifier: 'John Doe',
-        senderInfo: null,
-        frequentCustomers: [],
-        pagination: {
-          currentPage: 2,
-          totalPages: 3,
-          totalRecords: 15,
-          limit: 5,
-          hasNextPage: true,
-          hasPrevPage: true,
-        },
-      };
-
-      MockedMoneyDeliveryService.prototype.getFrequentCustomers.mockResolvedValue(
-        mockFrequentCustomersResult
-      );
-
-      await request(app)
-        .get('/api/money-deliveries/frequent-customers/John%20Doe')
+    it('should handle validation error for invalid sender identifier', async () => {
+      // Test with a string that's too long (over 100 characters)
+      const longIdentifier = 'a'.repeat(101);
+      const response = await request(app)
+        .get(`/api/money-deliveries/frequent-customers/${longIdentifier}`)
         .set('Authorization', `Bearer ${authToken}`)
-        .query({ page: 2, limit: 5 })
-        .expect(200);
+        .expect(400);
 
-      expect(MockedMoneyDeliveryService.prototype.getFrequentCustomers).toHaveBeenCalledWith(
-        'John Doe',
-        'user123',
-        2,
-        5
-      );
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Validation');
     });
   });
 

@@ -15,7 +15,6 @@ import {
   IMoneyDeliveryWithPopulatedRefs,
   IMoneyDeliveryLeanPopulated,
   INextMoneyDeliveryCodeResponse,
-  IFrequentMoneyCustomersResponse,
   IFrequentMoneyCustomer,
   ITodayMoneyDeliveryReport,
   ITodayMoneyDeliverySummary,
@@ -526,36 +525,20 @@ export class MoneyDeliveryService {
   }
 
   /**
-   * Get frequent customers for a sender with pagination
+   * Get all frequent customers for a sender
    * Groups by receiver name, phone, and route to avoid duplicates
    */
   async getFrequentCustomers(
     senderIdentifier: string,
-    userId: string,
-    page: number = 1,
-    limit: number = 10
-  ): Promise<IFrequentMoneyCustomersResponse> {
+    userId: string
+  ): Promise<IFrequentMoneyCustomer[]> {
     try {
-      const skip = (page - 1) * limit;
-
       // Get user's selectedRouteId to filter by fromRoute
       let selectedRouteId: string;
       try {
         selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
       } catch {
-        return {
-          senderIdentifier,
-          senderInfo: null,
-          frequentCustomers: [],
-          pagination: {
-            currentPage: page,
-            totalPages: 0,
-            totalRecords: 0,
-            limit,
-            hasNextPage: false,
-            hasPrevPage: false,
-          },
-        };
+        return [];
       }
 
       // Find sender IDs first to reduce pipeline load
@@ -590,19 +573,7 @@ export class MoneyDeliveryService {
 
       // If no senders found, return empty result early
       if (senderIds.length === 0) {
-        return {
-          senderIdentifier,
-          senderInfo: null,
-          frequentCustomers: [],
-          pagination: {
-            currentPage: page,
-            totalPages: 0,
-            totalRecords: 0,
-            limit,
-            hasNextPage: false,
-            hasPrevPage: false,
-          },
-        };
+        return [];
       }
 
       // Optimized aggregation pipeline - filter first, then join
@@ -616,14 +587,6 @@ export class MoneyDeliveryService {
         },
 
         // Lookup only needed collections for filtered records
-        {
-          $lookup: {
-            from: 'customers',
-            localField: 'sender',
-            foreignField: '_id',
-            as: 'sender',
-          },
-        },
         {
           $lookup: {
             from: 'customers',
@@ -641,7 +604,6 @@ export class MoneyDeliveryService {
           },
         },
         // Unwind arrays
-        { $unwind: '$sender' },
         { $unwind: '$receiver' },
         { $unwind: '$toRoute' },
         // Group by receiver name, phone, and route to avoid duplicates
@@ -660,7 +622,6 @@ export class MoneyDeliveryService {
             totalCost: { $sum: '$totalCost' },
             lastDeliveryDate: { $max: '$createdAt' },
             firstDeliveryDate: { $min: '$createdAt' },
-            senderInfo: { $first: '$sender' },
           },
         },
         // Sort by delivery count (most frequent first) and then by last delivery date
@@ -670,21 +631,12 @@ export class MoneyDeliveryService {
             lastDeliveryDate: -1,
           },
         },
-        // Add pagination fields
-        {
-          $facet: {
-            data: [{ $skip: skip }, { $limit: limit }],
-            totalCount: [{ $count: 'count' }],
-          },
-        },
       ];
 
       const result = await MoneyDelivery.aggregate(pipeline);
-      const data = result[0]?.data || [];
-      const total = result[0]?.totalCount[0]?.count || 0;
 
       // Transform the data to match the response interface
-      const frequentCustomers: IFrequentMoneyCustomer[] = data.map(
+      const frequentCustomers: IFrequentMoneyCustomer[] = result.map(
         (item: IMoneyAggregationResultItem) => ({
           receiverName: item._id.receiverName,
           receiverPhone: item._id.receiverPhone,
@@ -702,37 +654,11 @@ export class MoneyDeliveryService {
         })
       );
 
-      // Get sender info from the first record if available
-      const senderInfo = data.length > 0 ? data[0].senderInfo : null;
-
-      const totalPages = Math.ceil(total / limit);
-      const hasNextPage = page < totalPages;
-      const hasPrevPage = page > 1;
-
-      return {
-        senderIdentifier,
-        senderInfo: senderInfo
-          ? {
-              name: senderInfo.name,
-              phone: senderInfo.phone,
-            }
-          : null,
-        frequentCustomers,
-        pagination: {
-          currentPage: page,
-          totalPages,
-          totalRecords: total,
-          limit,
-          hasNextPage,
-          hasPrevPage,
-        },
-      };
+      return frequentCustomers;
     } catch (error) {
       Logger.error('Failed to get frequent money customers', {
         error: error instanceof Error ? error.message : error,
         senderIdentifier,
-        page,
-        limit,
       });
       throw new Error('Failed to get frequent money customers');
     }

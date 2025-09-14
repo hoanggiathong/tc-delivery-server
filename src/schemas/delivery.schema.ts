@@ -184,18 +184,6 @@ export const frequentCustomersSchema = z.object({
       .max(100, 'Sender identifier must not exceed 100 characters')
       .trim(),
   }),
-  query: z.object({
-    page: z
-      .string()
-      .optional()
-      .transform(val => (val ? parseInt(val) : 1))
-      .refine(val => val >= 1, 'Page must be greater than 0'),
-    limit: z
-      .string()
-      .optional()
-      .transform(val => (val ? parseInt(val) : 10))
-      .refine(val => val >= 1 && val <= 100, 'Limit must be between 1 and 100'),
-  }),
 });
 
 // Schema for cost report
@@ -238,7 +226,6 @@ export type UpdateDeliveryRequest = z.infer<typeof updateDeliverySchema>['body']
 export type GetNextCodeRequest = z.infer<typeof getNextCodeSchema>['query'];
 export type DeliveryCodeParams = z.infer<typeof deliveryCodeSchema>['params'];
 export type FrequentCustomersParams = z.infer<typeof frequentCustomersSchema>['params'];
-export type FrequentCustomersQuery = z.infer<typeof frequentCustomersSchema>['query'];
 export type DeliveryCostReportQuery = z.infer<typeof deliveryCostReportSchema>['query'];
 
 // Schema for delivery receipt by code

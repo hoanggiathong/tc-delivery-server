@@ -1115,7 +1115,7 @@ export class DeliveryController {
    * @swagger
    * /api/delivery/frequent-customers/{senderIdentifier}:
    *   get:
-   *     summary: Get frequent customers for a sender with pagination
+   *     summary: Get all frequent customers for a sender
    *     tags: [Delivery]
    *     security:
    *       - bearerAuth: []
@@ -1126,25 +1126,80 @@ export class DeliveryController {
    *         schema:
    *           type: string
    *         description: Sender name or phone number to search for
-   *       - in: query
-   *         name: page
-   *         schema:
-   *           type: integer
-   *           default: 1
-   *         description: Page number for pagination
-   *       - in: query
-   *         name: limit
-   *         schema:
-   *           type: integer
-   *           default: 10
-   *         description: Number of records per page
    *     responses:
    *       200:
    *         description: Frequent customers retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Frequent customers retrieved successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     frequentCustomers:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                         properties:
+   *                           receiverName:
+   *                             type: string
+   *                             example: "Nguyễn Thị Mai"
+   *                           receiverPhone:
+   *                             type: string
+   *                             example: "+84901234567"
+   *                           toRoute:
+   *                             type: object
+   *                             properties:
+   *                               id:
+   *                                 type: string
+   *                                 example: "507f1f77bcf86cd799439011"
+   *                               code:
+   *                                 type: string
+   *                                 example: "T1"
+   *                               name:
+   *                                 type: string
+   *                                 example: "Tuyến Hà Nội"
+   *                           deliveryCount:
+   *                             type: number
+   *                             example: 5
+   *                             description: Number of deliveries to this customer
+   *                     total:
+   *                       type: number
+   *                       example: 10
+   *                       description: Total number of frequent customers
    *       400:
    *         description: Validation error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Validation error"
    *       401:
    *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Unauthorized"
    */
   getFrequentCustomers = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
@@ -1158,28 +1213,22 @@ export class DeliveryController {
       }
 
       const { senderIdentifier } = req.params;
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 10;
 
       const frequentCustomers = await this.deliveryService.getFrequentCustomers(
         senderIdentifier,
-        req.user.userId,
-        page,
-        limit
+        req.user.userId
       );
 
       Logger.info('Frequent customers retrieved successfully', {
         senderIdentifier,
-        page,
-        limit,
-        count: frequentCustomers.frequentCustomers.length,
+        count: frequentCustomers.length,
         userId: req.user.userId,
       });
 
       const response: ApiResponse = {
         success: true,
         message: 'Frequent customers retrieved successfully',
-        data: frequentCustomers,
+        data: { frequentCustomers, total: frequentCustomers.length },
       };
 
       res.status(200).json(response);
@@ -1187,8 +1236,6 @@ export class DeliveryController {
       Logger.error('Failed to get frequent customers', {
         error: error instanceof Error ? error.message : error,
         senderIdentifier: req.params.senderIdentifier,
-        page: req.query.page,
-        limit: req.query.limit,
         userId: req.user?.userId,
       });
 
