@@ -4,8 +4,9 @@ export interface ICustomer extends Document {
   _id: string;
   name: string;
   phone: string;
-  fromRouteId: Types.ObjectId;
-  toRouteId: Types.ObjectId;
+  routeId: Types.ObjectId;
+  relativeReceiver: Array<Types.ObjectId>;
+  type: 'delivery' | 'money';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -24,15 +25,21 @@ const customerSchema = new Schema<ICustomer>(
       trim: true,
       match: [/^\+?[1-9]\d{1,14}$/, 'Please enter a valid phone number'],
     },
-    fromRouteId: {
+    routeId: {
       type: Schema.Types.ObjectId,
       ref: 'Route',
       required: [true, 'From route is required'],
     },
-    toRouteId: {
-      type: Schema.Types.ObjectId,
-      ref: 'Route',
-      required: [true, 'To route is required'],
+    relativeReceiver: {
+      type: [Schema.Types.ObjectId],
+      ref: 'Customer',
+      default: [],
+    },
+    type: {
+      type: String,
+      enum: ['delivery', 'money'],
+      default: 'delivery',
+      required: true,
     },
   },
   {
@@ -46,8 +53,8 @@ const customerSchema = new Schema<ICustomer>(
   }
 );
 
-// Create compound index for name and phone (both together must be unique)
-customerSchema.index({ name: 1, phone: 1 }, { unique: true });
+// Create compound index for phone and type (both together must be unique)
+customerSchema.index({ phone: 1, type: 1 }, { unique: true });
 
 // Performance indexes for frequent customer search
 customerSchema.index({ name: 'text' }); // Text index for name search

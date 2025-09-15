@@ -1,5 +1,4 @@
 import { Delivery, IDelivery } from '@/models/delivery.model';
-import { Customer } from '@/models/customer.model';
 import { Route } from '@/models/route.model';
 import { Types, PipelineStage } from 'mongoose';
 import { CustomerService } from '@/services/customer.service';
@@ -22,23 +21,8 @@ import {
   ITodayDeliveryItem,
 } from '@/types/delivery.type';
 import { PopulatedDelivery } from '@/services/delivery-receipt.service';
-import { ICustomerResponse } from '@/types/customer.type';
+import { ICustomer } from '@/models/customer.model';
 import Logger from '@/utils/logger';
-
-interface IAggregationResultItem {
-  _id: {
-    receiverName: string;
-    receiverPhone: string;
-    toRouteId: Types.ObjectId;
-    toRouteCode: string;
-    toRouteName: string;
-  };
-  deliveryCount: number;
-  senderInfo: {
-    name: string;
-    phone: string;
-  };
-}
 
 export class DeliveryService {
   private customerService: CustomerService;
@@ -71,8 +55,8 @@ export class DeliveryService {
   private async transformDeliveryToResponse(delivery: IDelivery): Promise<IDeliveryResponse> {
     // Populate sender, receiver, fromRoute, toRoute and createdByUser
     const populatedDelivery = await delivery.populate([
-      { path: 'sender', select: '_id name phone fromRouteId toRouteId createdAt updatedAt' },
-      { path: 'receiver', select: '_id name phone fromRouteId toRouteId createdAt updatedAt' },
+      { path: 'sender', select: '_id name phone routeId createdAt updatedAt' },
+      { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
       { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
       { path: 'toRoute', select: '_id code name createdAt updatedAt' },
       { path: 'createdByUser', select: '_id username' },
@@ -89,8 +73,8 @@ export class DeliveryService {
         id: populated.sender._id,
         name: populated.sender.name,
         phone: populated.sender.phone,
-        fromRouteId: populated.sender.fromRouteId.toString(),
-        toRouteId: populated.sender.toRouteId.toString(),
+        fromRouteId: populated.sender.routeId.toString(),
+        toRouteId: populated.receiver.routeId.toString(),
         createdAt: populated.sender.createdAt,
         updatedAt: populated.sender.updatedAt,
       },
@@ -98,8 +82,8 @@ export class DeliveryService {
         id: populated.receiver._id,
         name: populated.receiver.name,
         phone: populated.receiver.phone,
-        fromRouteId: populated.receiver.fromRouteId.toString(),
-        toRouteId: populated.receiver.toRouteId.toString(),
+        fromRouteId: populated.sender.routeId.toString(),
+        toRouteId: populated.receiver.routeId.toString(),
         createdAt: populated.receiver.createdAt,
         updatedAt: populated.receiver.updatedAt,
       },
@@ -209,19 +193,22 @@ export class DeliveryService {
     // Get user's selected route as fromRoute
     const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
 
-    // Find or create sender and receiver
+    // Find or create sender and receiver with type 'delivery'
     const sender = await this.customerService.findOrCreateCustomer(
-      data.senderName,
       data.senderPhone,
+      data.senderName,
       selectedRouteId,
-      data.toRouteId
+      'delivery'
     );
     const receiver = await this.customerService.findOrCreateCustomer(
-      data.receiverName,
       data.receiverPhone,
-      selectedRouteId,
-      data.toRouteId
+      data.receiverName,
+      data.toRouteId,
+      'delivery'
     );
+
+    // Update sender's relativeReceiver array
+    await this.customerService.addRelativeReceiver(sender._id.toString(), receiver._id.toString());
 
     // Validate fromRoute and toRoute exist
     const [fromRoute, toRoute] = await Promise.all([
@@ -244,8 +231,8 @@ export class DeliveryService {
       code: codeData.code,
       fullCode: codeData.fullCode,
       subCode: codeData.subCode,
-      sender: sender.id,
-      receiver: receiver.id,
+      sender: sender._id,
+      receiver: receiver._id,
       fromRoute: selectedRouteId,
       toRoute: data.toRouteId,
       name: data.name,
@@ -285,10 +272,10 @@ export class DeliveryService {
       const senderName = data.senderName || delivery.sender.toString();
       const senderPhone = data.senderPhone || delivery.sender.toString();
       const sender = await this.customerService.findOrCreateCustomer(
-        senderName,
         senderPhone,
+        senderName,
         data.fromRouteId || delivery.fromRoute.toString(),
-        data.toRouteId || delivery.toRoute.toString()
+        'delivery'
       );
       updateData.sender = sender.id;
     } else {
@@ -300,10 +287,10 @@ export class DeliveryService {
       const receiverName = data.receiverName || delivery.receiver.toString();
       const receiverPhone = data.receiverPhone || delivery.receiver.toString();
       const receiver = await this.customerService.findOrCreateCustomer(
-        receiverName,
         receiverPhone,
-        data.fromRouteId || delivery.fromRoute.toString(),
-        data.toRouteId || delivery.toRoute.toString()
+        receiverName,
+        data.toRouteId || delivery.toRoute.toString(),
+        'delivery'
       );
       updateData.receiver = receiver.id;
     } else {
@@ -499,7 +486,7 @@ export class DeliveryService {
       }
 
       // Get sender IDs
-      const senderIds = senders.map((sender: ICustomerResponse) => sender.id);
+      const senderIds = senders.map((sender: ICustomer) => sender._id.toString());
 
       // Find all deliveries by these senders with populated data
       const deliveries = await Delivery.find({
@@ -726,118 +713,65 @@ export class DeliveryService {
    */
   async getFrequentCustomers(
     senderIdentifier: string,
-    userId: string
+    _userId: string
   ): Promise<IFrequentCustomer[]> {
     try {
-      // Get user's selectedRouteId to filter by fromRoute
-      let selectedRouteId: string;
-      try {
-        selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
-      } catch {
+      // Get frequent receivers using new customer service
+      const receivers = await this.customerService.getFrequentReceivers(
+        senderIdentifier,
+        'delivery'
+      );
+
+      if (receivers.length === 0) {
         return [];
       }
 
-      // Find sender IDs first to reduce pipeline load
-      // Use optimized queries with indexes
-      let senders;
-      try {
-        let senderQuery;
-        if (/^\+?[1-9]\d{1,14}$/.test(senderIdentifier)) {
-          // If it looks like a phone number, search phone first (exact match with index)
-          senderQuery = { phone: senderIdentifier };
-        } else {
-          // Use text search for name (leverages text index)
-          senderQuery = {
-            $or: [
-              { $text: { $search: senderIdentifier } },
-              { phone: senderIdentifier }, // Still check phone as fallback
-            ],
-          };
-        }
+      // Count deliveries for each receiver and build response
+      const frequentCustomersWithNull = await Promise.all(
+        receivers.map(async receiver => {
+          // Find sender with delivery type
+          const sender = await this.customerService.getCustomerByPhoneAndType(
+            senderIdentifier,
+            'delivery'
+          );
 
-        senders = await Customer.find(senderQuery).select('_id').lean();
-      } catch (error) {
-        // Fallback to regex search if text index is not available (e.g., in tests)
-        senders = await Customer.find({
-          $or: [{ name: { $regex: senderIdentifier, $options: 'i' } }, { phone: senderIdentifier }],
-        })
-          .select('_id')
-          .lean();
-      }
+          if (!sender) {
+            return null;
+          }
 
-      const senderIds = senders.map(sender => sender._id);
+          // Count deliveries between this sender and receiver
+          const deliveryCount = await Delivery.countDocuments({
+            sender: sender._id,
+            receiver: receiver._id,
+          });
 
-      // If no senders found, return empty result early
-      if (senderIds.length === 0) {
-        return [];
-      }
+          // Get route info for receiver
+          const route = await Route.findById(receiver.routeId);
 
-      // Optimized aggregation pipeline - filter first, then join
-      const pipeline: PipelineStage[] = [
-        // Match deliveries by sender IDs and fromRoute (uses index)
-        {
-          $match: {
-            sender: { $in: senderIds },
-            fromRoute: new Types.ObjectId(selectedRouteId),
-          },
-        },
-
-        // Lookup only needed collections for filtered records
-        {
-          $lookup: {
-            from: 'customers',
-            localField: 'receiver',
-            foreignField: '_id',
-            as: 'receiver',
-          },
-        },
-        {
-          $lookup: {
-            from: 'routes',
-            localField: 'toRoute',
-            foreignField: '_id',
-            as: 'toRoute',
-          },
-        },
-        // Unwind arrays
-        { $unwind: '$receiver' },
-        { $unwind: '$toRoute' },
-        // Group by receiver name, phone, and route to avoid duplicates
-        {
-          $group: {
-            _id: {
-              receiverName: '$receiver.name',
-              receiverPhone: '$receiver.phone',
-              toRouteId: '$toRoute._id',
-              toRouteCode: '$toRoute.code',
-              toRouteName: '$toRoute.name',
+          return {
+            receiverName: receiver.name,
+            receiverPhone: receiver.phone,
+            toRoute: {
+              id: receiver.routeId.toString(),
+              code: route?.code || '',
+              name: route?.name || '',
             },
-            deliveryCount: { $sum: 1 },
-          },
-        },
-        // Sort by delivery count (most frequent first)
-        {
-          $sort: {
-            deliveryCount: -1,
-          },
-        },
-      ];
+            deliveryCount,
+          };
+        })
+      );
 
-      const result = await Delivery.aggregate(pipeline);
+      // Filter out null results and sort by delivery count
+      const validResults = frequentCustomersWithNull
+        .filter((customer): customer is IFrequentCustomer => customer !== null)
+        .sort((a, b) => b.deliveryCount - a.deliveryCount);
 
-      // Transform the data to match the response interface
-      const frequentCustomers: IFrequentCustomer[] = result.map((item: IAggregationResultItem) => ({
-        receiverName: item._id.receiverName,
-        receiverPhone: item._id.receiverPhone,
-        toRoute: {
-          id: item._id.toRouteId.toString(),
-          code: item._id.toRouteCode,
-          name: item._id.toRouteName,
-        },
-        deliveryCount: item.deliveryCount,
-      }));
+      Logger.debug('Frequent customers retrieved for delivery', {
+        senderIdentifier,
+        count: validResults.length,
+      });
 
-      return frequentCustomers;
+      return validResults;
     } catch (error) {
       Logger.error('Failed to get frequent customers', {
         error: error instanceof Error ? error.message : error,

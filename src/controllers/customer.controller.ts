@@ -310,14 +310,12 @@ export class CustomerController {
    */
   getAllCustomers = async (req: Request, res: Response): Promise<void> => {
     try {
-      const customers = await this.customerService.getAllCustomers();
-
-      const customersArray = customers || [];
+      const result = await this.customerService.getAllCustomers();
 
       const response: ApiResponse = {
         success: true,
         message: 'Customers retrieved successfully',
-        data: { customers: customersArray, total: customersArray.length },
+        data: { customers: result.customers, total: result.total, pages: result.pages },
       };
 
       res.status(200).json(response);

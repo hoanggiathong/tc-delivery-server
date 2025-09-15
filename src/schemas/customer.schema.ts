@@ -12,14 +12,15 @@ export const createCustomerSchema = z.object({
       .min(1, 'Phone is required')
       .regex(/^\+?[1-9]\d{1,14}$/, 'Please enter a valid phone number')
       .trim(),
-    fromRouteId: z
+    routeId: z
       .string()
-      .min(1, 'From route ID is required')
-      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid from route ID format'),
-    toRouteId: z
-      .string()
-      .min(1, 'To route ID is required')
-      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid to route ID format'),
+      .min(1, 'Route ID is required')
+      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid route ID format'),
+    type: z.enum(['delivery', 'money']).default('delivery'),
+    relativeReceiver: z
+      .array(z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid customer ID format'))
+      .optional()
+      .default([]),
   }),
 });
 
@@ -38,18 +39,17 @@ export const updateCustomerSchema = z.object({
         .regex(/^\+?[1-9]\d{1,14}$/, 'Please enter a valid phone number')
         .trim()
         .optional(),
-      fromRouteId: z
+      routeId: z
         .string()
-        .min(1, 'From route ID is required')
-        .regex(/^[0-9a-fA-F]{24}$/, 'Invalid from route ID format')
+        .min(1, 'Route ID is required')
+        .regex(/^[0-9a-fA-F]{24}$/, 'Invalid route ID format')
         .optional(),
-      toRouteId: z
-        .string()
-        .min(1, 'To route ID is required')
-        .regex(/^[0-9a-fA-F]{24}$/, 'Invalid to route ID format')
+      type: z.enum(['delivery', 'money']).optional(),
+      relativeReceiver: z
+        .array(z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid customer ID format'))
         .optional(),
     })
-    .refine(data => data.name || data.phone || data.fromRouteId || data.toRouteId, {
+    .refine(data => data.name || data.phone || data.routeId || data.type || data.relativeReceiver, {
       message: 'At least one field must be provided',
     }),
 });

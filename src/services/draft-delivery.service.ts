@@ -44,10 +44,6 @@ export class DraftDeliveryService {
       throw new Error('To route not found');
     }
 
-    // Validate itemCost if provided
-    if (data.itemValue > 0 && data.itemCost > 0) {
-      await this.validateItemCost(data.itemValue, data.itemCost);
-    }
 
     // Create draft
     const draft = new DraftDelivery({
@@ -124,11 +120,6 @@ export class DraftDeliveryService {
     }
 
     // Validate itemCost if updating relevant fields
-    const itemValue = data.itemValue !== undefined ? data.itemValue : draft.itemValue;
-    const itemCost = data.itemCost !== undefined ? data.itemCost : draft.itemCost;
-    if (itemValue > 0 && itemCost > 0) {
-      await this.validateItemCost(itemValue, itemCost);
-    }
 
     // Update draft
     const updateData: any = {};
@@ -298,52 +289,6 @@ export class DraftDeliveryService {
   async deleteAllUserDrafts(userId: string): Promise<{ deletedCount: number }> {
     const result = await DraftDelivery.deleteMany({ createdByUser: userId });
     return { deletedCount: result.deletedCount };
-  }
-
-  /**
-   * Validate itemCost against shipping rates
-   */
-  private async validateItemCost(itemValue: number, itemCost: number): Promise<void> {
-    try {
-      const shippingRates = await this.settingsService.getShippingRates();
-
-      if (!shippingRates || shippingRates.length === 0) {
-        // Skip validation if no rates configured
-        return;
-      }
-
-      const matchingRate = shippingRates.find(
-        rate => itemValue >= rate.fromAmount && itemValue <= rate.toAmount
-      );
-
-      if (!matchingRate) {
-        throw new Error(`No shipping rate found for item value ${itemValue.toLocaleString()} VND`);
-      }
-
-      let expectedFee: number;
-      if (matchingRate.regularShippingFeeUnit === '%') {
-        expectedFee = Math.round(itemValue * (matchingRate.regularShippingFee / 100));
-      } else {
-        expectedFee = matchingRate.regularShippingFee;
-      }
-
-      if (itemCost !== expectedFee) {
-        const unit = matchingRate.regularShippingFeeUnit;
-        const feeDisplay =
-          unit === '%'
-            ? `${matchingRate.regularShippingFee}% of item value (${expectedFee.toLocaleString()} VND)`
-            : `${expectedFee.toLocaleString()} ${unit}`;
-
-        throw new Error(
-          `Invalid item cost. Expected: ${feeDisplay}, but received: ${itemCost.toLocaleString()} VND`
-        );
-      }
-    } catch (error) {
-      if (error instanceof Error) {
-        throw error;
-      }
-      // Skip validation on other errors
-    }
   }
 
   /**
