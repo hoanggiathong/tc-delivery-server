@@ -2,14 +2,16 @@ import { Router } from 'express';
 import authRoutes from './auth.routes';
 import customerRoutes from './customer.routes';
 import deliveryRoutes from './delivery.routes';
+import draftDeliveryRoutes from './draft-delivery.routes';
 import moneyDeliveryRoutes from './money-delivery.routes';
 import routeRoutes from './route.routes';
-import userRouteRoutes from './user-route.routes';
 import settingsRoutes from './settings.routes';
-import draftDeliveryRoutes from './draft-delivery.routes';
+import testRoutes from './test.routes';
+import userRouteRoutes from './user-route.routes';
 
 const router = Router();
 
+router.use('/test', testRoutes);
 router.use('/auth', authRoutes);
 router.use('/customer', customerRoutes);
 router.use('/delivery', deliveryRoutes);
