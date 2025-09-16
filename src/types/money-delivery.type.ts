@@ -31,7 +31,6 @@ export interface IMoneyDeliveryCreateRequest {
   senderPhone: string;
   receiverName: string;
   receiverPhone: string;
-  fromRouteId?: string;
   toRouteId: string;
   sendMoneyAmount: number;
   sendCost: number;
@@ -46,7 +45,6 @@ export interface IMoneyDeliveryUpdateRequest {
   senderPhone?: string;
   receiverName?: string;
   receiverPhone?: string;
-  fromRouteId?: string;
   toRouteId?: string;
   sendMoneyAmount?: number;
   sendCost?: number;
@@ -123,8 +121,7 @@ export interface IMoneyDeliveryLeanPopulated {
     _id: string;
     name: string;
     phone: string;
-    fromRouteId: Types.ObjectId;
-    toRouteId: Types.ObjectId;
+    routeId: Types.ObjectId;
     createdAt: Date;
     updatedAt: Date;
   };
@@ -132,8 +129,7 @@ export interface IMoneyDeliveryLeanPopulated {
     _id: string;
     name: string;
     phone: string;
-    fromRouteId: Types.ObjectId;
-    toRouteId: Types.ObjectId;
+    routeId: Types.ObjectId;
     createdAt: Date;
     updatedAt: Date;
   };
@@ -167,6 +163,8 @@ export interface IMoneyDeliveryLeanPopulated {
 
 // Interface for frequent money customers
 export interface IFrequentMoneyCustomer {
+  senderName: string;
+  senderPhone: string;
   receiverName: string;
   receiverPhone: string;
   toRoute: {
@@ -174,12 +172,10 @@ export interface IFrequentMoneyCustomer {
     code: string;
     name: string;
   };
-  deliveryCount: number;
   totalSendMoneyAmount: number;
   totalSendCost: number;
   totalCost: number;
   lastDeliveryDate: Date;
-  firstDeliveryDate: Date;
 }
 
 // Interface for frequent money customers response
@@ -205,7 +201,6 @@ export interface CreateMoneyDeliveryRequest {
   senderPhone: string;
   receiverName: string;
   receiverPhone: string;
-  fromRouteId: string;
   toRouteId: string;
   sendMoneyAmount: number;
   sendCost: number;
@@ -219,7 +214,6 @@ export interface UpdateMoneyDeliveryRequest {
   senderPhone?: string;
   receiverName?: string;
   receiverPhone?: string;
-  fromRouteId?: string;
   toRouteId?: string;
   sendMoneyAmount?: number;
   sendCost?: number;

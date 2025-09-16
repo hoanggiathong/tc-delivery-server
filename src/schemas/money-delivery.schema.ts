@@ -22,12 +22,6 @@ export const createMoneyDeliverySchema = z.object({
       .min(1, 'Receiver phone is required')
       .regex(/^\+?[1-9]\d{1,14}$/, 'Please enter a valid receiver phone number')
       .trim(),
-    fromRouteId: z
-      .string()
-      .min(1, 'From route ID is required')
-      .regex(/^[0-9a-fA-F]{24}$/, 'Please provide a valid from route ID')
-      .trim()
-      .optional(),
     toRouteId: z
       .string()
       .min(1, 'To route ID is required')
@@ -65,12 +59,6 @@ export const updateMoneyDeliverySchema = z.object({
       .string()
       .min(1, 'Receiver phone is required')
       .regex(/^\+?[1-9]\d{1,14}$/, 'Please enter a valid receiver phone number')
-      .trim()
-      .optional(),
-    fromRouteId: z
-      .string()
-      .min(1, 'From route ID is required')
-      .regex(/^[0-9a-fA-F]{24}$/, 'Please provide a valid from route ID')
       .trim()
       .optional(),
     toRouteId: z

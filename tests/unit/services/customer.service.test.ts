@@ -18,8 +18,9 @@ describe('CustomerService', () => {
       _id: 'customer123',
       name: 'John Doe',
       phone: '+1234567890',
-      fromRouteId: '507f1f77bcf86cd799439011',
-      toRouteId: '507f1f77bcf86cd799439012',
+      routeId: '507f1f77bcf86cd799439011',
+      type: 'delivery',
+      relativeReceiver: [],
       createdAt: new Date(),
       updatedAt: new Date(),
       save: jest.fn(),
@@ -31,16 +32,10 @@ describe('CustomerService', () => {
       const customerData = {
         name: 'John Doe',
         phone: '+1234567890',
-        fromRouteId: '507f1f77bcf86cd799439011',
-        toRouteId: '507f1f77bcf86cd799439012',
+        routeId: '507f1f77bcf86cd799439011',
+        type: 'delivery' as const,
+        relativeReceiver: [],
       };
-
-      // Mock findOne to return null (no existing customer)
-      MockedCustomer.findOne = jest.fn().mockResolvedValue(null);
-
-      // Update mockCustomerInstance with customerData values
-      mockCustomerInstance.name = customerData.name;
-      mockCustomerInstance.phone = customerData.phone;
 
       // Mock constructor and save
       MockedCustomer.mockImplementation(() => mockCustomerInstance);
@@ -48,41 +43,33 @@ describe('CustomerService', () => {
 
       const result = await customerService.createCustomer(customerData);
 
-      expect(MockedCustomer.findOne).toHaveBeenCalledWith({
+      expect(MockedCustomer).toHaveBeenCalledWith({
         name: customerData.name,
         phone: customerData.phone,
+        routeId: expect.any(Object), // Types.ObjectId
+        type: customerData.type,
+        relativeReceiver: [],
       });
-      expect(MockedCustomer).toHaveBeenCalledWith(customerData);
       expect(mockCustomerInstance.save).toHaveBeenCalled();
-      expect(result).toEqual({
-        id: 'customer123',
-        name: customerData.name,
-        phone: customerData.phone,
-        createdAt: mockCustomerInstance.createdAt,
-        updatedAt: mockCustomerInstance.updatedAt,
-      });
+      expect(result).toEqual(mockCustomerInstance);
     });
 
-    it('should throw error when customer already exists', async () => {
+    it('should throw error when save fails', async () => {
       const customerData = {
         name: 'John Doe',
         phone: '+1234567890',
-        fromRouteId: '507f1f77bcf86cd799439011',
-        toRouteId: '507f1f77bcf86cd799439012',
+        routeId: '507f1f77bcf86cd799439011',
+        type: 'delivery' as const,
+        relativeReceiver: [],
       };
 
-      // Mock findOne to return existing customer
-      MockedCustomer.findOne = jest.fn().mockResolvedValue(mockCustomerInstance);
+      // Mock constructor and save to fail
+      MockedCustomer.mockImplementation(() => mockCustomerInstance);
+      mockCustomerInstance.save.mockRejectedValue(new Error('Database error'));
 
       await expect(customerService.createCustomer(customerData)).rejects.toThrow(
-        'Customer with this name and phone already exists'
+        'Failed to create customer: Database error'
       );
-
-      expect(MockedCustomer.findOne).toHaveBeenCalledWith({
-        name: customerData.name,
-        phone: customerData.phone,
-      });
-      expect(MockedCustomer).not.toHaveBeenCalled();
     });
   });
 
@@ -98,34 +85,32 @@ describe('CustomerService', () => {
         name: 'Jane Doe',
       };
 
-      // Mock findById to return existing customer
-      MockedCustomer.findById = jest.fn().mockResolvedValue(mockCustomerInstance);
-
-      // Mock findOne to return null (no duplicate)
-      MockedCustomer.findOne = jest.fn().mockResolvedValue(null);
-
-      // Mock save to return updated customer
-      mockCustomerInstance.save = jest.fn().mockResolvedValue(updatedCustomer);
+      // Mock findByIdAndUpdate to return updated customer
+      MockedCustomer.findByIdAndUpdate = jest.fn().mockResolvedValue(updatedCustomer);
 
       const result = await customerService.updateCustomer(customerId, updateData);
 
-      expect(MockedCustomer.findById).toHaveBeenCalledWith(customerId);
-      expect(mockCustomerInstance.save).toHaveBeenCalled();
-      expect(result.name).toBe('Jane Doe');
+      expect(MockedCustomer.findByIdAndUpdate).toHaveBeenCalledWith(customerId, updateData, {
+        new: true,
+        runValidators: true,
+      });
+      expect(result).toEqual(updatedCustomer);
     });
 
-    it('should throw error when customer not found', async () => {
+    it('should return null when customer not found', async () => {
       const customerId = 'nonexistent';
       const updateData = { name: 'Jane Doe' };
 
-      // Mock findById to return null
-      MockedCustomer.findById = jest.fn().mockResolvedValue(null);
+      // Mock findByIdAndUpdate to return null
+      MockedCustomer.findByIdAndUpdate = jest.fn().mockResolvedValue(null);
 
-      await expect(customerService.updateCustomer(customerId, updateData)).rejects.toThrow(
-        'Customer not found'
-      );
+      const result = await customerService.updateCustomer(customerId, updateData);
 
-      expect(MockedCustomer.findById).toHaveBeenCalledWith(customerId);
+      expect(MockedCustomer.findByIdAndUpdate).toHaveBeenCalledWith(customerId, updateData, {
+        new: true,
+        runValidators: true,
+      });
+      expect(result).toBeNull();
     });
   });
 
@@ -134,35 +119,29 @@ describe('CustomerService', () => {
       const customerId = 'customer123';
 
       const mockFindById = {
-        lean: jest.fn().mockResolvedValue(mockCustomerInstance),
+        populate: jest.fn().mockResolvedValue(mockCustomerInstance),
       };
       MockedCustomer.findById = jest.fn().mockReturnValue(mockFindById);
 
       const result = await customerService.getCustomerById(customerId);
 
       expect(MockedCustomer.findById).toHaveBeenCalledWith(customerId);
-      expect(mockFindById.lean).toHaveBeenCalled();
-      expect(result).toEqual({
-        id: 'customer123',
-        name: 'John Doe',
-        phone: '+1234567890',
-        createdAt: mockCustomerInstance.createdAt,
-        updatedAt: mockCustomerInstance.updatedAt,
-      });
+      expect(mockFindById.populate).toHaveBeenCalledWith('relativeReceiver');
+      expect(result).toEqual(mockCustomerInstance);
     });
 
     it('should return null when customer not found', async () => {
       const customerId = 'nonexistent';
 
       const mockFindById = {
-        lean: jest.fn().mockResolvedValue(null),
+        populate: jest.fn().mockResolvedValue(null),
       };
       MockedCustomer.findById = jest.fn().mockReturnValue(mockFindById);
 
       const result = await customerService.getCustomerById(customerId);
 
       expect(MockedCustomer.findById).toHaveBeenCalledWith(customerId);
-      expect(mockFindById.lean).toHaveBeenCalled();
+      expect(mockFindById.populate).toHaveBeenCalledWith('relativeReceiver');
       expect(result).toBeNull();
     });
   });
@@ -171,82 +150,65 @@ describe('CustomerService', () => {
     it('should return all customers', async () => {
       const mockCustomers = [mockCustomerInstance];
       const mockFind = {
-        sort: jest.fn().mockReturnValue({
-          lean: jest.fn().mockResolvedValue(mockCustomers),
+        populate: jest.fn().mockReturnValue({
+          sort: jest.fn().mockReturnValue({
+            skip: jest.fn().mockReturnValue({
+              limit: jest.fn().mockResolvedValue(mockCustomers),
+            }),
+          }),
         }),
       };
 
       MockedCustomer.find = jest.fn().mockReturnValue(mockFind);
+      MockedCustomer.countDocuments = jest.fn().mockResolvedValue(1);
 
       const result = await customerService.getAllCustomers();
 
-      expect(MockedCustomer.find).toHaveBeenCalledWith({});
-      expect(mockFind.sort).toHaveBeenCalledWith({ createdAt: -1 });
-      expect(result).toHaveLength(1);
-      expect(result[0].id).toBe('customer123');
+      expect(MockedCustomer.find).toHaveBeenCalled();
+      expect(result.customers).toEqual(mockCustomers);
+      expect(result.total).toBe(1);
+      expect(result.pages).toBe(1);
     });
   });
 
   describe('findOrCreateCustomer', () => {
-    it('should return existing customer if found', async () => {
-      const name = 'John Doe';
+    it('should create or update customer', async () => {
       const phone = '+1234567890';
+      const name = 'John Doe';
+      const routeId = '507f1f77bcf86cd799439011';
+      const type = 'delivery';
 
-      const mockFindOne = {
-        lean: jest.fn().mockResolvedValue(mockCustomerInstance),
-      };
-      MockedCustomer.findOne = jest.fn().mockReturnValue(mockFindOne);
+      MockedCustomer.findOneAndUpdate = jest.fn().mockResolvedValue(mockCustomerInstance);
 
-      const result = await customerService.findOrCreateCustomer(
-        name,
-        phone,
-        '507f1f77bcf86cd799439011',
-        '507f1f77bcf86cd799439012'
+      const result = await customerService.findOrCreateCustomer(phone, name, routeId, type);
+
+      expect(MockedCustomer.findOneAndUpdate).toHaveBeenCalledWith(
+        { phone, type },
+        {
+          name,
+          routeId: expect.any(Object), // Types.ObjectId
+          type,
+        },
+        {
+          upsert: true,
+          new: true,
+          setDefaultsOnInsert: true,
+        }
       );
-
-      expect(MockedCustomer.findOne).toHaveBeenCalledWith({ name, phone });
-      expect(mockFindOne.lean).toHaveBeenCalled();
-      expect(result).toEqual({
-        id: 'customer123',
-        name: 'John Doe',
-        phone: '+1234567890',
-        createdAt: mockCustomerInstance.createdAt,
-        updatedAt: mockCustomerInstance.updatedAt,
-      });
+      expect(result).toEqual(mockCustomerInstance);
     });
 
-    it('should create new customer if not found', async () => {
-      const name = 'Jane Doe';
+    it('should handle errors during upsert', async () => {
       const phone = '+0987654321';
+      const name = 'Jane Doe';
+      const routeId = '507f1f77bcf86cd799439011';
+      const type = 'delivery';
 
-      // Mock findOne to return null (not found)
-      const mockFindOne = {
-        lean: jest.fn().mockResolvedValue(null),
-      };
-      MockedCustomer.findOne = jest.fn().mockReturnValue(mockFindOne);
+      MockedCustomer.findOneAndUpdate = jest.fn().mockRejectedValue(new Error('Database error'));
 
-      // Update mockCustomerInstance with input values
-      mockCustomerInstance.name = name;
-      mockCustomerInstance.phone = phone;
-
-      // Mock constructor and save
-      MockedCustomer.mockImplementation(() => mockCustomerInstance);
-      mockCustomerInstance.save.mockResolvedValue(mockCustomerInstance);
-
-      const result = await customerService.findOrCreateCustomer(
-        name,
-        phone,
-        '507f1f77bcf86cd799439011',
-        '507f1f77bcf86cd799439012'
-      );
-
-      expect(MockedCustomer.findOne).toHaveBeenCalledWith({ name, phone });
-      expect(mockFindOne.lean).toHaveBeenCalled();
-      expect(MockedCustomer).toHaveBeenCalledWith({ name, phone });
-      expect(mockCustomerInstance.save).toHaveBeenCalled();
-      expect(result.id).toBe('customer123');
-      expect(result.name).toBe(name);
-      expect(result.phone).toBe(phone);
+      await expect(
+        customerService.findOrCreateCustomer(phone, name, routeId, type)
+      ).rejects.toThrow('Failed to find or create customer: Database error');
     });
   });
 });

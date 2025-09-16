@@ -211,6 +211,7 @@ router.use(authenticateToken);
 
 router.post('/', validate(createDeliverySchema), deliveryController.createDelivery);
 router.get('/', deliveryController.getAllDeliveries);
+router.get('/:id', validate(deliveryParamsSchema), deliveryController.getDeliveryById);
 
 router.get(
   '/search/:fullCode',

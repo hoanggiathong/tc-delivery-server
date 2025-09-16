@@ -1,9 +1,16 @@
 import { Types } from 'mongoose';
 import { Customer, ICustomer } from '@/models/customer.model';
 import { CreateCustomerRequest, UpdateCustomerRequest } from '@/schemas/customer.schema';
+import { UserService } from '@/services/user.service';
 import Logger from '@/utils/logger';
 
 export class CustomerService {
+  private userService: UserService;
+
+  constructor() {
+    this.userService = new UserService();
+  }
+
   /**
    * Find or create a customer with specific type
    */
@@ -74,35 +81,44 @@ export class CustomerService {
   }
 
   /**
-   * Get frequent receivers for a sender by phone and type
+   * Get frequent receivers for a sender by phone and type, filtered by user's selected route
    */
   async getFrequentReceivers(
     senderPhone: string,
-    type: 'delivery' | 'money'
+    type: 'delivery' | 'money',
+    userId: string
   ): Promise<ICustomer[]> {
     try {
+      const userSelectedRouteId = await this.userService.getUserSelectedRouteId(userId);
+
       const sender = await Customer.findOne({
         phone: senderPhone,
         type,
+        routeId: userSelectedRouteId,
       }).populate('relativeReceiver');
 
       if (!sender) {
-        Logger.debug('Sender not found', { senderPhone, type });
+        Logger.debug('Sender not found', { senderPhone, type, userSelectedRouteId });
         return [];
       }
+
+      const frequentReceivers = sender.relativeReceiver as unknown as ICustomer[];
 
       Logger.debug('Frequent receivers retrieved', {
         senderPhone,
         type,
-        receiversCount: sender.relativeReceiver.length,
+        userId,
+        receiversCount: frequentReceivers.length,
+        userSelectedRouteId,
       });
 
-      return sender.relativeReceiver as unknown as ICustomer[];
+      return frequentReceivers;
     } catch (error) {
       Logger.error('Failed to get frequent receivers', {
         error: error instanceof Error ? error.message : error,
         senderPhone,
         type,
+        userId,
       });
       throw new Error(
         `Failed to get frequent receivers: ${error instanceof Error ? error.message : 'Unknown error'}`

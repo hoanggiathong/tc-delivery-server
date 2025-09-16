@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import { SettingsService } from '@/services/settings.service';
+import { AppError } from '@/middlewares/error.middleware';
 import {
   CalculateShippingFeeInput,
   UpdateShippingRatesInput,
@@ -424,6 +425,253 @@ export class SettingsController {
       const response: ApiResponse = {
         success: false,
         message,
+      };
+
+      res.status(statusCode).json(response);
+    }
+  };
+
+  updateSettingsByName = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { name } = req.params;
+      const { metadata } = req.body;
+
+      // Basic validation for shipping rates
+      if (name === 'shipping_rates' && Array.isArray(metadata)) {
+        if (metadata.length === 0) {
+          const response: ApiResponse = {
+            success: false,
+            message: 'Validation error: metadata cannot be empty',
+          };
+          res.status(400).json(response);
+          return;
+        }
+        for (const rate of metadata) {
+          if (rate.fromAmount >= rate.toAmount) {
+            const response: ApiResponse = {
+              success: false,
+              message: 'Validation error: fromAmount must be less than toAmount',
+            };
+            res.status(400).json(response);
+            return;
+          }
+        }
+      }
+
+      const result = await this.settingsService.update(name, metadata);
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Settings updated successfully',
+        data: result,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Failed to update settings by name', {
+        error: error instanceof Error ? error.message : error,
+        userId: req.user?.userId,
+        name: req.params.name,
+      });
+
+      const response: ApiResponse = {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to update settings',
+      };
+
+      res.status(400).json(response);
+    }
+  };
+
+  deleteSettingsByName = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { name } = req.params;
+
+      await this.settingsService.delete(name);
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Settings deleted successfully',
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Failed to delete settings by name', {
+        error: error instanceof Error ? error.message : error,
+        userId: req.user?.userId,
+        name: req.params.name,
+      });
+
+      const response: ApiResponse = {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to delete settings',
+      };
+
+      res.status(400).json(response);
+    }
+  };
+
+  createSettings = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { name, metadata } = req.body;
+
+      // Basic validation for shipping rates
+      if (name === 'shipping_rates' && Array.isArray(metadata)) {
+        if (metadata.length === 0) {
+          const response: ApiResponse = {
+            success: false,
+            message: 'Validation error: metadata cannot be empty',
+          };
+          res.status(400).json(response);
+          return;
+        }
+        for (const rate of metadata) {
+          if (rate.fromAmount >= rate.toAmount) {
+            const response: ApiResponse = {
+              success: false,
+              message: 'Validation error: fromAmount must be less than toAmount',
+            };
+            res.status(400).json(response);
+            return;
+          }
+        }
+      }
+
+      const result = await this.settingsService.create(name, metadata);
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Settings created successfully',
+        data: result,
+      };
+
+      res.status(201).json(response);
+    } catch (error) {
+      Logger.error('Failed to create settings', {
+        error: error instanceof Error ? error.message : error,
+        userId: req.user?.userId,
+      });
+
+      const response: ApiResponse = {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to create settings',
+      };
+
+      res.status(400).json(response);
+    }
+  };
+
+  getAllSettings = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const result = await this.settingsService.getAll();
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Settings retrieved successfully',
+        data: result,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Failed to get all settings', {
+        error: error instanceof Error ? error.message : error,
+        userId: req.user?.userId,
+      });
+
+      const response: ApiResponse = {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to get settings',
+      };
+
+      res.status(400).json(response);
+    }
+  };
+
+  getSettingsByName = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { name } = req.params;
+
+      const result = await this.settingsService.getByName(name);
+
+      if (!result) {
+        const response: ApiResponse = {
+          success: false,
+          message: `Settings with name "${name}" not found`,
+        };
+        res.status(404).json(response);
+        return;
+      }
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Settings retrieved successfully',
+        data: result,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Failed to get settings by name', {
+        error: error instanceof Error ? error.message : error,
+        userId: req.user?.userId,
+        name: req.params.name,
+      });
+
+      // Check if it's an AppError with a specific status code
+      let statusCode = 400;
+      if (error instanceof AppError) {
+        statusCode = error.statusCode;
+      } else if (error instanceof Error && error.message.includes('not found')) {
+        statusCode = 404;
+      }
+
+      const response: ApiResponse = {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to get settings',
       };
 
       res.status(statusCode).json(response);

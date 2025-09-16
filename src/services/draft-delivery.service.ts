@@ -44,7 +44,6 @@ export class DraftDeliveryService {
       throw new Error('To route not found');
     }
 
-
     // Create draft
     const draft = new DraftDelivery({
       senderName: data.senderName,

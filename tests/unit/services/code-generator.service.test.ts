@@ -41,13 +41,21 @@ describe('CodeGeneratorService', () => {
 
   describe('generateCode', () => {
     it('should generate unique code successfully', async () => {
-      MockedRoute.findById = jest
-        .fn()
-        .mockResolvedValueOnce(mockToRoute)
-        .mockResolvedValueOnce(mockFromRoute);
+      const mockQuery = {
+        select: jest.fn().mockReturnThis(),
+        lean: jest.fn(),
+      };
 
-      MockedDelivery.exists = jest.fn().mockResolvedValue(null);
-      MockedMoneyDelivery.exists = jest.fn().mockResolvedValue(null);
+      MockedRoute.findById = jest.fn().mockReturnValue(mockQuery);
+
+      mockQuery.lean.mockResolvedValueOnce(mockToRoute).mockResolvedValueOnce(mockFromRoute);
+
+      const mockExistsQuery = {
+        lean: jest.fn(),
+      };
+      MockedDelivery.exists = jest.fn().mockReturnValue(mockExistsQuery);
+      MockedMoneyDelivery.exists = jest.fn().mockReturnValue(mockExistsQuery);
+      mockExistsQuery.lean.mockResolvedValue(null);
 
       const result = await CodeGeneratorService.generateCode(
         mockToRouteId,
@@ -76,10 +84,14 @@ describe('CodeGeneratorService', () => {
     });
 
     it('should throw error when route not found', async () => {
-      MockedRoute.findById = jest
-        .fn()
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(mockFromRoute);
+      const mockQuery = {
+        select: jest.fn().mockReturnThis(),
+        lean: jest.fn(),
+      };
+
+      MockedRoute.findById = jest.fn().mockReturnValue(mockQuery);
+
+      mockQuery.lean.mockResolvedValueOnce(null).mockResolvedValueOnce(mockFromRoute);
 
       await expect(
         CodeGeneratorService.generateCode(mockToRouteId, mockFromRouteId, 'delivery')
@@ -87,17 +99,29 @@ describe('CodeGeneratorService', () => {
     });
 
     it('should retry on fullCode collision', async () => {
-      MockedRoute.findById = jest
-        .fn()
-        .mockResolvedValueOnce(mockToRoute)
-        .mockResolvedValueOnce(mockFromRoute);
+      const mockQuery = {
+        select: jest.fn().mockReturnThis(),
+        lean: jest.fn(),
+      };
+
+      MockedRoute.findById = jest.fn().mockReturnValue(mockQuery);
+
+      mockQuery.lean.mockResolvedValueOnce(mockToRoute).mockResolvedValueOnce(mockFromRoute);
 
       // First call returns collision, second call succeeds
+      const mockExistsQuery1 = {
+        lean: jest.fn().mockResolvedValue({ _id: 'exists' }),
+      };
+      const mockExistsQuery2 = {
+        lean: jest.fn().mockResolvedValue(null),
+      };
       MockedDelivery.exists = jest
         .fn()
-        .mockResolvedValueOnce({ _id: 'exists' }) // Collision
-        .mockResolvedValueOnce(null); // Success
-      MockedMoneyDelivery.exists = jest.fn().mockResolvedValue(null);
+        .mockReturnValueOnce(mockExistsQuery1)
+        .mockReturnValueOnce(mockExistsQuery2);
+      MockedMoneyDelivery.exists = jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue(null),
+      });
 
       const result = await CodeGeneratorService.generateCode(
         mockToRouteId,
@@ -112,13 +136,21 @@ describe('CodeGeneratorService', () => {
 
   describe('generateNextCode', () => {
     it('should generate delivery code', async () => {
-      MockedRoute.findById = jest
-        .fn()
-        .mockResolvedValueOnce(mockToRoute)
-        .mockResolvedValueOnce(mockFromRoute);
+      const mockQuery = {
+        select: jest.fn().mockReturnThis(),
+        lean: jest.fn(),
+      };
 
-      MockedDelivery.exists = jest.fn().mockResolvedValue(null);
-      MockedMoneyDelivery.exists = jest.fn().mockResolvedValue(null);
+      MockedRoute.findById = jest.fn().mockReturnValue(mockQuery);
+
+      mockQuery.lean.mockResolvedValueOnce(mockToRoute).mockResolvedValueOnce(mockFromRoute);
+
+      const mockExistsQuery = {
+        lean: jest.fn(),
+      };
+      MockedDelivery.exists = jest.fn().mockReturnValue(mockExistsQuery);
+      MockedMoneyDelivery.exists = jest.fn().mockReturnValue(mockExistsQuery);
+      mockExistsQuery.lean.mockResolvedValue(null);
 
       const result = await CodeGeneratorService.generateNextCode(mockToRouteId, mockFromRouteId);
 
@@ -129,13 +161,21 @@ describe('CodeGeneratorService', () => {
 
   describe('generateNextMoneyDeliveryCode', () => {
     it('should generate money delivery code', async () => {
-      MockedRoute.findById = jest
-        .fn()
-        .mockResolvedValueOnce(mockToRoute)
-        .mockResolvedValueOnce(mockFromRoute);
+      const mockQuery = {
+        select: jest.fn().mockReturnThis(),
+        lean: jest.fn(),
+      };
 
-      MockedDelivery.exists = jest.fn().mockResolvedValue(null);
-      MockedMoneyDelivery.exists = jest.fn().mockResolvedValue(null);
+      MockedRoute.findById = jest.fn().mockReturnValue(mockQuery);
+
+      mockQuery.lean.mockResolvedValueOnce(mockToRoute).mockResolvedValueOnce(mockFromRoute);
+
+      const mockExistsQuery = {
+        lean: jest.fn(),
+      };
+      MockedDelivery.exists = jest.fn().mockReturnValue(mockExistsQuery);
+      MockedMoneyDelivery.exists = jest.fn().mockReturnValue(mockExistsQuery);
+      mockExistsQuery.lean.mockResolvedValue(null);
 
       const result = await CodeGeneratorService.generateNextMoneyDeliveryCode(
         mockToRouteId,
@@ -149,26 +189,26 @@ describe('CodeGeneratorService', () => {
 
   describe('validateCodeFormat', () => {
     it('should validate correct code format', () => {
-      expect(CodeGeneratorService.validateCodeFormat('2401250001')).toBe(true);
+      expect(CodeGeneratorService.validateCodeFormat('2501240001')).toBe(true); // 25-01-24
     });
 
     it('should reject invalid code format', () => {
-      expect(CodeGeneratorService.validateCodeFormat('240125000')).toBe(false); // Too short
-      expect(CodeGeneratorService.validateCodeFormat('24012500011')).toBe(false); // Too long
-      expect(CodeGeneratorService.validateCodeFormat('240125000a')).toBe(false); // Contains letter
+      expect(CodeGeneratorService.validateCodeFormat('250124000')).toBe(false); // Too short
+      expect(CodeGeneratorService.validateCodeFormat('25012400011')).toBe(false); // Too long
+      expect(CodeGeneratorService.validateCodeFormat('250124000a')).toBe(false); // Contains letter
     });
 
     it('should reject invalid dates', () => {
-      expect(CodeGeneratorService.validateCodeFormat('2413250001')).toBe(false); // Invalid month
-      expect(CodeGeneratorService.validateCodeFormat('2401320001')).toBe(false); // Invalid day
+      expect(CodeGeneratorService.validateCodeFormat('3213240001')).toBe(false); // Invalid day (32)
+      expect(CodeGeneratorService.validateCodeFormat('2513240001')).toBe(false); // Invalid month (13)
     });
   });
 
   describe('parseCode', () => {
     it('should parse valid code', () => {
-      const result = CodeGeneratorService.parseCode('2401250001');
+      const result = CodeGeneratorService.parseCode('2501240001');
       expect(result).toEqual({
-        date: new Date(2024, 0, 25), // Month is 0-indexed
+        date: new Date(2025, 0, 24), // Year 25->2025, Month 01->0 (0-indexed), Day 24
         sequence: 1,
       });
     });
@@ -181,10 +221,14 @@ describe('CodeGeneratorService', () => {
 
   describe('getNextCodePreview', () => {
     it('should generate code preview', async () => {
-      MockedRoute.findById = jest
-        .fn()
-        .mockResolvedValueOnce(mockToRoute)
-        .mockResolvedValueOnce(mockFromRoute);
+      const mockQuery = {
+        select: jest.fn().mockReturnThis(),
+        lean: jest.fn(),
+      };
+
+      MockedRoute.findById = jest.fn().mockReturnValue(mockQuery);
+
+      mockQuery.lean.mockResolvedValueOnce(mockToRoute).mockResolvedValueOnce(mockFromRoute);
 
       const result = await CodeGeneratorService.getNextCodePreview(mockToRouteId, mockFromRouteId);
 
@@ -202,7 +246,7 @@ describe('CodeGeneratorService', () => {
 
       expect(count).toBe(5);
       expect(MockedDelivery.countDocuments).toHaveBeenCalledWith({
-        code: /^2401250\d{4}$/,
+        code: /^250124\d{4}$/,
       });
     });
   });
@@ -215,7 +259,7 @@ describe('CodeGeneratorService', () => {
 
       expect(count).toBe(3);
       expect(MockedMoneyDelivery.countDocuments).toHaveBeenCalledWith({
-        code: /^2401250\d{4}$/,
+        code: /^250124\d{4}$/,
       });
     });
   });

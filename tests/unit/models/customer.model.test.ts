@@ -123,12 +123,26 @@ describe('Customer Model', () => {
   });
 
   describe('Indexes', () => {
-    it('should have compound index on name and phone', () => {
+    it('should have compound unique index on phone and type', () => {
       const indexes = Customer.schema.indexes();
-      const compoundIndex = indexes.find(index => index[0].name === 1 && index[0].phone === 1);
+      const compoundIndex = indexes.find(index => index[0].phone === 1 && index[0].type === 1);
 
       expect(compoundIndex).toBeDefined();
       expect(compoundIndex?.[1].unique).toBe(true);
+    });
+
+    it('should have text index on name', () => {
+      const indexes = Customer.schema.indexes();
+      const textIndex = indexes.find(index => index[0].name === 'text');
+
+      expect(textIndex).toBeDefined();
+    });
+
+    it('should have single field index on phone', () => {
+      const indexes = Customer.schema.indexes();
+      const phoneIndex = indexes.find(index => index[0].phone === 1 && !index[0].type);
+
+      expect(phoneIndex).toBeDefined();
     });
   });
 });

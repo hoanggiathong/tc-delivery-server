@@ -461,7 +461,7 @@ export class DeliveryController {
       const { id } = req.params;
       const data: UpdateDeliveryRequest = req.body;
 
-      const delivery = await this.deliveryService.updateDelivery(id, data);
+      const delivery = await this.deliveryService.updateDelivery(id, data, req.user.userId);
 
       Logger.info('Delivery updated successfully', {
         deliveryId: id,

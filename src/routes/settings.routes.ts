@@ -69,6 +69,23 @@ const settingsController = new SettingsController();
  *           format: date-time
  */
 
+// Generic CRUD routes for settings
+router.post(
+  '/',
+  authenticateToken,
+  requireRole([UserRole.ADMIN, UserRole.SUPERADMIN]),
+  settingsController.createSettings
+);
+
+router.get(
+  '/',
+  authenticateToken,
+  requireRole([UserRole.ADMIN, UserRole.SUPERADMIN]),
+  settingsController.getAllSettings
+);
+
+router.get('/:name', authenticateToken, settingsController.getSettingsByName);
+
 /**
  * @swagger
  * /api/settings/calculate-shipping-fee:
@@ -741,6 +758,21 @@ router.delete(
   requireRole([UserRole.ADMIN, UserRole.SUPERADMIN]),
   validate(deleteProductSchema),
   settingsController.deleteProduct
+);
+
+// Generic routes for backward compatibility with tests
+router.put(
+  '/:name',
+  authenticateToken,
+  requireRole([UserRole.ADMIN, UserRole.SUPERADMIN]),
+  settingsController.updateSettingsByName
+);
+
+router.delete(
+  '/:name',
+  authenticateToken,
+  requireRole([UserRole.SUPERADMIN]),
+  settingsController.deleteSettingsByName
 );
 
 export default router;

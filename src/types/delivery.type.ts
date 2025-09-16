@@ -78,7 +78,6 @@ export interface IDeliveryUpdateRequest {
   senderPhone?: string;
   receiverName?: string;
   receiverPhone?: string;
-  fromRouteId?: string;
   toRouteId?: string;
   name?: string;
   quantity?: number;
@@ -196,8 +195,7 @@ export interface IDeliveryLeanPopulated {
     _id: string;
     name: string;
     phone: string;
-    fromRouteId: Types.ObjectId;
-    toRouteId: Types.ObjectId;
+    routeId: Types.ObjectId;
     createdAt: Date;
     updatedAt: Date;
   };
@@ -205,8 +203,7 @@ export interface IDeliveryLeanPopulated {
     _id: string;
     name: string;
     phone: string;
-    fromRouteId: Types.ObjectId;
-    toRouteId: Types.ObjectId;
+    routeId: Types.ObjectId;
     createdAt: Date;
     updatedAt: Date;
   };
@@ -247,6 +244,8 @@ export interface IDeliveryLeanPopulated {
 
 // Frequent customers interfaces
 export interface IFrequentCustomer {
+  senderName: string;
+  senderPhone: string;
   receiverName: string;
   receiverPhone: string;
   toRoute: {
@@ -254,7 +253,6 @@ export interface IFrequentCustomer {
     code: string;
     name: string;
   };
-  deliveryCount: number;
 }
 
 export interface IFrequentCustomersPagination {
