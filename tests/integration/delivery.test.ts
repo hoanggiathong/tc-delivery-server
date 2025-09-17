@@ -206,7 +206,8 @@ describe('Delivery Endpoints', () => {
       expect(response.body.data.delivery).toEqualWithDateStrings(mockUpdatedDelivery);
       expect(MockedDeliveryService.prototype.updateDelivery).toHaveBeenCalledWith(
         deliveryId,
-        updateData
+        updateData,
+        'admin123'
       );
     });
 

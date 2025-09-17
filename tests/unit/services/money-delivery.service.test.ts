@@ -47,8 +47,7 @@ describe('MoneyDeliveryService', () => {
     id: 'customer-id-1',
     name: 'John Doe',
     phone: '1234567890',
-    fromRouteId: '507f1f77bcf86cd799439011',
-    toRouteId: '507f1f77bcf86cd799439012',
+    routeId: '507f1f77bcf86cd799439011',
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -115,6 +114,15 @@ describe('MoneyDeliveryService', () => {
     MockedCustomerService.prototype.findOrCreateCustomer = jest
       .fn()
       .mockResolvedValue(mockCustomer);
+    MockedCustomerService.prototype.getFrequentReceivers = jest
+      .fn()
+      .mockResolvedValue([mockCustomer]);
+    MockedCustomerService.prototype.getCustomerByPhoneAndType = jest
+      .fn()
+      .mockResolvedValue(mockCustomer);
+
+    // Mock UserService methods
+    MockedUserService.prototype.getUserSelectedRouteId = jest.fn().mockResolvedValue('route-id-1');
 
     // Mock SettingsService methods
     MockedSettingsService.prototype.getShippingRates = jest
@@ -147,7 +155,6 @@ describe('MoneyDeliveryService', () => {
       senderPhone: '1234567890',
       receiverName: 'Jane Doe',
       receiverPhone: '0987654321',
-      fromRouteId: 'route-id-1',
       toRouteId: 'route-id-2',
       sendMoneyAmount: 1000000,
       sendCost: 50000,
@@ -183,12 +190,16 @@ describe('MoneyDeliveryService', () => {
 
       expect(MockedCustomerService.prototype.findOrCreateCustomer).toHaveBeenCalledTimes(2);
       expect(MockedCustomerService.prototype.findOrCreateCustomer).toHaveBeenCalledWith(
+        '1234567890',
         'John Doe',
-        '1234567890'
+        'route-id-1',
+        'money'
       );
       expect(MockedCustomerService.prototype.findOrCreateCustomer).toHaveBeenCalledWith(
+        '0987654321',
         'Jane Doe',
-        '0987654321'
+        'route-id-2',
+        'money'
       );
       expect(MockedRoute.findById).toHaveBeenCalledTimes(2);
       expect(MockedCodeGeneratorService.generateNextMoneyDeliveryCode).toHaveBeenCalled();
@@ -360,7 +371,8 @@ describe('MoneyDeliveryService', () => {
 
       const result = await moneyDeliveryService.updateMoneyDelivery(
         'money-delivery-id-1',
-        updateData
+        updateData,
+        'user123'
       );
 
       expect(MockedMoneyDelivery.findById).toHaveBeenCalledWith('money-delivery-id-1');
@@ -385,7 +397,7 @@ describe('MoneyDeliveryService', () => {
       MockedMoneyDelivery.findById = jest.fn().mockResolvedValue(null);
 
       await expect(
-        moneyDeliveryService.updateMoneyDelivery('non-existent-id', updateData)
+        moneyDeliveryService.updateMoneyDelivery('non-existent-id', updateData, 'user123')
       ).rejects.toThrow('Money delivery not found');
     });
 
@@ -402,7 +414,11 @@ describe('MoneyDeliveryService', () => {
       const updateDataWithRoute = { ...updateData, fromRouteId: 'non-existent-route' };
 
       await expect(
-        moneyDeliveryService.updateMoneyDelivery('money-delivery-id-1', updateDataWithRoute)
+        moneyDeliveryService.updateMoneyDelivery(
+          'money-delivery-id-1',
+          updateDataWithRoute,
+          'user123'
+        )
       ).rejects.toThrow('From route not found');
     });
 
@@ -421,7 +437,11 @@ describe('MoneyDeliveryService', () => {
       };
 
       await expect(
-        moneyDeliveryService.updateMoneyDelivery('money-delivery-id-1', updateDataWithoutSendCost)
+        moneyDeliveryService.updateMoneyDelivery(
+          'money-delivery-id-1',
+          updateDataWithoutSendCost,
+          'user123'
+        )
       ).rejects.toThrow('sendCost is required when updating transferType or sendMoneyAmount');
     });
 
@@ -442,7 +462,8 @@ describe('MoneyDeliveryService', () => {
 
       const result = await moneyDeliveryService.updateMoneyDelivery(
         'money-delivery-id-1',
-        updateDataWithCustomSendCost
+        updateDataWithCustomSendCost,
+        'user123'
       );
 
       expect(result).toBeDefined();
@@ -653,19 +674,21 @@ describe('MoneyDeliveryService', () => {
 
   describe('getFrequentCustomers', () => {
     it('should return frequent customers for a sender', async () => {
-      // Mock UserService.getUserSelectedRouteId
-      MockedUserService.prototype.getUserSelectedRouteId = jest.fn().mockResolvedValue('route123');
+      // Mock Route.find for route lookup
+      MockedRoute.find = jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue([
+          {
+            _id: '507f1f77bcf86cd799439011',
+            code: 'T1',
+            name: 'Route 1',
+          },
+        ]),
+      });
 
-      // Mock data - direct aggregation result without facet
+      // Mock MoneyDelivery aggregation
       const mockAggregationResult = [
         {
-          _id: {
-            receiverName: 'John Doe',
-            receiverPhone: '1234567890',
-            toRouteId: 'route1',
-            toRouteCode: 'T1',
-            toRouteName: 'Route 1',
-          },
+          _id: mockCustomer._id,
           deliveryCount: 5,
           totalSendMoneyAmount: 50000,
           totalSendCost: 1000,
@@ -674,35 +697,25 @@ describe('MoneyDeliveryService', () => {
           firstDeliveryDate: new Date('2024-01-01'),
         },
       ];
-
-      // Mock Customer.find to return sender IDs
-      const mockSenders = [{ _id: 'sender1' }, { _id: 'sender2' }];
-      MockedCustomer.find = jest.fn().mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          lean: jest.fn().mockResolvedValue(mockSenders),
-        }),
-      });
-
-      // Mock the MoneyDelivery model aggregation
-      jest.spyOn(MoneyDelivery, 'aggregate').mockResolvedValue(mockAggregationResult as any);
+      MockedMoneyDelivery.aggregate = jest.fn().mockResolvedValue(mockAggregationResult);
 
       const result = await moneyDeliveryService.getFrequentCustomers('Sender Name', 'user123');
 
       expect(result).toEqual([
         {
+          senderName: 'John Doe',
+          senderPhone: '1234567890',
           receiverName: 'John Doe',
           receiverPhone: '1234567890',
           toRoute: {
-            id: 'route1',
+            id: '507f1f77bcf86cd799439011',
             code: 'T1',
             name: 'Route 1',
           },
-          deliveryCount: 5,
           totalSendMoneyAmount: 50000,
           totalSendCost: 1000,
           totalCost: 1000,
           lastDeliveryDate: new Date('2024-01-15'),
-          firstDeliveryDate: new Date('2024-01-01'),
         },
       ]);
 
@@ -710,15 +723,9 @@ describe('MoneyDeliveryService', () => {
     });
 
     it('should handle empty results', async () => {
-      // Mock UserService.getUserSelectedRouteId
-      MockedUserService.prototype.getUserSelectedRouteId = jest.fn().mockResolvedValue('route123');
-
-      // Mock Customer.find to return empty array (no senders found)
-      MockedCustomer.find = jest.fn().mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          lean: jest.fn().mockResolvedValue([]),
-        }),
-      });
+      // Override the mock to return empty array for this test
+      const mockService = (moneyDeliveryService as any).customerService;
+      mockService.getFrequentReceivers = jest.fn().mockResolvedValue([]);
 
       const result = await moneyDeliveryService.getFrequentCustomers(
         'NonExistentSender',

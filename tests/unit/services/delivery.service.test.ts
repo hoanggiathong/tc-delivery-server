@@ -28,7 +28,7 @@ jest.mock('@/services/user.service');
 
 const MockedCustomerService = CustomerService as jest.MockedClass<typeof CustomerService>;
 const MockedSettingsService = SettingsService as jest.MockedClass<typeof SettingsService>;
-const MockedUserService = UserService as jest.MockedClass<typeof UserService>;
+const _MockedUserService = UserService as jest.MockedClass<typeof UserService>;
 jest.mock('@/services/code-generator.service', () => ({
   CodeGeneratorService: {
     generateNextCode: jest.fn(),
@@ -38,7 +38,7 @@ jest.mock('@/services/code-generator.service', () => ({
 }));
 
 const MockedDelivery = Delivery as jest.MockedClass<typeof Delivery>;
-const MockedCustomer = Customer as jest.MockedClass<typeof Customer>;
+const _MockedCustomer = Customer as jest.MockedClass<typeof Customer>;
 const MockedUser = User as jest.MockedClass<typeof User>;
 const MockedRoute = Route as jest.MockedClass<typeof Route>;
 const MockedCodeGeneratorService = CodeGeneratorService as jest.Mocked<typeof CodeGeneratorService>;
@@ -465,7 +465,7 @@ describe('DeliveryService', () => {
         .spyOn(deliveryService as any, 'transformDeliveryToResponse')
         .mockResolvedValue(mockExpectedResponse);
 
-      const result = await deliveryService.updateDelivery('delivery123', mockUpdateData);
+      const result = await deliveryService.updateDelivery('delivery123', mockUpdateData, 'user123');
 
       expect(MockedDelivery.findById).toHaveBeenCalledWith('delivery123');
       expect(MockedCustomerService.prototype.findOrCreateCustomer).toHaveBeenCalledWith(
@@ -493,9 +493,9 @@ describe('DeliveryService', () => {
     it('should throw error when delivery not found', async () => {
       MockedDelivery.findById = jest.fn().mockResolvedValue(null);
 
-      await expect(deliveryService.updateDelivery('delivery123', mockUpdateData)).rejects.toThrow(
-        'Delivery not found'
-      );
+      await expect(
+        deliveryService.updateDelivery('delivery123', mockUpdateData, 'user123')
+      ).rejects.toThrow('Delivery not found');
     });
 
     it('should throw error when from route not found during update', async () => {
@@ -503,9 +503,9 @@ describe('DeliveryService', () => {
 
       MockedRoute.findById = jest.fn().mockResolvedValueOnce(null); // From route not found
 
-      await expect(deliveryService.updateDelivery('delivery123', mockUpdateData)).rejects.toThrow(
-        'From route not found'
-      );
+      await expect(
+        deliveryService.updateDelivery('delivery123', mockUpdateData, 'user123')
+      ).rejects.toThrow('From route not found');
     });
 
     it('should throw error when to route not found during update', async () => {
@@ -516,9 +516,9 @@ describe('DeliveryService', () => {
         .mockResolvedValueOnce(mockNewFromRoute) // From route found
         .mockResolvedValueOnce(null); // To route not found
 
-      await expect(deliveryService.updateDelivery('delivery123', mockUpdateData)).rejects.toThrow(
-        'To route not found'
-      );
+      await expect(
+        deliveryService.updateDelivery('delivery123', mockUpdateData, 'user123')
+      ).rejects.toThrow('To route not found');
     });
 
     it('should throw error when update fails', async () => {
@@ -530,9 +530,9 @@ describe('DeliveryService', () => {
         .mockResolvedValueOnce(mockNewToRoute);
       MockedDelivery.findByIdAndUpdate = jest.fn().mockResolvedValue(null);
 
-      await expect(deliveryService.updateDelivery('delivery123', mockUpdateData)).rejects.toThrow(
-        'Failed to update delivery'
-      );
+      await expect(
+        deliveryService.updateDelivery('delivery123', mockUpdateData, 'user123')
+      ).rejects.toThrow('Failed to update delivery');
     });
   });
 
@@ -1135,39 +1135,48 @@ describe('DeliveryService', () => {
   });
 
   describe('getFrequentCustomers', () => {
-    it('should return frequent customers for a sender', async () => {
-      // Mock UserService.getUserSelectedRouteId
-      MockedUserService.prototype.getUserSelectedRouteId = jest.fn().mockResolvedValue('route123');
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
 
-      // Mock data - direct aggregation result without facet
-      const mockAggregationResult = [
+    it('should return frequent customers for a sender', async () => {
+      const mockSender = {
+        _id: 'sender1',
+        name: 'Sender Name',
+        phone: '+84123456789',
+      };
+
+      const mockReceivers = [
         {
-          _id: {
-            receiverName: 'John Doe',
-            receiverPhone: '1234567890',
-            toRouteId: 'route1',
-            toRouteCode: 'T1',
-            toRouteName: 'Route 1',
-          },
-          deliveryCount: 5,
+          _id: 'receiver1',
+          name: 'John Doe',
+          phone: '1234567890',
+          routeId: 'route1',
         },
       ];
 
-      // Mock Customer.find to return sender IDs - first call should succeed
-      const mockSenders = [{ _id: 'sender1' }, { _id: 'sender2' }];
-      MockedCustomer.find = jest.fn().mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          lean: jest.fn().mockResolvedValue(mockSenders),
-        }),
+      const mockRoute = {
+        _id: 'route1',
+        code: 'T1',
+        name: 'Route 1',
+      };
+
+      MockedCustomerService.prototype.getFrequentReceivers = jest
+        .fn()
+        .mockResolvedValue(mockReceivers);
+      MockedCustomerService.prototype.getCustomerByPhoneAndType = jest
+        .fn()
+        .mockResolvedValue(mockSender);
+      MockedRoute.find = jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue([mockRoute]),
       });
 
-      // Mock the Delivery model aggregation
-      jest.spyOn(Delivery, 'aggregate').mockResolvedValue(mockAggregationResult as any);
-
-      const result = await deliveryService.getFrequentCustomers('Sender Name', 'user123');
+      const result = await deliveryService.getFrequentCustomers('+84123456789', 'user123');
 
       expect(result).toEqual([
         {
+          senderName: 'Sender Name',
+          senderPhone: '+84123456789',
           receiverName: 'John Doe',
           receiverPhone: '1234567890',
           toRoute: {
@@ -1175,42 +1184,31 @@ describe('DeliveryService', () => {
             code: 'T1',
             name: 'Route 1',
           },
-          deliveryCount: 5,
         },
       ]);
 
-      expect(Delivery.aggregate).toHaveBeenCalled();
+      expect(MockedCustomerService.prototype.getFrequentReceivers).toHaveBeenCalledWith(
+        '+84123456789',
+        'delivery'
+      );
+      expect(MockedCustomerService.prototype.getCustomerByPhoneAndType).toHaveBeenCalledWith(
+        '+84123456789',
+        'delivery'
+      );
     });
 
     it('should handle empty results', async () => {
-      // Mock UserService.getUserSelectedRouteId
-      MockedUserService.prototype.getUserSelectedRouteId = jest.fn().mockResolvedValue('route123');
-
-      // Mock Customer.find to return empty array (no senders found)
-      MockedCustomer.find = jest.fn().mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          lean: jest.fn().mockResolvedValue([]),
-        }),
-      });
+      MockedCustomerService.prototype.getFrequentReceivers = jest.fn().mockResolvedValue([]);
 
       const result = await deliveryService.getFrequentCustomers('NonExistentSender', 'user123');
 
       expect(result).toEqual([]);
     });
 
-    it('should handle aggregation errors', async () => {
-      // Mock UserService.getUserSelectedRouteId
-      MockedUserService.prototype.getUserSelectedRouteId = jest.fn().mockResolvedValue('route123');
-
-      // Mock Customer.find to return sender IDs
-      const mockSenders = [{ _id: 'sender1' }];
-      MockedCustomer.find = jest.fn().mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          lean: jest.fn().mockResolvedValue(mockSenders),
-        }),
-      });
-
-      jest.spyOn(Delivery, 'aggregate').mockRejectedValue(new Error('Database error'));
+    it('should handle service errors', async () => {
+      MockedCustomerService.prototype.getFrequentReceivers = jest
+        .fn()
+        .mockRejectedValue(new Error('Database error'));
 
       await expect(deliveryService.getFrequentCustomers('Sender Name', 'user123')).rejects.toThrow(
         'Failed to get frequent customers'

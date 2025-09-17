@@ -197,12 +197,12 @@ describe('Money Delivery API Integration Tests', () => {
           code: 'T2',
           name: 'Test Route 2',
         },
-        deliveryCount: 5,
+        senderName: 'Nguyen Van A',
+        senderPhone: '+84123456789',
         totalSendMoneyAmount: 5000000,
         totalSendCost: 250000,
         totalCost: 250000,
         lastDeliveryDate: new Date('2024-01-25'),
-        firstDeliveryDate: new Date('2024-01-20'),
       },
     ]);
   });
@@ -370,12 +370,12 @@ describe('Money Delivery API Integration Tests', () => {
             code: 'T2',
             name: 'Test Route 2',
           },
-          deliveryCount: 5,
+          senderName: 'Nguyen Van A',
+          senderPhone: '+84123456789',
           totalSendMoneyAmount: 5000000,
           totalSendCost: 250000,
           totalCost: 250000,
           lastDeliveryDate: new Date('2024-01-25'),
-          firstDeliveryDate: new Date('2024-01-20'),
         },
       ];
       MockedMoneyDeliveryService.prototype.getFrequentCustomers.mockResolvedValue(

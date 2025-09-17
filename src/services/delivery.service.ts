@@ -36,6 +36,61 @@ export class DeliveryService {
   }
 
   /**
+   * Validate itemCost against shipping rates
+   */
+  private async validateItemCost(itemValue: number, itemCost: number): Promise<void> {
+    try {
+      const shippingRates = await this.settingsService.getShippingRates();
+
+      if (!shippingRates || !Array.isArray(shippingRates) || shippingRates.length === 0) {
+        throw new Error('Shipping rate configuration not found. Please contact administrator.');
+      }
+
+      // Find the applicable shipping rate for the item value
+      const applicableRate = shippingRates.find(
+        rate => itemValue >= rate.fromAmount && itemValue <= rate.toAmount
+      );
+
+      if (!applicableRate) {
+        throw new Error(
+          `No shipping rate found for item value ${itemValue.toLocaleString()} VND. Please check the item value.`
+        );
+      }
+
+      let expectedCost: number;
+      let errorMessage: string;
+
+      if (applicableRate.regularShippingFeeUnit === '%') {
+        // Percentage-based fee
+        expectedCost = Math.round(itemValue * (applicableRate.regularShippingFee / 100));
+        errorMessage = `Invalid item cost. Expected: ${applicableRate.regularShippingFee}% of item value (${expectedCost.toLocaleString()} VND), but received: ${itemCost.toLocaleString()} VND. Please correct the item cost.`;
+      } else {
+        // Fixed fee
+        expectedCost = applicableRate.regularShippingFee;
+        errorMessage = `Invalid item cost. Expected: ${expectedCost.toLocaleString()} VND, but received: ${itemCost.toLocaleString()} VND. Please correct the item cost.`;
+      }
+
+      if (itemCost !== expectedCost) {
+        throw new Error(errorMessage);
+      }
+
+      Logger.debug('ItemCost validation successful', {
+        itemValue,
+        itemCost,
+        expectedCost,
+        feeType: applicableRate.regularShippingFeeUnit,
+      });
+    } catch (error) {
+      Logger.error('ItemCost validation failed', {
+        error: error instanceof Error ? error.message : error,
+        itemValue,
+        itemCost,
+      });
+      throw error;
+    }
+  }
+
+  /**
    * Type assertion helper for populated delivery objects
    */
   private toPopulatedDelivery(delivery: unknown): IDeliveryWithPopulatedRefs {
@@ -137,8 +192,8 @@ export class DeliveryService {
         id: delivery.sender._id,
         name: delivery.sender.name,
         phone: delivery.sender.phone,
-        fromRouteId: delivery.sender.fromRouteId.toString(),
-        toRouteId: delivery.sender.toRouteId.toString(),
+        fromRouteId: delivery.sender.routeId.toString(),
+        toRouteId: delivery.receiver.routeId.toString(),
         createdAt: delivery.sender.createdAt,
         updatedAt: delivery.sender.updatedAt,
       },
@@ -146,8 +201,8 @@ export class DeliveryService {
         id: delivery.receiver._id,
         name: delivery.receiver.name,
         phone: delivery.receiver.phone,
-        fromRouteId: delivery.receiver.fromRouteId.toString(),
-        toRouteId: delivery.receiver.toRouteId.toString(),
+        fromRouteId: delivery.sender.routeId.toString(),
+        toRouteId: delivery.receiver.routeId.toString(),
         createdAt: delivery.receiver.createdAt,
         updatedAt: delivery.receiver.updatedAt,
       },
@@ -259,28 +314,36 @@ export class DeliveryService {
   /**
    * Update delivery by ID
    */
-  async updateDelivery(id: string, data: IDeliveryUpdateRequest): Promise<IDeliveryResponse> {
+  async updateDelivery(
+    id: string,
+    data: IDeliveryUpdateRequest,
+    userId: string
+  ): Promise<IDeliveryResponse> {
     const delivery = await Delivery.findById(id);
     if (!delivery) {
       throw new Error('Delivery not found');
     }
 
+    const userSelectedRouteId = await this.userService.getUserSelectedRouteId(userId);
     const updateData: Record<string, unknown> = {};
 
-    // Handle sender update
+    // Handle sender update - always use userSelectedRouteId for sender
     if (data.senderName || data.senderPhone) {
       const senderName = data.senderName || delivery.sender.toString();
       const senderPhone = data.senderPhone || delivery.sender.toString();
       const sender = await this.customerService.findOrCreateCustomer(
         senderPhone,
         senderName,
-        data.fromRouteId || delivery.fromRoute.toString(),
+        userSelectedRouteId,
         'delivery'
       );
       updateData.sender = sender.id;
     } else {
       updateData.sender = delivery.sender;
     }
+
+    // Always ensure fromRoute is userSelectedRouteId
+    updateData.fromRoute = userSelectedRouteId;
 
     // Handle receiver update
     if (data.receiverName || data.receiverPhone) {
@@ -295,15 +358,6 @@ export class DeliveryService {
       updateData.receiver = receiver.id;
     } else {
       updateData.receiver = delivery.receiver;
-    }
-
-    // Handle route updates
-    if (data.fromRouteId !== undefined) {
-      const fromRoute = await Route.findById(data.fromRouteId);
-      if (!fromRoute) {
-        throw new Error('From route not found');
-      }
-      updateData.fromRoute = data.fromRouteId;
     }
 
     if (data.toRouteId !== undefined) {
@@ -610,8 +664,8 @@ export class DeliveryService {
       toRoute: toRoute._id,
     })
       .populate([
-        { path: 'sender', select: '_id name phone fromRouteId toRouteId createdAt updatedAt' },
-        { path: 'receiver', select: '_id name phone fromRouteId toRouteId createdAt updatedAt' },
+        { path: 'sender', select: '_id name phone routeId createdAt updatedAt' },
+        { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
         { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
         { path: 'toRoute', select: '_id code name createdAt updatedAt' },
         { path: 'createdByUser', select: '_id username' },
@@ -664,8 +718,8 @@ export class DeliveryService {
       fromRoute: userRouteInfo.selectedRouteId,
     })
       .populate([
-        { path: 'sender', select: '_id name phone fromRouteId toRouteId createdAt updatedAt' },
-        { path: 'receiver', select: '_id name phone fromRouteId toRouteId createdAt updatedAt' },
+        { path: 'sender', select: '_id name phone routeId createdAt updatedAt' },
+        { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
         { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
         { path: 'toRoute', select: '_id code name createdAt updatedAt' },
         { path: 'createdByUser', select: '_id username' },
@@ -707,71 +761,65 @@ export class DeliveryService {
     };
   }
 
-  /**
-   * Get all frequent customers for a sender
-   * Groups by receiver name, phone, and route to avoid duplicates
-   */
   async getFrequentCustomers(
     senderIdentifier: string,
-    _userId: string
+    userId: string
   ): Promise<IFrequentCustomer[]> {
     try {
-      // Get frequent receivers using new customer service
       const receivers = await this.customerService.getFrequentReceivers(
         senderIdentifier,
-        'delivery'
+        'delivery',
+        userId
       );
 
       if (receivers.length === 0) {
         return [];
       }
 
-      // Count deliveries for each receiver and build response
-      const frequentCustomersWithNull = await Promise.all(
-        receivers.map(async receiver => {
-          // Find sender with delivery type
-          const sender = await this.customerService.getCustomerByPhoneAndType(
-            senderIdentifier,
-            'delivery'
-          );
-
-          if (!sender) {
-            return null;
-          }
-
-          // Count deliveries between this sender and receiver
-          const deliveryCount = await Delivery.countDocuments({
-            sender: sender._id,
-            receiver: receiver._id,
-          });
-
-          // Get route info for receiver
-          const route = await Route.findById(receiver.routeId);
-
-          return {
-            receiverName: receiver.name,
-            receiverPhone: receiver.phone,
-            toRoute: {
-              id: receiver.routeId.toString(),
-              code: route?.code || '',
-              name: route?.name || '',
-            },
-            deliveryCount,
-          };
-        })
+      const sender = await this.customerService.getCustomerByPhoneAndType(
+        senderIdentifier,
+        'delivery'
       );
 
-      // Filter out null results and sort by delivery count
-      const validResults = frequentCustomersWithNull
-        .filter((customer): customer is IFrequentCustomer => customer !== null)
-        .sort((a, b) => b.deliveryCount - a.deliveryCount);
+      if (!sender) {
+        Logger.debug('Sender not found for frequent customers', { senderIdentifier });
+        return [];
+      }
+
+      const routeIds = receivers.map(receiver => receiver.routeId);
+      const routes = await Route.find({ _id: { $in: routeIds } }).lean();
+      const routeMap = new Map(routes.map(route => [route._id.toString(), route]));
+
+      const frequentCustomers: IFrequentCustomer[] = receivers.map(receiver => {
+        const route = routeMap.get(receiver.routeId.toString());
+
+        if (!route) {
+          Logger.warn('Route not found for receiver', {
+            receiverId: receiver._id,
+            routeId: receiver.routeId,
+            senderIdentifier,
+          });
+        }
+
+        return {
+          senderName: sender.name,
+          senderPhone: sender.phone,
+          receiverName: receiver.name,
+          receiverPhone: receiver.phone,
+          toRoute: {
+            id: receiver.routeId.toString(),
+            code: route?.code || 'UNKNOWN',
+            name: route?.name || 'Unknown Route',
+          },
+        };
+      });
 
       Logger.debug('Frequent customers retrieved for delivery', {
         senderIdentifier,
-        count: validResults.length,
+        count: frequentCustomers.length,
       });
 
-      return validResults;
+      return frequentCustomers;
     } catch (error) {
       Logger.error('Failed to get frequent customers', {
         error: error instanceof Error ? error.message : error,
