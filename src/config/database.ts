@@ -8,6 +8,7 @@ import { Route } from '@/models/route.model';
 import { User } from '@/models/user.model';
 import { UserRoute } from '@/models/user-route.model';
 import { Settings } from '@/models/settings.model';
+import { Debt } from '@/models/debt.model';
 
 export const connectDB = async (): Promise<void> => {
   try {
@@ -69,6 +70,7 @@ export const syncIndexes = async (): Promise<void> => {
       { name: 'User', model: User },
       { name: 'UserRoute', model: UserRoute },
       { name: 'Settings', model: Settings },
+      { name: 'Debt', model: Debt },
     ];
 
     for (const { name, model } of models) {

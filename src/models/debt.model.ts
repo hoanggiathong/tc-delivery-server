@@ -95,8 +95,8 @@ const debtSchema = new Schema<IDebt>(
   },
   {
     timestamps: true,
-    // collection: 'debts',
-    collection: 'debtsTest',
+    collection: 'debts',
+    // collection: 'debtsTest',
     toJSON: {
       transform: function (_doc, ret) {
         const { _id, __v, ...rest } = ret;
@@ -114,18 +114,28 @@ debtSchema.pre('save', async function (next) {
       createdAt: -1,
     });
 
+    console.log('fromRoute :>> ', this.fromRoute);
+    console.log('toRoute :>> ', this.toRoute);
+    console.log('lastDebt :>> ', lastDebt);
     // assign value to openingBalance
-
-    this.openingBalance = lastDebt ? (lastDebt.totalDebt ?? 0) : 0;
+    if (lastDebt) {
+      if (lastDebt.totalDebt === 0) {
+        this.openingBalance = 0;
+      } else {
+        this.openingBalance = lastDebt.totalDebt;
+      }
+    } else {
+      this.openingBalance = 0;
+    }
 
     // handle two field: accountPayable and receivable
     if (this.openingBalance == 0) {
       this.accountPayable = 0;
       this.receivable = 0;
     } else if (this.openingBalance > 0) {
-      this.accountPayable = this.openingBalance;
+      this.accountPayable = +this.openingBalance;
     } else if (this.openingBalance < 0) {
-      this.receivable = this.openingBalance;
+      this.receivable = +this.openingBalance;
     }
 
     // calculate totalDebt
@@ -143,4 +153,4 @@ debtSchema.index({ fromRoute: 1 });
 debtSchema.index({ fromRoute: 1, toRoute: 1, createdAt: -1 });
 
 // Index is already created by unique: true in the field definition
-export const Debt = mongoose.model<IDebt>('DebtSchema', debtSchema);
+export const Debt = mongoose.model<IDebt>('Debt', debtSchema);

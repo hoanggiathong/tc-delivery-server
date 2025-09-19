@@ -5,7 +5,7 @@ import { IRoute, Route } from '@/models/route.model';
 import { IDebtRow } from '@/types/debt.type';
 import mongoose from 'mongoose';
 
-export class TestService {
+export class CronjobService {
   async cronjobCalculateDebt(): Promise<void> {
     let session = await mongoose.startSession();
     session.startTransaction();
@@ -88,17 +88,12 @@ export class TestService {
           },
         }).lean();
 
-        console.log('listDeliveryFromRoute :>> ', listDeliveryFromRoute);
-
         // handle listDeliveryFromRoute
         for (const delivery of listDeliveryFromRoute) {
           const toRoute: any = delivery.toRoute.toString();
 
           // object from route with information about debt
           const elementArrayRoute = handleArrayRoute(toRoute, toRoute);
-
-          console.log('listDeliveryFromRoute - delivery :>> ', delivery);
-          console.log('arrayRoute[toRoute] - 1 :>> ', elementArrayRoute);
 
           let costDeliveryFromRoute = delivery.cost ?? 0;
           let homeDeliveryCostFromRoute = delivery.homeDeliveryCost ?? 0;
@@ -137,9 +132,6 @@ export class TestService {
           let homeDeliveryCost = delivery.homeDeliveryCost ?? 0;
           let collectForCustomerCostToRoute = delivery.collectForCustomerCost ?? 0;
 
-          console.log('listDeliveriesToRoute - delivery :>> ', delivery);
-          console.log('arrayRoute[fromRoute] - 2 :>> ', elementArrayRoute);
-
           // handle feeCODToRoute (no cuoc ve)
           if (delivery.paymentType == 'debt') {
             elementArrayRoute.feeCODToRoute += costDelivery ?? 0;
@@ -169,9 +161,6 @@ export class TestService {
 
           let moneyDeliveryCostFromRoute = moneyDelivery.sendMoneyAmount ?? 0;
 
-          console.log('listMoneyDeliveriesFromRoute - delivery :>> ', moneyDelivery);
-          console.log('arrayRoute[toRoute] - 3 :>> ', elementArrayRoute);
-
           // handle field costFromRoute (tien cuoc di)
           elementArrayRoute.costFromRoute += moneyDeliveryCostFromRoute ?? 0;
         }
@@ -192,9 +181,6 @@ export class TestService {
 
           let moneyDeliveryCostToRoute = moneyDelivery.sendMoneyAmount ?? 0;
 
-          console.log('listMoneyDeliveriesToRoute - delivery :>> ', moneyDelivery);
-          console.log('arrayRoute[fromRoute] - 4 :>> ', elementArrayRoute);
-
           // handle field costToRoute (tien cuoc ve)
           elementArrayRoute.costToRoute += moneyDeliveryCostToRoute ?? 0;
         }
@@ -207,8 +193,11 @@ export class TestService {
       // insert to debt collection
       await Promise.all(
         listInsertDebt.map(async itemDebt => {
-          const debtData = new Debt(itemDebt);
-          return await debtData.save({ session: session });
+          // check fromRoute and toRoute are not the same
+          if (itemDebt.fromRoute.toString() !== itemDebt.toRoute.toString()) {
+            const debtData = new Debt(itemDebt);
+            return await debtData.save({ session: session });
+          }
         })
       );
 

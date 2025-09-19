@@ -1,4 +1,3 @@
-import { LoginRequest } from '@/schemas/auth.schema';
 import { TestService } from '@/services/test.service';
 import { ApiResponse } from '@/types';
 import { Request, Response } from 'express';

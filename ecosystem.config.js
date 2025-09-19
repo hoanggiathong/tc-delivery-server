@@ -1,6 +1,25 @@
 module.exports = {
   apps: [
     {
+      name: 'tc-delivery-debt-calculator',
+      script: 'dist/src/services/test.service.js',
+      cwd: './',
+      instances: 1,
+      exec_mode: 'fork',
+      env: {
+        NODE_ENV: 'production',
+      },
+      // Logging
+      log_file: './logs/debt-calculator-combined.log',
+      out_file: './logs/debt-calculator-out.log',
+      error_file: './logs/debt-calculator-error.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      // Cron settings
+      cron_restart: '0 0 * * *', // Run at midnight every day
+      watch: false,
+      autorestart: false
+    },
+    {
       name: 'tc-delivery-server-prod',
       script: 'dist/src/index.js',
       cwd: './',
