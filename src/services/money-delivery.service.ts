@@ -511,13 +511,13 @@ export class MoneyDeliveryService {
   private parseDeliveryIdentifier(
     deliveryIdentifier: string
   ): { code: string; fromRouteCode: string; toRouteCode: string } | null {
-    // Expected format: 10 digits + route code + route code + -T suffix (e.g., 0907250001T4T1-T)
-    const match = deliveryIdentifier.match(/^(\d{10})([A-Z]\d+)([A-Z]\d+)-T$/);
+    // Expected format: 10 digits + route code + route code + -T suffix (e.g., 0907250001T4T1-T, 0907250001ABCD-T)
+    const match = deliveryIdentifier.match(/^(\d{10})([A-Z]([A-Z]|\d+))([A-Z]([A-Z]|\d+))-T$/);
     if (!match) {
       return null;
     }
 
-    const [, code, fromRouteCode, toRouteCode] = match;
+    const [, code, fromRouteCode, , toRouteCode] = match;
     return { code, fromRouteCode, toRouteCode };
   }
 

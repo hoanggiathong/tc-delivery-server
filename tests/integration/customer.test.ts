@@ -34,6 +34,7 @@ describe('Customer Endpoints', () => {
     const validCustomerData = {
       name: 'John Doe',
       phone: '+1234567890',
+      routeId: '507f1f77bcf86cd799439011',
     };
 
     it('should create a new customer when authenticated as admin', async () => {
@@ -67,19 +68,15 @@ describe('Customer Endpoints', () => {
       expect(response.body.message).toBe('Customer with this name and phone already exists');
     });
 
-    it('should return 400 for other service errors', async () => {
-      MockedCustomerService.prototype.createCustomer.mockRejectedValue(
-        new Error('Database connection failed')
-      );
-
+    it('should return 400 for validation errors', async () => {
       const response = await request(app)
         .post('/api/customer')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send(validCustomerData)
+        .send({})
         .expect(400);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Database connection failed');
+      expect(response.body.message).toBe('Validation failed');
     });
 
     it('should return 403 when authenticated as regular user', async () => {
@@ -125,15 +122,13 @@ describe('Customer Endpoints', () => {
     };
 
     it('should update customer successfully', async () => {
-      const mockUpdatedCustomer = {
-        id: customerId,
+      const mockUpdatedCustomer = createMockCustomer({
+        _id: customerId,
         name: 'Jane Doe',
         phone: '+1987654321',
-        fromRouteId: '507f1f77bcf86cd799439011',
-        toRouteId: '507f1f77bcf86cd799439012',
         createdAt: new Date('2025-06-27T07:51:17.342Z'),
         updatedAt: new Date('2025-06-27T07:51:17.342Z'),
-      };
+      });
 
       MockedCustomerService.prototype.updateCustomer.mockResolvedValue(mockUpdatedCustomer);
 
@@ -183,15 +178,13 @@ describe('Customer Endpoints', () => {
     const customerId = '507f1f77bcf86cd799439011';
 
     it('should get customer by ID successfully', async () => {
-      const mockCustomer = {
-        id: customerId,
+      const mockCustomer = createMockCustomer({
+        _id: customerId,
         name: 'John Doe',
         phone: '+1234567890',
-        fromRouteId: '507f1f77bcf86cd799439011',
-        toRouteId: '507f1f77bcf86cd799439012',
         createdAt: new Date('2025-06-27T07:51:17.342Z'),
         updatedAt: new Date('2025-06-27T07:51:17.342Z'),
-      };
+      });
 
       MockedCustomerService.prototype.getCustomerById.mockResolvedValue(mockCustomer);
 
@@ -234,9 +227,10 @@ describe('Customer Endpoints', () => {
 
   describe('GET /api/customer', () => {
     it('should get all customers successfully', async () => {
-      const mockCustomers = [createMockCustomer({ id: 'customer1' })];
+      const mockCustomers = [createMockCustomer({ _id: 'customer1' })];
+      const mockResult = { customers: mockCustomers, total: 1, pages: 1 };
 
-      MockedCustomerService.prototype.getAllCustomers.mockResolvedValue(mockCustomers);
+      MockedCustomerService.prototype.getAllCustomers.mockResolvedValue(mockResult);
 
       const response = await request(app)
         .get('/api/customer')
@@ -250,7 +244,9 @@ describe('Customer Endpoints', () => {
     });
 
     it('should return empty array when no customers exist', async () => {
-      MockedCustomerService.prototype.getAllCustomers.mockResolvedValue([]);
+      const mockResult = { customers: [], total: 0, pages: 0 };
+
+      MockedCustomerService.prototype.getAllCustomers.mockResolvedValue(mockResult);
 
       const response = await request(app)
         .get('/api/customer')

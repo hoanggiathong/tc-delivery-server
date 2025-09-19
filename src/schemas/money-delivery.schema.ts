@@ -1,4 +1,8 @@
 import { z } from 'zod';
+import {
+  MONEY_DELIVERY_IDENTIFIER_PATTERN,
+  VALIDATION_MESSAGES,
+} from '@/utils/validation-patterns';
 
 export const createMoneyDeliverySchema = z.object({
   body: z.object({
@@ -99,10 +103,7 @@ export const moneyDeliveryCodeSchema = z.object({
       .string()
       .min(14, 'Money delivery identifier must be at least 14 characters') // 10 digits code + 2 route codes + -T suffix minimum
       .max(22, 'Money delivery identifier must not exceed 22 characters')
-      .regex(
-        /^\d{10}[A-Z]\d+[A-Z]\d+-T$/,
-        'Invalid money delivery identifier format. Expected: codeFromRouteToRoute-T (e.g., 0907250001T4T1-T)'
-      )
+      .regex(MONEY_DELIVERY_IDENTIFIER_PATTERN, VALIDATION_MESSAGES.MONEY_DELIVERY_IDENTIFIER)
       .trim(),
   }),
 });
@@ -177,10 +178,7 @@ export const updateMoneyDeliveryByFullCodeSchema = z.object({
       .string()
       .min(14, 'Money delivery fullCode must be at least 14 characters') // 10 digits code + 2 route codes + -T suffix minimum
       .max(22, 'Money delivery fullCode must not exceed 22 characters')
-      .regex(
-        /^\d{10}[A-Z]\d+[A-Z]\d+-T$/,
-        'Invalid money delivery fullCode format. Expected: codeFromRouteToRoute-T (e.g., 0907250001T4T1-T)'
-      )
+      .regex(MONEY_DELIVERY_IDENTIFIER_PATTERN, VALIDATION_MESSAGES.MONEY_DELIVERY_IDENTIFIER)
       .trim(),
   }),
   body: z

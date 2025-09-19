@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ROUTE_CODE_PATTERN, VALIDATION_MESSAGES } from '@/utils/validation-patterns';
 
 export const createRouteSchema = z.object({
   body: z.object({
@@ -6,7 +7,7 @@ export const createRouteSchema = z.object({
       .string()
       .min(1, 'Code is required')
       .max(10, 'Code must not exceed 10 characters')
-      .regex(/^[A-Z]\d+$/, 'Code must start with a letter followed by numbers (e.g., T1, T2)')
+      .regex(ROUTE_CODE_PATTERN, VALIDATION_MESSAGES.ROUTE_CODE)
       .trim(),
     name: z
       .string()
@@ -23,7 +24,7 @@ export const updateRouteSchema = z.object({
         .string()
         .min(1, 'Code is required')
         .max(10, 'Code must not exceed 10 characters')
-        .regex(/^[A-Z]\d+$/, 'Code must start with a letter followed by numbers (e.g., T1, T2)')
+        .regex(ROUTE_CODE_PATTERN, VALIDATION_MESSAGES.ROUTE_CODE)
         .trim()
         .optional(),
       name: z

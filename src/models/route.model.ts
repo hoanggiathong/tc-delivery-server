@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import { ROUTE_CODE_PATTERN, VALIDATION_MESSAGES } from '@/utils/validation-patterns';
 
 export interface IRoute extends Document {
   _id: string;
@@ -20,7 +21,7 @@ const routeSchema = new Schema<IRoute>(
       unique: true,
       trim: true,
       uppercase: true,
-      match: [/^[A-Z]\d+$/, 'Code must start with a letter followed by numbers (e.g., T1, T2)'],
+      match: [ROUTE_CODE_PATTERN, VALIDATION_MESSAGES.ROUTE_CODE],
     },
     name: {
       type: String,
