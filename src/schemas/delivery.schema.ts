@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DELIVERY_IDENTIFIER_PATTERN, VALIDATION_MESSAGES } from '@/utils/validation-patterns';
 
 export const createDeliverySchema = z.object({
   body: z.object({
@@ -158,10 +159,7 @@ export const deliveryCodeSchema = z.object({
       .string()
       .min(12, 'Delivery identifier must be at least 12 characters') // 10 digits code + 2 route codes minimum
       .max(20, 'Delivery identifier must not exceed 20 characters')
-      .regex(
-        /^\d{10}[A-Z]\d+[A-Z]\d+$/,
-        'Invalid delivery identifier format. Expected: codeFromRouteToRoute (e.g., 0907250001T4T1)'
-      )
+      .regex(DELIVERY_IDENTIFIER_PATTERN, VALIDATION_MESSAGES.DELIVERY_IDENTIFIER)
       .trim(),
   }),
 });
@@ -247,10 +245,7 @@ export const deliveryFullCodeSchema = z.object({
       .string()
       .min(12, 'Delivery fullCode must be at least 12 characters') // 10 digits code + 2 route codes minimum
       .max(20, 'Delivery fullCode must not exceed 20 characters')
-      .regex(
-        /^\d{10}[A-Z]\d+[A-Z]\d+$/,
-        'Invalid delivery fullCode format. Expected: codeFromRouteToRoute (e.g., 0907250001T4T1)'
-      )
+      .regex(DELIVERY_IDENTIFIER_PATTERN, VALIDATION_MESSAGES.DELIVERY_IDENTIFIER)
       .trim(),
   }),
 });

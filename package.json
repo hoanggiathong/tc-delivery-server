@@ -42,7 +42,6 @@
     "type-check": "tsc --noEmit",
     "code-quality": "npm run type-check && npm run lint && npm run format:check",
     "test": "jest",
-    "test:unit": "jest tests/unit",
     "test:integration": "jest tests/integration",
     "test:debug": "node --inspect-brk node_modules/.bin/jest --runInBand",
     "test:debug-file": "node --inspect-brk node_modules/.bin/jest --runInBand --testPathPattern",

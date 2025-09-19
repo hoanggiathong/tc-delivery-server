@@ -740,14 +740,14 @@ export class DeliveryService {
   private parseDeliveryIdentifier(
     deliveryIdentifier: string
   ): { code: string; fromRouteCode: string; toRouteCode: string } | null {
-    // Expected format: 10 digits + route codes (e.g., 0907250001T4T1)
-    const match = deliveryIdentifier.match(/^(\d{10})([A-Z]\d+)([A-Z]\d+)$/);
+    // Expected format: 10 digits + route codes (e.g., 0907250001T4T1, 0907250001ABCD)
+    const match = deliveryIdentifier.match(/^(\d{10})([A-Z]([A-Z]|\d+))([A-Z]([A-Z]|\d+))$/);
 
     if (!match) {
       return null;
     }
 
-    const [, code, fromRouteCode, toRouteCode] = match;
+    const [, code, fromRouteCode, , toRouteCode] = match;
 
     // Validate code format
     if (!CodeGeneratorService.validateCodeFormat(code)) {

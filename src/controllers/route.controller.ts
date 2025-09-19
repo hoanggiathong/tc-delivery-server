@@ -31,7 +31,7 @@ export class RouteController {
    *               code:
    *                 type: string
    *                 maxLength: 10
-   *                 pattern: ^[A-Z]\d+$
+   *                 pattern: ^[A-Z]([A-Z]|\d+)$
    *                 example: T1
    *               name:
    *                 type: string
@@ -123,7 +123,7 @@ export class RouteController {
    *                 summary: Invalid route code format
    *                 value:
    *                   success: false
-   *                   message: "Validation error: Code must match pattern ^[A-Z]\\d+$"
+   *                   message: "Validation error: Code must match pattern ^[A-Z]([A-Z]|\\d+)$"
    *               missingName:
    *                 summary: Missing required field
    *                 value:
@@ -208,7 +208,7 @@ export class RouteController {
    *               code:
    *                 type: string
    *                 maxLength: 10
-   *                 pattern: ^[A-Z]\d+$
+   *                 pattern: ^[A-Z]([A-Z]|\d+)$
    *                 example: T1
    *               name:
    *                 type: string
@@ -277,7 +277,7 @@ export class RouteController {
    *                 summary: Invalid code format
    *                 value:
    *                   success: false
-   *                   message: "Validation error: Code must match pattern ^[A-Z]\\d+$"
+   *                   message: "Validation error: Code must match pattern ^[A-Z]([A-Z]|\\d+)$"
    *       404:
    *         description: Route not found
    *         content:

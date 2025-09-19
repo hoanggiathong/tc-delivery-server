@@ -8,6 +8,7 @@ import {
   createMockCustomer,
   createMockDeliveryRequestWithoutHome,
   mockCostReportForIntegration,
+  mockNextCodeResponseForIntegration,
 } from '../mocks';
 
 // Mock DeliveryService
@@ -354,27 +355,10 @@ describe('Delivery Endpoints', () => {
 
   describe('GET /api/delivery/next-code', () => {
     it('should get the next delivery code successfully', async () => {
-      const mockNextCodeResponse = {
-        nextCode: '2401250001',
-        fullCode: '2401250001T1T2',
-        subCode: '17031750001',
-        toRoute: {
-          id: '507f1f77bcf86cd799439012',
-          code: 'T2',
-          name: 'Ha Noi',
-          createdAt: new Date('2025-06-27'),
-          updatedAt: new Date('2025-06-27'),
-        },
-        fromRoute: {
-          id: '507f1f77bcf86cd799439011',
-          code: 'T1',
-          name: 'Ho Chi Minh',
-          createdAt: new Date('2025-06-27'),
-          updatedAt: new Date('2025-06-27'),
-        },
-      };
-
-      MockedDeliveryService.prototype.getNextCode.mockResolvedValue(mockNextCodeResponse);
+      // Use the centralized mock data
+      MockedDeliveryService.prototype.getNextCode.mockResolvedValue(
+        mockNextCodeResponseForIntegration
+      );
 
       const response = await request(app)
         .get('/api/delivery/next-code')
@@ -383,7 +367,12 @@ describe('Delivery Endpoints', () => {
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.data).toEqualWithDateStrings(mockNextCodeResponse);
+      expect(response.body.data).toEqualWithDateStrings(mockNextCodeResponseForIntegration);
+      // Verify the service method was called
+      expect(MockedDeliveryService.prototype.getNextCode).toHaveBeenCalledWith(
+        '507f1f77bcf86cd799439012',
+        'admin123'
+      );
     });
 
     it('should return 404 when route not found', async () => {

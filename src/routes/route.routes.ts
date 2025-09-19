@@ -25,7 +25,7 @@ const routeController = new RouteController();
  *         code:
  *           type: string
  *           maxLength: 10
- *           pattern: ^[A-Z]\d+$
+ *           pattern: ^[A-Z]([A-Z]|\d+)$
  *           example: T1
  *           description: The unique code of the route
  *         name:
@@ -48,7 +48,7 @@ const routeController = new RouteController();
  *         code:
  *           type: string
  *           maxLength: 10
- *           pattern: ^[A-Z]\d+$
+ *           pattern: ^[A-Z]([A-Z]|\d+)$
  *           example: T1
  *           description: The unique code of the route
  *         name:
@@ -62,7 +62,7 @@ const routeController = new RouteController();
  *         code:
  *           type: string
  *           maxLength: 10
- *           pattern: ^[A-Z]\d+$
+ *           pattern: ^[A-Z]([A-Z]|\d+)$
  *           example: T1
  *           description: The unique code of the route
  *         name:
