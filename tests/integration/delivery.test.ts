@@ -8,7 +8,8 @@ import {
   createMockCustomer,
   createMockDeliveryRequestWithoutHome,
   mockCostReportForIntegration,
-  mockNextCodeResponseForIntegration,
+  mockDeliveryNextCodeResponseForIntegration,
+  customerToResponse,
 } from '../mocks';
 
 // Mock DeliveryService
@@ -176,7 +177,9 @@ describe('Delivery Endpoints', () => {
     it('should update delivery successfully', async () => {
       const mockUpdatedDelivery = createMockDelivery({
         id: deliveryId,
-        sender: createMockCustomer({ name: 'Updated Sender', phone: '+1111111111' }),
+        sender: customerToResponse(
+          createMockCustomer({ name: 'Updated Sender', phone: '+1111111111' })
+        ),
         fromRoute: {
           id: '507f1f77bcf86cd799439013',
           code: 'T3',
@@ -290,8 +293,10 @@ describe('Delivery Endpoints', () => {
         createMockDelivery({
           id: 'delivery1',
           name: 'Package 1',
-          sender: createMockCustomer({ id: 'sender1', name: 'John Sender' }),
-          receiver: createMockCustomer({ id: 'receiver1', name: 'Jane Receiver' }),
+          sender: customerToResponse(createMockCustomer({ _id: 'sender1', name: 'John Sender' })),
+          receiver: customerToResponse(
+            createMockCustomer({ _id: 'receiver1', name: 'Jane Receiver' })
+          ),
         }),
       ];
 
@@ -357,7 +362,7 @@ describe('Delivery Endpoints', () => {
     it('should get the next delivery code successfully', async () => {
       // Use the centralized mock data
       MockedDeliveryService.prototype.getNextCode.mockResolvedValue(
-        mockNextCodeResponseForIntegration
+        mockDeliveryNextCodeResponseForIntegration
       );
 
       const response = await request(app)
@@ -367,7 +372,7 @@ describe('Delivery Endpoints', () => {
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.data).toEqualWithDateStrings(mockNextCodeResponseForIntegration);
+      expect(response.body.data).toEqualWithDateStrings(mockDeliveryNextCodeResponseForIntegration);
       // Verify the service method was called
       expect(MockedDeliveryService.prototype.getNextCode).toHaveBeenCalledWith(
         '507f1f77bcf86cd799439012',
@@ -427,7 +432,9 @@ describe('Delivery Endpoints', () => {
 
     it('should get related deliveries successfully', async () => {
       const mockRelatedDeliveries = [
-        createMockDelivery({ sender: createMockCustomer({ name: 'John Sender' }) }),
+        createMockDelivery({
+          sender: customerToResponse(createMockCustomer({ name: 'John Sender' })),
+        }),
       ];
 
       MockedDeliveryService.prototype.getRelatedDeliveriesBySender.mockResolvedValue(

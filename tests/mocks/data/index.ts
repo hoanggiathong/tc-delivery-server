@@ -8,8 +8,10 @@
 export {
   // Customer mocks
   createMockCustomer,
+  createMockCustomerResponse,
   createMockCustomerRequest,
   createMockCustomerList,
+  customerToResponse,
   // Integration test mocks
   mockCustomersForIntegration,
 } from './customers';

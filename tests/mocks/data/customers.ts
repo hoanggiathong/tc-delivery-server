@@ -1,6 +1,22 @@
+import { ICustomer } from '@/models/customer.model';
 import { ICustomerResponse } from '@/types/customer.type';
+import { Types } from 'mongoose';
 
-export const createMockCustomer = (
+export const createMockCustomer = (overrides: Partial<ICustomer> = {}): ICustomer => {
+  return {
+    _id: 'customer-id-1',
+    name: 'John Doe',
+    phone: '1234567890',
+    routeId: new Types.ObjectId('507f1f77bcf86cd799439011'),
+    relativeReceiver: [],
+    type: 'delivery',
+    createdAt: new Date('2023-01-01'),
+    updatedAt: new Date('2023-01-01'),
+    ...overrides,
+  } as ICustomer;
+};
+
+export const createMockCustomerResponse = (
   overrides: Partial<ICustomerResponse> = {}
 ): ICustomerResponse => {
   return {
@@ -25,10 +41,23 @@ export const createMockCustomerRequest = (overrides: any = {}) => {
   };
 };
 
-export const createMockCustomerList = (count: number = 3): ICustomerResponse[] => {
+// Utility to convert ICustomer to ICustomerResponse for delivery tests
+export const customerToResponse = (customer: ICustomer): ICustomerResponse => {
+  return {
+    id: customer._id,
+    name: customer.name,
+    phone: customer.phone,
+    fromRouteId: customer.routeId.toString(),
+    toRouteId: customer.routeId.toString(),
+    createdAt: customer.createdAt,
+    updatedAt: customer.updatedAt,
+  };
+};
+
+export const createMockCustomerList = (count: number = 3): ICustomer[] => {
   return Array.from({ length: count }, (_, index) =>
     createMockCustomer({
-      id: `customer-id-${index + 1}`,
+      _id: `customer-id-${index + 1}`,
       name: `Customer ${index + 1}`,
       phone: `123456789${index}`,
     })
