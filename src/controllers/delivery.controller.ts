@@ -1526,6 +1526,12 @@ export class DeliveryController {
         return;
       }
 
+      Logger.info('Getting today delivery report', {
+        userId: req.user.userId,
+        path: req.path,
+        originalUrl: req.originalUrl,
+      });
+
       // Call service to get today's delivery report
       const report = await this.deliveryService.getTodayReport(req.user.userId);
 
