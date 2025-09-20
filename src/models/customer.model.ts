@@ -1,5 +1,10 @@
 import mongoose, { Document, Schema, Types } from 'mongoose';
 
+export interface ICustomerImage {
+  url: string;
+  rotate: number;
+}
+
 export interface ICustomer extends Document {
   _id: string;
   name: string;
@@ -7,6 +12,8 @@ export interface ICustomer extends Document {
   routeId: Types.ObjectId;
   relativeReceiver: Array<Types.ObjectId>;
   type: 'delivery' | 'money';
+  bankId: Types.ObjectId;
+  images: ICustomerImage[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -40,6 +47,39 @@ const customerSchema = new Schema<ICustomer>(
       enum: ['delivery', 'money'],
       default: 'delivery',
       required: true,
+    },
+    bankId: {
+      type: Schema.Types.ObjectId,
+      ref: 'CustomerBank',
+    },
+    images: {
+      type: [
+        {
+          url: {
+            type: String,
+            required: true,
+            trim: true,
+          },
+          rotate: {
+            type: Number,
+            default: 0,
+            enum: [0, 90, 180, 270],
+            validate: {
+              validator: function (value: number) {
+                return [0, 90, 180, 270].includes(value);
+              },
+              message: 'Rotate must be 0, 90, 180, or 270 degrees',
+            },
+          },
+        },
+      ],
+      default: [],
+      validate: {
+        validator: function (images: ICustomerImage[]) {
+          return images.length <= 5;
+        },
+        message: 'Maximum 5 images allowed',
+      },
     },
   },
   {

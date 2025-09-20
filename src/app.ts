@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import path from 'path';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from '@/config/swagger';
 import routes from '@/routes';
@@ -54,6 +55,9 @@ app.get('/health', (_req, res) => {
     environment: process.env.NODE_ENV,
   });
 });
+
+// Serve uploaded images
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
 // API routes
 app.use('/api', routes);

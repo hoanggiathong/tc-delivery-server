@@ -60,5 +60,52 @@ export const customerParamsSchema = z.object({
   }),
 });
 
+export const uploadImageSchema = z.object({
+  body: z.object({
+    name: z
+      .string()
+      .min(1, 'Name is required')
+      .max(100, 'Name must not exceed 100 characters')
+      .trim(),
+    phone: z
+      .string()
+      .min(1, 'Phone is required')
+      .regex(/^\+?[1-9]\d{1,14}$/, 'Please enter a valid phone number')
+      .trim(),
+    routeId: z
+      .string()
+      .min(1, 'Route ID is required')
+      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid route ID format'),
+    type: z.enum(['delivery', 'money']).default('delivery'),
+    imageIndex: z.coerce.number().min(1).max(5),
+    rotate: z.coerce
+      .number()
+      .refine(val => [0, 90, 180, 270].includes(val), {
+        message: 'Rotate must be 0, 90, 180, or 270',
+      })
+      .default(0),
+  }),
+});
+
+export const updateImageRotationSchema = z.object({
+  params: z.object({
+    id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid customer ID'),
+    index: z.string().regex(/^[1-5]$/, 'Index must be between 1 and 5'),
+  }),
+  body: z.object({
+    rotate: z.coerce.number().refine(val => [0, 90, 180, 270].includes(val), {
+      message: 'Rotate must be 0, 90, 180, or 270',
+    }),
+  }),
+});
+
+export const deleteImageSchema = z.object({
+  params: z.object({
+    id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid customer ID'),
+    index: z.string().regex(/^[1-5]$/, 'Index must be between 1 and 5'),
+  }),
+});
+
 export type CreateCustomerRequest = z.infer<typeof createCustomerSchema>['body'];
 export type UpdateCustomerRequest = z.infer<typeof updateCustomerSchema>['body'];
+export type UploadImageRequest = z.infer<typeof uploadImageSchema>['body'];

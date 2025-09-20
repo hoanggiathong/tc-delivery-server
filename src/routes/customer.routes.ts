@@ -8,7 +8,11 @@ import {
   createCustomerSchema,
   updateCustomerSchema,
   customerParamsSchema,
+  uploadImageSchema,
+  updateImageRotationSchema,
+  deleteImageSchema,
 } from '@/schemas/customer.schema';
+import { uploadMiddleware } from '@/middlewares/upload.middleware';
 
 const router = Router();
 const customerController = new CustomerController();
@@ -80,6 +84,43 @@ router.put(
   customerController.updateCustomer
 );
 router.get('/:id', validate(customerParamsSchema), customerController.getCustomerById);
-router.get('/', customerController.getAllCustomers);
+
+// Upload image with auto-create customer
+router.post(
+  '/upload-image',
+  authenticateToken,
+  requireRole([UserRole.USER, UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]),
+  uploadMiddleware.single('image'),
+  validate(uploadImageSchema),
+  customerController.uploadImage
+);
+
+// Upload image for existing customer by ID
+router.post(
+  '/:id/upload-image',
+  authenticateToken,
+  requireRole([UserRole.USER, UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]),
+  uploadMiddleware.single('image'),
+  validate(customerParamsSchema),
+  customerController.uploadImageById
+);
+
+// Update image rotation
+router.patch(
+  '/:id/image/:index/rotate',
+  authenticateToken,
+  requireRole([UserRole.USER, UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]),
+  validate(updateImageRotationSchema),
+  customerController.updateImageRotation
+);
+
+// Delete image
+router.delete(
+  '/:id/image/:index',
+  authenticateToken,
+  requireRole([UserRole.USER, UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]),
+  validate(deleteImageSchema),
+  customerController.deleteImage
+);
 
 export default router;

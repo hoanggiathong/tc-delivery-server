@@ -1,5 +1,7 @@
 import { Types } from 'mongoose';
-import { Customer, ICustomer } from '@/models/customer.model';
+import fs from 'fs';
+import path from 'path';
+import { Customer, ICustomer, ICustomerImage } from '@/models/customer.model';
 import { CreateCustomerRequest, UpdateCustomerRequest } from '@/schemas/customer.schema';
 import { UserService } from '@/services/user.service';
 import Logger from '@/utils/logger';
@@ -306,47 +308,6 @@ export class CustomerService {
   }
 
   /**
-   * Get all customers with pagination (for controller CRUD operations)
-   */
-  async getAllCustomers(
-    page = 1,
-    limit = 10
-  ): Promise<{ customers: ICustomer[]; total: number; pages: number }> {
-    try {
-      const skip = (page - 1) * limit;
-      const [customers, total] = await Promise.all([
-        Customer.find()
-          .populate('relativeReceiver')
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(limit),
-        Customer.countDocuments(),
-      ]);
-
-      const pages = Math.ceil(total / limit);
-
-      Logger.debug('All customers retrieved', {
-        page,
-        limit,
-        total,
-        pages,
-        count: customers.length,
-      });
-
-      return { customers, total, pages };
-    } catch (error) {
-      Logger.error('Failed to get all customers', {
-        error: error instanceof Error ? error.message : error,
-        page,
-        limit,
-      });
-      throw new Error(
-        `Failed to get all customers: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    }
-  }
-
-  /**
    * Update or create customer with partial data (for bulk update operations)
    * Note: This is a simplified implementation for compatibility
    */
@@ -416,5 +377,166 @@ export class CustomerService {
         `Failed to update or create customer: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
+  }
+
+  /**
+   * Find or create customer and upload image with rotation
+   */
+  async findOrCreateAndUploadImage(
+    phone: string,
+    name: string,
+    routeId: string,
+    type: 'delivery' | 'money',
+    imageIndex: number,
+    imageBuffer: Buffer,
+    originalName: string,
+    rotate: number = 0
+  ): Promise<ICustomer> {
+    try {
+      // Find or create customer using existing method
+      const customer = await this.findOrCreateCustomer(phone, name, routeId, type);
+
+      // Create customer folder if not exists
+      const customerFolder = path.join('public/uploads/customers', customer._id.toString());
+      if (!fs.existsSync(customerFolder)) {
+        fs.mkdirSync(customerFolder, { recursive: true });
+      }
+
+      // Check and delete old image if exists
+      if (customer.images && customer.images[imageIndex - 1]) {
+        const oldImagePath = path.join('public', customer.images[imageIndex - 1].url);
+        if (fs.existsSync(oldImagePath)) {
+          fs.unlinkSync(oldImagePath);
+        }
+      }
+
+      // Save new image
+      const ext = path.extname(originalName);
+      const filename = `${customer._id}_${imageIndex}${ext}`;
+      const filePath = path.join(customerFolder, filename);
+      fs.writeFileSync(filePath, imageBuffer);
+
+      // Update customer images array with url and rotate
+      const images: ICustomerImage[] = [...(customer.images || [])];
+      images[imageIndex - 1] = {
+        url: `/uploads/customers/${customer._id}/${filename}`,
+        rotate: rotate,
+      };
+
+      // Save updated customer
+      customer.images = images.filter(img => img && img.url).slice(0, 5);
+      await customer.save();
+
+      Logger.debug('Image uploaded for customer', {
+        customerId: customer._id,
+        phone,
+        imageIndex,
+        filename,
+        rotate,
+      });
+
+      return customer;
+    } catch (error) {
+      Logger.error('Failed to upload image', {
+        error: error instanceof Error ? error.message : error,
+        phone,
+        imageIndex,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Upload image for existing customer by ID
+   */
+  async uploadImageById(
+    customerId: string,
+    imageIndex: number,
+    imageBuffer: Buffer,
+    originalName: string,
+    rotate: number = 0
+  ): Promise<ICustomer> {
+    const customer = await Customer.findById(customerId);
+    if (!customer) {
+      throw new Error('Customer not found');
+    }
+
+    // Create customer folder if not exists
+    const customerFolder = path.join('public/uploads/customers', customerId);
+    if (!fs.existsSync(customerFolder)) {
+      fs.mkdirSync(customerFolder, { recursive: true });
+    }
+
+    // Check and delete old image if exists
+    if (customer.images && customer.images[imageIndex - 1]) {
+      const oldImagePath = path.join('public', customer.images[imageIndex - 1].url);
+      if (fs.existsSync(oldImagePath)) {
+        fs.unlinkSync(oldImagePath);
+      }
+    }
+
+    // Save new image
+    const ext = path.extname(originalName);
+    const filename = `${customerId}_${imageIndex}${ext}`;
+    const filePath = path.join(customerFolder, filename);
+    fs.writeFileSync(filePath, imageBuffer);
+
+    // Update images array
+    const images: ICustomerImage[] = [...(customer.images || [])];
+    images[imageIndex - 1] = {
+      url: `/uploads/customers/${customerId}/${filename}`,
+      rotate: rotate,
+    };
+    customer.images = images.filter(img => img && img.url).slice(0, 5);
+
+    return await customer.save();
+  }
+
+  /**
+   * Update image rotation
+   */
+  async updateImageRotation(
+    customerId: string,
+    imageIndex: number,
+    rotate: number
+  ): Promise<ICustomer> {
+    const customer = await Customer.findById(customerId);
+    if (!customer) {
+      throw new Error('Customer not found');
+    }
+
+    if (!customer.images || !customer.images[imageIndex - 1]) {
+      throw new Error(`No image found at index ${imageIndex}`);
+    }
+
+    // Update rotation
+    customer.images[imageIndex - 1].rotate = rotate;
+
+    return await customer.save();
+  }
+
+  /**
+   * Delete customer image
+   */
+  async deleteCustomerImage(customerId: string, imageIndex: number): Promise<ICustomer> {
+    const customer = await Customer.findById(customerId);
+    if (!customer) {
+      throw new Error('Customer not found');
+    }
+
+    if (!customer.images || !customer.images[imageIndex - 1]) {
+      throw new Error(`No image found at index ${imageIndex}`);
+    }
+
+    // Delete physical file
+    const imagePath = path.join('public', customer.images[imageIndex - 1].url);
+    if (fs.existsSync(imagePath)) {
+      fs.unlinkSync(imagePath);
+    }
+
+    // Remove from array
+    customer.images.splice(imageIndex - 1, 1);
+
+    return await customer.save();
   }
 }

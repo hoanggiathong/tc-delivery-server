@@ -7,7 +7,6 @@
 export const mockCustomerService = {
   createCustomer: jest.fn(),
   findOrCreateCustomer: jest.fn(),
-  getAllCustomers: jest.fn(),
   getCustomerById: jest.fn(),
   updateCustomer: jest.fn(),
   deleteCustomer: jest.fn(),
@@ -17,7 +16,6 @@ export const mockCustomerService = {
 export class MockCustomerService {
   createCustomer = mockCustomerService.createCustomer;
   findOrCreateCustomer = mockCustomerService.findOrCreateCustomer;
-  getAllCustomers = mockCustomerService.getAllCustomers;
   getCustomerById = mockCustomerService.getCustomerById;
   updateCustomer = mockCustomerService.updateCustomer;
   deleteCustomer = mockCustomerService.deleteCustomer;

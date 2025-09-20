@@ -1,6 +1,10 @@
 import { Request, Response } from 'express';
 import { CustomerService } from '@/services/customer.service';
-import { CreateCustomerRequest, UpdateCustomerRequest } from '@/schemas/customer.schema';
+import {
+  CreateCustomerRequest,
+  UpdateCustomerRequest,
+  UploadImageRequest,
+} from '@/schemas/customer.schema';
 import { ApiResponse } from '@/types';
 
 export class CustomerController {
@@ -295,41 +299,136 @@ export class CustomerController {
   };
 
   /**
-   * @swagger
-   * /api/customer:
-   *   get:
-   *     summary: Get all customers
-   *     tags: [Customer]
-   *     security:
-   *       - bearerAuth: []
-   *     responses:
-   *       200:
-   *         description: Customers retrieved successfully
-   *       403:
-   *         description: Insufficient permissions
+   * Upload image with auto-create customer
    */
-  getAllCustomers = async (req: Request, res: Response): Promise<void> => {
+  uploadImage = async (req: Request, res: Response): Promise<void> => {
     try {
-      const result = await this.customerService.getAllCustomers();
+      const { name, phone, routeId, type, imageIndex, rotate } = req.body as UploadImageRequest;
+      const file = req.file;
 
-      const response: ApiResponse = {
+      if (!file) {
+        res.status(400).json({
+          success: false,
+          message: 'No image file provided',
+        });
+        return;
+      }
+
+      const customer = await this.customerService.findOrCreateAndUploadImage(
+        phone,
+        name,
+        routeId,
+        type || 'delivery',
+        imageIndex,
+        file.buffer,
+        file.originalname,
+        rotate || 0
+      );
+
+      res.status(200).json({
         success: true,
-        message: 'Customers retrieved successfully',
-        data: { customers: result.customers, total: result.total, pages: result.pages },
-      };
-
-      res.status(200).json(response);
+        message: 'Image uploaded successfully',
+        data: { customer },
+      });
     } catch (error) {
-      console.error('Get all customers error:', error);
-
-      const message = error instanceof Error ? error.message : 'Failed to get customers';
-
-      const response: ApiResponse = {
+      console.error('Upload image error:', error);
+      res.status(400).json({
         success: false,
-        message,
-      };
+        message: error instanceof Error ? error.message : 'Failed to upload image',
+      });
+    }
+  };
 
-      res.status(500).json(response);
+  /**
+   * Upload image by customer ID (existing customer only)
+   */
+  uploadImageById = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const { imageIndex, rotate } = req.body;
+      const file = req.file;
+
+      if (!file) {
+        res.status(400).json({
+          success: false,
+          message: 'No image file provided',
+        });
+        return;
+      }
+
+      const customer = await this.customerService.uploadImageById(
+        id,
+        imageIndex,
+        file.buffer,
+        file.originalname,
+        rotate || 0
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Image uploaded successfully',
+        data: { customer },
+      });
+    } catch (error) {
+      console.error('Upload image error:', error);
+      const statusCode =
+        error instanceof Error && error.message === 'Customer not found' ? 404 : 400;
+
+      res.status(statusCode).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to upload image',
+      });
+    }
+  };
+
+  /**
+   * Update image rotation
+   */
+  updateImageRotation = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { id, index } = req.params;
+      const { rotate } = req.body;
+
+      const customer = await this.customerService.updateImageRotation(id, parseInt(index), rotate);
+
+      res.status(200).json({
+        success: true,
+        message: 'Image rotation updated successfully',
+        data: { customer },
+      });
+    } catch (error) {
+      console.error('Update rotation error:', error);
+      const statusCode =
+        error instanceof Error && error.message === 'Customer not found' ? 404 : 400;
+      res.status(statusCode).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to update rotation',
+      });
+    }
+  };
+
+  /**
+   * Delete customer image
+   */
+  deleteImage = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { id, index } = req.params;
+
+      const customer = await this.customerService.deleteCustomerImage(id, parseInt(index));
+
+      res.status(200).json({
+        success: true,
+        message: 'Image deleted successfully',
+        data: { customer },
+      });
+    } catch (error) {
+      console.error('Delete image error:', error);
+      const statusCode =
+        error instanceof Error && error.message === 'Customer not found' ? 404 : 400;
+      res.status(statusCode).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to delete image',
+      });
     }
   };
 }
