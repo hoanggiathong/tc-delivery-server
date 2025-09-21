@@ -36,6 +36,11 @@ export interface AuthRequest extends Request {
   user?: JWTPayload;
 }
 
+// Interface for auth requests with file upload support (upload.fields())
+export interface AuthRequestWithFileUploads extends AuthRequest {
+  files?: { [fieldname: string]: Express.Multer.File[] } | Express.Multer.File[];
+}
+
 export interface ApiResponse<T = any> {
   success: boolean;
   message: string;

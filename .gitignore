@@ -55,3 +55,6 @@ Thumbs.db
 # Cursor
 .cursorrules
 .claude
+
+# Uploads directory
+public/uploads/

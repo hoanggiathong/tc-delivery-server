@@ -1,13 +1,21 @@
 import { Request, Response } from 'express';
 import { CustomerService } from '@/services/customer.service';
-import { CreateCustomerRequest, UpdateCustomerRequest } from '@/schemas/customer.schema';
-import { ApiResponse } from '@/types';
+import { UserService } from '@/services/user.service';
+import {
+  CreateCustomerRequest,
+  UpdateCustomerRequest,
+  UploadImageRequest,
+  UpdateCustomerBankRequest,
+} from '@/schemas/customer.schema';
+import { ApiResponse, AuthRequest, AuthRequestWithFileUploads } from '@/types';
 
 export class CustomerController {
   private customerService: CustomerService;
+  private userService: UserService;
 
   constructor() {
     this.customerService = new CustomerService();
+    this.userService = new UserService();
   }
 
   /**
@@ -202,7 +210,7 @@ export class CustomerController {
    *       403:
    *         description: Insufficient permissions
    */
-  updateCustomer = async (req: Request, res: Response): Promise<void> => {
+  updateCustomer = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
       const data: UpdateCustomerRequest = req.body;
@@ -259,7 +267,7 @@ export class CustomerController {
    *       403:
    *         description: Insufficient permissions
    */
-  getCustomerById = async (req: Request, res: Response): Promise<void> => {
+  getCustomerById = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
       const customer = await this.customerService.getCustomerById(id);
@@ -295,41 +303,215 @@ export class CustomerController {
   };
 
   /**
-   * @swagger
-   * /api/customer:
-   *   get:
-   *     summary: Get all customers
-   *     tags: [Customer]
-   *     security:
-   *       - bearerAuth: []
-   *     responses:
-   *       200:
-   *         description: Customers retrieved successfully
-   *       403:
-   *         description: Insufficient permissions
+   * Upload image with auto-create customer
    */
-  getAllCustomers = async (req: Request, res: Response): Promise<void> => {
+  uploadImage = async (req: AuthRequestWithFileUploads, res: Response): Promise<void> => {
     try {
-      const result = await this.customerService.getAllCustomers();
+      const { name, phone, routeId, type, imageIndex, rotate } = req.body as UploadImageRequest;
+      const file = req.file;
 
-      const response: ApiResponse = {
+      if (!file) {
+        res.status(400).json({
+          success: false,
+          message: 'No image file provided',
+        });
+        return;
+      }
+
+      const customer = await this.customerService.findOrCreateAndUploadImage(
+        phone,
+        name,
+        routeId,
+        type || 'delivery',
+        imageIndex,
+        file.buffer,
+        file.originalname,
+        rotate || 0
+      );
+
+      res.status(200).json({
         success: true,
-        message: 'Customers retrieved successfully',
-        data: { customers: result.customers, total: result.total, pages: result.pages },
-      };
-
-      res.status(200).json(response);
+        message: 'Image uploaded successfully',
+        data: { customer },
+      });
     } catch (error) {
-      console.error('Get all customers error:', error);
+      console.error('Upload image error:', error);
+      res.status(400).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to upload image',
+      });
+    }
+  };
 
-      const message = error instanceof Error ? error.message : 'Failed to get customers';
+  /**
+   * Upload image by customer ID (existing customer only)
+   */
+  uploadImageById = async (req: AuthRequestWithFileUploads, res: Response): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const { imageIndex, rotate } = req.body;
+      const file = req.file;
 
-      const response: ApiResponse = {
+      if (!file) {
+        res.status(400).json({
+          success: false,
+          message: 'No image file provided',
+        });
+        return;
+      }
+
+      const customer = await this.customerService.uploadImageById(
+        id,
+        imageIndex,
+        file.buffer,
+        file.originalname,
+        rotate || 0
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Image uploaded successfully',
+        data: { customer },
+      });
+    } catch (error) {
+      console.error('Upload image error:', error);
+      const statusCode =
+        error instanceof Error && error.message === 'Customer not found' ? 404 : 400;
+
+      res.status(statusCode).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to upload image',
+      });
+    }
+  };
+
+  /**
+   * Update image rotation
+   */
+  updateImageRotation = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      const { id, index } = req.params;
+      const { rotate } = req.body;
+
+      const customer = await this.customerService.updateImageRotation(id, parseInt(index), rotate);
+
+      res.status(200).json({
+        success: true,
+        message: 'Image rotation updated successfully',
+        data: { customer },
+      });
+    } catch (error) {
+      console.error('Update rotation error:', error);
+      const statusCode =
+        error instanceof Error && error.message === 'Customer not found' ? 404 : 400;
+      res.status(statusCode).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to update rotation',
+      });
+    }
+  };
+
+  /**
+   * Delete customer image
+   */
+  deleteImage = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      const { id, index } = req.params;
+
+      const customer = await this.customerService.deleteCustomerImage(id, parseInt(index));
+
+      res.status(200).json({
+        success: true,
+        message: 'Image deleted successfully',
+        data: { customer },
+      });
+    } catch (error) {
+      console.error('Delete image error:', error);
+      const statusCode =
+        error instanceof Error && error.message === 'Customer not found' ? 404 : 400;
+      res.status(statusCode).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to delete image',
+      });
+    }
+  };
+
+  /**
+   * Update customer bank info and/or upload image(s)
+   */
+  updateBankInfo = async (req: AuthRequestWithFileUploads, res: Response): Promise<void> => {
+    try {
+      const { phone, name, type, bankInfo, images } = req.body as UpdateCustomerBankRequest;
+      const filesObject = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+      const userId = req.user?.userId;
+
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'User not authenticated',
+        });
+        return;
+      }
+
+      // Get user's selected route
+      const routeId = await this.userService.getUserSelectedRouteId(userId);
+
+      // Prepare image data for multiple images
+      let imagesData: Array<{
+        index: number;
+        buffer: Buffer;
+        originalName: string;
+        rotate: number;
+      }> = [];
+
+      // Handle multiple images
+      if (
+        filesObject &&
+        !Array.isArray(filesObject) &&
+        filesObject.images &&
+        filesObject.images.length > 0 &&
+        images
+      ) {
+        imagesData = filesObject.images.map((file, idx) => ({
+          index: images[idx]?.index || idx + 1,
+          buffer: file.buffer,
+          originalName: file.originalname,
+          rotate: images[idx]?.rotate || 0,
+        }));
+      }
+
+      // Update customer with all data
+      const customer = await this.customerService.updateCustomerBankInfo(
+        phone,
+        routeId,
+        type || 'delivery',
+        name,
+        bankInfo,
+        imagesData.length > 0 ? imagesData : undefined
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Bank info updated successfully',
+        data: { customer },
+      });
+    } catch (error) {
+      console.error('Update bank info error:', error);
+
+      let statusCode = 400;
+      const message = error instanceof Error ? error.message : 'Failed to update bank info';
+
+      // Handle specific error cases
+      if (message === 'Name is required when creating new customer') {
+        statusCode = 400;
+      } else if (message === 'User must have a selected route') {
+        statusCode = 400;
+      }
+
+      res.status(statusCode).json({
         success: false,
         message,
-      };
-
-      res.status(500).json(response);
+      });
     }
   };
 }

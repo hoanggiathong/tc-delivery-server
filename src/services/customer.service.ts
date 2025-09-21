@@ -1,14 +1,76 @@
 import { Types } from 'mongoose';
-import { Customer, ICustomer } from '@/models/customer.model';
+import fs from 'fs';
+import path from 'path';
+import QRCode from 'qrcode';
+import { Customer, ICustomer, ICustomerImage } from '@/models/customer.model';
 import { CreateCustomerRequest, UpdateCustomerRequest } from '@/schemas/customer.schema';
 import { UserService } from '@/services/user.service';
+import { CustomerBankService, BankCreateData } from '@/services/customerBank.service';
 import Logger from '@/utils/logger';
+import { generateVersionedUrl } from '@/utils/image-url.utils';
 
 export class CustomerService {
   private userService: UserService;
+  private customerBankService: CustomerBankService;
 
   constructor() {
     this.userService = new UserService();
+    this.customerBankService = new CustomerBankService();
+  }
+
+  /**
+   * Generate QR code image from bank info and save to file
+   */
+  private async generateBankQRCode(customerId: string, bankData: BankCreateData): Promise<string> {
+    try {
+      // Create QR code data string in format: BankName|AccountNumber|AccountName
+      const qrData = `${bankData.bankName}|${bankData.bankAccount}|${bankData.name}`;
+
+      // Create customer directory if not exists
+      const customerDir = path.join('public', 'uploads', 'customers', customerId);
+      if (!fs.existsSync(customerDir)) {
+        fs.mkdirSync(customerDir, { recursive: true });
+      }
+
+      // Generate QR code file path
+      const qrFileName = 'bank-qrcode.png';
+      const qrFilePath = path.join(customerDir, qrFileName);
+      const qrBaseUrl = `/uploads/customers/${customerId}/${qrFileName}`;
+      const qrUrl = generateVersionedUrl(qrBaseUrl);
+
+      // Remove existing QR code if exists
+      if (fs.existsSync(qrFilePath)) {
+        fs.unlinkSync(qrFilePath);
+      }
+
+      // Generate QR code image and save to file
+      await QRCode.toFile(qrFilePath, qrData, {
+        width: 200,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF',
+        },
+      });
+
+      Logger.debug('QR code generated for bank info', {
+        customerId,
+        qrFilePath,
+        qrUrl,
+        bankAccount: bankData.bankAccount,
+      });
+
+      return qrUrl;
+    } catch (error) {
+      Logger.error('Failed to generate bank QR code', {
+        error: error instanceof Error ? error.message : error,
+        customerId,
+        bankData,
+      });
+      throw new Error(
+        `Failed to generate QR code: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
   }
 
   /**
@@ -306,47 +368,6 @@ export class CustomerService {
   }
 
   /**
-   * Get all customers with pagination (for controller CRUD operations)
-   */
-  async getAllCustomers(
-    page = 1,
-    limit = 10
-  ): Promise<{ customers: ICustomer[]; total: number; pages: number }> {
-    try {
-      const skip = (page - 1) * limit;
-      const [customers, total] = await Promise.all([
-        Customer.find()
-          .populate('relativeReceiver')
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(limit),
-        Customer.countDocuments(),
-      ]);
-
-      const pages = Math.ceil(total / limit);
-
-      Logger.debug('All customers retrieved', {
-        page,
-        limit,
-        total,
-        pages,
-        count: customers.length,
-      });
-
-      return { customers, total, pages };
-    } catch (error) {
-      Logger.error('Failed to get all customers', {
-        error: error instanceof Error ? error.message : error,
-        page,
-        limit,
-      });
-      throw new Error(
-        `Failed to get all customers: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    }
-  }
-
-  /**
    * Update or create customer with partial data (for bulk update operations)
    * Note: This is a simplified implementation for compatibility
    */
@@ -415,6 +436,318 @@ export class CustomerService {
       throw new Error(
         `Failed to update or create customer: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
+    }
+  }
+
+  /**
+   * Find or create customer and upload image with rotation
+   */
+  async findOrCreateAndUploadImage(
+    phone: string,
+    name: string,
+    routeId: string,
+    type: 'delivery' | 'money',
+    imageIndex: number,
+    imageBuffer: Buffer,
+    originalName: string,
+    rotate: number = 0
+  ): Promise<ICustomer> {
+    try {
+      // Find or create customer using existing method
+      const customer = await this.findOrCreateCustomer(phone, name, routeId, type);
+
+      // Create customer folder if not exists
+      const customerFolder = path.join('public/uploads/customers', customer._id.toString());
+      if (!fs.existsSync(customerFolder)) {
+        fs.mkdirSync(customerFolder, { recursive: true });
+      }
+
+      // Check and delete old image if exists
+      if (customer.images && customer.images[imageIndex - 1]) {
+        const oldImagePath = path.join('public', customer.images[imageIndex - 1].url);
+        if (fs.existsSync(oldImagePath)) {
+          fs.unlinkSync(oldImagePath);
+        }
+      }
+
+      // Save new image
+      const ext = path.extname(originalName);
+      const filename = `${customer._id}_${imageIndex}${ext}`;
+      const filePath = path.join(customerFolder, filename);
+      fs.writeFileSync(filePath, imageBuffer);
+
+      // Update customer images array with url and rotate
+      const images: ICustomerImage[] = [...(customer.images || [])];
+      const baseUrl = `/uploads/customers/${customer._id}/${filename}`;
+      images[imageIndex - 1] = {
+        url: generateVersionedUrl(baseUrl),
+        rotate: rotate,
+      };
+
+      // Save updated customer
+      customer.images = images.filter(img => img && img.url).slice(0, 5);
+      await customer.save();
+
+      Logger.debug('Image uploaded for customer', {
+        customerId: customer._id,
+        phone,
+        imageIndex,
+        filename,
+        rotate,
+      });
+
+      return customer;
+    } catch (error) {
+      Logger.error('Failed to upload image', {
+        error: error instanceof Error ? error.message : error,
+        phone,
+        imageIndex,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Upload image for existing customer by ID
+   */
+  async uploadImageById(
+    customerId: string,
+    imageIndex: number,
+    imageBuffer: Buffer,
+    originalName: string,
+    rotate: number = 0
+  ): Promise<ICustomer> {
+    const customer = await Customer.findById(customerId);
+    if (!customer) {
+      throw new Error('Customer not found');
+    }
+
+    // Create customer folder if not exists
+    const customerFolder = path.join('public/uploads/customers', customerId);
+    if (!fs.existsSync(customerFolder)) {
+      fs.mkdirSync(customerFolder, { recursive: true });
+    }
+
+    // Check and delete old image if exists
+    if (customer.images && customer.images[imageIndex - 1]) {
+      const oldImagePath = path.join('public', customer.images[imageIndex - 1].url);
+      if (fs.existsSync(oldImagePath)) {
+        fs.unlinkSync(oldImagePath);
+      }
+    }
+
+    // Save new image
+    const ext = path.extname(originalName);
+    const filename = `${customerId}_${imageIndex}${ext}`;
+    const filePath = path.join(customerFolder, filename);
+    fs.writeFileSync(filePath, imageBuffer);
+
+    // Update images array
+    const images: ICustomerImage[] = [...(customer.images || [])];
+    const baseUrl = `/uploads/customers/${customerId}/${filename}`;
+    images[imageIndex - 1] = {
+      url: generateVersionedUrl(baseUrl),
+      rotate: rotate,
+    };
+    customer.images = images.filter(img => img && img.url).slice(0, 5);
+
+    return await customer.save();
+  }
+
+  /**
+   * Update image rotation
+   */
+  async updateImageRotation(
+    customerId: string,
+    imageIndex: number,
+    rotate: number
+  ): Promise<ICustomer> {
+    const customer = await Customer.findById(customerId);
+    if (!customer) {
+      throw new Error('Customer not found');
+    }
+
+    if (!customer.images || !customer.images[imageIndex - 1]) {
+      throw new Error(`No image found at index ${imageIndex}`);
+    }
+
+    // Update rotation
+    customer.images[imageIndex - 1].rotate = rotate;
+
+    return await customer.save();
+  }
+
+  /**
+   * Delete customer image
+   */
+  async deleteCustomerImage(customerId: string, imageIndex: number): Promise<ICustomer> {
+    const customer = await Customer.findById(customerId);
+    if (!customer) {
+      throw new Error('Customer not found');
+    }
+
+    if (!customer.images || !customer.images[imageIndex - 1]) {
+      throw new Error(`No image found at index ${imageIndex}`);
+    }
+
+    // Delete physical file
+    const imagePath = path.join('public', customer.images[imageIndex - 1].url);
+    if (fs.existsSync(imagePath)) {
+      fs.unlinkSync(imagePath);
+    }
+
+    // Remove from array
+    customer.images.splice(imageIndex - 1, 1);
+
+    return await customer.save();
+  }
+
+  /**
+   * Update customer with bank info and/or image(s)
+   */
+  async updateCustomerBankInfo(
+    phone: string,
+    routeId: string,
+    type: 'delivery' | 'money',
+    name?: string,
+    bankInfo?: BankCreateData,
+    imagesData?: Array<{
+      index: number;
+      buffer: Buffer;
+      originalName: string;
+      rotate: number;
+    }>
+  ): Promise<ICustomer> {
+    try {
+      // Try to find existing customer
+      let customer = await Customer.findOne({ phone, type, routeId });
+
+      if (!customer) {
+        // Customer not found - need name to create new
+        if (!name) {
+          throw new Error('Name is required when creating new customer');
+        }
+        const newCustomer = await this.findOrCreateCustomer(phone, name, routeId, type);
+        customer = await Customer.findById(newCustomer._id);
+        if (!customer) {
+          throw new Error('Failed to retrieve newly created customer');
+        }
+        Logger.debug('New customer created for bank update', {
+          customerId: customer._id,
+          phone,
+          type,
+        });
+      } else {
+        Logger.debug('Existing customer found for bank update', {
+          customerId: customer._id,
+          phone,
+          type,
+        });
+      }
+
+      // Ensure customer is not null at this point
+      if (!customer) {
+        throw new Error('Failed to create or find customer');
+      }
+
+      // Handle bank info if provided
+      if (bankInfo) {
+        // Generate QR code first
+        const qrCodeUrl = await this.generateBankQRCode(customer._id.toString(), bankInfo);
+
+        // Add QR code URL to bank data
+        const bankDataWithQR = { ...bankInfo, qrCodeUrl };
+
+        const bankId = customer.bankId;
+
+        if (bankId) {
+          // Update existing bank
+          await this.customerBankService.updateBank(bankId.toString(), bankDataWithQR);
+          Logger.debug('Bank info updated with QR code', {
+            customerId: customer._id,
+            bankId,
+            bankAccount: bankInfo.bankAccount,
+            qrCodeUrl,
+          });
+        } else {
+          // Create new bank
+          const newBank = await this.customerBankService.createBank(bankDataWithQR);
+          customer.bankId = new Types.ObjectId(newBank._id);
+          await customer.save();
+          Logger.debug('New bank created and linked with QR code', {
+            customerId: customer._id,
+            bankId: newBank._id,
+            bankAccount: newBank.bankAccount,
+            qrCodeUrl,
+          });
+        }
+      }
+
+      // Handle multiple images upload if provided
+      if (imagesData && imagesData.length > 0) {
+        // Create customer folder if not exists
+        const customerFolder = path.join('public/uploads/customers', customer._id.toString());
+        if (!fs.existsSync(customerFolder)) {
+          fs.mkdirSync(customerFolder, { recursive: true });
+        }
+
+        // Initialize images array from existing customer images
+        const images: ICustomerImage[] = [...(customer.images || [])];
+
+        // Process each image
+        for (const imageData of imagesData) {
+          // Check and delete old image if exists at this index
+          if (customer.images && customer.images[imageData.index - 1]) {
+            const oldImagePath = path.join('public', customer.images[imageData.index - 1].url);
+            if (fs.existsSync(oldImagePath)) {
+              fs.unlinkSync(oldImagePath);
+            }
+          }
+
+          // Save new image
+          const ext = path.extname(imageData.originalName);
+          const filename = `${customer._id}_${imageData.index}${ext}`;
+          const filePath = path.join(customerFolder, filename);
+          fs.writeFileSync(filePath, imageData.buffer);
+
+          // Update images array at specific index with versioned URL
+          const baseUrl = `/uploads/customers/${customer._id}/${filename}`;
+          images[imageData.index - 1] = {
+            url: generateVersionedUrl(baseUrl),
+            rotate: imageData.rotate,
+          };
+
+          Logger.debug('Image uploaded for customer bank update', {
+            customerId: customer._id,
+            imageIndex: imageData.index,
+            filename,
+            rotate: imageData.rotate,
+          });
+        }
+
+        // Update customer with processed images
+        customer.images = images.filter(img => img && img.url).slice(0, 5);
+      }
+
+      // Save and return updated customer
+      const updatedCustomer = await customer.save();
+
+      Logger.debug('Customer bank info update completed', {
+        customerId: updatedCustomer._id,
+        hasBankInfo: !!bankInfo,
+        hasImages: !!(imagesData && imagesData.length > 0),
+        imagesCount: imagesData?.length || 0,
+      });
+
+      return updatedCustomer;
+    } catch (error) {
+      Logger.error('Failed to update customer bank info', {
+        error: error instanceof Error ? error.message : error,
+        phone,
+        type,
+        routeId,
+      });
+      throw error;
     }
   }
 }

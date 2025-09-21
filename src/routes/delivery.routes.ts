@@ -211,7 +211,11 @@ router.use(authenticateToken);
 
 router.post('/', validate(createDeliverySchema), deliveryController.createDelivery);
 router.get('/', deliveryController.getAllDeliveries);
-router.get('/:id', validate(deliveryParamsSchema), deliveryController.getDeliveryById);
+
+// Specific routes must come before parameterized routes
+router.get('/next-code', validate(getNextCodeSchema), deliveryController.getNextCode);
+router.get('/cost-report', validate(deliveryCostReportSchema), deliveryController.getCostReport);
+router.get('/today-report', deliveryController.getTodayReport);
 
 router.get(
   '/search/:fullCode',
@@ -219,11 +223,8 @@ router.get(
   deliveryController.getDeliveryByFullCodeFromUserRoute
 );
 
-router.get('/next-code', validate(getNextCodeSchema), deliveryController.getNextCode);
-
-router.get('/cost-report', validate(deliveryCostReportSchema), deliveryController.getCostReport);
-
-router.get('/today-report', deliveryController.getTodayReport);
+// Parameterized routes should come after specific routes
+router.get('/:id', validate(deliveryParamsSchema), deliveryController.getDeliveryById);
 
 router.get(
   '/code/:deliveryIdentifier',
