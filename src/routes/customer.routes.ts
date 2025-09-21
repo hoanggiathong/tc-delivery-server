@@ -11,11 +11,23 @@ import {
   uploadImageSchema,
   updateImageRotationSchema,
   deleteImageSchema,
+  updateCustomerBankSchema,
 } from '@/schemas/customer.schema';
 import { uploadMiddleware } from '@/middlewares/upload.middleware';
 
 const router = Router();
 const customerController = new CustomerController();
+
+// Routes that allow USER role access - must be defined before global role middleware
+// Update customer bank info and/or upload image
+router.put(
+  '/bank-info',
+  authenticateToken,
+  requireRole([UserRole.USER, UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]),
+  uploadMiddleware.single('image'),
+  validate(updateCustomerBankSchema),
+  customerController.updateBankInfo
+);
 
 /**
  * @swagger

@@ -56,8 +56,19 @@ app.get('/health', (_req, res) => {
   });
 });
 
-// Serve uploaded images
-app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
+// Serve uploaded images with 90-day immutable cache
+app.use(
+  '/uploads',
+  express.static(path.join(__dirname, '../public/uploads'), {
+    etag: true,
+    lastModified: true,
+    maxAge: '90d', // Cache for 90 days
+    setHeaders: res => {
+      // 90 days = 90 * 24 * 60 * 60 = 7776000 seconds
+      res.setHeader('Cache-Control', 'public, max-age=7776000, immutable');
+    },
+  })
+);
 
 // API routes
 app.use('/api', routes);

@@ -7,7 +7,7 @@ export interface ICustomerBank extends Document {
   bankAccount: string;
   bankBranch: string;
   bankAddress: string;
-  qrCode: string;
+  qrCodeUrl: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -42,9 +42,10 @@ const customerBankSchema = new Schema<ICustomerBank>(
       trim: true,
       maxlength: [200, 'Bank address must not exceed 200 characters'],
     },
-    qrCode: {
+    qrCodeUrl: {
       type: String,
       trim: true,
+      default: '',
     },
   },
   {

@@ -1,17 +1,21 @@
 import { Request, Response } from 'express';
 import { CustomerService } from '@/services/customer.service';
+import { UserService } from '@/services/user.service';
 import {
   CreateCustomerRequest,
   UpdateCustomerRequest,
   UploadImageRequest,
+  UpdateCustomerBankRequest,
 } from '@/schemas/customer.schema';
-import { ApiResponse } from '@/types';
+import { ApiResponse, AuthRequest } from '@/types';
 
 export class CustomerController {
   private customerService: CustomerService;
+  private userService: UserService;
 
   constructor() {
     this.customerService = new CustomerService();
+    this.userService = new UserService();
   }
 
   /**
@@ -428,6 +432,73 @@ export class CustomerController {
       res.status(statusCode).json({
         success: false,
         message: error instanceof Error ? error.message : 'Failed to delete image',
+      });
+    }
+  };
+
+  /**
+   * Update customer bank info and/or upload image
+   */
+  updateBankInfo = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      const { phone, name, type, bankInfo, imageIndex, rotate } =
+        req.body as UpdateCustomerBankRequest;
+      const file = req.file;
+      const userId = req.user?.userId;
+
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'User not authenticated',
+        });
+        return;
+      }
+
+      // Get user's selected route
+      const routeId = await this.userService.getUserSelectedRouteId(userId);
+
+      // Prepare image data if file uploaded
+      let imageData = undefined;
+      if (file && imageIndex) {
+        imageData = {
+          index: imageIndex,
+          buffer: file.buffer,
+          originalName: file.originalname,
+          rotate: rotate || 0,
+        };
+      }
+
+      // Update customer with all data
+      const customer = await this.customerService.updateCustomerBankInfo(
+        phone,
+        routeId,
+        type || 'delivery',
+        name,
+        bankInfo,
+        imageData
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Bank info updated successfully',
+        data: { customer },
+      });
+    } catch (error) {
+      console.error('Update bank info error:', error);
+
+      let statusCode = 400;
+      const message = error instanceof Error ? error.message : 'Failed to update bank info';
+
+      // Handle specific error cases
+      if (message === 'Name is required when creating new customer') {
+        statusCode = 400;
+      } else if (message === 'User must have a selected route') {
+        statusCode = 400;
+      }
+
+      res.status(statusCode).json({
+        success: false,
+        message,
       });
     }
   };

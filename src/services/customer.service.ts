@@ -1,16 +1,76 @@
 import { Types } from 'mongoose';
 import fs from 'fs';
 import path from 'path';
+import QRCode from 'qrcode';
 import { Customer, ICustomer, ICustomerImage } from '@/models/customer.model';
 import { CreateCustomerRequest, UpdateCustomerRequest } from '@/schemas/customer.schema';
 import { UserService } from '@/services/user.service';
+import { CustomerBankService, BankCreateData } from '@/services/customerBank.service';
 import Logger from '@/utils/logger';
+import { generateVersionedUrl } from '@/utils/image-url.utils';
 
 export class CustomerService {
   private userService: UserService;
+  private customerBankService: CustomerBankService;
 
   constructor() {
     this.userService = new UserService();
+    this.customerBankService = new CustomerBankService();
+  }
+
+  /**
+   * Generate QR code image from bank info and save to file
+   */
+  private async generateBankQRCode(customerId: string, bankData: BankCreateData): Promise<string> {
+    try {
+      // Create QR code data string in format: BankName|AccountNumber|AccountName
+      const qrData = `${bankData.bankName}|${bankData.bankAccount}|${bankData.name}`;
+
+      // Create customer directory if not exists
+      const customerDir = path.join('public', 'uploads', 'customers', customerId);
+      if (!fs.existsSync(customerDir)) {
+        fs.mkdirSync(customerDir, { recursive: true });
+      }
+
+      // Generate QR code file path
+      const qrFileName = 'bank-qrcode.png';
+      const qrFilePath = path.join(customerDir, qrFileName);
+      const qrBaseUrl = `/uploads/customers/${customerId}/${qrFileName}`;
+      const qrUrl = generateVersionedUrl(qrBaseUrl);
+
+      // Remove existing QR code if exists
+      if (fs.existsSync(qrFilePath)) {
+        fs.unlinkSync(qrFilePath);
+      }
+
+      // Generate QR code image and save to file
+      await QRCode.toFile(qrFilePath, qrData, {
+        width: 200,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF',
+        },
+      });
+
+      Logger.debug('QR code generated for bank info', {
+        customerId,
+        qrFilePath,
+        qrUrl,
+        bankAccount: bankData.bankAccount,
+      });
+
+      return qrUrl;
+    } catch (error) {
+      Logger.error('Failed to generate bank QR code', {
+        error: error instanceof Error ? error.message : error,
+        customerId,
+        bankData,
+      });
+      throw new Error(
+        `Failed to generate QR code: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
   }
 
   /**
@@ -418,8 +478,9 @@ export class CustomerService {
 
       // Update customer images array with url and rotate
       const images: ICustomerImage[] = [...(customer.images || [])];
+      const baseUrl = `/uploads/customers/${customer._id}/${filename}`;
       images[imageIndex - 1] = {
-        url: `/uploads/customers/${customer._id}/${filename}`,
+        url: generateVersionedUrl(baseUrl),
         rotate: rotate,
       };
 
@@ -483,8 +544,9 @@ export class CustomerService {
 
     // Update images array
     const images: ICustomerImage[] = [...(customer.images || [])];
+    const baseUrl = `/uploads/customers/${customerId}/${filename}`;
     images[imageIndex - 1] = {
-      url: `/uploads/customers/${customerId}/${filename}`,
+      url: generateVersionedUrl(baseUrl),
       rotate: rotate,
     };
     customer.images = images.filter(img => img && img.url).slice(0, 5);
@@ -538,5 +600,147 @@ export class CustomerService {
     customer.images.splice(imageIndex - 1, 1);
 
     return await customer.save();
+  }
+
+  /**
+   * Update customer with bank info and/or image
+   */
+  async updateCustomerBankInfo(
+    phone: string,
+    routeId: string,
+    type: 'delivery' | 'money',
+    name?: string,
+    bankInfo?: BankCreateData,
+    imageData?: {
+      index: number;
+      buffer: Buffer;
+      originalName: string;
+      rotate: number;
+    }
+  ): Promise<ICustomer> {
+    try {
+      // Try to find existing customer
+      let customer = await Customer.findOne({ phone, type, routeId });
+
+      if (!customer) {
+        // Customer not found - need name to create new
+        if (!name) {
+          throw new Error('Name is required when creating new customer');
+        }
+        const newCustomer = await this.findOrCreateCustomer(phone, name, routeId, type);
+        customer = await Customer.findById(newCustomer._id);
+        if (!customer) {
+          throw new Error('Failed to retrieve newly created customer');
+        }
+        Logger.debug('New customer created for bank update', {
+          customerId: customer._id,
+          phone,
+          type,
+        });
+      } else {
+        Logger.debug('Existing customer found for bank update', {
+          customerId: customer._id,
+          phone,
+          type,
+        });
+      }
+
+      // Ensure customer is not null at this point
+      if (!customer) {
+        throw new Error('Failed to create or find customer');
+      }
+
+      // Handle bank info if provided
+      if (bankInfo) {
+        // Generate QR code first
+        const qrCodeUrl = await this.generateBankQRCode(customer._id.toString(), bankInfo);
+
+        // Add QR code URL to bank data
+        const bankDataWithQR = { ...bankInfo, qrCodeUrl };
+
+        const bankId = customer.bankId;
+
+        if (bankId) {
+          // Update existing bank
+          await this.customerBankService.updateBank(bankId.toString(), bankDataWithQR);
+          Logger.debug('Bank info updated with QR code', {
+            customerId: customer._id,
+            bankId,
+            bankAccount: bankInfo.bankAccount,
+            qrCodeUrl,
+          });
+        } else {
+          // Create new bank
+          const newBank = await this.customerBankService.createBank(bankDataWithQR);
+          customer.bankId = new Types.ObjectId(newBank._id);
+          await customer.save();
+          Logger.debug('New bank created and linked with QR code', {
+            customerId: customer._id,
+            bankId: newBank._id,
+            bankAccount: newBank.bankAccount,
+            qrCodeUrl,
+          });
+        }
+      }
+
+      // Handle image upload if provided
+      if (imageData) {
+        // Create customer folder if not exists
+        const customerFolder = path.join('public/uploads/customers', customer._id.toString());
+        if (!fs.existsSync(customerFolder)) {
+          fs.mkdirSync(customerFolder, { recursive: true });
+        }
+
+        // Check and delete old image if exists
+        if (customer.images && customer.images[imageData.index - 1]) {
+          const oldImagePath = path.join('public', customer.images[imageData.index - 1].url);
+          if (fs.existsSync(oldImagePath)) {
+            fs.unlinkSync(oldImagePath);
+          }
+        }
+
+        // Save new image
+        const ext = path.extname(imageData.originalName);
+        const filename = `${customer._id}_${imageData.index}${ext}`;
+        const filePath = path.join(customerFolder, filename);
+        fs.writeFileSync(filePath, imageData.buffer);
+
+        // Update customer images array with url and rotate
+        const images: ICustomerImage[] = [...(customer.images || [])];
+        const baseUrl = `/uploads/customers/${customer._id}/${filename}`;
+        images[imageData.index - 1] = {
+          url: generateVersionedUrl(baseUrl),
+          rotate: imageData.rotate,
+        };
+
+        customer.images = images.filter(img => img && img.url).slice(0, 5);
+
+        Logger.debug('Image uploaded for customer bank update', {
+          customerId: customer._id,
+          imageIndex: imageData.index,
+          filename,
+          rotate: imageData.rotate,
+        });
+      }
+
+      // Save and return updated customer
+      const updatedCustomer = await customer.save();
+
+      Logger.debug('Customer bank info update completed', {
+        customerId: updatedCustomer._id,
+        hasBankInfo: !!bankInfo,
+        hasImage: !!imageData,
+      });
+
+      return updatedCustomer;
+    } catch (error) {
+      Logger.error('Failed to update customer bank info', {
+        error: error instanceof Error ? error.message : error,
+        phone,
+        type,
+        routeId,
+      });
+      throw error;
+    }
   }
 }

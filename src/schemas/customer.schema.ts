@@ -106,6 +106,41 @@ export const deleteImageSchema = z.object({
   }),
 });
 
+export const updateCustomerBankSchema = z.object({
+  body: z.object({
+    phone: z
+      .string()
+      .min(1, 'Phone is required')
+      .regex(/^\+?[1-9]\d{1,14}$/, 'Please enter a valid phone number')
+      .trim(),
+    name: z
+      .string()
+      .min(1, 'Name is required when creating new customer')
+      .max(100, 'Name must not exceed 100 characters')
+      .trim()
+      .optional(),
+    type: z.enum(['delivery', 'money']).default('delivery'),
+    bankInfo: z
+      .object({
+        name: z.string().min(1, 'Bank holder name is required').trim(),
+        bankName: z.string().min(1, 'Bank name is required').trim(),
+        bankAccount: z.string().min(1, 'Bank account is required').trim(),
+        bankBranch: z.string().trim().optional(),
+        bankAddress: z.string().trim().optional(),
+      })
+      .optional(),
+    imageIndex: z.coerce.number().min(1).max(5).optional(),
+    rotate: z.coerce
+      .number()
+      .refine(val => [0, 90, 180, 270].includes(val), {
+        message: 'Rotate must be 0, 90, 180, or 270',
+      })
+      .default(0)
+      .optional(),
+  }),
+});
+
 export type CreateCustomerRequest = z.infer<typeof createCustomerSchema>['body'];
 export type UpdateCustomerRequest = z.infer<typeof updateCustomerSchema>['body'];
 export type UploadImageRequest = z.infer<typeof uploadImageSchema>['body'];
+export type UpdateCustomerBankRequest = z.infer<typeof updateCustomerBankSchema>['body'];
