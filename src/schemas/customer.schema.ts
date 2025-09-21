@@ -129,13 +129,20 @@ export const updateCustomerBankSchema = z.object({
         bankAddress: z.string().trim().optional(),
       })
       .optional(),
-    imageIndex: z.coerce.number().min(1).max(5).optional(),
-    rotate: z.coerce
-      .number()
-      .refine(val => [0, 90, 180, 270].includes(val), {
-        message: 'Rotate must be 0, 90, 180, or 270',
-      })
-      .default(0)
+    // Multiple images support
+    images: z
+      .array(
+        z.object({
+          index: z.coerce.number().min(1).max(5),
+          rotate: z.coerce
+            .number()
+            .refine(val => [0, 90, 180, 270].includes(val), {
+              message: 'Rotate must be 0, 90, 180, or 270',
+            })
+            .default(0),
+        })
+      )
+      .max(5, 'Maximum 5 images allowed')
       .optional(),
   }),
 });

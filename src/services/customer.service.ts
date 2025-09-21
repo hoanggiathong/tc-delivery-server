@@ -603,7 +603,7 @@ export class CustomerService {
   }
 
   /**
-   * Update customer with bank info and/or image
+   * Update customer with bank info and/or image(s)
    */
   async updateCustomerBankInfo(
     phone: string,
@@ -611,12 +611,12 @@ export class CustomerService {
     type: 'delivery' | 'money',
     name?: string,
     bankInfo?: BankCreateData,
-    imageData?: {
+    imagesData?: Array<{
       index: number;
       buffer: Buffer;
       originalName: string;
       rotate: number;
-    }
+    }>
   ): Promise<ICustomer> {
     try {
       // Try to find existing customer
@@ -683,44 +683,50 @@ export class CustomerService {
         }
       }
 
-      // Handle image upload if provided
-      if (imageData) {
+      // Handle multiple images upload if provided
+      if (imagesData && imagesData.length > 0) {
         // Create customer folder if not exists
         const customerFolder = path.join('public/uploads/customers', customer._id.toString());
         if (!fs.existsSync(customerFolder)) {
           fs.mkdirSync(customerFolder, { recursive: true });
         }
 
-        // Check and delete old image if exists
-        if (customer.images && customer.images[imageData.index - 1]) {
-          const oldImagePath = path.join('public', customer.images[imageData.index - 1].url);
-          if (fs.existsSync(oldImagePath)) {
-            fs.unlinkSync(oldImagePath);
+        // Initialize images array from existing customer images
+        const images: ICustomerImage[] = [...(customer.images || [])];
+
+        // Process each image
+        for (const imageData of imagesData) {
+          // Check and delete old image if exists at this index
+          if (customer.images && customer.images[imageData.index - 1]) {
+            const oldImagePath = path.join('public', customer.images[imageData.index - 1].url);
+            if (fs.existsSync(oldImagePath)) {
+              fs.unlinkSync(oldImagePath);
+            }
           }
+
+          // Save new image
+          const ext = path.extname(imageData.originalName);
+          const filename = `${customer._id}_${imageData.index}${ext}`;
+          const filePath = path.join(customerFolder, filename);
+          fs.writeFileSync(filePath, imageData.buffer);
+
+          // Update images array at specific index with versioned URL
+          const baseUrl = `/uploads/customers/${customer._id}/${filename}`;
+          images[imageData.index - 1] = {
+            url: generateVersionedUrl(baseUrl),
+            rotate: imageData.rotate,
+          };
+
+          Logger.debug('Image uploaded for customer bank update', {
+            customerId: customer._id,
+            imageIndex: imageData.index,
+            filename,
+            rotate: imageData.rotate,
+          });
         }
 
-        // Save new image
-        const ext = path.extname(imageData.originalName);
-        const filename = `${customer._id}_${imageData.index}${ext}`;
-        const filePath = path.join(customerFolder, filename);
-        fs.writeFileSync(filePath, imageData.buffer);
-
-        // Update customer images array with url and rotate
-        const images: ICustomerImage[] = [...(customer.images || [])];
-        const baseUrl = `/uploads/customers/${customer._id}/${filename}`;
-        images[imageData.index - 1] = {
-          url: generateVersionedUrl(baseUrl),
-          rotate: imageData.rotate,
-        };
-
+        // Update customer with processed images
         customer.images = images.filter(img => img && img.url).slice(0, 5);
-
-        Logger.debug('Image uploaded for customer bank update', {
-          customerId: customer._id,
-          imageIndex: imageData.index,
-          filename,
-          rotate: imageData.rotate,
-        });
       }
 
       // Save and return updated customer
@@ -729,7 +735,8 @@ export class CustomerService {
       Logger.debug('Customer bank info update completed', {
         customerId: updatedCustomer._id,
         hasBankInfo: !!bankInfo,
-        hasImage: !!imageData,
+        hasImages: !!(imagesData && imagesData.length > 0),
+        imagesCount: imagesData?.length || 0,
       });
 
       return updatedCustomer;

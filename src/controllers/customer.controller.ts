@@ -7,7 +7,7 @@ import {
   UploadImageRequest,
   UpdateCustomerBankRequest,
 } from '@/schemas/customer.schema';
-import { ApiResponse, AuthRequest } from '@/types';
+import { ApiResponse, AuthRequest, AuthRequestWithFileUploads } from '@/types';
 
 export class CustomerController {
   private customerService: CustomerService;
@@ -210,7 +210,7 @@ export class CustomerController {
    *       403:
    *         description: Insufficient permissions
    */
-  updateCustomer = async (req: Request, res: Response): Promise<void> => {
+  updateCustomer = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
       const data: UpdateCustomerRequest = req.body;
@@ -267,7 +267,7 @@ export class CustomerController {
    *       403:
    *         description: Insufficient permissions
    */
-  getCustomerById = async (req: Request, res: Response): Promise<void> => {
+  getCustomerById = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
       const customer = await this.customerService.getCustomerById(id);
@@ -305,7 +305,7 @@ export class CustomerController {
   /**
    * Upload image with auto-create customer
    */
-  uploadImage = async (req: Request, res: Response): Promise<void> => {
+  uploadImage = async (req: AuthRequestWithFileUploads, res: Response): Promise<void> => {
     try {
       const { name, phone, routeId, type, imageIndex, rotate } = req.body as UploadImageRequest;
       const file = req.file;
@@ -346,7 +346,7 @@ export class CustomerController {
   /**
    * Upload image by customer ID (existing customer only)
    */
-  uploadImageById = async (req: Request, res: Response): Promise<void> => {
+  uploadImageById = async (req: AuthRequestWithFileUploads, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
       const { imageIndex, rotate } = req.body;
@@ -388,7 +388,7 @@ export class CustomerController {
   /**
    * Update image rotation
    */
-  updateImageRotation = async (req: Request, res: Response): Promise<void> => {
+  updateImageRotation = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       const { id, index } = req.params;
       const { rotate } = req.body;
@@ -414,7 +414,7 @@ export class CustomerController {
   /**
    * Delete customer image
    */
-  deleteImage = async (req: Request, res: Response): Promise<void> => {
+  deleteImage = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       const { id, index } = req.params;
 
@@ -437,13 +437,12 @@ export class CustomerController {
   };
 
   /**
-   * Update customer bank info and/or upload image
+   * Update customer bank info and/or upload image(s)
    */
-  updateBankInfo = async (req: AuthRequest, res: Response): Promise<void> => {
+  updateBankInfo = async (req: AuthRequestWithFileUploads, res: Response): Promise<void> => {
     try {
-      const { phone, name, type, bankInfo, imageIndex, rotate } =
-        req.body as UpdateCustomerBankRequest;
-      const file = req.file;
+      const { phone, name, type, bankInfo, images } = req.body as UpdateCustomerBankRequest;
+      const filesObject = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
       const userId = req.user?.userId;
 
       if (!userId) {
@@ -457,15 +456,28 @@ export class CustomerController {
       // Get user's selected route
       const routeId = await this.userService.getUserSelectedRouteId(userId);
 
-      // Prepare image data if file uploaded
-      let imageData = undefined;
-      if (file && imageIndex) {
-        imageData = {
-          index: imageIndex,
+      // Prepare image data for multiple images
+      let imagesData: Array<{
+        index: number;
+        buffer: Buffer;
+        originalName: string;
+        rotate: number;
+      }> = [];
+
+      // Handle multiple images
+      if (
+        filesObject &&
+        !Array.isArray(filesObject) &&
+        filesObject.images &&
+        filesObject.images.length > 0 &&
+        images
+      ) {
+        imagesData = filesObject.images.map((file, idx) => ({
+          index: images[idx]?.index || idx + 1,
           buffer: file.buffer,
           originalName: file.originalname,
-          rotate: rotate || 0,
-        };
+          rotate: images[idx]?.rotate || 0,
+        }));
       }
 
       // Update customer with all data
@@ -475,7 +487,7 @@ export class CustomerController {
         type || 'delivery',
         name,
         bankInfo,
-        imageData
+        imagesData.length > 0 ? imagesData : undefined
       );
 
       res.status(200).json({

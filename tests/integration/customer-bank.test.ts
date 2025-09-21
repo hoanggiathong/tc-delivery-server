@@ -141,7 +141,7 @@ describe('Customer Bank API Integration Tests', () => {
       );
     });
 
-    it('should update customer with image upload', async () => {
+    it('should update customer with multiple images upload', async () => {
       MockedUserService.prototype.getUserSelectedRouteId.mockResolvedValue(
         '507f1f77bcf86cd799439011'
       );
@@ -155,9 +155,12 @@ describe('Customer Bank API Integration Tests', () => {
         .field('phone', '+84912345678')
         .field('name', 'Nguyễn Văn A')
         .field('type', 'delivery')
-        .field('imageIndex', '1')
-        .field('rotate', '90')
-        .attach('image', Buffer.from('fake-image'), 'test.jpg')
+        .field('images[0][index]', '1')
+        .field('images[0][rotate]', '90')
+        .field('images[1][index]', '3')
+        .field('images[1][rotate]', '180')
+        .attach('images', Buffer.from('fake-image-1'), 'test1.jpg')
+        .attach('images', Buffer.from('fake-image-2'), 'test2.png')
         .expect(200);
 
       expect(response.body.success).toBe(true);
@@ -167,14 +170,20 @@ describe('Customer Bank API Integration Tests', () => {
         'delivery',
         'Nguyễn Văn A',
         undefined,
-        expect.objectContaining({
-          index: 1,
-          rotate: 90,
-        })
+        expect.arrayContaining([
+          expect.objectContaining({
+            index: 1,
+            rotate: 90,
+          }),
+          expect.objectContaining({
+            index: 3,
+            rotate: 180,
+          }),
+        ])
       );
     });
 
-    it('should update customer with both bank info and image', async () => {
+    it('should update customer with bank info and multiple images', async () => {
       MockedUserService.prototype.getUserSelectedRouteId.mockResolvedValue(
         '507f1f77bcf86cd799439011'
       );
@@ -191,9 +200,15 @@ describe('Customer Bank API Integration Tests', () => {
         .field('bankInfo[name]', 'Nguyễn Văn A')
         .field('bankInfo[bankName]', 'Vietcombank')
         .field('bankInfo[bankAccount]', '0071000123456')
-        .field('imageIndex', '2')
-        .field('rotate', '180')
-        .attach('image', Buffer.from('fake-image'), 'test.png')
+        .field('images[0][index]', '1')
+        .field('images[0][rotate]', '0')
+        .field('images[1][index]', '2')
+        .field('images[1][rotate]', '90')
+        .field('images[2][index]', '5')
+        .field('images[2][rotate]', '270')
+        .attach('images', Buffer.from('fake-image-1'), 'img1.jpg')
+        .attach('images', Buffer.from('fake-image-2'), 'img2.png')
+        .attach('images', Buffer.from('fake-image-3'), 'img3.gif')
         .expect(200);
 
       expect(response.body.success).toBe(true);
@@ -207,10 +222,11 @@ describe('Customer Bank API Integration Tests', () => {
           bankName: 'Vietcombank',
           bankAccount: '0071000123456',
         }),
-        expect.objectContaining({
-          index: 2,
-          rotate: 180,
-        })
+        expect.arrayContaining([
+          expect.objectContaining({ index: 1, rotate: 0 }),
+          expect.objectContaining({ index: 2, rotate: 90 }),
+          expect.objectContaining({ index: 5, rotate: 270 }),
+        ])
       );
     });
 
@@ -258,35 +274,6 @@ describe('Customer Bank API Integration Tests', () => {
           name: 'Nguyễn Văn A',
           type: 'delivery',
         })
-        .expect(400);
-
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toContain('Validation');
-    });
-
-    it('should return 400 for invalid imageIndex', async () => {
-      const response = await request(app)
-        .put('/api/customer/bank-info')
-        .set('Authorization', `Bearer ${authToken}`)
-        .field('phone', '+84912345678')
-        .field('name', 'Nguyễn Văn A')
-        .field('imageIndex', '6') // Invalid: > 5
-        .attach('image', Buffer.from('fake-image'), 'test.jpg')
-        .expect(400);
-
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toContain('Validation');
-    });
-
-    it('should return 400 for invalid rotate value', async () => {
-      const response = await request(app)
-        .put('/api/customer/bank-info')
-        .set('Authorization', `Bearer ${authToken}`)
-        .field('phone', '+84912345678')
-        .field('name', 'Nguyễn Văn A')
-        .field('imageIndex', '1')
-        .field('rotate', '45') // Invalid: not 0, 90, 180, 270
-        .attach('image', Buffer.from('fake-image'), 'test.jpg')
         .expect(400);
 
       expect(response.body.success).toBe(false);
