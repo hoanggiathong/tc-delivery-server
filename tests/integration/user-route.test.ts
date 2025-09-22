@@ -24,24 +24,30 @@ describe('User Route Integration Tests', () => {
 
   // Mock data
   const mockUserRoute = {
-    _id: '507f1f77bcf86cd799439016',
+    id: '507f1f77bcf86cd799439016',
     userId: '507f1f77bcf86cd799439013',
     routeId: '507f1f77bcf86cd799439014',
     assignedBy: '507f1f77bcf86cd799439011',
     user: {
-      _id: '507f1f77bcf86cd799439013',
+      id: '507f1f77bcf86cd799439013',
       username: 'testuser',
-      role: 'user',
+      role: UserRole.USER,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     },
     route: {
-      _id: '507f1f77bcf86cd799439014',
+      id: '507f1f77bcf86cd799439014',
       code: 'T1',
       name: 'Test Route',
+      createdAt: new Date(),
+      updatedAt: new Date(),
     },
     assignedByUser: {
-      _id: '507f1f77bcf86cd799439011',
+      id: '507f1f77bcf86cd799439011',
       username: 'manager',
-      role: 'manager',
+      role: UserRole.MANAGER,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     },
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -49,14 +55,14 @@ describe('User Route Integration Tests', () => {
 
   const mockRoutes = [
     {
-      _id: '507f1f77bcf86cd799439014',
+      id: '507f1f77bcf86cd799439014',
       code: 'T1',
       name: 'TP.HCM',
       createdAt: new Date(),
       updatedAt: new Date(),
     },
     {
-      _id: '507f1f77bcf86cd799439015',
+      id: '507f1f77bcf86cd799439015',
       code: 'T2',
       name: 'Long An',
       createdAt: new Date(),
@@ -120,7 +126,7 @@ describe('User Route Integration Tests', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.message).toBe('Route assigned to user successfully');
       expect(response.body.data.userRoute).toBeDefined();
-      expect(response.body.data.userRoute._id).toBe(mockUserRoute._id);
+      expect(response.body.data.userRoute.id).toBe(mockUserRoute.id);
       expect(response.body.data.userRoute.userId).toBe(mockUserRoute.userId);
       expect(response.body.data.userRoute.routeId).toBe(mockUserRoute.routeId);
     });
@@ -241,7 +247,10 @@ describe('User Route Integration Tests', () => {
     });
 
     it('should assign multiple routes to user successfully', async () => {
-      const mockUserRoutes = [mockUserRoute, { ...mockUserRoute, routeId: '507f1f77bcf86cd799439015' }];
+      const mockUserRoutes = [
+        mockUserRoute,
+        { ...mockUserRoute, routeId: '507f1f77bcf86cd799439015' },
+      ];
       MockedUserRouteService.prototype.assignMultipleRoutesToUser.mockResolvedValue(mockUserRoutes);
 
       const response = await request(app)

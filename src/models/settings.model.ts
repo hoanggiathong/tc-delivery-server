@@ -18,6 +18,12 @@ export type IProductConfig = {
   cost: number;
 };
 
+export type IProductConfigResponse = {
+  id: string;
+  name: string;
+  cost: number;
+};
+
 export type SettingsMetadata = IShippingRateConfig[] | IProductConfig[] | Record<string, unknown>;
 
 export interface ISettings extends Document {

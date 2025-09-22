@@ -353,4 +353,190 @@ describe('Settings API Integration Tests', () => {
       expect(response.body.success).toBe(false);
     });
   });
+
+  describe('PUT /api/settings/products/:id', () => {
+    const validProductId = '507f1f77bcf86cd799439011';
+    const invalidProductId = 'invalid-id';
+
+    it('should update product successfully with admin token', async () => {
+      const mockUpdatedProduct = {
+        _id: validProductId,
+        name: 'Updated Product Name',
+        cost: 35000,
+      } as any;
+
+      MockedSettingsService.prototype.updateProductById.mockResolvedValue(mockUpdatedProduct);
+
+      const response = await request(app)
+        .put(`/api/settings/products/${validProductId}`)
+        .send({
+          name: 'Updated Product Name',
+          cost: 35000,
+        })
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('Product updated successfully');
+      expect(response.body.data).toEqual({
+        id: validProductId,
+        name: 'Updated Product Name',
+        cost: 35000,
+      });
+      expect(MockedSettingsService.prototype.updateProductById).toHaveBeenCalledWith(
+        validProductId,
+        { name: 'Updated Product Name', cost: 35000 }
+      );
+    });
+
+    it('should update product name only', async () => {
+      const mockUpdatedProduct = {
+        _id: validProductId,
+        name: 'New Product Name',
+        cost: 25000,
+      } as any;
+
+      MockedSettingsService.prototype.updateProductById.mockResolvedValue(mockUpdatedProduct);
+
+      const response = await request(app)
+        .put(`/api/settings/products/${validProductId}`)
+        .send({
+          name: 'New Product Name',
+        })
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('Product updated successfully');
+      expect(response.body.data).toEqual({
+        id: validProductId,
+        name: 'New Product Name',
+        cost: 25000,
+      });
+      expect(MockedSettingsService.prototype.updateProductById).toHaveBeenCalledWith(
+        validProductId,
+        { name: 'New Product Name' }
+      );
+    });
+
+    it('should update product cost only', async () => {
+      const mockUpdatedProduct = {
+        _id: validProductId,
+        name: 'Existing Product',
+        cost: 50000,
+      } as any;
+
+      MockedSettingsService.prototype.updateProductById.mockResolvedValue(mockUpdatedProduct);
+
+      const response = await request(app)
+        .put(`/api/settings/products/${validProductId}`)
+        .send({
+          cost: 50000,
+        })
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('Product updated successfully');
+      expect(response.body.data).toEqual({
+        id: validProductId,
+        name: 'Existing Product',
+        cost: 50000,
+      });
+      expect(MockedSettingsService.prototype.updateProductById).toHaveBeenCalledWith(
+        validProductId,
+        { cost: 50000 }
+      );
+    });
+
+    it('should return 404 for non-existent product', async () => {
+      const notFoundError = new Error('Product with id "507f1f77bcf86cd799439012" not found');
+      MockedSettingsService.prototype.updateProductById.mockRejectedValue(notFoundError);
+
+      const response = await request(app)
+        .put('/api/settings/products/507f1f77bcf86cd799439012')
+        .send({
+          name: 'Updated Name',
+        })
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(404);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('not found');
+    });
+
+    it('should return 400 for invalid ObjectId format', async () => {
+      const response = await request(app)
+        .put(`/api/settings/products/${invalidProductId}`)
+        .send({
+          name: 'Updated Name',
+        })
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Validation');
+    });
+
+    it('should return 400 when no fields are provided', async () => {
+      const response = await request(app)
+        .put(`/api/settings/products/${validProductId}`)
+        .send({})
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Validation');
+    });
+
+    it('should return 400 for invalid cost (negative)', async () => {
+      const response = await request(app)
+        .put(`/api/settings/products/${validProductId}`)
+        .send({
+          cost: -100,
+        })
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Validation');
+    });
+
+    it('should return 400 for invalid name (empty)', async () => {
+      const response = await request(app)
+        .put(`/api/settings/products/${validProductId}`)
+        .send({
+          name: '',
+        })
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Validation');
+    });
+
+    it('should return 403 for user without admin role', async () => {
+      const response = await request(app)
+        .put(`/api/settings/products/${validProductId}`)
+        .send({
+          name: 'Updated Name',
+        })
+        .set('Authorization', `Bearer ${userToken}`)
+        .expect(403);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Insufficient');
+    });
+
+    it('should return 401 for unauthenticated request', async () => {
+      const response = await request(app)
+        .put(`/api/settings/products/${validProductId}`)
+        .send({
+          name: 'Updated Name',
+        })
+        .expect(401);
+
+      expect(response.body.success).toBe(false);
+    });
+  });
 });

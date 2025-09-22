@@ -10,6 +10,7 @@ import {
   updateProductListSchema,
   deleteShippingRateSchema,
   deleteProductSchema,
+  updateProductByIdSchema,
 } from '@/schemas/settings.schema';
 
 const router = Router();
@@ -702,6 +703,143 @@ router.delete(
 /**
  * @swagger
  * /api/settings/products/{id}:
+ *   put:
+ *     summary: Update a specific product by ID (Admin/Superadmin only)
+ *     tags: [Settings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[0-9a-fA-F]{24}$'
+ *         description: MongoDB ObjectId of the product to update
+ *         example: "68a160568473a7fad9b29821"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 minLength: 1
+ *                 description: Updated product name
+ *                 example: "Bánh mì thịt"
+ *               cost:
+ *                 type: number
+ *                 minimum: 0
+ *                 description: Updated product cost
+ *                 example: 30000
+ *             description: At least one field (name or cost) must be provided
+ *           examples:
+ *             updateName:
+ *               summary: Update product name only
+ *               value:
+ *                 name: "Bánh mì thịt nướng"
+ *             updateCost:
+ *               summary: Update product cost only
+ *               value:
+ *                 cost: 35000
+ *             updateBoth:
+ *               summary: Update both name and cost
+ *               value:
+ *                 name: "Bánh mì đặc biệt"
+ *                 cost: 40000
+ *     responses:
+ *       200:
+ *         description: Product updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Product updated successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       description: Product ID
+ *                       example: "68a160568473a7fad9b29821"
+ *                     name:
+ *                       type: string
+ *                       description: Updated product name
+ *                       example: "Bánh mì đặc biệt"
+ *                     cost:
+ *                       type: number
+ *                       description: Updated product cost
+ *                       example: 40000
+ *             examples:
+ *               success:
+ *                 summary: Successful update response
+ *                 value:
+ *                   success: true
+ *                   message: "Product updated successfully"
+ *                   data:
+ *                     id: "68a160568473a7fad9b29821"
+ *                     name: "Bánh mì đặc biệt"
+ *                     cost: 40000
+ *       400:
+ *         description: Invalid input data or ObjectId format
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "At least one field (name or cost) must be provided for update"
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "No token provided"
+ *       403:
+ *         description: Insufficient privileges
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Access denied. Admin role required"
+ *       404:
+ *         description: Product not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 'Product with id "68a160568473a7fad9b29821" not found'
  *   delete:
  *     summary: Delete a specific product by ID (Admin/Superadmin only)
  *     tags: [Settings]
@@ -750,6 +888,14 @@ router.delete(
  *                   type: string
  *                   example: 'Product with id "68a160568473a7fad9b29821" not found'
  */
+router.put(
+  '/products/:id',
+  authenticateToken,
+  requireRole([UserRole.ADMIN, UserRole.SUPERADMIN]),
+  validate(updateProductByIdSchema),
+  settingsController.updateProduct
+);
+
 router.delete(
   '/products/:id',
   authenticateToken,

@@ -164,6 +164,20 @@ export const deleteProductSchema = z.object({
   }),
 });
 
+export const updateProductByIdSchema = z.object({
+  params: z.object({
+    id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format'),
+  }),
+  body: z
+    .object({
+      name: z.string().min(1, 'Product name is required').optional(),
+      cost: z.number().min(0, 'Product cost must be non-negative').optional(),
+    })
+    .refine(data => data.name !== undefined || data.cost !== undefined, {
+      message: 'At least one field (name or cost) must be provided for update',
+    }),
+});
+
 export type CreateSettingsInput = z.infer<typeof createSettingsSchema>;
 export type UpdateSettingsInput = z.infer<typeof updateSettingsSchema>;
 export type GetSettingsByNameInput = z.infer<typeof getSettingsByNameSchema>;
@@ -173,5 +187,6 @@ export type UpdateShippingRatesInput = z.infer<typeof updateShippingRatesSchema>
 export type UpdateProductListInput = z.infer<typeof updateProductListSchema>;
 export type DeleteShippingRateInput = z.infer<typeof deleteShippingRateSchema>;
 export type DeleteProductInput = z.infer<typeof deleteProductSchema>;
+export type UpdateProductByIdInput = z.infer<typeof updateProductByIdSchema>;
 export type ShippingRate = z.infer<typeof shippingRateSchema>;
 export type Product = z.infer<typeof productSchema>;

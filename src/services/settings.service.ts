@@ -4,6 +4,7 @@ import {
   IShippingRateConfig,
   SettingsMetadata,
   IProductConfig,
+  IProductConfigResponse,
 } from '@/models/settings.model';
 import { AppError } from '@/middlewares/error.middleware';
 import mongoose from 'mongoose';
@@ -101,9 +102,23 @@ export class SettingsService {
     }
   }
 
-  async getProductList(): Promise<IProductConfig[]> {
+  private async getProductListInternal(): Promise<IProductConfig[]> {
     const products = await this.getSetting<IProductConfig[]>('product_list');
     return products || [];
+  }
+
+  async getProductList(): Promise<IProductConfigResponse[]> {
+    const products = await this.getProductListInternal();
+    if (!products || products.length === 0) {
+      return [];
+    }
+
+    // Transform products to include id field
+    return products.map(product => ({
+      id: product._id?.toString() || '',
+      name: product.name,
+      cost: product.cost,
+    }));
   }
 
   async updateProductList(products: IProductConfig[]): Promise<boolean> {
@@ -112,7 +127,7 @@ export class SettingsService {
 
   async appendProducts(newProducts: IProductConfig[]): Promise<boolean> {
     try {
-      const existingProducts = await this.getProductList();
+      const existingProducts = await this.getProductListInternal();
 
       // Add _id to new products if not present
       const newProductsWithIds = newProducts.map(product => ({
@@ -170,9 +185,51 @@ export class SettingsService {
     }
   }
 
+  async updateProductById(
+    productId: string,
+    updates: Partial<IProductConfig>
+  ): Promise<IProductConfig> {
+    try {
+      const existingProducts = await this.getProductListInternal();
+
+      // Find the product to update
+      const productIndex = existingProducts.findIndex(
+        product => product._id?.toString() === productId
+      );
+
+      if (productIndex === -1) {
+        throw new AppError(`Product with id "${productId}" not found`, 404);
+      }
+
+      // Update the product with new values
+      const updatedProduct = {
+        ...existingProducts[productIndex],
+        ...(updates.name !== undefined && { name: updates.name }),
+        ...(updates.cost !== undefined && { cost: updates.cost }),
+      };
+
+      // Replace the product in the array
+      const updatedProducts = [...existingProducts];
+      updatedProducts[productIndex] = updatedProduct;
+
+      // Update the setting
+      const success = await this.updateSetting('product_list', updatedProducts);
+      if (!success) {
+        throw new AppError('Failed to update product', 500);
+      }
+
+      return updatedProduct;
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throw new AppError('Failed to update product', 500);
+    }
+  }
+
   async deleteProductById(productId: string): Promise<boolean> {
     try {
-      const existingProducts = await this.getProductList();
+      const existingProducts = await this.getProductListInternal();
 
       // Find the product to delete
       const productIndex = existingProducts.findIndex(
