@@ -539,4 +539,403 @@ describe('Settings API Integration Tests', () => {
       expect(response.body.success).toBe(false);
     });
   });
+
+  describe('PUT /api/settings/shipping-rates/:id', () => {
+    const validRateId = '507f1f77bcf86cd799439011';
+    const invalidRateId = 'invalid-id';
+
+    it('should update shipping rate successfully with all fields', async () => {
+      const mockUpdatedRate = {
+        _id: validRateId,
+        fromAmount: 0,
+        toAmount: 1500000,
+        regularShippingFee: 18000,
+        expressShippingFee: 25000,
+        fromAmountUnit: 'VND',
+        toAmountUnit: 'VND',
+        regularShippingFeeUnit: 'VND',
+        expressShippingFeeUnit: 'VND',
+      } as any;
+
+      MockedSettingsService.prototype.updateShippingRateById.mockResolvedValue(mockUpdatedRate);
+
+      const response = await request(app)
+        .put(`/api/settings/shipping-rates/${validRateId}`)
+        .send({
+          fromAmount: 0,
+          toAmount: 1500000,
+          regularShippingFee: 18000,
+          expressShippingFee: 25000,
+          fromAmountUnit: 'VND',
+          toAmountUnit: 'VND',
+          regularShippingFeeUnit: 'VND',
+          expressShippingFeeUnit: 'VND',
+        })
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('Shipping rate updated successfully');
+      expect(response.body.data).toEqual({
+        id: validRateId,
+        fromAmount: 0,
+        toAmount: 1500000,
+        regularShippingFee: 18000,
+        expressShippingFee: 25000,
+        fromAmountUnit: 'VND',
+        toAmountUnit: 'VND',
+        regularShippingFeeUnit: 'VND',
+        expressShippingFeeUnit: 'VND',
+      });
+      expect(MockedSettingsService.prototype.updateShippingRateById).toHaveBeenCalledWith(
+        validRateId,
+        {
+          fromAmount: 0,
+          toAmount: 1500000,
+          regularShippingFee: 18000,
+          expressShippingFee: 25000,
+          fromAmountUnit: 'VND',
+          toAmountUnit: 'VND',
+          regularShippingFeeUnit: 'VND',
+          expressShippingFeeUnit: 'VND',
+        }
+      );
+    });
+
+    it('should update shipping rate with partial fields (fees only)', async () => {
+      const mockUpdatedRate = {
+        _id: validRateId,
+        fromAmount: 0,
+        toAmount: 1000000,
+        regularShippingFee: 20000,
+        expressShippingFee: 30000,
+        fromAmountUnit: 'VND',
+        toAmountUnit: 'VND',
+        regularShippingFeeUnit: 'VND',
+        expressShippingFeeUnit: 'VND',
+      } as any;
+
+      MockedSettingsService.prototype.updateShippingRateById.mockResolvedValue(mockUpdatedRate);
+
+      const response = await request(app)
+        .put(`/api/settings/shipping-rates/${validRateId}`)
+        .send({
+          regularShippingFee: 20000,
+          expressShippingFee: 30000,
+        })
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('Shipping rate updated successfully');
+      expect(response.body.data).toEqual({
+        id: validRateId,
+        fromAmount: 0,
+        toAmount: 1000000,
+        regularShippingFee: 20000,
+        expressShippingFee: 30000,
+        fromAmountUnit: 'VND',
+        toAmountUnit: 'VND',
+        regularShippingFeeUnit: 'VND',
+        expressShippingFeeUnit: 'VND',
+      });
+      expect(MockedSettingsService.prototype.updateShippingRateById).toHaveBeenCalledWith(
+        validRateId,
+        {
+          regularShippingFee: 20000,
+          expressShippingFee: 30000,
+        }
+      );
+    });
+
+    it('should update shipping rate with amount range', async () => {
+      const mockUpdatedRate = {
+        _id: validRateId,
+        fromAmount: 500000,
+        toAmount: 2000000,
+        regularShippingFee: 15000,
+        expressShippingFee: 20000,
+        fromAmountUnit: 'VND',
+        toAmountUnit: 'VND',
+        regularShippingFeeUnit: 'VND',
+        expressShippingFeeUnit: 'VND',
+      } as any;
+
+      MockedSettingsService.prototype.updateShippingRateById.mockResolvedValue(mockUpdatedRate);
+
+      const response = await request(app)
+        .put(`/api/settings/shipping-rates/${validRateId}`)
+        .send({
+          fromAmount: 500000,
+          toAmount: 2000000,
+        })
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('Shipping rate updated successfully');
+      expect(response.body.data).toEqual({
+        id: validRateId,
+        fromAmount: 500000,
+        toAmount: 2000000,
+        regularShippingFee: 15000,
+        expressShippingFee: 20000,
+        fromAmountUnit: 'VND',
+        toAmountUnit: 'VND',
+        regularShippingFeeUnit: 'VND',
+        expressShippingFeeUnit: 'VND',
+      });
+      expect(MockedSettingsService.prototype.updateShippingRateById).toHaveBeenCalledWith(
+        validRateId,
+        {
+          fromAmount: 500000,
+          toAmount: 2000000,
+        }
+      );
+    });
+
+    it('should update shipping rate with currency units', async () => {
+      const mockUpdatedRate = {
+        _id: validRateId,
+        fromAmount: 0,
+        toAmount: 1000000,
+        regularShippingFee: 15000,
+        expressShippingFee: 20000,
+        fromAmountUnit: 'USD',
+        toAmountUnit: 'USD',
+        regularShippingFeeUnit: '%',
+        expressShippingFeeUnit: '%',
+      } as any;
+
+      MockedSettingsService.prototype.updateShippingRateById.mockResolvedValue(mockUpdatedRate);
+
+      const response = await request(app)
+        .put(`/api/settings/shipping-rates/${validRateId}`)
+        .send({
+          fromAmountUnit: 'USD',
+          toAmountUnit: 'USD',
+          regularShippingFeeUnit: '%',
+          expressShippingFeeUnit: '%',
+        })
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('Shipping rate updated successfully');
+      expect(response.body.data).toEqual({
+        id: validRateId,
+        fromAmount: 0,
+        toAmount: 1000000,
+        regularShippingFee: 15000,
+        expressShippingFee: 20000,
+        fromAmountUnit: 'USD',
+        toAmountUnit: 'USD',
+        regularShippingFeeUnit: '%',
+        expressShippingFeeUnit: '%',
+      });
+      expect(MockedSettingsService.prototype.updateShippingRateById).toHaveBeenCalledWith(
+        validRateId,
+        {
+          fromAmountUnit: 'USD',
+          toAmountUnit: 'USD',
+          regularShippingFeeUnit: '%',
+          expressShippingFeeUnit: '%',
+        }
+      );
+    });
+
+    it('should return 404 for non-existent shipping rate', async () => {
+      const notFoundError = new Error('Shipping rate with id "507f1f77bcf86cd799439012" not found');
+      MockedSettingsService.prototype.updateShippingRateById.mockRejectedValue(notFoundError);
+
+      const response = await request(app)
+        .put('/api/settings/shipping-rates/507f1f77bcf86cd799439012')
+        .send({
+          regularShippingFee: 20000,
+        })
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(404);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('not found');
+    });
+
+    it('should return 400 for invalid ObjectId format', async () => {
+      const response = await request(app)
+        .put(`/api/settings/shipping-rates/${invalidRateId}`)
+        .send({
+          regularShippingFee: 20000,
+        })
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Validation');
+    });
+
+    it('should return 400 when no fields are provided', async () => {
+      const response = await request(app)
+        .put(`/api/settings/shipping-rates/${validRateId}`)
+        .send({})
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Validation failed');
+      expect(response.body.errors).toBeDefined();
+      expect(
+        response.body.errors.some((error: any) =>
+          error.message.includes('At least one field must be provided')
+        )
+      ).toBe(true);
+    });
+
+    it('should return 400 for invalid amount range (toAmount <= fromAmount)', async () => {
+      const response = await request(app)
+        .put(`/api/settings/shipping-rates/${validRateId}`)
+        .send({
+          fromAmount: 1000000,
+          toAmount: 500000,
+        })
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Validation failed');
+      expect(response.body.errors).toBeDefined();
+      expect(
+        response.body.errors.some((error: any) =>
+          error.message.includes('To amount must be greater than from amount')
+        )
+      ).toBe(true);
+    });
+
+    it('should return 400 for negative fromAmount', async () => {
+      const response = await request(app)
+        .put(`/api/settings/shipping-rates/${validRateId}`)
+        .send({
+          fromAmount: -100,
+        })
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Validation');
+    });
+
+    it('should return 400 for negative toAmount', async () => {
+      const response = await request(app)
+        .put(`/api/settings/shipping-rates/${validRateId}`)
+        .send({
+          toAmount: -500,
+        })
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Validation');
+    });
+
+    it('should return 400 for negative regularShippingFee', async () => {
+      const response = await request(app)
+        .put(`/api/settings/shipping-rates/${validRateId}`)
+        .send({
+          regularShippingFee: -1000,
+        })
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Validation');
+    });
+
+    it('should return 400 for negative expressShippingFee', async () => {
+      const response = await request(app)
+        .put(`/api/settings/shipping-rates/${validRateId}`)
+        .send({
+          expressShippingFee: -2000,
+        })
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Validation');
+    });
+
+    it('should return 400 for invalid currency unit', async () => {
+      const response = await request(app)
+        .put(`/api/settings/shipping-rates/${validRateId}`)
+        .send({
+          fromAmountUnit: 'INVALID',
+        })
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Validation');
+    });
+
+    it('should return 403 for user without admin role', async () => {
+      const response = await request(app)
+        .put(`/api/settings/shipping-rates/${validRateId}`)
+        .send({
+          regularShippingFee: 20000,
+        })
+        .set('Authorization', `Bearer ${userToken}`)
+        .expect(403);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Insufficient');
+    });
+
+    it('should return 401 for unauthenticated request', async () => {
+      const response = await request(app)
+        .put(`/api/settings/shipping-rates/${validRateId}`)
+        .send({
+          regularShippingFee: 20000,
+        })
+        .expect(401);
+
+      expect(response.body.success).toBe(false);
+    });
+
+    it('should work with superadmin token', async () => {
+      const mockUpdatedRate = {
+        _id: validRateId,
+        fromAmount: 0,
+        toAmount: 1000000,
+        regularShippingFee: 25000,
+        expressShippingFee: 35000,
+        fromAmountUnit: 'VND',
+        toAmountUnit: 'VND',
+        regularShippingFeeUnit: 'VND',
+        expressShippingFeeUnit: 'VND',
+      } as any;
+
+      MockedSettingsService.prototype.updateShippingRateById.mockResolvedValue(mockUpdatedRate);
+
+      const response = await request(app)
+        .put(`/api/settings/shipping-rates/${validRateId}`)
+        .send({
+          regularShippingFee: 25000,
+          expressShippingFee: 35000,
+        })
+        .set('Authorization', `Bearer ${superadminToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('Shipping rate updated successfully');
+      expect(response.body.data).toEqual({
+        id: validRateId,
+        fromAmount: 0,
+        toAmount: 1000000,
+        regularShippingFee: 25000,
+        expressShippingFee: 35000,
+        fromAmountUnit: 'VND',
+        toAmountUnit: 'VND',
+        regularShippingFeeUnit: 'VND',
+        expressShippingFeeUnit: 'VND',
+      });
+    });
+  });
 });

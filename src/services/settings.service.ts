@@ -2,6 +2,7 @@ import {
   Settings,
   ISettings,
   IShippingRateConfig,
+  IShippingRateConfigResponse,
   SettingsMetadata,
   IProductConfig,
   IProductConfigResponse,
@@ -19,7 +20,7 @@ export class SettingsService {
     }
   }
 
-  async getShippingRates(): Promise<IShippingRateConfig[]> {
+  private async getShippingRatesInternal(): Promise<IShippingRateConfig[]> {
     const rates = await this.getSetting<IShippingRateConfig[]>('shipping_rates');
 
     if (!rates) {
@@ -29,6 +30,27 @@ export class SettingsService {
     // Ensure all rates have default unit values
     return rates.map(rate => ({
       ...rate,
+      fromAmountUnit: rate.fromAmountUnit || 'VND',
+      toAmountUnit: rate.toAmountUnit || 'VND',
+      regularShippingFeeUnit: rate.regularShippingFeeUnit || 'VND',
+      expressShippingFeeUnit: rate.expressShippingFeeUnit || 'VND',
+    }));
+  }
+
+  async getShippingRates(): Promise<IShippingRateConfigResponse[]> {
+    const rates = await this.getShippingRatesInternal();
+
+    if (!rates || rates.length === 0) {
+      return [];
+    }
+
+    // Transform rates to include id field
+    return rates.map(rate => ({
+      id: rate._id?.toString() || '',
+      fromAmount: rate.fromAmount,
+      toAmount: rate.toAmount,
+      regularShippingFee: rate.regularShippingFee,
+      expressShippingFee: rate.expressShippingFee,
       fromAmountUnit: rate.fromAmountUnit || 'VND',
       toAmountUnit: rate.toAmountUnit || 'VND',
       regularShippingFeeUnit: rate.regularShippingFeeUnit || 'VND',
@@ -55,7 +77,7 @@ export class SettingsService {
 
   async appendShippingRates(newRates: IShippingRateConfig[]): Promise<boolean> {
     try {
-      const existingRates = await this.getShippingRates();
+      const existingRates = await this.getShippingRatesInternal();
 
       // Add _id to new rates if not present
       const newRatesWithIds = newRates.map(rate => ({
@@ -99,6 +121,60 @@ export class SettingsService {
         throw error;
       }
       throw new AppError('Failed to append shipping rates with defaults', 500);
+    }
+  }
+
+  async updateShippingRateById(
+    rateId: string,
+    updates: Partial<IShippingRateConfig>
+  ): Promise<IShippingRateConfig> {
+    try {
+      const existingRates = await this.getShippingRatesInternal();
+
+      // Find the rate to update
+      const rateIndex = existingRates.findIndex(rate => rate._id?.toString() === rateId);
+
+      if (rateIndex === -1) {
+        throw new AppError(`Shipping rate with id "${rateId}" not found`, 404);
+      }
+
+      // Update the rate with new values
+      const updatedRate = {
+        ...existingRates[rateIndex],
+        ...(updates.fromAmount !== undefined && { fromAmount: updates.fromAmount }),
+        ...(updates.toAmount !== undefined && { toAmount: updates.toAmount }),
+        ...(updates.regularShippingFee !== undefined && {
+          regularShippingFee: updates.regularShippingFee,
+        }),
+        ...(updates.expressShippingFee !== undefined && {
+          expressShippingFee: updates.expressShippingFee,
+        }),
+        ...(updates.fromAmountUnit !== undefined && { fromAmountUnit: updates.fromAmountUnit }),
+        ...(updates.toAmountUnit !== undefined && { toAmountUnit: updates.toAmountUnit }),
+        ...(updates.regularShippingFeeUnit !== undefined && {
+          regularShippingFeeUnit: updates.regularShippingFeeUnit,
+        }),
+        ...(updates.expressShippingFeeUnit !== undefined && {
+          expressShippingFeeUnit: updates.expressShippingFeeUnit,
+        }),
+      };
+
+      // Replace the rate in the array
+      const updatedRates = [...existingRates];
+      updatedRates[rateIndex] = updatedRate;
+
+      // Update the setting
+      const success = await this.updateSetting('shipping_rates', updatedRates);
+      if (!success) {
+        throw new AppError('Failed to update shipping rate', 500);
+      }
+
+      return updatedRate;
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throw new AppError('Failed to update shipping rate', 500);
     }
   }
 
@@ -418,7 +494,7 @@ export class SettingsService {
 
   async deleteShippingRateById(rateId: string): Promise<boolean> {
     try {
-      const existingRates = await this.getShippingRates();
+      const existingRates = await this.getShippingRatesInternal();
 
       // Find the rate to delete
       const rateIndex = existingRates.findIndex(rate => rate._id?.toString() === rateId);

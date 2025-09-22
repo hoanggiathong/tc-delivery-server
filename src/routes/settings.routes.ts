@@ -9,6 +9,7 @@ import {
   updateShippingRatesSchema,
   updateProductListSchema,
   deleteShippingRateSchema,
+  updateShippingRateByIdSchema,
   deleteProductSchema,
   updateProductByIdSchema,
 } from '@/schemas/settings.schema';
@@ -691,7 +692,170 @@ router.put(
  *                 message:
  *                   type: string
  *                   example: 'Shipping rate with id "68a160568473a7fad9b29821" not found'
+ *   put:
+ *     summary: Update a specific shipping rate by ID (Admin/Superadmin only)
+ *     tags: [Settings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[0-9a-fA-F]{24}$'
+ *         description: MongoDB ObjectId of the shipping rate to update
+ *         example: "68a160568473a7fad9b29821"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               fromAmount:
+ *                 type: number
+ *                 minimum: 0
+ *                 description: Starting amount for this rate range
+ *                 example: 0
+ *               toAmount:
+ *                 type: number
+ *                 minimum: 0
+ *                 description: Ending amount for this rate range
+ *                 example: 1000000
+ *               regularShippingFee:
+ *                 type: number
+ *                 minimum: 0
+ *                 description: Regular shipping fee for this range
+ *                 example: 15000
+ *               expressShippingFee:
+ *                 type: number
+ *                 minimum: 0
+ *                 description: Express shipping fee for this range
+ *                 example: 25000
+ *               fromAmountUnit:
+ *                 type: string
+ *                 enum: [VND, USD, '%']
+ *                 description: Unit for fromAmount
+ *                 example: "VND"
+ *               toAmountUnit:
+ *                 type: string
+ *                 enum: [VND, USD, '%']
+ *                 description: Unit for toAmount
+ *                 example: "VND"
+ *               regularShippingFeeUnit:
+ *                 type: string
+ *                 enum: [VND, USD, '%']
+ *                 description: Unit for regular shipping fee
+ *                 example: "VND"
+ *               expressShippingFeeUnit:
+ *                 type: string
+ *                 enum: [VND, USD, '%']
+ *                 description: Unit for express shipping fee
+ *                 example: "VND"
+ *             description: At least one field must be provided
+ *           examples:
+ *             updateAmounts:
+ *               summary: Update amount range
+ *               value:
+ *                 fromAmount: 0
+ *                 toAmount: 2000000
+ *             updateFees:
+ *               summary: Update shipping fees
+ *               value:
+ *                 regularShippingFee: 20000
+ *                 expressShippingFee: 35000
+ *             updateUnits:
+ *               summary: Update to percentage-based fees
+ *               value:
+ *                 regularShippingFee: 2.5
+ *                 expressShippingFee: 4.0
+ *                 regularShippingFeeUnit: "%"
+ *                 expressShippingFeeUnit: "%"
+ *     responses:
+ *       200:
+ *         description: Shipping rate updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Shipping rate updated successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       description: Shipping rate ID
+ *                       example: "68a160568473a7fad9b29821"
+ *                     fromAmount:
+ *                       type: number
+ *                       example: 0
+ *                     toAmount:
+ *                       type: number
+ *                       example: 2000000
+ *                     regularShippingFee:
+ *                       type: number
+ *                       example: 20000
+ *                     expressShippingFee:
+ *                       type: number
+ *                       example: 35000
+ *                     fromAmountUnit:
+ *                       type: string
+ *                       example: "VND"
+ *                     toAmountUnit:
+ *                       type: string
+ *                       example: "VND"
+ *                     regularShippingFeeUnit:
+ *                       type: string
+ *                       example: "VND"
+ *                     expressShippingFeeUnit:
+ *                       type: string
+ *                       example: "VND"
+ *       400:
+ *         description: Invalid input data or ObjectId format
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "At least one field must be provided for update"
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Insufficient privileges
+ *       404:
+ *         description: Shipping rate not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 'Shipping rate with id "68a160568473a7fad9b29821" not found'
  */
+router.put(
+  '/shipping-rates/:id',
+  authenticateToken,
+  requireRole([UserRole.ADMIN, UserRole.SUPERADMIN]),
+  validate(updateShippingRateByIdSchema),
+  settingsController.updateShippingRate
+);
+
 router.delete(
   '/shipping-rates/:id',
   authenticateToken,

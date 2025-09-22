@@ -158,6 +158,49 @@ export const deleteShippingRateSchema = z.object({
   }),
 });
 
+export const updateShippingRateByIdSchema = z.object({
+  params: z.object({
+    id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format'),
+  }),
+  body: z
+    .object({
+      fromAmount: z.number().min(0, 'From amount must be non-negative').optional(),
+      toAmount: z.number().min(0, 'To amount must be non-negative').optional(),
+      regularShippingFee: z.number().min(0, 'Regular shipping fee must be non-negative').optional(),
+      expressShippingFee: z.number().min(0, 'Express shipping fee must be non-negative').optional(),
+      fromAmountUnit: z.enum(['VND', 'USD', '%']).optional(),
+      toAmountUnit: z.enum(['VND', 'USD', '%']).optional(),
+      regularShippingFeeUnit: z.enum(['VND', 'USD', '%']).optional(),
+      expressShippingFeeUnit: z.enum(['VND', 'USD', '%']).optional(),
+    })
+    .refine(
+      data =>
+        data.fromAmount !== undefined ||
+        data.toAmount !== undefined ||
+        data.regularShippingFee !== undefined ||
+        data.expressShippingFee !== undefined ||
+        data.fromAmountUnit !== undefined ||
+        data.toAmountUnit !== undefined ||
+        data.regularShippingFeeUnit !== undefined ||
+        data.expressShippingFeeUnit !== undefined,
+      {
+        message: 'At least one field must be provided for update',
+      }
+    )
+    .refine(
+      data => {
+        // If both fromAmount and toAmount are provided, validate the range
+        if (data.fromAmount !== undefined && data.toAmount !== undefined) {
+          return data.toAmount > data.fromAmount;
+        }
+        return true;
+      },
+      {
+        message: 'To amount must be greater than from amount',
+      }
+    ),
+});
+
 export const deleteProductSchema = z.object({
   params: z.object({
     id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format'),
@@ -186,6 +229,7 @@ export type CalculateShippingFeeInput = z.infer<typeof calculateShippingFeeSchem
 export type UpdateShippingRatesInput = z.infer<typeof updateShippingRatesSchema>;
 export type UpdateProductListInput = z.infer<typeof updateProductListSchema>;
 export type DeleteShippingRateInput = z.infer<typeof deleteShippingRateSchema>;
+export type UpdateShippingRateByIdInput = z.infer<typeof updateShippingRateByIdSchema>;
 export type DeleteProductInput = z.infer<typeof deleteProductSchema>;
 export type UpdateProductByIdInput = z.infer<typeof updateProductByIdSchema>;
 export type ShippingRate = z.infer<typeof shippingRateSchema>;
