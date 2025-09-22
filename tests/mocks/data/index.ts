@@ -55,4 +55,6 @@ export {
   // Money Delivery integration test mocks
   mockMoneyDeliveryForIntegration,
   mockMoneyDeliveryNextCodeResponseForIntegration,
+  mockUpdatedMoneyDeliveryForIntegration,
+  mockMoneyDeliveryWithAlphaRoutes,
 } from './money-deliveries';

@@ -179,6 +179,108 @@ export const mockMoneyDeliveryNextCodeResponseForIntegration = {
 };
 
 /**
+ * Mock updated money delivery responses for integration tests
+ */
+export const mockUpdatedMoneyDeliveryForIntegration = {
+  id: 'moneyDelivery123',
+  code: '2401250001',
+  fullCode: '2401250001T1T3-T', // Route changed from T2 to T3
+  subCode: '17031750001', // Original subCode preserved
+  sender: {
+    id: 'customer123',
+    name: 'Updated Sender Name',
+    phone: '+84111222333',
+    fromRouteId: '507f1f77bcf86cd799439011',
+    toRouteId: '507f1f77bcf86cd799439013',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  receiver: {
+    id: 'customer456',
+    name: 'Updated Receiver Name',
+    phone: '+84444555666',
+    fromRouteId: '507f1f77bcf86cd799439011',
+    toRouteId: '507f1f77bcf86cd799439013',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  fromRoute: {
+    id: 'route123',
+    code: 'T1',
+    name: 'Test Route 1',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  toRoute: {
+    id: 'route789',
+    code: 'T3',
+    name: 'Test Route 3',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  sendMoneyAmount: 2000000,
+  sendCost: 75000,
+  transferType: 'express' as const,
+  isFree: false,
+  totalCost: 75000,
+  notes: 'Updated notes',
+  createdByUser: 'user123',
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
+/**
+ * Mock money delivery with route codes like AG, BC for testing fullCode format
+ */
+export const mockMoneyDeliveryWithAlphaRoutes = {
+  id: 'moneyDelivery456',
+  code: '2412250001',
+  fullCode: '2412250001AGBC-T', // Complex route codes
+  subCode: '17582103201153', // Original subCode format
+  sender: {
+    id: 'customer789',
+    name: 'Alpha Sender',
+    phone: '+84123456789',
+    fromRouteId: '507f1f77bcf86cd799439014',
+    toRouteId: '507f1f77bcf86cd799439015',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  receiver: {
+    id: 'customer101',
+    name: 'Beta Receiver',
+    phone: '+84987654321',
+    fromRouteId: '507f1f77bcf86cd799439014',
+    toRouteId: '507f1f77bcf86cd799439015',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  fromRoute: {
+    id: 'route014',
+    code: 'AG',
+    name: 'Alpha Gamma Route',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  toRoute: {
+    id: 'route015',
+    code: 'BC',
+    name: 'Beta Charlie Route',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  sendMoneyAmount: 5000000,
+  sendCost: 150000,
+  transferType: 'regular' as const,
+  isFree: false,
+  totalCost: 150000,
+  notes: 'Complex route codes test',
+  createdByUser: 'user123',
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
+/**
  * Mock frequent customers responses for integration tests
  */
 export const mockFrequentCustomersForIntegration = {

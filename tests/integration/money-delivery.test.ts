@@ -9,6 +9,8 @@ import { MoneyDeliveryService } from '../../src/services/money-delivery.service'
 import {
   mockMoneyDeliveryForIntegration,
   mockMoneyDeliveryNextCodeResponseForIntegration,
+  mockUpdatedMoneyDeliveryForIntegration,
+  mockMoneyDeliveryWithAlphaRoutes,
 } from '../mocks';
 
 // Mock MoneyDeliveryService at module level
@@ -519,6 +521,247 @@ describe('Money Delivery API Integration Tests', () => {
 
       expect(response.body.success).toBe(false);
       expect(response.body.message).toContain('Validation');
+    });
+  });
+
+  describe('PUT /api/money-deliveries/:id', () => {
+    it('should update money delivery successfully', async () => {
+      MockedMoneyDeliveryService.prototype.updateMoneyDelivery.mockResolvedValue(
+        mockUpdatedMoneyDeliveryForIntegration
+      );
+
+      const updateData = {
+        senderName: 'Updated Sender Name',
+        senderPhone: '+84111222333',
+        receiverName: 'Updated Receiver Name',
+        receiverPhone: '+84444555666',
+        toRouteId: '507f1f77bcf86cd799439013',
+        sendMoneyAmount: 2000000,
+        sendCost: 75000,
+        transferType: 'express',
+        notes: 'Updated notes',
+      };
+
+      const response = await request(app)
+        .put('/api/money-deliveries/moneyDelivery123')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send(updateData)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('Money delivery updated successfully');
+      expect(response.body.data.sender.name).toBe('Updated Sender Name');
+      expect(response.body.data.receiver.name).toBe('Updated Receiver Name');
+      expect(response.body.data.sendMoneyAmount).toBe(2000000);
+      expect(response.body.data.transferType).toBe('express');
+      expect(response.body.data.notes).toBe('Updated notes');
+
+      // Verify subCode is preserved and fullCode is updated correctly
+      expect(response.body.data.subCode).toBe('17031750001'); // Original subCode preserved
+      expect(response.body.data.fullCode).toBe('2401250001T1T3-T'); // Updated with new route and -T suffix
+
+      expect(MockedMoneyDeliveryService.prototype.updateMoneyDelivery).toHaveBeenCalledWith(
+        'moneyDelivery123',
+        updateData,
+        'user123'
+      );
+    });
+
+    it('should return 401 when not authenticated', async () => {
+      const updateData = {
+        senderName: 'Updated Name',
+      };
+
+      await request(app).put('/api/money-deliveries/moneyDelivery123').send(updateData).expect(401);
+    });
+
+    it('should return 404 for non-existent money delivery', async () => {
+      MockedMoneyDeliveryService.prototype.updateMoneyDelivery.mockRejectedValue(
+        new Error('Money delivery not found')
+      );
+
+      const updateData = {
+        senderName: 'Updated Name',
+      };
+
+      const response = await request(app)
+        .put('/api/money-deliveries/nonexistent')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send(updateData)
+        .expect(404);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Money delivery not found');
+    });
+
+    it('should return 400 for validation errors', async () => {
+      const invalidData = {
+        senderPhone: 'invalid-phone',
+      };
+
+      const response = await request(app)
+        .put('/api/money-deliveries/moneyDelivery123')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send(invalidData)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Validation');
+    });
+  });
+
+  describe('PUT /api/money-deliveries/code/:fullCode', () => {
+    it('should update money delivery by fullCode successfully', async () => {
+      MockedMoneyDeliveryService.prototype.updateMoneyDeliveryByFullCode.mockResolvedValue(
+        mockUpdatedMoneyDeliveryForIntegration
+      );
+
+      const updateData = {
+        senderName: 'Updated Sender Name',
+        senderPhone: '+84111222333',
+        receiverName: 'Updated Receiver Name',
+        receiverPhone: '+84444555666',
+        toRouteId: '507f1f77bcf86cd799439013',
+      };
+
+      const fullCode = '2401250001T1T2-T';
+      const response = await request(app)
+        .put(`/api/money-deliveries/code/${fullCode}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .send(updateData)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('Money delivery updated successfully');
+      expect(response.body.data.sender.name).toBe('Updated Sender Name');
+      expect(response.body.data.receiver.name).toBe('Updated Receiver Name');
+
+      // Critical test: Verify subCode is preserved (not changed to route codes like "AGBC")
+      expect(response.body.data.subCode).toBe('17031750001'); // Original timestamp+sequence format
+      expect(response.body.data.subCode).not.toBe('T1T3'); // Should NOT be route codes
+      expect(response.body.data.subCode).not.toBe('AGBC'); // Should NOT be route codes
+
+      // Critical test: Verify fullCode maintains -T suffix
+      expect(response.body.data.fullCode).toBe('2401250001T1T3-T'); // Must include -T suffix
+      expect(response.body.data.fullCode).not.toBe('2401250001T1T3'); // Must NOT miss -T suffix
+
+      expect(
+        MockedMoneyDeliveryService.prototype.updateMoneyDeliveryByFullCode
+      ).toHaveBeenCalledWith(fullCode, updateData);
+    });
+
+    it('should handle complex route codes (AG, BC) correctly', async () => {
+      MockedMoneyDeliveryService.prototype.updateMoneyDeliveryByFullCode.mockResolvedValue(
+        mockMoneyDeliveryWithAlphaRoutes
+      );
+
+      const updateData = {
+        senderName: 'Updated Alpha Sender',
+        receiverName: 'Updated Beta Receiver',
+      };
+
+      const fullCode = '2412250001AGBC-T';
+      const response = await request(app)
+        .put(`/api/money-deliveries/code/${fullCode}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .send(updateData)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+
+      // Critical test: Complex route codes should preserve proper subCode format
+      expect(response.body.data.subCode).toBe('17582103201153'); // Original timestamp+sequence
+      expect(response.body.data.subCode).not.toBe('AGBC'); // Should NOT be route codes
+
+      // Critical test: Complex route codes should maintain -T suffix
+      expect(response.body.data.fullCode).toBe('2412250001AGBC-T'); // Must include -T suffix
+      expect(response.body.data.fullCode).not.toBe('2412250001AGBC'); // Must NOT miss -T suffix
+    });
+
+    it('should return 400 for invalid fullCode format', async () => {
+      MockedMoneyDeliveryService.prototype.updateMoneyDeliveryByFullCode.mockRejectedValue(
+        new Error('Validation error: Invalid money delivery fullCode format')
+      );
+
+      const updateData = {
+        senderName: 'Updated Name',
+      };
+
+      const invalidFullCode = 'invalid-format';
+      const response = await request(app)
+        .put(`/api/money-deliveries/code/${invalidFullCode}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .send(updateData)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Validation');
+    });
+
+    it('should return 404 for non-existent money delivery', async () => {
+      MockedMoneyDeliveryService.prototype.updateMoneyDeliveryByFullCode.mockRejectedValue(
+        new Error('Money delivery not found')
+      );
+
+      const updateData = {
+        senderName: 'Updated Name',
+      };
+
+      const fullCode = '9999999999T1T2-T';
+      const response = await request(app)
+        .put(`/api/money-deliveries/code/${fullCode}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .send(updateData)
+        .expect(404);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Money delivery not found');
+    });
+
+    it('should return 401 when not authenticated', async () => {
+      const updateData = {
+        senderName: 'Updated Name',
+      };
+
+      const fullCode = '2401250001T1T2-T';
+      await request(app).put(`/api/money-deliveries/code/${fullCode}`).send(updateData).expect(401);
+    });
+
+    it('should return 400 when no fields provided for update', async () => {
+      MockedMoneyDeliveryService.prototype.updateMoneyDeliveryByFullCode.mockRejectedValue(
+        new Error('Validation error: At least one field must be provided')
+      );
+
+      const emptyData = {};
+      const fullCode = '2401250001T1T2-T';
+      const response = await request(app)
+        .put(`/api/money-deliveries/code/${fullCode}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .send(emptyData)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Validation');
+    });
+
+    it('should return 404 when toRoute not found during update', async () => {
+      MockedMoneyDeliveryService.prototype.updateMoneyDeliveryByFullCode.mockRejectedValue(
+        new Error('To route not found')
+      );
+
+      const updateData = {
+        toRouteId: '507f1f77bcf86cd799439999', // Non-existent route
+      };
+
+      const fullCode = '2401250001T1T2-T';
+      const response = await request(app)
+        .put(`/api/money-deliveries/code/${fullCode}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .send(updateData)
+        .expect(404);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('To route not found');
     });
   });
 });

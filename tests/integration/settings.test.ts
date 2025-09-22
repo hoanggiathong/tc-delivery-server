@@ -157,41 +157,6 @@ describe('Settings API Integration Tests', () => {
     });
   });
 
-  describe('GET /api/settings/:name', () => {
-    it('should get settings by name successfully', async () => {
-      MockedSettingsService.prototype.getByName.mockResolvedValue(mockSettings as any);
-
-      const response = await request(app)
-        .get('/api/settings/shipping_rates')
-        .set('Authorization', `Bearer ${userToken}`)
-        .expect(200);
-
-      expect(response.body.success).toBe(true);
-      expect(response.body.data).toMatchObject({
-        name: 'shipping_rates',
-        metadata: mockShippingRates,
-      });
-    });
-
-    it('should return 404 if settings not found', async () => {
-      const error = new Error('Settings with name "shipping_rates" not found');
-      MockedSettingsService.prototype.getByName.mockRejectedValue(error);
-
-      const response = await request(app)
-        .get('/api/settings/shipping_rates')
-        .set('Authorization', `Bearer ${userToken}`)
-        .expect(404);
-
-      expect(response.body.success).toBe(false);
-    });
-
-    it('should return 401 for unauthenticated request', async () => {
-      const response = await request(app).get('/api/settings/shipping_rates').expect(401);
-
-      expect(response.body.success).toBe(false);
-    });
-  });
-
   describe('PUT /api/settings/:name', () => {
     it('should update settings successfully with admin token', async () => {
       const updatedSettings = { ...mockSettings, metadata: mockShippingRates };

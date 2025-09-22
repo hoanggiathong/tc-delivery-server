@@ -1126,9 +1126,7 @@ export class MoneyDeliveryService {
           throw new Error('New to route not found');
         }
         updates.toRoute = newToRoute._id;
-        // Update subCode and fullCode when route changes
-        updates.subCode = `${fromRoute.code}${newToRoute.code}`;
-        updates.fullCode = `${code}${fromRoute.code}${newToRoute.code}`;
+        updates.fullCode = `${code}${fromRoute.code}${newToRoute.code}-T`;
       }
 
       // Update the money delivery

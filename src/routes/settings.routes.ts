@@ -84,8 +84,6 @@ router.get(
   settingsController.getAllSettings
 );
 
-router.get('/:name', authenticateToken, settingsController.getSettingsByName);
-
 /**
  * @swagger
  * /api/settings/calculate-shipping-fee:
