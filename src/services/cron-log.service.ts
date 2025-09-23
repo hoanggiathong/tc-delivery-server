@@ -1,4 +1,5 @@
-import { CRON_LOG_STATUS, CronLogModel } from '@/models/cronjob-log.model';
+import { CRON_LOG_STATUS } from '@/const/cron-log.const';
+import { CronLogModel } from '@/models/cronjob-log.model';
 import { ICronLog } from '@/types/cron-log.type';
 
 export class CronLogService {

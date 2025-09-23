@@ -1,18 +1,6 @@
+import { CRON_LOG_STATUS } from '@/const/cron-log.const';
 import { ICronLog } from '@/types/cron-log.type';
 import mongoose, { Schema } from 'mongoose';
-
-export enum CRON_LOG_STATUS {
-  PROCESSING = 'PROCESSING',
-  SUCCESS = 'SUCCESS',
-  FAILED = 'FAILED',
-}
-
-export enum CRON_LOG_VALUE_FORMAT {
-  MINUTE = 'MINUTE',
-  DAY = 'DAY',
-  WEEK = 'WEEK',
-  MONTH = 'MONTH',
-}
 
 const CronLogSchema = new Schema<ICronLog>(
   {

@@ -1,9 +1,11 @@
+import { DEBT_MANAGEMENT_TYPE, SORT_BY } from '@/const/debt-management.const';
+import { DebtManagement } from '@/models/debt-management.model';
 import { Debt } from '@/models/debt.model';
 import { Delivery, IDelivery } from '@/models/delivery.model';
 import { IMoneyDelivery, MoneyDelivery } from '@/models/money-delivery.model';
 import { IRoute, Route } from '@/models/route.model';
 import { IDebtRow } from '@/types/debt.type';
-import mongoose from 'mongoose';
+import mongoose, { Types } from 'mongoose';
 
 export class TestService {
   async cronjobCalculateDebt(): Promise<void> {
@@ -223,6 +225,97 @@ export class TestService {
         throw error;
       }
       throw new Error('Calculate debt failed');
+    }
+  }
+
+  async getListPaymentDebtMangement(req: any): Promise<any> {
+    const { startDate, endDate, fromRouteId, keySort, typeSort, key } = req.query;
+
+    const start = new Date(String(startDate));
+    const end = new Date(String(endDate));
+    const endExclusive = new Date(end.getTime() + 1);
+
+    const fromId = new Types.ObjectId(String(fromRouteId));
+
+    let query = {
+      fromRoute: fromId,
+      type: DEBT_MANAGEMENT_TYPE.PAYMENT,
+      cashDate: {
+        $gte: start,
+        $lte: endExclusive,
+      },
+    };
+
+    let sort = {};
+
+    //handle sort
+    if (keySort) {
+      switch (keySort) {
+        case SORT_BY.CASH_DATE:
+          sort = { cashDate: typeSort };
+          break;
+        case SORT_BY.CASH:
+          sort = { cash: typeSort };
+          break;
+        case SORT_BY.TO_ROUTE:
+          sort = { toRoute: typeSort };
+          break;
+        default:
+          sort = { toRoute: 1, createdAt: 1 };
+          break;
+      }
+    } else {
+      sort = { toRoute: 1, createdAt: 1 };
+    }
+
+    try {
+      if (key) {
+        Object.assign(query, {
+          $or: [
+            {
+              content: { $regex: `${key}`, $options: 'i' },
+            },
+          ],
+        });
+      }
+
+      const result = await DebtManagement.find(query)
+        .select({
+          _id: 1,
+          fromRoute: 1,
+          toRoute: 1,
+          content: 1,
+          type: 1,
+          cash: 1,
+          cashDate: 1,
+          createdAt: 1,
+          updatedAt: 1,
+        })
+        .sort(sort)
+        .populate([
+          {
+            path: 'fromRoute',
+            select: {
+              _id: 1,
+              name: 1,
+            },
+          },
+          {
+            path: 'toRoute',
+            select: {
+              _id: 1,
+              name: 1,
+            },
+          },
+        ])
+        .lean();
+
+      return result;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('get list debt management failed');
     }
   }
 }

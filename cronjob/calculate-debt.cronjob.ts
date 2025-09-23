@@ -1,7 +1,7 @@
 import { config } from 'dotenv';
 import path from 'path';
 import mongoose from 'mongoose';
-import { CronjobService } from '../src/services/cronjob.service';
+import { CronjobService } from '../src/services/cron-job.service';
 import { CronLogService } from './../src/services/cron-log.service';
 config({ path: path.resolve(__dirname, '../.env') });
 
@@ -19,12 +19,10 @@ async function main() {
   const key = `Calculate-debt-${new Date().toISOString().slice(0, 10)}`;
 
   try {
-    await CronLogService.start(key, 'Caluculate debt cronjob');
-
-    await cronjobService.cronjobCalculateDebt();
-
-    await CronLogService.success(key);
-    await mongoose.disconnect();
+    (await CronLogService.start(key, 'Caluculate debt cronjob'),
+      await cronjobService.cronjobCalculateDebt(),
+      await CronLogService.success(key),
+      await mongoose.disconnect());
   } catch (error) {
     console.log('Error calculate debt cron-job', error);
     const errorMessage = error instanceof Error ? error.message : error;

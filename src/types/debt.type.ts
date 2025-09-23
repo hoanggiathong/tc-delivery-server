@@ -1,6 +1,11 @@
+import { Types } from 'mongoose';
+
+type RouteInfo = { _id: Types.ObjectId | string; name?: string };
 export interface IDebtRow {
-  fromRoute: string;
-  toRoute: string;
+  _id: Types.ObjectId | string;
+  fromRoute: RouteInfo;
+  toRoute: RouteInfo;
+  openingBalance?: number;
   costFromRoute: number;
   feeCODToRoute: number;
   costToRoute: number;
@@ -12,4 +17,8 @@ export interface IDebtRow {
   surchargeToRoute: number;
   surchargeFromRoute: number;
   totalDebt: number;
-};
+  paymentDebt?: number;
+  createdAt?: Date;
+  updatedAt?: Date;
+  __v?: number;
+}

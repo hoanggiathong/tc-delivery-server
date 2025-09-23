@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import authRoutes from './auth.routes';
 import customerRoutes from './customer.routes';
+import debtManagementRoutes from './debt-management.route';
+import debtRoutes from './debt.routes';
 import deliveryRoutes from './delivery.routes';
 import draftDeliveryRoutes from './draft-delivery.routes';
 import moneyDeliveryRoutes from './money-delivery.routes';
@@ -20,5 +22,7 @@ router.use('/route', routeRoutes);
 router.use('/user-route', userRouteRoutes);
 router.use('/settings', settingsRoutes);
 router.use('/draft-deliveries', draftDeliveryRoutes);
+router.use('/debt-management', debtManagementRoutes);
+router.use('/debt', debtRoutes);
 
 export default router;

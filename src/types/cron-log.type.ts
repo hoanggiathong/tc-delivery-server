@@ -1,4 +1,4 @@
-import { CRON_LOG_STATUS } from '@/models/cronjob-log.model';
+import { CRON_LOG_STATUS } from '@/const/cron-log.const';
 import { Document } from 'mongoose';
 
 export interface ICronLog extends Document {
