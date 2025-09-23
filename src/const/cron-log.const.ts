@@ -1,0 +1,5 @@
+export enum CRON_LOG_STATUS {
+  PROCESSING = 'PROCESSING',
+  SUCCESS = 'SUCCESS',
+  FAILED = 'FAILED',
+}

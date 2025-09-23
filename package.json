@@ -13,6 +13,8 @@
     "build:uat": "npm run code-quality && npm run build",
     "start": "NODE_ENV=production node dist/src/index.js",
     "start:debug": "NODE_ENV=production node --inspect dist/src/index.js",
+    "cronjob:debt:dev": "NODE_ENV=development npx tsx cronjob/calculate-debt.cronjob.ts",
+    "cronjob:debt": "NODE_ENV=production node dist/cronjob/calculate-debt.cronjob.js",
     "pm2:start:prod": "pm2 start ecosystem.config.js --only tc-delivery-server-prod",
     "pm2:start:uat": "pm2 start ecosystem.config.js --only tc-delivery-server-uat",
     "pm2:start:all": "pm2 start ecosystem.config.js",
