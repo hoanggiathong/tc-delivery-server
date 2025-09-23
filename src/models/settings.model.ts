@@ -12,8 +12,26 @@ export interface IShippingRateConfig {
   expressShippingFeeUnit: 'VND' | 'USD' | '%';
 }
 
+export type IShippingRateConfigResponse = {
+  id: string;
+  fromAmount: number;
+  toAmount: number;
+  regularShippingFee: number;
+  expressShippingFee: number;
+  fromAmountUnit: 'VND' | 'USD' | '%';
+  toAmountUnit: 'VND' | 'USD' | '%';
+  regularShippingFeeUnit: 'VND' | 'USD' | '%';
+  expressShippingFeeUnit: 'VND' | 'USD' | '%';
+};
+
 export type IProductConfig = {
   _id?: mongoose.Types.ObjectId;
+  name: string;
+  cost: number;
+};
+
+export type IProductConfigResponse = {
+  id: string;
   name: string;
   cost: number;
 };

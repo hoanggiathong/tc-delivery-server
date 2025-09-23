@@ -6,7 +6,9 @@ import {
   UpdateShippingRatesInput,
   UpdateProductListInput,
   DeleteShippingRateInput,
+  UpdateShippingRateByIdInput,
   DeleteProductInput,
+  UpdateProductByIdInput,
 } from '@/schemas/settings.schema';
 import { AuthRequest, ApiResponse } from '@/types';
 import Logger from '@/utils/logger';
@@ -226,6 +228,66 @@ export class SettingsController {
     }
   };
 
+  updateProduct = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { id } = req.params as UpdateProductByIdInput['params'];
+      const updates = req.body as UpdateProductByIdInput['body'];
+
+      const updatedProduct = await this.settingsService.updateProductById(id, updates);
+
+      Logger.info('Product update attempted', {
+        success: true,
+        productId: id,
+        updates,
+        userId: req.user.userId,
+      });
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Product updated successfully',
+        data: {
+          id: updatedProduct._id?.toString(),
+          name: updatedProduct.name,
+          cost: updatedProduct.cost,
+        },
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Failed to update product', {
+        error: error instanceof Error ? error.message : error,
+        userId: req.user?.userId,
+        productId: req.params.id,
+        requestBody: req.body,
+      });
+
+      const message = error instanceof Error ? error.message : 'Failed to update product';
+
+      let statusCode = 400;
+      if (error instanceof Error) {
+        if (error.message.includes('not found')) {
+          statusCode = 404;
+        }
+      }
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(statusCode).json(response);
+    }
+  };
+
   deleteProduct = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       if (!req.user) {
@@ -377,6 +439,72 @@ export class SettingsController {
       };
 
       res.status(400).json(response);
+    }
+  };
+
+  updateShippingRate = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { id } = req.params as UpdateShippingRateByIdInput['params'];
+      const updates = req.body as UpdateShippingRateByIdInput['body'];
+
+      const updatedRate = await this.settingsService.updateShippingRateById(id, updates);
+
+      Logger.info('Shipping rate update attempted', {
+        success: true,
+        rateId: id,
+        updates,
+        userId: req.user.userId,
+      });
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Shipping rate updated successfully',
+        data: {
+          id: updatedRate._id?.toString(),
+          fromAmount: updatedRate.fromAmount,
+          toAmount: updatedRate.toAmount,
+          regularShippingFee: updatedRate.regularShippingFee,
+          expressShippingFee: updatedRate.expressShippingFee,
+          fromAmountUnit: updatedRate.fromAmountUnit,
+          toAmountUnit: updatedRate.toAmountUnit,
+          regularShippingFeeUnit: updatedRate.regularShippingFeeUnit,
+          expressShippingFeeUnit: updatedRate.expressShippingFeeUnit,
+        },
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Failed to update shipping rate', {
+        error: error instanceof Error ? error.message : error,
+        userId: req.user?.userId,
+        rateId: req.params.id,
+        requestBody: req.body,
+      });
+
+      const message = error instanceof Error ? error.message : 'Failed to update shipping rate';
+
+      let statusCode = 400;
+      if (error instanceof Error) {
+        if (error.message.includes('not found')) {
+          statusCode = 404;
+        }
+      }
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(statusCode).json(response);
     }
   };
 
