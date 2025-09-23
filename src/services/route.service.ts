@@ -11,6 +11,7 @@ export class RouteService {
       id: route._id.toString(),
       code: route.code,
       name: route.name,
+      address: route.address,
       createdAt: route.createdAt,
       updatedAt: route.updatedAt,
     };
@@ -24,6 +25,7 @@ export class RouteService {
       id: route._id.toString(),
       code: route.code,
       name: route.name,
+      address: route.address,
       createdAt: route.createdAt,
       updatedAt: route.updatedAt,
     };
@@ -43,6 +45,7 @@ export class RouteService {
       const newRoute = new Route({
         code: data.code.toUpperCase(),
         name: data.name,
+        address: data.address,
       });
 
       await newRoute.save();
@@ -127,6 +130,9 @@ export class RouteService {
       }
       if (data.name !== undefined) {
         route.name = data.name;
+      }
+      if (data.address !== undefined) {
+        route.address = data.address;
       }
 
       await route.save();

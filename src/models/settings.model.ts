@@ -38,6 +38,11 @@ export type IProductConfigResponse = {
 
 export type SettingsMetadata = IShippingRateConfig[] | IProductConfig[] | Record<string, unknown>;
 
+interface ValidationResult {
+  isValid: boolean;
+  errorMessage?: string;
+}
+
 export interface ISettings extends Document {
   name: string;
   metadata: SettingsMetadata;
@@ -47,14 +52,17 @@ export interface ISettings extends Document {
   updatedAt: Date;
 }
 
-function validateRangeOverlap(rates: IShippingRateConfig[]): boolean {
+function validateRangeOverlap(rates: IShippingRateConfig[]): ValidationResult {
   // Sort rates by fromAmount to check for overlaps
   const sortedRates = [...rates].sort((a, b) => a.fromAmount - b.fromAmount);
 
   // Check for invalid ranges (toAmount <= fromAmount)
   for (const rate of sortedRates) {
     if (rate.toAmount <= rate.fromAmount) {
-      return false;
+      return {
+        isValid: false,
+        errorMessage: `Số tiền từ (${rate.fromAmount.toLocaleString('vi-VN')}) phải nhỏ hơn số tiền đến (${rate.toAmount.toLocaleString('vi-VN')})`,
+      };
     }
   }
 
@@ -65,14 +73,17 @@ function validateRangeOverlap(rates: IShippingRateConfig[]): boolean {
 
     // Check if current range overlaps with next range
     if (currentRate.toAmount >= nextRate.fromAmount) {
-      return false;
+      return {
+        isValid: false,
+        errorMessage: `Các khoảng giá bị chồng lấp: [${currentRate.fromAmount.toLocaleString('vi-VN')} - ${currentRate.toAmount.toLocaleString('vi-VN')}] trùng với [${nextRate.fromAmount.toLocaleString('vi-VN')} - ${nextRate.toAmount.toLocaleString('vi-VN')}]`,
+      };
     }
   }
 
-  return true;
+  return { isValid: true };
 }
 
-function validateNoDuplicateRanges(rates: IShippingRateConfig[]): boolean {
+function validateNoDuplicateRanges(rates: IShippingRateConfig[]): ValidationResult {
   // Check for exact duplicate ranges
   for (let i = 0; i < rates.length; i++) {
     for (let j = i + 1; j < rates.length; j++) {
@@ -81,34 +92,22 @@ function validateNoDuplicateRanges(rates: IShippingRateConfig[]): boolean {
 
       // Check for exact duplicate ranges (same fromAmount and toAmount)
       if (rateA.fromAmount === rateB.fromAmount && rateA.toAmount === rateB.toAmount) {
-        return false;
+        return {
+          isValid: false,
+          errorMessage: `Phát hiện khoảng giá trùng lặp: [${rateA.fromAmount.toLocaleString('vi-VN')} - ${rateA.toAmount.toLocaleString('vi-VN')}]`,
+        };
       }
     }
   }
-  return true;
+  return { isValid: true };
 }
 
-function validateRangeContinuity(rates: IShippingRateConfig[]): boolean {
-  // Sort rates by fromAmount
-  const sortedRates = [...rates].sort((a, b) => a.fromAmount - b.fromAmount);
-
-  // Check for gaps between ranges
-  for (let i = 0; i < sortedRates.length - 1; i++) {
-    const currentRate = sortedRates[i];
-    const nextRate = sortedRates[i + 1];
-
-    // Check if there's a gap between current and next range
-    if (currentRate.toAmount + 1 !== nextRate.fromAmount) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-function validateShippingRates(rates: unknown): boolean {
+function validateShippingRates(rates: unknown): ValidationResult {
   if (!Array.isArray(rates) || rates.length === 0) {
-    return false;
+    return {
+      isValid: false,
+      errorMessage: 'Dữ liệu shipping rates phải là một mảng và không được rỗng',
+    };
   }
 
   const validUnits = ['VND', 'USD', '%'];
@@ -120,13 +119,25 @@ function validateShippingRates(rates: unknown): boolean {
       typeof rate.fromAmount !== 'number' ||
       typeof rate.toAmount !== 'number' ||
       typeof rate.regularShippingFee !== 'number' ||
-      typeof rate.expressShippingFee !== 'number' ||
+      typeof rate.expressShippingFee !== 'number'
+    ) {
+      return {
+        isValid: false,
+        errorMessage:
+          'Giá trị fromAmount, toAmount, regularShippingFee, expressShippingFee phải là số',
+      };
+    }
+
+    if (
       !validUnits.includes(rate.fromAmountUnit || 'VND') ||
       !validUnits.includes(rate.toAmountUnit || 'VND') ||
       !validUnits.includes(rate.regularShippingFeeUnit || 'VND') ||
       !validUnits.includes(rate.expressShippingFeeUnit || 'VND')
     ) {
-      return false;
+      return {
+        isValid: false,
+        errorMessage: 'Đơn vị không hợp lệ. Chỉ chấp nhận: VND, USD, %',
+      };
     }
 
     // Check for non-negative values
@@ -136,71 +147,102 @@ function validateShippingRates(rates: unknown): boolean {
       rate.regularShippingFee < 0 ||
       rate.expressShippingFee < 0
     ) {
-      return false;
+      return {
+        isValid: false,
+        errorMessage:
+          'Các giá trị fromAmount, toAmount, regularShippingFee, expressShippingFee không được âm',
+      };
     }
   }
 
   // Validate no overlaps
-  if (!validateRangeOverlap(typedRates)) {
-    return false;
+  const overlapValidation = validateRangeOverlap(typedRates);
+  if (!overlapValidation.isValid) {
+    return overlapValidation;
   }
 
   // Validate no duplicate ranges
-  if (!validateNoDuplicateRanges(typedRates)) {
-    return false;
+  const duplicateValidation = validateNoDuplicateRanges(typedRates);
+  if (!duplicateValidation.isValid) {
+    return duplicateValidation;
   }
 
-  // Validate continuity
-  if (!validateRangeContinuity(typedRates)) {
-    return false;
-  }
-
-  return true;
+  return { isValid: true };
 }
 
-function validateNoDuplicateProductNames(products: IProductConfig[]): boolean {
+function validateNoDuplicateProductNames(products: IProductConfig[]): ValidationResult {
   // Check for duplicate product names (case-insensitive)
   const names = products.map(product => product.name.toLowerCase().trim());
   const uniqueNames = new Set(names);
-  return names.length === uniqueNames.size;
+
+  if (names.length !== uniqueNames.size) {
+    // Find the duplicate name
+    const seen = new Set();
+    for (const name of names) {
+      if (seen.has(name)) {
+        return {
+          isValid: false,
+          errorMessage: `Tên sản phẩm bị trùng lặp: "${name}"`,
+        };
+      }
+      seen.add(name);
+    }
+  }
+
+  return { isValid: true };
 }
 
-function validateProductConfig(products: unknown): boolean {
+function validateProductConfig(products: unknown): ValidationResult {
   if (!Array.isArray(products)) {
-    return false;
+    return {
+      isValid: false,
+      errorMessage: 'Dữ liệu sản phẩm phải là một mảng',
+    };
   }
 
   const typedProducts = products as IProductConfig[];
 
   // Validate basic constraints
-  const basicValidation = typedProducts.every(
-    (product: IProductConfig) =>
-      typeof product.name === 'string' &&
-      product.name.trim().length > 0 &&
-      typeof product.cost === 'number' &&
-      product.cost >= 0
-  );
+  for (const product of typedProducts) {
+    if (typeof product.name !== 'string' || product.name.trim().length === 0) {
+      return {
+        isValid: false,
+        errorMessage: 'Tên sản phẩm không được để trống và phải là chuỗi ký tự',
+      };
+    }
 
-  if (!basicValidation) {
-    return false;
+    if (typeof product.cost !== 'number' || product.cost < 0) {
+      return {
+        isValid: false,
+        errorMessage: 'Giá sản phẩm phải là số và không được âm',
+      };
+    }
   }
 
   // Validate no duplicate names
-  if (!validateNoDuplicateProductNames(typedProducts)) {
-    return false;
+  const duplicateValidation = validateNoDuplicateProductNames(typedProducts);
+  if (!duplicateValidation.isValid) {
+    return duplicateValidation;
   }
 
-  return true;
+  return { isValid: true };
 }
 
-function validateMetadataByName(name: string, metadata: unknown): boolean {
+function validateMetadataByName(name: string, metadata: unknown): ValidationResult {
   switch (name) {
     case 'shipping_rates':
       return validateShippingRates(metadata);
     case 'product_list':
       return validateProductConfig(metadata);
     default:
-      return typeof metadata === 'object' && metadata !== null;
+      if (typeof metadata === 'object' && metadata !== null) {
+        return { isValid: true };
+      } else {
+        return {
+          isValid: false,
+          errorMessage: 'Dữ liệu metadata phải là một object hợp lệ',
+        };
+      }
   }
 }
 
@@ -219,15 +261,28 @@ const settingsSchema = new Schema<ISettings>(
         validator: function (data: unknown) {
           // Access the document's name field
           const doc = this as unknown as QueryOptions;
-          const name = doc._conditions.name;
+          const name = doc._conditions?.name;
 
           if (!name) {
             return false;
           }
 
-          return validateMetadataByName(name, data);
+          const validationResult = validateMetadataByName(name, data);
+          return validationResult.isValid;
         },
-        message: 'Invalid metadata structure for this setting type',
+        message: function (props: { value: unknown }) {
+          const doc = this as unknown as QueryOptions;
+          const name = doc._conditions?.name;
+
+          if (!name) {
+            return 'Không thể xác định loại setting';
+          }
+
+          const validationResult = validateMetadataByName(name, props.value);
+          return (
+            validationResult.errorMessage || 'Invalid metadata structure for this setting type'
+          );
+        },
       },
     },
     description: {

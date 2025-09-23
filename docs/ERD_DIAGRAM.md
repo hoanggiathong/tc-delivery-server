@@ -21,6 +21,9 @@ erDiagram
     CUSTOMERS ||--o{ DELIVERIES : "người nhận"
     CUSTOMERS ||--o{ MONEY_DELIVERIES : "người gửi"
     CUSTOMERS ||--o{ MONEY_DELIVERIES : "người nhận"
+    CUSTOMERS }o--|| ROUTES : "thuộc tuyến đường"
+    CUSTOMERS }o--o| CUSTOMER_BANK : "có thông tin ngân hàng"
+    CUSTOMERS ||--o{ CUSTOMERS : "người nhận thường xuyên"
 
     USERS {
         ObjectId _id PK
@@ -57,6 +60,23 @@ erDiagram
         ObjectId _id PK
         string name "bắt buộc, tối đa 100 ký tự, trim"
         string phone "bắt buộc, định dạng quốc tế, trim"
+        ObjectId routeId FK "tham chiếu: ROUTES, bắt buộc"
+        array relativeReceiver FK "tham chiếu: CUSTOMERS, mặc định [], người nhận thường xuyên"
+        enum type "delivery|money, mặc định delivery"
+        ObjectId bankId FK "tham chiếu: CUSTOMER_BANK, tùy chọn"
+        array images "tối đa 5 ảnh, mỗi ảnh có url và rotate (0,90,180,270)"
+        datetime createdAt "tự động tạo"
+        datetime updatedAt "tự động cập nhật"
+    }
+
+    CUSTOMER_BANK {
+        ObjectId _id PK
+        string name "bắt buộc, tối đa 100 ký tự, trim"
+        string bankName "tên ngân hàng, bắt buộc, tối đa 100 ký tự, trim"
+        string bankAccount UK "số tài khoản, bắt buộc, tối đa 50 ký tự, trim, duy nhất"
+        string bankBranch "chi nhánh, tùy chọn, tối đa 100 ký tự, trim"
+        string bankAddress "địa chỉ ngân hàng, tùy chọn, tối đa 200 ký tự, trim"
+        string qrCodeUrl "URL mã QR, tùy chọn, mặc định rỗng"
         datetime createdAt "tự động tạo"
         datetime updatedAt "tự động cập nhật"
     }
@@ -90,7 +110,8 @@ erDiagram
         boolean details_isOverweight "quá tải, mặc định false"
         number details_convertedWeight "khối lượng quy đổi, tùy chọn, tối thiểu 0"
         string notes "tùy chọn, trim"
-        enum paymentType "paid|debt|free, mặc định paid, loại thanh toán"
+        enum paymentType "paid|debt, mặc định paid, loại thanh toán"
+        boolean isFree "miễn phí, mặc định false"
         ObjectId createdByUser FK "tham chiếu: USERS, bắt buộc"
         datetime createdAt "tự động tạo"
         datetime updatedAt "tự động cập nhật"
@@ -184,11 +205,12 @@ erDiagram
 
 ### Tên Các Collection
 - `users` - Tài khoản người dùng và xác thực
-- `customers` - Cơ sở dữ liệu thông tin khách hàng
+- `customers` - Cơ sở dữ liệu thông tin khách hàng (delivery và money)
+- `customerBank` - Thông tin ngân hàng của khách hàng
 - `routes` - Cấu hình tuyến đường vận chuyển
 - `userRoutes` - Mối quan hệ nhiều-nhiều giữa người dùng và tuyến đường
 - `deliveries` - Giao dịch vận chuyển thông thường
-- `moneydeliveries` - Giao dịch chuyển tiền
+- `moneyDeliveries` - Giao dịch chuyển tiền
 - `draftdeliveries` - Bản nháp delivery (lưu tạm thông tin chưa hoàn tất)
 - `settings` - Cấu hình hệ thống linh hoạt (shipping rates, product list, custom configs)
 
@@ -201,10 +223,27 @@ erDiagram
 - **Tuyến đường đã chọn**: Tham chiếu tùy chọn đến tuyến đường ưa thích của người dùng
 
 #### Bảng CUSTOMERS
-- **Ràng buộc duy nhất**: Tổ hợp name + phone phải duy nhất
+- **Ràng buộc duy nhất**: Tổ hợp phone + type phải duy nhất (một số điện thoại có thể có cả customer delivery và money)
 - **Định dạng số điện thoại**: Định dạng quốc tế với regex `/^\+?[1-9]\d{1,14}$/`
+- **Loại khách hàng**: 'delivery' (mặc định) hoặc 'money'
+- **Thông tin bổ sung**:
+  - relativeReceiver: Mảng ObjectId tham chiếu đến các customers khác (người nhận thường xuyên)
+  - images: Tối đa 5 ảnh, mỗi ảnh có url và rotate (0,90,180,270 độ)
+  - bankId: Tham chiếu tùy chọn đến CUSTOMER_BANK
 - **Index hiệu suất**: Text search trên name, exact match trên phone
-- **Index quan trọng**: `{phone: 1}` cho phone search, `{name: "text"}` cho text search
+- **Index quan trọng**:
+  - `{phone: 1, type: 1}` unique constraint
+  - `{phone: 1}` cho phone search
+  - `{name: "text"}` cho text search
+
+#### Bảng CUSTOMER_BANK
+- **Ràng buộc duy nhất**: bankAccount phải duy nhất
+- **Thông tin ngân hàng**: name, bankName, bankAccount (bắt buộc), bankBranch và bankAddress (tùy chọn)
+- **Mã QR**: qrCodeUrl tùy chọn để lưu mã QR thanh toán
+- **Index hiệu suất**:
+  - `{bankAccount: 1}` unique constraint
+  - `{name: "text"}` cho text search
+  - `{bankName: 1}` cho search theo tên ngân hàng
 
 #### Bảng ROUTES
 - **Định dạng mã**: Phải khớp với pattern `[A-Z]\d+` (ví dụ: T1, T2, A1)
@@ -233,7 +272,9 @@ erDiagram
   - Tuyến đi và tuyến đến không thể giống nhau
   - Tổng chi phí được tính tự động qua middleware
   - Số lượng phải tối thiểu 1
-- **Tính toán chi phí**: `totalCost = cost + itemCost(phí trị giá) + collectForCustomerCost`
+- **Tính toán chi phí**:
+  - `totalCost = isFree ? 0 : (cost + itemCost + collectForCustomerCost)`
+  - Nếu isFree = true thì totalCost = 0, bất kể các chi phí khác
 - **Thông tin chi tiết hàng hóa (details)**:
   - `weight`: Khối lượng thực tế của hàng hóa (kg)
   - `length`, `width`, `height`: Kích thước hàng hóa (cm)
@@ -242,7 +283,9 @@ erDiagram
 - **Loại thanh toán**:
   - `paid` (mặc định): Thanh toán bình thường, khách hàng đã thanh toán
   - `debt`: Khách hàng nợ tiền, sẽ thanh toán sau
-  - `free`: Giao hàng miễn phí, không cần thanh toán
+- **Chế độ miễn phí**:
+  - `isFree`: Boolean field riêng biệt để đánh dấu giao hàng miễn phí
+  - Khi isFree = true, totalCost tự động = 0
 - **Index hiệu suất**: Được tối ưu cho 10M+ records với compound indexes
 - **Index quan trọng**:
   - `{sender: 1, receiver: 1, toRoute: 1}` - Index chính cho frequent customers
@@ -443,6 +486,18 @@ erDiagram
 
 #### Phiên Bản Mới Nhất
 
+- **New Table: CUSTOMER_BANK**: Thêm bảng thông tin ngân hàng khách hàng
+  - Lưu thông tin ngân hàng chi tiết (name, bankName, bankAccount, bankBranch, bankAddress)
+  - Unique constraint trên bankAccount
+  - QR code URL cho thanh toán
+  - Index tối ưu cho search theo name và bankName
+- **Enhanced Table: CUSTOMERS**: Mở rộng thông tin khách hàng
+  - **Unique constraint mới**: phone + type thay vì name + phone
+  - **Type field**: 'delivery' hoặc 'money' để phân biệt loại khách hàng
+  - **Route relationship**: routeId bắt buộc liên kết với ROUTES
+  - **Bank relationship**: bankId tùy chọn liên kết với CUSTOMER_BANK
+  - **Relative receivers**: Mảng tham chiếu đến customers khác (người nhận thường xuyên)
+  - **Images support**: Tối đa 5 ảnh với thông tin rotate (0,90,180,270 độ)
 - **New Table: DRAFT_DELIVERIES**: Thêm bảng lưu tạm delivery
   - Lưu tạm thông tin delivery chưa hoàn tất (không có code)
   - Auto TTL cleanup sau 90 ngày
@@ -481,13 +536,13 @@ erDiagram
     - `isOverweight`: Đánh dấu quá tải (boolean)
     - `convertedWeight`: Khối lượng quy đổi
   - Cả DELIVERIES và DRAFT_DELIVERIES đều có cấu trúc fields giống nhau
-- **Field PaymentType**: Trường `paymentType` trong bảng DELIVERIES với 3 giá trị:
-  - `paid` (mặc định): Thanh toán bình thường, khách hàng đã thanh toán
-  - `debt`: Thanh toán nợ (khách hàng sẽ trả sau)
-  - `free`: Giao hàng miễn phí
-- **Cập Nhật Công Thức TotalCost**: Loại bỏ `homeDeliveryCost` khỏi tính toán tổng chi phí
+- **Field PaymentType và isFree**: Cập nhật logic thanh toán trong bảng DELIVERIES:
+  - **paymentType**: 'paid' (mặc định) hoặc 'debt' (loại bỏ 'free')
+  - **isFree**: Boolean field riêng biệt để đánh dấu miễn phí (mặc định false)
+  - Logic: Khi isFree = true thì totalCost = 0, bất kể paymentType
+- **Cập Nhật Công Thức TotalCost**: Tích hợp logic isFree và loại bỏ `homeDeliveryCost`
   - Công thức cũ: `totalCost = cost + homeDeliveryCost + itemCost(phí trị giá) + collectForCustomerCost`
-  - Công thức mới: `totalCost = cost + itemCost(phí trị giá) + collectForCustomerCost`
+  - Công thức mới: `totalCost = isFree ? 0 : (cost + itemCost + collectForCustomerCost)`
 - **Money Delivery Transfer Types**: Cập nhật hình thức chuyển tiền cho MONEY_DELIVERIES
   - Cập nhật field `transferType`: regular (mặc định), express (loại bỏ 'free')
   - Thêm field `isFree`: boolean (mặc định false) - tách riêng logic miễn phí

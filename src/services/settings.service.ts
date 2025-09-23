@@ -67,6 +67,15 @@ export class SettingsService {
       );
       return !!result;
     } catch (error) {
+      // Check if it's a MongoDB validation error with our custom message
+      if (error instanceof Error && error.name === 'ValidationError') {
+        const mongoError = error as {
+          errors?: { metadata?: { message: string } };
+        };
+        if (mongoError.errors?.metadata?.message) {
+          throw new AppError(mongoError.errors.metadata.message, 400);
+        }
+      }
       throw new AppError('Failed to update setting', 500);
     }
   }

@@ -112,8 +112,8 @@ export class DeliveryService {
     const populatedDelivery = await delivery.populate([
       { path: 'sender', select: '_id name phone routeId createdAt updatedAt' },
       { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
-      { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
-      { path: 'toRoute', select: '_id code name createdAt updatedAt' },
+      { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
+      { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
       { path: 'createdByUser', select: '_id username' },
     ]);
 
@@ -427,8 +427,8 @@ export class DeliveryService {
         .populate([
           { path: 'sender', select: '_id name phone createdAt updatedAt' },
           { path: 'receiver', select: '_id name phone createdAt updatedAt' },
-          { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
-          { path: 'toRoute', select: '_id code name createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
           { path: 'createdByUser', select: '_id username' },
         ])
         .lean();
@@ -506,8 +506,8 @@ export class DeliveryService {
         .populate([
           { path: 'sender', select: '_id name phone createdAt updatedAt' },
           { path: 'receiver', select: '_id name phone createdAt updatedAt' },
-          { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
-          { path: 'toRoute', select: '_id code name createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
           { path: 'createdByUser', select: '_id username' },
         ])
         .sort({ createdAt: -1 })
@@ -549,8 +549,8 @@ export class DeliveryService {
         .populate([
           { path: 'sender', select: '_id name phone createdAt updatedAt' },
           { path: 'receiver', select: '_id name phone createdAt updatedAt' },
-          { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
-          { path: 'toRoute', select: '_id code name createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
           { path: 'createdByUser', select: '_id username' },
         ])
         .sort({ createdAt: -1 })
@@ -666,8 +666,8 @@ export class DeliveryService {
       .populate([
         { path: 'sender', select: '_id name phone routeId createdAt updatedAt' },
         { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
-        { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
-        { path: 'toRoute', select: '_id code name createdAt updatedAt' },
+        { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
+        { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
         { path: 'createdByUser', select: '_id username' },
       ])
       .lean();
@@ -720,8 +720,8 @@ export class DeliveryService {
       .populate([
         { path: 'sender', select: '_id name phone routeId createdAt updatedAt' },
         { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
-        { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
-        { path: 'toRoute', select: '_id code name createdAt updatedAt' },
+        { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
+        { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
         { path: 'createdByUser', select: '_id username' },
       ])
       .lean();

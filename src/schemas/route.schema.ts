@@ -14,6 +14,7 @@ export const createRouteSchema = z.object({
       .min(1, 'Name is required')
       .max(100, 'Name must not exceed 100 characters')
       .trim(),
+    address: z.string().max(200, 'Address must not exceed 200 characters').trim().optional(),
   }),
 });
 
@@ -33,9 +34,10 @@ export const updateRouteSchema = z.object({
         .max(100, 'Name must not exceed 100 characters')
         .trim()
         .optional(),
+      address: z.string().max(200, 'Address must not exceed 200 characters').trim().optional(),
     })
-    .refine(data => data.code || data.name, {
-      message: 'At least one field (code or name) must be provided',
+    .refine(data => data.code || data.name || data.address, {
+      message: 'At least one field (code, name, or address) must be provided',
     }),
 });
 

@@ -184,4 +184,8 @@ moneyDeliverySchema.index({ subCode: 1 });
 // Additional unique index for fullCode
 moneyDeliverySchema.index({ fullCode: 1 }, { unique: true });
 
-export const MoneyDelivery = mongoose.model<IMoneyDelivery>('MoneyDelivery', moneyDeliverySchema);
+export const MoneyDelivery = mongoose.model<IMoneyDelivery>(
+  'MoneyDelivery',
+  moneyDeliverySchema,
+  'moneyDeliveries'
+);

@@ -938,4 +938,262 @@ describe('Settings API Integration Tests', () => {
       });
     });
   });
+
+  describe('PUT /api/settings/shipping-rates - Detailed Error Messages', () => {
+    it('should return detailed error for overlapping ranges', async () => {
+      // Create overlapping rates that pass Zod but should fail MongoDB validation
+      const overlappingRates = [
+        {
+          fromAmount: 200000000,
+          toAmount: 300000000,
+          regularShippingFee: 15000,
+          expressShippingFee: 20000,
+          regularShippingFeeUnit: 'VND',
+          expressShippingFeeUnit: 'VND',
+        },
+        {
+          fromAmount: 250000000, // Overlaps with previous range
+          toAmount: 350000000,
+          regularShippingFee: 18000,
+          expressShippingFee: 25000,
+          regularShippingFeeUnit: 'VND',
+          expressShippingFeeUnit: 'VND',
+        },
+      ];
+
+      const errorMessage =
+        'Các khoảng giá bị chồng lấp: [200.000.000 - 300.000.000] trùng với [250.000.000 - 350.000.000]';
+      const error = new Error(errorMessage);
+      error.name = 'ValidationError';
+      (error as any).errors = { metadata: { message: errorMessage } };
+
+      MockedSettingsService.prototype.appendShippingRatesWithDefaults.mockRejectedValue(error);
+
+      const response = await request(app)
+        .put('/api/settings/shipping-rates')
+        .send({ rates: overlappingRates })
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Các khoảng giá bị chồng lấp');
+      expect(response.body.message).toContain('200.000.000');
+      expect(response.body.message).toContain('300.000.000');
+      expect(response.body.message).toContain('250.000.000');
+      expect(response.body.message).toContain('350.000.000');
+    });
+
+    it('should return detailed error for duplicate ranges', async () => {
+      const duplicateRates = [
+        {
+          fromAmount: 200000000,
+          toAmount: 300000000,
+          regularShippingFee: 15000,
+          expressShippingFee: 20000,
+          regularShippingFeeUnit: 'VND',
+          expressShippingFeeUnit: 'VND',
+        },
+        {
+          fromAmount: 200000000, // Same range as above
+          toAmount: 300000000,
+          regularShippingFee: 18000, // Different fees but same range
+          expressShippingFee: 25000,
+          regularShippingFeeUnit: 'VND',
+          expressShippingFeeUnit: 'VND',
+        },
+      ];
+
+      const errorMessage = 'Phát hiện khoảng giá trùng lặp: [200.000.000 - 300.000.000]';
+      const error = new Error(errorMessage);
+      error.name = 'ValidationError';
+      (error as any).errors = { metadata: { message: errorMessage } };
+
+      MockedSettingsService.prototype.appendShippingRatesWithDefaults.mockRejectedValue(error);
+
+      const response = await request(app)
+        .put('/api/settings/shipping-rates')
+        .send({ rates: duplicateRates })
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Phát hiện khoảng giá trùng lặp');
+      expect(response.body.message).toContain('200.000.000 - 300.000.000');
+    });
+
+    it('should return detailed error for invalid range (fromAmount >= toAmount)', async () => {
+      // This case is caught by Zod validation, so test Zod's error message
+      const invalidRates = [
+        {
+          fromAmount: 500000000,
+          toAmount: 300000000, // toAmount < fromAmount
+          regularShippingFee: 15000,
+          expressShippingFee: 20000,
+          regularShippingFeeUnit: 'VND',
+          expressShippingFeeUnit: 'VND',
+        },
+      ];
+
+      const response = await request(app)
+        .put('/api/settings/shipping-rates')
+        .send({ rates: invalidRates })
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Validation failed');
+      expect(response.body.errors).toBeDefined();
+      expect(
+        response.body.errors.some((error: any) =>
+          error.message.includes('toAmount must be greater than fromAmount')
+        )
+      ).toBe(true);
+    });
+
+    it('should return detailed error for negative values', async () => {
+      // This case is caught by Zod validation, so test Zod's error message
+      const negativeValueRates = [
+        {
+          fromAmount: -100000,
+          toAmount: 300000000,
+          regularShippingFee: -5000,
+          expressShippingFee: 20000,
+          regularShippingFeeUnit: 'VND',
+          expressShippingFeeUnit: 'VND',
+        },
+      ];
+
+      const response = await request(app)
+        .put('/api/settings/shipping-rates')
+        .send({ rates: negativeValueRates })
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Validation failed');
+      expect(response.body.errors).toBeDefined();
+      expect(
+        response.body.errors.some((error: any) =>
+          error.message.includes('From amount must be non-negative')
+        )
+      ).toBe(true);
+      expect(
+        response.body.errors.some((error: any) =>
+          error.message.includes('Regular shipping fee must be non-negative')
+        )
+      ).toBe(true);
+    });
+
+    it('should return detailed error for invalid units', async () => {
+      // This case is caught by Zod validation, so test Zod's error message
+      const invalidUnitRates = [
+        {
+          fromAmount: 100000,
+          toAmount: 300000000,
+          regularShippingFee: 5000,
+          expressShippingFee: 20000,
+          regularShippingFeeUnit: 'INVALID_UNIT',
+          expressShippingFeeUnit: 'VND',
+        },
+      ];
+
+      const response = await request(app)
+        .put('/api/settings/shipping-rates')
+        .send({ rates: invalidUnitRates })
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Validation failed');
+      expect(response.body.errors).toBeDefined();
+      expect(
+        response.body.errors.some(
+          (error: any) =>
+            error.message.includes('Invalid enum value') &&
+            error.path.includes('regularShippingFeeUnit')
+        )
+      ).toBe(true);
+    });
+  });
+
+  describe('PUT /api/settings/products - Detailed Error Messages', () => {
+    it('should return detailed error for duplicate product names', async () => {
+      // This case is caught by Zod validation
+      const duplicateProducts = [
+        {
+          name: 'Giao hàng nhanh',
+          cost: 15000,
+        },
+        {
+          name: 'giao hàng nhanh', // Case-insensitive duplicate
+          cost: 20000,
+        },
+      ];
+
+      const response = await request(app)
+        .put('/api/settings/products')
+        .send({ products: duplicateProducts })
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Validation failed');
+      expect(response.body.errors).toBeDefined();
+      expect(
+        response.body.errors.some((error: any) =>
+          error.message.includes('Duplicate product names are not allowed')
+        )
+      ).toBe(true);
+    });
+
+    it('should return detailed error for empty product name', async () => {
+      // This case is caught by Zod validation
+      const emptyNameProducts = [
+        {
+          name: '',
+          cost: 15000,
+        },
+      ];
+
+      const response = await request(app)
+        .put('/api/settings/products')
+        .send({ products: emptyNameProducts })
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Validation failed');
+      expect(response.body.errors).toBeDefined();
+      expect(
+        response.body.errors.some((error: any) =>
+          error.message.includes('Product name is required')
+        )
+      ).toBe(true);
+    });
+
+    it('should return detailed error for negative product cost', async () => {
+      // This case is caught by Zod validation
+      const negativeCostProducts = [
+        {
+          name: 'Giao hàng nhanh',
+          cost: -5000,
+        },
+      ];
+
+      const response = await request(app)
+        .put('/api/settings/products')
+        .send({ products: negativeCostProducts })
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Validation failed');
+      expect(response.body.errors).toBeDefined();
+      expect(
+        response.body.errors.some((error: any) =>
+          error.message.includes('Product cost must be non-negative')
+        )
+      ).toBe(true);
+    });
+  });
 });
