@@ -113,22 +113,16 @@ export const updateShippingRatesSchema = z.object({
       .min(1, 'At least one shipping rate is required')
       .refine(
         rates => {
-          for (let i = 0; i < rates.length; i++) {
-            const rate = rates[i];
+          // Check for invalid ranges (toAmount <= fromAmount)
+          for (const rate of rates) {
             if (rate.toAmount <= rate.fromAmount) {
               return false;
-            }
-            if (i > 0) {
-              const prevRate = rates[i - 1];
-              if (rate.fromAmount !== prevRate.toAmount + 1) {
-                return false;
-              }
             }
           }
           return true;
         },
         {
-          message: 'Invalid shipping rates: ranges must be continuous and non-overlapping',
+          message: 'Invalid shipping rates: toAmount must be greater than fromAmount',
         }
       ),
   }),

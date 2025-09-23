@@ -27,6 +27,7 @@ export class UserRouteService {
     _id: string;
     code: string;
     name: string;
+    address?: string;
     createdAt: Date;
     updatedAt: Date;
   } {
@@ -101,8 +102,9 @@ export class UserRouteService {
         id: userRoute.routeId._id,
         code: userRoute.routeId.code,
         name: userRoute.routeId.name,
-        createdAt: userRoute.createdAt,
-        updatedAt: userRoute.updatedAt,
+        address: userRoute.routeId.address,
+        createdAt: userRoute.routeId.createdAt,
+        updatedAt: userRoute.routeId.updatedAt,
       },
       assignedByUser: {
         id: userRoute.assignedBy._id,
@@ -274,7 +276,7 @@ export class UserRouteService {
       const userRoutes = await UserRoute.find({ userId })
         .populate([
           { path: 'userId', select: '_id username role' },
-          { path: 'routeId', select: '_id code name' },
+          { path: 'routeId', select: '_id code name address' },
           { path: 'assignedBy', select: '_id username role' },
         ])
         .sort({ createdAt: -1 })
@@ -295,7 +297,7 @@ export class UserRouteService {
   async getRoutesForUser(userId: string): Promise<IRouteResponse[]> {
     try {
       const userRoutes = await UserRoute.find({ userId })
-        .populate('routeId', '_id code name createdAt updatedAt')
+        .populate('routeId', '_id code name address createdAt updatedAt')
         .sort({ 'routeId.code': 1 })
         .lean();
 
@@ -305,6 +307,7 @@ export class UserRouteService {
           id: route._id,
           code: route.code,
           name: route.name,
+          address: route.address,
           createdAt: route.createdAt,
           updatedAt: route.updatedAt,
         };

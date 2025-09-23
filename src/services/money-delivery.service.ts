@@ -58,8 +58,8 @@ export class MoneyDeliveryService {
     const populatedMoneyDelivery = await moneyDelivery.populate([
       { path: 'sender', select: '_id name phone routeId createdAt updatedAt' },
       { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
-      { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
-      { path: 'toRoute', select: '_id code name createdAt updatedAt' },
+      { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
+      { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
       { path: 'createdByUser', select: '_id username' },
     ]);
 
