@@ -816,7 +816,7 @@ export class MoneyDeliveryService {
       const selectedRouteId = userRouteInfo.selectedRouteId;
 
       // Get route information
-      const route = await Route.findById(selectedRouteId).select('_id code name').lean();
+      const route = await Route.findById(selectedRouteId).select('_id code name address').lean();
       if (!route) {
         throw new Error('Selected route not found');
       }
