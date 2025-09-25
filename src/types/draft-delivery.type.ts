@@ -38,11 +38,13 @@ export interface IDraftDeliveryResponse {
     id: string;
     code: string;
     name: string;
+    address: string;
   };
   toRoute: {
     id: string;
     code: string;
     name: string;
+    address: string;
   };
   name: string;
   quantity: number;

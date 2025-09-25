@@ -50,7 +50,7 @@ const debtManagementSchema = new Schema<IDebtManagement>(
     },
     deletedAt: {
       type: Date,
-      default: null
+      default: null,
     },
   },
   {

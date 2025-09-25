@@ -211,6 +211,7 @@ export interface IDeliveryLeanPopulated {
     _id: string;
     code: string;
     name: string;
+    address: string;
     createdAt: Date;
     updatedAt: Date;
   };
@@ -218,6 +219,7 @@ export interface IDeliveryLeanPopulated {
     _id: string;
     code: string;
     name: string;
+    address: string;
     createdAt: Date;
     updatedAt: Date;
   };
@@ -348,6 +350,7 @@ export interface IDeliveryCostReportFilter {
     id: string;
     code: string;
     name: string;
+    address: string;
   };
 }
 

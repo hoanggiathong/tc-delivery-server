@@ -7,7 +7,7 @@ import mongoose from 'mongoose';
 
 export class CronjobService {
   async cronjobCalculateDebt(): Promise<void> {
-    let listInsertDebt: IDebtRow[] = [];
+    const listInsertDebt: IDebtRow[] = [];
 
     // Set today's date range (from start of day to end of day)
     const today = new Date();
@@ -30,7 +30,7 @@ export class CronjobService {
       console.log('route main checking:>> ', route);
 
       // other route: can tho, tphcm
-      let arrayRoute: any = {};
+      const arrayRoute: any = {};
 
       // handle array route with toRoute as key
       const handleArrayRoute = (key: string, toRoute: any) => {
@@ -86,9 +86,9 @@ export class CronjobService {
         // object from route with information about debt
         const elementArrayRoute = handleArrayRoute(toRoute, toRoute);
 
-        let costDeliveryFromRoute = delivery.cost ?? 0;
-        let homeDeliveryCostFromRoute = delivery.homeDeliveryCost ?? 0;
-        let collectForCustomerCostFromRoute = delivery.collectForCustomerCost ?? 0;
+        const costDeliveryFromRoute = delivery.cost ?? 0;
+        const homeDeliveryCostFromRoute = delivery.homeDeliveryCost ?? 0;
+        const collectForCustomerCostFromRoute = delivery.collectForCustomerCost ?? 0;
 
         // handle feeCODFromRoute (no cuoc di)
         if (delivery.paymentType == 'debt') {
@@ -119,9 +119,9 @@ export class CronjobService {
 
         const elementArrayRoute = handleArrayRoute(fromRoute, fromRoute);
 
-        let costDelivery = delivery.cost ?? 0;
-        let homeDeliveryCost = delivery.homeDeliveryCost ?? 0;
-        let collectForCustomerCostToRoute = delivery.collectForCustomerCost ?? 0;
+        const costDelivery = delivery.cost ?? 0;
+        const homeDeliveryCost = delivery.homeDeliveryCost ?? 0;
+        const collectForCustomerCostToRoute = delivery.collectForCustomerCost ?? 0;
 
         // handle feeCODToRoute (no cuoc ve)
         if (delivery.paymentType == 'debt') {
@@ -150,7 +150,7 @@ export class CronjobService {
 
         const elementArrayRoute = handleArrayRoute(toRoute, toRoute);
 
-        let moneyDeliveryCostFromRoute = moneyDelivery.sendMoneyAmount ?? 0;
+        const moneyDeliveryCostFromRoute = moneyDelivery.sendMoneyAmount ?? 0;
 
         // handle field costFromRoute (tien cuoc di)
         elementArrayRoute.costFromRoute += moneyDeliveryCostFromRoute ?? 0;
@@ -170,7 +170,7 @@ export class CronjobService {
         const fromRoute: any = moneyDelivery.fromRoute.toString();
         const elementArrayRoute = handleArrayRoute(fromRoute, fromRoute);
 
-        let moneyDeliveryCostToRoute = moneyDelivery.sendMoneyAmount ?? 0;
+        const moneyDeliveryCostToRoute = moneyDelivery.sendMoneyAmount ?? 0;
 
         // handle field costToRoute (tien cuoc ve)
         elementArrayRoute.costToRoute += moneyDeliveryCostToRoute ?? 0;
@@ -233,7 +233,7 @@ export class CronjobService {
       }
     }
 
-    let session = await mongoose.startSession();
+    const session = await mongoose.startSession();
     try {
       await session.withTransaction(
         async () => {

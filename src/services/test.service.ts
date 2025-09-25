@@ -9,11 +9,11 @@ import mongoose, { Types } from 'mongoose';
 
 export class TestService {
   async cronjobCalculateDebt(): Promise<void> {
-    let session = await mongoose.startSession();
+    const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
-      let listInsertDebt: IDebtRow[] = [];
+      const listInsertDebt: IDebtRow[] = [];
 
       // Set today's date range (from start of day to end of day)
       const today = new Date();
@@ -44,7 +44,7 @@ export class TestService {
         console.log('route main checking:>> ', route);
 
         // other route: can tho, tphcm
-        let arrayRoute: any = {};
+        const arrayRoute: any = {};
 
         // handle array route with toRoute as key
         const handleArrayRoute = (key: string, toRoute: any) => {
@@ -102,9 +102,9 @@ export class TestService {
           console.log('listDeliveryFromRoute - delivery :>> ', delivery);
           console.log('arrayRoute[toRoute] - 1 :>> ', elementArrayRoute);
 
-          let costDeliveryFromRoute = delivery.cost ?? 0;
-          let homeDeliveryCostFromRoute = delivery.homeDeliveryCost ?? 0;
-          let collectForCustomerCostFromRoute = delivery.collectForCustomerCost ?? 0;
+          const costDeliveryFromRoute = delivery.cost ?? 0;
+          const homeDeliveryCostFromRoute = delivery.homeDeliveryCost ?? 0;
+          const collectForCustomerCostFromRoute = delivery.collectForCustomerCost ?? 0;
 
           // handle feeCODFromRoute (no cuoc di)
           if (delivery.paymentType == 'debt') {
@@ -135,9 +135,9 @@ export class TestService {
 
           const elementArrayRoute = handleArrayRoute(fromRoute, fromRoute);
 
-          let costDelivery = delivery.cost ?? 0;
-          let homeDeliveryCost = delivery.homeDeliveryCost ?? 0;
-          let collectForCustomerCostToRoute = delivery.collectForCustomerCost ?? 0;
+          const costDelivery = delivery.cost ?? 0;
+          const homeDeliveryCost = delivery.homeDeliveryCost ?? 0;
+          const collectForCustomerCostToRoute = delivery.collectForCustomerCost ?? 0;
 
           console.log('listDeliveriesToRoute - delivery :>> ', delivery);
           console.log('arrayRoute[fromRoute] - 2 :>> ', elementArrayRoute);
@@ -169,7 +169,7 @@ export class TestService {
 
           const elementArrayRoute = handleArrayRoute(toRoute, toRoute);
 
-          let moneyDeliveryCostFromRoute = moneyDelivery.sendMoneyAmount ?? 0;
+          const moneyDeliveryCostFromRoute = moneyDelivery.sendMoneyAmount ?? 0;
 
           console.log('listMoneyDeliveriesFromRoute - delivery :>> ', moneyDelivery);
           console.log('arrayRoute[toRoute] - 3 :>> ', elementArrayRoute);
@@ -192,7 +192,7 @@ export class TestService {
           const fromRoute: any = moneyDelivery.fromRoute.toString();
           const elementArrayRoute = handleArrayRoute(fromRoute, fromRoute);
 
-          let moneyDeliveryCostToRoute = moneyDelivery.sendMoneyAmount ?? 0;
+          const moneyDeliveryCostToRoute = moneyDelivery.sendMoneyAmount ?? 0;
 
           console.log('listMoneyDeliveriesToRoute - delivery :>> ', moneyDelivery);
           console.log('arrayRoute[fromRoute] - 4 :>> ', elementArrayRoute);
@@ -237,7 +237,7 @@ export class TestService {
 
     const fromId = new Types.ObjectId(String(fromRouteId));
 
-    let query = {
+    const query = {
       fromRoute: fromId,
       type: DEBT_MANAGEMENT_TYPE.PAYMENT,
       cashDate: {

@@ -146,6 +146,7 @@ export class DeliveryService {
         id: populated.fromRoute._id,
         code: populated.fromRoute.code,
         name: populated.fromRoute.name,
+        address: populated.fromRoute.address,
         createdAt: populated.fromRoute.createdAt,
         updatedAt: populated.fromRoute.updatedAt,
       },
@@ -153,6 +154,7 @@ export class DeliveryService {
         id: populated.toRoute._id,
         code: populated.toRoute.code,
         name: populated.toRoute.name,
+        address: populated.toRoute.address,
         createdAt: populated.toRoute.createdAt,
         updatedAt: populated.toRoute.updatedAt,
       },
@@ -210,6 +212,7 @@ export class DeliveryService {
         id: delivery.fromRoute._id,
         code: delivery.fromRoute.code,
         name: delivery.fromRoute.name,
+        address: delivery.fromRoute.address,
         createdAt: delivery.fromRoute.createdAt,
         updatedAt: delivery.fromRoute.updatedAt,
       },
@@ -217,6 +220,7 @@ export class DeliveryService {
         id: delivery.toRoute._id,
         code: delivery.toRoute.code,
         name: delivery.toRoute.name,
+        address: delivery.toRoute.address,
         createdAt: delivery.toRoute.createdAt,
         updatedAt: delivery.toRoute.updatedAt,
       },
@@ -618,6 +622,7 @@ export class DeliveryService {
         id: toRoute._id,
         code: toRoute.code,
         name: toRoute.name,
+        address: toRoute.address,
         createdAt: toRoute.createdAt,
         updatedAt: toRoute.updatedAt,
       },
@@ -625,6 +630,7 @@ export class DeliveryService {
         id: fromRoute._id,
         code: fromRoute.code,
         name: fromRoute.name,
+        address: fromRoute.address,
         createdAt: fromRoute.createdAt,
         updatedAt: fromRoute.updatedAt,
       },
@@ -810,6 +816,7 @@ export class DeliveryService {
             id: receiver.routeId.toString(),
             code: route?.code || 'UNKNOWN',
             name: route?.name || 'Unknown Route',
+            address: route?.address || 'Unknown Address',
           },
         };
       });
@@ -918,6 +925,7 @@ export class DeliveryService {
               id: '$toRouteData._id',
               code: '$toRouteData.code',
               name: '$toRouteData.name',
+              address: '$toRouteData.address',
             },
             cost: 1,
             homeDeliveryCost: 1,
@@ -1024,7 +1032,7 @@ export class DeliveryService {
           createdAt: Date;
           sender: { name: string; phone: string };
           receiver: { name: string; phone: string };
-          toRoute: { id: Types.ObjectId; code: string; name: string };
+          toRoute: { id: Types.ObjectId; code: string; name: string; address: string };
           cost: number;
           homeDeliveryCost: number;
           itemCost: number;
@@ -1045,6 +1053,7 @@ export class DeliveryService {
             id: d.toRoute.id.toString(),
             code: d.toRoute.code,
             name: d.toRoute.name,
+            address: d.toRoute.address,
           },
           cost: d.cost,
           homeDeliveryCost: d.homeDeliveryCost,
@@ -1215,6 +1224,7 @@ export class DeliveryService {
               id: '$toRouteData._id',
               code: '$toRouteData.code',
               name: '$toRouteData.name',
+              address: '$toRouteData.address',
             },
             cost: 1,
             homeDelivery: 1,
@@ -1275,7 +1285,7 @@ export class DeliveryService {
           updatedAt?: Date;
           sender: { name: string; phone: string };
           receiver: { name: string; phone: string };
-          toRoute: { id: Types.ObjectId; code: string; name: string };
+          toRoute: { id: Types.ObjectId; code: string; name: string; address: string };
           cost: number;
           homeDelivery?: string;
           homeDeliveryCost?: number;
@@ -1309,6 +1319,7 @@ export class DeliveryService {
             id: d.toRoute.id.toString(),
             code: d.toRoute.code,
             name: d.toRoute.name,
+            address: d.toRoute.address,
           },
           cost: d.cost,
           homeDelivery: d.homeDelivery,

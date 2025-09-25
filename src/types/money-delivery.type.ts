@@ -137,6 +137,7 @@ export interface IMoneyDeliveryLeanPopulated {
     _id: string;
     code: string;
     name: string;
+    address: string;
     createdAt: Date;
     updatedAt: Date;
   };
@@ -144,6 +145,7 @@ export interface IMoneyDeliveryLeanPopulated {
     _id: string;
     code: string;
     name: string;
+    address: string;
     createdAt: Date;
     updatedAt: Date;
   };
@@ -171,6 +173,7 @@ export interface IFrequentMoneyCustomer {
     id: string;
     code: string;
     name: string;
+    address: string;
   };
   totalSendMoneyAmount: number;
   totalSendCost: number;
@@ -336,6 +339,7 @@ export interface IMoneyDeliveryCostReportFilter {
     id: string;
     code: string;
     name: string;
+    address: string;
   };
 }
 

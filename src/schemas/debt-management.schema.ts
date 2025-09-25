@@ -14,10 +14,16 @@ const keySortOptionalSchema = z.preprocess(
 
 const typeSortOptionalSchema = z.preprocess(
   v => {
-    if (v == null || String(v).trim() === '') return undefined;
+    if (v == null || String(v).trim() === '') {
+      return undefined;
+    }
     const s = String(v).toLowerCase().trim();
-    if (s === 'desc' || s === '-1') return -1;
-    if (s === 'asc' || s === '1') return 1;
+    if (s === 'desc' || s === '-1') {
+      return -1;
+    }
+    if (s === 'asc' || s === '1') {
+      return 1;
+    }
     return NaN;
   },
   z
@@ -107,7 +113,11 @@ export const createDebtManagementSchema = z.object({
       .regex(/^[0-9a-fA-F]{24}$/, 'Please provide a valid to route ID')
       .trim(),
     cash: z.number().min(0, 'Send cost must be positive'),
-    type: z.enum([DEBT_MANAGEMENT_TYPE.COLLECTION, DEBT_MANAGEMENT_TYPE.PAYMENT, DEBT_MANAGEMENT_TYPE.RECEIPT]),
+    type: z.enum([
+      DEBT_MANAGEMENT_TYPE.COLLECTION,
+      DEBT_MANAGEMENT_TYPE.PAYMENT,
+      DEBT_MANAGEMENT_TYPE.RECEIPT,
+    ]),
     cashDate: z
       .string()
       .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid cash date in ISO format')

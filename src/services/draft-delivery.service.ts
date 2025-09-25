@@ -72,8 +72,8 @@ export class DraftDeliveryService {
     // Populate and return
     const populatedDraft = await DraftDelivery.findById(draft._id)
       .populate([
-        { path: 'fromRoute', select: '_id code name' },
-        { path: 'toRoute', select: '_id code name' },
+        { path: 'fromRoute', select: '_id code name address' },
+        { path: 'toRoute', select: '_id code name address' },
         { path: 'createdByUser', select: '_id username' },
       ])
       .lean();
@@ -159,8 +159,8 @@ export class DraftDeliveryService {
       runValidators: true,
     })
       .populate([
-        { path: 'fromRoute', select: '_id code name' },
-        { path: 'toRoute', select: '_id code name' },
+        { path: 'fromRoute', select: '_id code name address' },
+        { path: 'toRoute', select: '_id code name address' },
         { path: 'createdByUser', select: '_id username' },
       ])
       .lean();
@@ -186,8 +186,8 @@ export class DraftDeliveryService {
       createdByUser: userId,
     })
       .populate([
-        { path: 'fromRoute', select: '_id code name' },
-        { path: 'toRoute', select: '_id code name' },
+        { path: 'fromRoute', select: '_id code name address' },
+        { path: 'toRoute', select: '_id code name address' },
         { path: 'createdByUser', select: '_id username' },
       ])
       .sort({ createdAt: -1 })
@@ -202,8 +202,8 @@ export class DraftDeliveryService {
   async getDraftById(draftId: string, userId: string): Promise<IDraftDeliveryResponse> {
     const draft = await DraftDelivery.findById(draftId)
       .populate([
-        { path: 'fromRoute', select: '_id code name' },
-        { path: 'toRoute', select: '_id code name' },
+        { path: 'fromRoute', select: '_id code name address' },
+        { path: 'toRoute', select: '_id code name address' },
         { path: 'createdByUser', select: '_id username' },
       ])
       .lean();
@@ -304,11 +304,13 @@ export class DraftDeliveryService {
         id: draft.fromRoute._id.toString(),
         code: draft.fromRoute.code,
         name: draft.fromRoute.name,
+        address: draft.fromRoute.address,
       },
       toRoute: {
         id: draft.toRoute._id.toString(),
         code: draft.toRoute.code,
         name: draft.toRoute.name,
+        address: draft.toRoute.address,
       },
       name: draft.name,
       quantity: draft.quantity || 1,

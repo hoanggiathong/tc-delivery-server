@@ -232,7 +232,7 @@ export class DebtManagementService {
   }
 
   async createDebtManagement(data: ICreateDebtManagementRequest): Promise<any> {
-    let session = await mongoose.startSession();
+    const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
@@ -317,7 +317,7 @@ export class DebtManagementService {
    * Delete debt management by ID
    */
   async deleteDebtManagement(id: string): Promise<void> {
-    let session = await mongoose.startSession();
+    const session = await mongoose.startSession();
     session.startTransaction();
 
     try {

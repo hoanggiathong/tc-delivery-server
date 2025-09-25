@@ -13,10 +13,16 @@ const keySortOptionalSchema = z.preprocess(
 
 const typeSortOptionalSchema = z.preprocess(
   v => {
-    if (v == null || String(v).trim() === '') return undefined;
+    if (v == null || String(v).trim() === '') {
+      return undefined;
+    }
     const s = String(v).toLowerCase().trim();
-    if (s === 'desc' || s === '-1') return -1;
-    if (s === 'asc' || s === '1') return 1;
+    if (s === 'desc' || s === '-1') {
+      return -1;
+    }
+    if (s === 'asc' || s === '1') {
+      return 1;
+    }
     return NaN;
   },
   z
