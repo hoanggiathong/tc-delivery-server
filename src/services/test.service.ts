@@ -107,7 +107,7 @@ export class TestService {
           const collectForCustomerCostFromRoute = delivery.collectForCustomerCost ?? 0;
 
           // handle feeCODFromRoute (no cuoc di)
-          if (delivery.paymentType == 'debt') {
+          if (delivery.paymentType === 'debt') {
             elementArrayRoute.feeCODFromRoute += costDeliveryFromRoute ?? 0;
           }
 
@@ -143,7 +143,7 @@ export class TestService {
           console.log('arrayRoute[fromRoute] - 2 :>> ', elementArrayRoute);
 
           // handle feeCODToRoute (no cuoc ve)
-          if (delivery.paymentType == 'debt') {
+          if (delivery.paymentType === 'debt') {
             elementArrayRoute.feeCODToRoute += costDelivery ?? 0;
           }
 

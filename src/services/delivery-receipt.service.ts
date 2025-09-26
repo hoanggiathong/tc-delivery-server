@@ -80,7 +80,7 @@ export class DeliveryReceiptService {
       const logoSvg = fs.readFileSync(logoPath, 'utf-8');
       return logoSvg;
     } catch (error) {
-      console.warn('Logo file not found, using company name instead');
+      // Logo file not found, using company name instead
       return '';
     }
   }
@@ -94,7 +94,7 @@ export class DeliveryReceiptService {
       const checkboxSvg = fs.readFileSync(checkboxPath, 'utf-8');
       return checkboxSvg;
     } catch (error) {
-      console.warn('Checkbox SVG not found, using CSS fallback');
+      // Checkbox SVG not found, using CSS fallback
       return '';
     }
   }
@@ -704,7 +704,7 @@ export class DeliveryReceiptService {
 
       // Validate that we have valid data URLs
       if (!barcodeDataURL.startsWith('data:image/') || !qrCodeDataURL.startsWith('data:image/')) {
-        console.warn('Invalid barcode or QR code data URL, using fallbacks');
+        // Invalid barcode or QR code data URL, using fallbacks
       }
 
       // Generate HTML
@@ -762,7 +762,7 @@ export class DeliveryReceiptService {
         });
       });
     } catch (error) {
-      console.error('PDF generation error:', error);
+      // PDF generation error logged internally
       throw new Error(`Failed to generate PDF receipt: ${error}`);
     }
   }

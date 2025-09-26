@@ -8,13 +8,13 @@ const SortBySchema = z.union([
 ]);
 
 const keySortOptionalSchema = z.preprocess(
-  v => (v == null || String(v).trim() === '' ? undefined : String(v).trim()),
+  v => (v === null || String(v).trim() === '' ? undefined : String(v).trim()),
   SortBySchema.optional()
 );
 
 const typeSortOptionalSchema = z.preprocess(
   v => {
-    if (v == null || String(v).trim() === '') {
+    if (v === null || String(v).trim() === '') {
       return undefined;
     }
     const s = String(v).toLowerCase().trim();

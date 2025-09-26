@@ -91,7 +91,7 @@ export class CronjobService {
         const collectForCustomerCostFromRoute = delivery.collectForCustomerCost ?? 0;
 
         // handle feeCODFromRoute (no cuoc di)
-        if (delivery.paymentType == 'debt') {
+        if (delivery.paymentType === 'debt') {
           elementArrayRoute.feeCODFromRoute += costDeliveryFromRoute ?? 0;
         }
 
@@ -124,7 +124,7 @@ export class CronjobService {
         const collectForCustomerCostToRoute = delivery.collectForCustomerCost ?? 0;
 
         // handle feeCODToRoute (no cuoc ve)
-        if (delivery.paymentType == 'debt') {
+        if (delivery.paymentType === 'debt') {
           elementArrayRoute.feeCODToRoute += costDelivery ?? 0;
         }
 
@@ -204,7 +204,7 @@ export class CronjobService {
         }
 
         // handle two field: accountPayable and receivable
-        if (item.openingBalance == 0) {
+        if (item.openingBalance === 0) {
           item.accountPayable = 0;
           item.receivable = 0;
         } else if (item.openingBalance > 0) {
