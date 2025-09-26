@@ -17,7 +17,7 @@ module.exports = {
       // Cron settings
       cron_restart: '0 0 * * *', // Run at midnight every day
       watch: false,
-      autorestart: false
+      autorestart: false,
     },
     {
       name: 'tc-delivery-server-prod',
