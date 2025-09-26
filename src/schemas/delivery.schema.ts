@@ -252,3 +252,32 @@ export const deliveryFullCodeSchema = z.object({
 
 export type DeliveryReceiptParams = z.infer<typeof deliveryReceiptSchema>['params'];
 export type DeliveryFullCodeParams = z.infer<typeof deliveryFullCodeSchema>['params'];
+
+// Schema for deleting delivery by fullCode with password verification
+export const deleteDeliveryByFullCodeSchema = z.object({
+  params: z.object({
+    fullCode: z
+      .string()
+      .min(12, 'Delivery fullCode must be at least 12 characters')
+      .max(20, 'Delivery fullCode must not exceed 20 characters')
+      .regex(DELIVERY_IDENTIFIER_PATTERN, VALIDATION_MESSAGES.DELIVERY_IDENTIFIER)
+      .trim(),
+  }),
+  body: z.object({
+    password: z
+      .string()
+      .min(1, 'Password is required')
+      .min(6, 'Password must be at least 6 characters')
+      .trim(),
+    reason: z
+      .string()
+      .min(1, 'Deletion reason is required')
+      .max(500, 'Reason must not exceed 500 characters')
+      .trim(),
+  }),
+});
+
+export type DeleteDeliveryByFullCodeParams = z.infer<
+  typeof deleteDeliveryByFullCodeSchema
+>['params'];
+export type DeleteDeliveryByFullCodeBody = z.infer<typeof deleteDeliveryByFullCodeSchema>['body'];

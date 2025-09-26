@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { DeliveryService } from '@/services/delivery.service';
 import { DeliveryReceiptService } from '@/services/delivery-receipt.service';
+import { RemovedDeliveryService } from '@/services/removed-delivery.service';
 import {
   CreateDeliveryRequest,
   UpdateDeliveryRequest,
@@ -12,10 +13,12 @@ import Logger from '@/utils/logger';
 export class DeliveryController {
   private deliveryService: DeliveryService;
   private receiptService: DeliveryReceiptService;
+  private removedDeliveryService: RemovedDeliveryService;
 
   constructor() {
     this.deliveryService = new DeliveryService();
     this.receiptService = new DeliveryReceiptService();
+    this.removedDeliveryService = new RemovedDeliveryService();
   }
 
   /**
@@ -679,6 +682,181 @@ export class DeliveryController {
       const message = error instanceof Error ? error.message : 'Failed to delete delivery';
       const statusCode =
         error instanceof Error && error.message === 'Delivery not found' ? 404 : 400;
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(statusCode).json(response);
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/delivery/by-fullcode/{fullCode}:
+   *   delete:
+   *     summary: Delete delivery by fullCode with password verification
+   *     tags: [Deliveries]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: fullCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *           pattern: '^[0-9]{10}[A-Z0-9]{2,10}$'
+   *         description: The full code of the delivery (format YYMMDDNNNNXXYY)
+   *         example: "2412170001T1T2"
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - password
+   *               - reason
+   *             properties:
+   *               password:
+   *                 type: string
+   *                 minLength: 6
+   *                 description: User's current password for verification
+   *                 example: "password123"
+   *               reason:
+   *                 type: string
+   *                 maxLength: 500
+   *                 description: Reason for deleting the delivery
+   *                 example: "Duplicate entry created by mistake"
+   *     responses:
+   *       200:
+   *         description: Delivery deleted successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Delivery deleted successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     deletedDelivery:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           example: "507f1f77bcf86cd799439020"
+   *                         fullCode:
+   *                           type: string
+   *                           example: "2412170001T1T2"
+   *                         deletedAt:
+   *                           type: string
+   *                           format: date-time
+   *                           example: "2024-12-17T10:30:00.000Z"
+   *                         reason:
+   *                           type: string
+   *                           example: "Duplicate entry created by mistake"
+   *       400:
+   *         description: Validation error or invalid data
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *             examples:
+   *               invalidPassword:
+   *                 summary: Invalid password
+   *                 value:
+   *                   success: false
+   *                   message: "Invalid password"
+   *               invalidFullCode:
+   *                 summary: Invalid fullCode format
+   *                 value:
+   *                   success: false
+   *                   message: "Validation error: Invalid delivery identifier format"
+   *       401:
+   *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Unauthorized"
+   *       404:
+   *         description: Delivery not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Delivery not found"
+   */
+  deleteDeliveryByFullCode = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { fullCode } = req.params;
+      const { password, reason } = req.body;
+
+      const result = await this.removedDeliveryService.moveDeliveryToRemoved(
+        fullCode,
+        req.user.userId,
+        password,
+        reason
+      );
+
+      Logger.info('Delivery deleted by fullCode successfully', {
+        fullCode,
+        userId: req.user.userId,
+        reason,
+      });
+
+      res.status(200).json(result);
+    } catch (error) {
+      Logger.error('Failed to delete delivery by fullCode', {
+        error: error instanceof Error ? error.message : error,
+        fullCode: req.params.fullCode,
+        userId: req.user?.userId,
+      });
+
+      const message = error instanceof Error ? error.message : 'Failed to delete delivery';
+      let statusCode = 400;
+
+      if (error instanceof Error) {
+        if (error.message === 'Delivery not found') {
+          statusCode = 404;
+        } else if (error.message === 'User not found' || error.message === 'Invalid password') {
+          statusCode = 401;
+        }
+      }
 
       const response: ApiResponse = {
         success: false,
