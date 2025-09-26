@@ -303,6 +303,206 @@ export class CustomerController {
   };
 
   /**
+   * @swagger
+   * /api/customer/by-phone/{senderPhone}:
+   *   get:
+   *     summary: Get customer by sender phone with bank info
+   *     tags: [Customer]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: senderPhone
+   *         required: true
+   *         schema:
+   *           type: string
+   *           pattern: ^\+?[1-9]\d{1,14}$
+   *         example: "%2B84912345678"
+   *         description: Customer phone number (URL encoded, + becomes %2B)
+   *     responses:
+   *       200:
+   *         description: Customer retrieved successfully with bank info
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Customer retrieved successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     customer:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                         name:
+   *                           type: string
+   *                         phone:
+   *                           type: string
+   *                         type:
+   *                           type: string
+   *                           enum: [delivery, money]
+   *                         bankId:
+   *                           type: object
+   *                           properties:
+   *                             id:
+   *                               type: string
+   *                             name:
+   *                               type: string
+   *                             bankName:
+   *                               type: string
+   *                             bankAccount:
+   *                               type: string
+   *                             bankBranch:
+   *                               type: string
+   *                             bankAddress:
+   *                               type: string
+   *                             qrCodeUrl:
+   *                               type: string
+   *                         images:
+   *                           type: array
+   *                           items:
+   *                             type: object
+   *                             properties:
+   *                               url:
+   *                                 type: string
+   *                               rotate:
+   *                                 type: number
+   *                         createdAt:
+   *                           type: string
+   *                         updatedAt:
+   *                           type: string
+   *             examples:
+   *               withBankInfo:
+   *                 summary: Customer with bank info
+   *                 value:
+   *                   success: true
+   *                   message: "Customer retrieved successfully"
+   *                   data:
+   *                     customer:
+   *                       id: "507f1f77bcf86cd799439030"
+   *                       name: "Nguyễn Văn A"
+   *                       phone: "+84912345678"
+   *                       type: "money"
+   *                       bankId:
+   *                         id: "507f1f77bcf86cd799439031"
+   *                         name: "Nguyễn Văn A"
+   *                         bankName: "Vietcombank"
+   *                         bankAccount: "0071000123456"
+   *                         bankBranch: "Chi nhánh Tân Bình"
+   *                         bankAddress: "285 Cách Mạng Tháng 8"
+   *                         qrCodeUrl: "/uploads/customers/507f1f77bcf86cd799439030/bank-qrcode.png?v=123456"
+   *                       images: []
+   *                       createdAt: "2024-12-17T10:00:00.000Z"
+   *                       updatedAt: "2024-12-17T10:00:00.000Z"
+   *               withoutBankInfo:
+   *                 summary: Customer without bank info
+   *                 value:
+   *                   success: true
+   *                   message: "Customer retrieved successfully"
+   *                   data:
+   *                     customer:
+   *                       id: "507f1f77bcf86cd799439030"
+   *                       name: "Phạm Văn Đức"
+   *                       phone: "+84912345678"
+   *                       type: "delivery"
+   *                       bankId: null
+   *                       images: []
+   *                       createdAt: "2024-12-17T10:00:00.000Z"
+   *                       updatedAt: "2024-12-17T10:00:00.000Z"
+   *       400:
+   *         description: Validation error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *             examples:
+   *               invalidPhone:
+   *                 summary: Invalid phone format
+   *                 value:
+   *                   success: false
+   *                   message: "Validation error: Please enter a valid phone number"
+   *               missingSenderPhone:
+   *                 summary: Missing senderPhone parameter
+   *                 value:
+   *                   success: false
+   *                   message: "Validation error: Sender phone is required"
+   *       404:
+   *         description: Customer not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Customer not found"
+   *       401:
+   *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Unauthorized"
+   */
+  getCustomerBySenderPhone = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { senderPhone } = req.params;
+
+      const customer = await this.customerService.getCustomerBySenderPhone(senderPhone);
+
+      if (!customer) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Customer not found',
+        };
+        res.status(404).json(response);
+        return;
+      }
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Customer retrieved successfully',
+        data: { customer },
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      console.error('Get customer by sender phone error:', error);
+
+      const message = error instanceof Error ? error.message : 'Failed to get customer';
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(500).json(response);
+    }
+  };
+
+  /**
    * Upload image with auto-create customer
    */
   uploadImage = async (req: AuthRequestWithFileUploads, res: Response): Promise<void> => {

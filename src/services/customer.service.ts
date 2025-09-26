@@ -603,6 +603,32 @@ export class CustomerService {
   }
 
   /**
+   * Get customer by sender phone with bank info populated
+   */
+  async getCustomerBySenderPhone(phone: string): Promise<ICustomer | null> {
+    try {
+      const customer = await Customer.findOne({ phone }).populate('bankId');
+
+      Logger.debug('Customer retrieved by sender phone with bank info', {
+        phone,
+        found: !!customer,
+        customerId: customer?._id,
+        hasBankInfo: !!(customer && customer.bankId),
+      });
+
+      return customer;
+    } catch (error) {
+      Logger.error('Failed to get customer by sender phone', {
+        error: error instanceof Error ? error.message : error,
+        phone,
+      });
+      throw new Error(
+        `Failed to get customer by sender phone: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  /**
    * Update customer with bank info and/or image(s)
    */
   async updateCustomerBankInfo(

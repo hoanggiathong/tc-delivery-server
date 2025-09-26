@@ -25,6 +25,8 @@ export * from './models';
 export {
   // Mock Data
   createMockCustomer,
+  createMockCustomerWithBank,
+  createMockCustomerBank,
   createMockCustomerResponse,
   createMockUser,
   createMockRoute,

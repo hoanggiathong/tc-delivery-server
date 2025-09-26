@@ -11,6 +11,7 @@ import {
   uploadImageSchema,
   updateImageRotationSchema,
   deleteImageSchema,
+  getCustomerByPhoneSchema,
   updateCustomerBankSchema,
 } from '@/schemas/customer.schema';
 import { uploadMiddleware } from '@/middlewares/upload.middleware';
@@ -19,6 +20,15 @@ const router = Router();
 const customerController = new CustomerController();
 
 // Routes that allow USER role access - must be defined before global role middleware
+
+// Get customer by phone with bank info
+router.get(
+  '/by-phone/:senderPhone',
+  authenticateToken,
+  requireRole([UserRole.USER, UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]),
+  validate(getCustomerByPhoneSchema),
+  customerController.getCustomerBySenderPhone
+);
 
 /**
  * @swagger
