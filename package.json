@@ -8,7 +8,7 @@
     "dev": "NODE_ENV=development npx tsx watch src/index.ts",
     "dev:debug": "NODE_ENV=development npx tsx watch --inspect src/index.ts",
     "debug": "NODE_ENV=development npx tsx --inspect-brk src/index.ts",
-    "build": "tsc",
+    "build": "tsc && node copy-assets.js",
     "build:prod": "npm run code-quality && npm run build",
     "build:uat": "npm run code-quality && npm run build",
     "start": "NODE_ENV=production node dist/src/index.js",
