@@ -12,6 +12,7 @@ import {
   updateShippingRateByIdSchema,
   deleteProductSchema,
   updateProductByIdSchema,
+  updateBankListSchema,
 } from '@/schemas/settings.schema';
 
 const router = Router();
@@ -91,7 +92,7 @@ router.get(
  * /api/settings/calculate-shipping-fee:
  *   post:
  *     summary: Calculate shipping fee based on amount
- *     tags: [Settings]
+ *     tags: [Settings - shipping-rates]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -263,7 +264,7 @@ router.post(
  * /api/settings/shipping-rates:
  *   get:
  *     summary: Get shipping rates
- *     tags: [Settings]
+ *     tags: [Settings - shipping-rates]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -277,7 +278,7 @@ router.get('/shipping-rates', authenticateToken, settingsController.getShippingR
  * /api/settings/shipping-rates:
  *   put:
  *     summary: Append new shipping rates to existing ones (Admin/Superadmin only)
- *     tags: [Settings]
+ *     tags: [Settings - shipping-rates]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -384,7 +385,7 @@ router.get('/shipping-rates', authenticateToken, settingsController.getShippingR
  * /api/settings/shipping-rates:
  *   post:
  *     summary: Create new shipping rates (replace all existing rates) (Admin/Superadmin only)
- *     tags: [Settings]
+ *     tags: [Settings - shipping-rates]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -457,7 +458,7 @@ router.put(
  * /api/settings/products:
  *   get:
  *     summary: Get product list
- *     tags: [Settings]
+ *     tags: [Settings - products]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -465,6 +466,20 @@ router.put(
  *         description: Product list retrieved successfully
  */
 router.get('/products', authenticateToken, settingsController.getProductList);
+
+/**
+ * @swagger
+ * /api/settings/banks:
+ *   get:
+ *     summary: Get banks list
+ *     tags: [Settings - banks]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Bank list retrieved successfully
+ */
+router.get('/banks', authenticateToken, settingsController.getBankList);
 
 /**
  * @swagger
@@ -499,7 +514,7 @@ router.get('/products', authenticateToken, settingsController.getProductList);
  * /api/settings/products:
  *   post:
  *     summary: Create new products (replace all existing products) (Admin/Superadmin only)
- *     tags: [Settings]
+ *     tags: [Settings - products]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -565,10 +580,74 @@ router.post(
 
 /**
  * @swagger
+ * /api/settings/banks:
+ *   post:
+ *     summary: Create new banks (replace all existing banks) (Admin/Superadmin only)
+ *     tags: [Settings - banks]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - banks
+ *             properties:
+ *               banks:
+ *                 type: array
+ *                 minItems: 1
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     name:
+ *                       type: string
+ *                       example: "Vietcombank (VCB)"
+ *           examples:
+ *             createProducts:
+ *               summary: Create products example
+ *               value:
+ *                 banks:
+ *                   - name: "Vietcombank (VCB)"
+ *                   - name: "VietinBank (CTG)"
+ *                   - name: "VPBank (VPB)"
+ *                   - name: "Techcombank (TCB)"
+ *     responses:
+ *       201:
+ *         description: Banks created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Banks created successfully"
+ *       400:
+ *         description: Invalid request data or validation errors
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Insufficient privileges
+ */
+router.post(
+  '/banks',
+  authenticateToken,
+  requireRole([UserRole.ADMIN, UserRole.SUPERADMIN]),
+  validate(updateBankListSchema),
+  settingsController.createBanks
+);
+
+/**
+ * @swagger
  * /api/settings/products:
  *   put:
  *     summary: Append new products to existing ones (Admin/Superadmin only)
- *     tags: [Settings]
+ *     tags: [Settings - products]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -636,7 +715,7 @@ router.put(
  * /api/settings/shipping-rates/{id}:
  *   delete:
  *     summary: Delete a specific shipping rate by ID (Admin/Superadmin only)
- *     tags: [Settings]
+ *     tags: [Settings - shipping-rates]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -694,7 +773,7 @@ router.put(
  *                   example: 'Shipping rate with id "68a160568473a7fad9b29821" not found'
  *   put:
  *     summary: Update a specific shipping rate by ID (Admin/Superadmin only)
- *     tags: [Settings]
+ *     tags: [Settings - shipping-rates]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -869,7 +948,7 @@ router.delete(
  * /api/settings/products/{id}:
  *   put:
  *     summary: Update a specific product by ID (Admin/Superadmin only)
- *     tags: [Settings]
+ *     tags: [Settings - products]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -1006,7 +1085,7 @@ router.delete(
  *                   example: 'Product with id "68a160568473a7fad9b29821" not found'
  *   delete:
  *     summary: Delete a specific product by ID (Admin/Superadmin only)
- *     tags: [Settings]
+ *     tags: [Settings - products]
  *     security:
  *       - bearerAuth: []
  *     parameters:

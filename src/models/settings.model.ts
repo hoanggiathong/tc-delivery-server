@@ -1,3 +1,4 @@
+import { IBankConfig } from '@/types/setting.type';
 import mongoose, { Document, QueryOptions, Schema } from 'mongoose';
 
 export interface IShippingRateConfig {
@@ -36,7 +37,11 @@ export type IProductConfigResponse = {
   cost: number;
 };
 
-export type SettingsMetadata = IShippingRateConfig[] | IProductConfig[] | Record<string, unknown>;
+export type SettingsMetadata =
+  | IShippingRateConfig[]
+  | IProductConfig[]
+  | IBankConfig[]
+  | Record<string, unknown>;
 
 interface ValidationResult {
   isValid: boolean;
@@ -228,12 +233,65 @@ function validateProductConfig(products: unknown): ValidationResult {
   return { isValid: true };
 }
 
+function validateNoDuplicateBankNames(banks: IBankConfig[]): ValidationResult {
+  // Check for duplicate bank names (case-insensitive)
+  const names = banks.map(bank => bank.name.toLowerCase().trim());
+  const uniqueNames = new Set(names);
+
+  if (names.length !== uniqueNames.size) {
+    // Find the duplicate name
+    const seen = new Set();
+    for (const name of names) {
+      if (seen.has(name)) {
+        return {
+          isValid: false,
+          errorMessage: `Tên ngân hàng bị trùng lặp: "${name}"`,
+        };
+      }
+      seen.add(name);
+    }
+  }
+
+  return { isValid: true };
+}
+
+function validateBankConfig(banks: unknown): ValidationResult {
+  if (!Array.isArray(banks)) {
+    return {
+      isValid: false,
+      errorMessage: 'Dữ liệu ngân hàng phải là một mảng',
+    };
+  }
+
+  const typedBanks = banks as IBankConfig[];
+
+  // Validate basic constraints
+  for (const bank of typedBanks) {
+    if (typeof bank.name !== 'string' || bank.name.trim().length === 0) {
+      return {
+        isValid: false,
+        errorMessage: 'Tên ngân hàng không được để trống và phải là chuỗi ký tự',
+      };
+    }
+  }
+
+  // Validate no duplicate names
+  const duplicateValidation = validateNoDuplicateBankNames(typedBanks);
+  if (!duplicateValidation.isValid) {
+    return duplicateValidation;
+  }
+
+  return { isValid: true };
+}
+
 function validateMetadataByName(name: string, metadata: unknown): ValidationResult {
   switch (name) {
     case 'shipping_rates':
       return validateShippingRates(metadata);
     case 'product_list':
       return validateProductConfig(metadata);
+    case 'bank_list':
+      return validateBankConfig(metadata);
     default:
       if (typeof metadata === 'object' && metadata !== null) {
         return { isValid: true };
