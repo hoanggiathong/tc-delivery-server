@@ -33,6 +33,6 @@
     },
     "types": ["node", "jest"]
   },
-  "include": ["src/**/*", "tests/**/*"],
+  "include": ["src/**/*", "tests/**/*", "src/models/debt-management.model.ts"],
   "exclude": ["node_modules", "dist"]
 }

@@ -16,6 +16,11 @@ const productSchema = z.object({
   cost: z.number().min(0, 'Product cost must be non-negative'),
 });
 
+const bankSchema = z.object({
+  name: z.string().min(1, 'Bank name is required'),
+  image: z.string().trim().optional(),
+});
+
 export const createSettingsSchema = z.object({
   body: z.object({
     name: z.enum(['shipping_rates', 'product_list']),
@@ -215,6 +220,24 @@ export const updateProductByIdSchema = z.object({
     }),
 });
 
+export const updateBankListSchema = z.object({
+  body: z.object({
+    banks: z
+      .array(bankSchema)
+      .min(1, 'At least one bank is required')
+      .refine(
+        products => {
+          const names = products.map(product => product.name.toLowerCase().trim());
+          const uniqueNames = new Set(names);
+          return names.length === uniqueNames.size;
+        },
+        {
+          message: 'Duplicate bank names are not allowed',
+        }
+      ),
+  }),
+});
+
 export type CreateSettingsInput = z.infer<typeof createSettingsSchema>;
 export type UpdateSettingsInput = z.infer<typeof updateSettingsSchema>;
 export type GetSettingsByNameInput = z.infer<typeof getSettingsByNameSchema>;
@@ -222,6 +245,7 @@ export type DeleteSettingsInput = z.infer<typeof deleteSettingsSchema>;
 export type CalculateShippingFeeInput = z.infer<typeof calculateShippingFeeSchema>;
 export type UpdateShippingRatesInput = z.infer<typeof updateShippingRatesSchema>;
 export type UpdateProductListInput = z.infer<typeof updateProductListSchema>;
+export type UpdateBankListInput = z.infer<typeof updateBankListSchema>;
 export type DeleteShippingRateInput = z.infer<typeof deleteShippingRateSchema>;
 export type UpdateShippingRateByIdInput = z.infer<typeof updateShippingRateByIdSchema>;
 export type DeleteProductInput = z.infer<typeof deleteProductSchema>;

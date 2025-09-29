@@ -1,4 +1,5 @@
 import { ICustomer } from '@/models/customer.model';
+import { ICustomerBank } from '@/models/customerBank.model';
 import { ICustomerResponse } from '@/types/customer.type';
 import { Types } from 'mongoose';
 
@@ -42,6 +43,33 @@ export const createMockCustomerRequest = (overrides: any = {}) => {
 };
 
 // Utility to convert ICustomer to ICustomerResponse for delivery tests
+export const createMockCustomerBank = (overrides: Partial<ICustomerBank> = {}): ICustomerBank => {
+  return {
+    _id: 'bank-id-1',
+    name: 'Nguyễn Văn A',
+    bankName: 'Vietcombank',
+    bankAccount: '0071000123456',
+    bankBranch: 'Chi nhánh Tân Bình',
+    bankAddress: '285 Cách Mạng Tháng 8',
+    qrCodeUrl: '/uploads/customers/customer-id-1/bank-qrcode.png?v=123456',
+    createdAt: new Date('2023-01-01'),
+    updatedAt: new Date('2023-01-01'),
+    ...overrides,
+  } as ICustomerBank;
+};
+
+export const createMockCustomerWithBank = (
+  customerOverrides: Partial<ICustomer> = {},
+  bankOverrides: Partial<ICustomerBank> = {}
+): ICustomer => {
+  const mockBank = createMockCustomerBank(bankOverrides);
+  return createMockCustomer({
+    phone: '+84912345678',
+    bankId: mockBank as any, // Populated bank data
+    ...customerOverrides,
+  });
+};
+
 export const customerToResponse = (customer: ICustomer): ICustomerResponse => {
   return {
     id: customer._id,

@@ -3,7 +3,7 @@ import app from '../../src/app';
 import jwt from 'jsonwebtoken';
 import { UserRole } from '../../src/types/user.type';
 import { CustomerService } from '../../src/services/customer.service';
-import { createMockCustomer } from '../mocks';
+import { createMockCustomer, createMockCustomerWithBank } from '../mocks';
 
 // Mock CustomerService
 jest.mock('../../src/services/customer.service');
@@ -222,6 +222,146 @@ describe('Customer Endpoints', () => {
 
       expect(response.body.success).toBe(false);
       expect(response.body.message).toBe('Database error');
+    });
+  });
+
+  describe('GET /api/customer/by-phone/:senderPhone', () => {
+    const validPhone = '+84912345678';
+    const encodedPhone = '%2B84912345678';
+
+    it('should get customer by phone with bank info successfully', async () => {
+      const mockCustomerWithBank = createMockCustomerWithBank({
+        _id: 'customer-with-bank-id',
+        phone: validPhone,
+        name: 'Nguyễn Văn A',
+      });
+
+      MockedCustomerService.prototype.getCustomerBySenderPhone.mockResolvedValue(
+        mockCustomerWithBank
+      );
+
+      const response = await request(app)
+        .get(`/api/customer/by-phone/${encodedPhone}`)
+        .set('Authorization', `Bearer ${userToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('Customer retrieved successfully');
+      expect(response.body.data.customer).toEqualWithDateStrings(mockCustomerWithBank);
+      expect(MockedCustomerService.prototype.getCustomerBySenderPhone).toHaveBeenCalledWith(
+        validPhone
+      );
+    });
+
+    it('should get customer by phone without bank info successfully', async () => {
+      const mockCustomer = createMockCustomer({
+        _id: 'customer-without-bank-id',
+        phone: validPhone,
+        name: 'Phạm Văn Đức',
+        bankId: undefined,
+      });
+
+      MockedCustomerService.prototype.getCustomerBySenderPhone.mockResolvedValue(mockCustomer);
+
+      const response = await request(app)
+        .get(`/api/customer/by-phone/${encodedPhone}`)
+        .set('Authorization', `Bearer ${userToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('Customer retrieved successfully');
+      expect(response.body.data.customer).toEqualWithDateStrings(mockCustomer);
+      expect(MockedCustomerService.prototype.getCustomerBySenderPhone).toHaveBeenCalledWith(
+        validPhone
+      );
+    });
+
+    it('should return 404 when customer not found', async () => {
+      MockedCustomerService.prototype.getCustomerBySenderPhone.mockResolvedValue(null);
+
+      const response = await request(app)
+        .get(`/api/customer/by-phone/${encodedPhone}`)
+        .set('Authorization', `Bearer ${userToken}`)
+        .expect(404);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Customer not found');
+      expect(MockedCustomerService.prototype.getCustomerBySenderPhone).toHaveBeenCalledWith(
+        validPhone
+      );
+    });
+
+    it('should return 400 for invalid phone format', async () => {
+      const invalidPhone = 'invalid-phone';
+
+      const response = await request(app)
+        .get(`/api/customer/by-phone/${invalidPhone}`)
+        .set('Authorization', `Bearer ${userToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Validation');
+    });
+
+    it('should return 401 for unauthenticated request', async () => {
+      const response = await request(app).get(`/api/customer/by-phone/${encodedPhone}`).expect(401);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Access token is required');
+    });
+
+    it('should allow access for USER role', async () => {
+      const mockCustomer = createMockCustomer({ phone: validPhone });
+      MockedCustomerService.prototype.getCustomerBySenderPhone.mockResolvedValue(mockCustomer);
+
+      const response = await request(app)
+        .get(`/api/customer/by-phone/${encodedPhone}`)
+        .set('Authorization', `Bearer ${userToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+    });
+
+    it('should allow access for ADMIN role', async () => {
+      const mockCustomer = createMockCustomer({ phone: validPhone });
+      MockedCustomerService.prototype.getCustomerBySenderPhone.mockResolvedValue(mockCustomer);
+
+      const response = await request(app)
+        .get(`/api/customer/by-phone/${encodedPhone}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+    });
+
+    it('should handle phone without plus sign', async () => {
+      const phoneWithoutPlus = '84912345678';
+      const mockCustomer = createMockCustomer({ phone: phoneWithoutPlus });
+      MockedCustomerService.prototype.getCustomerBySenderPhone.mockResolvedValue(mockCustomer);
+
+      const response = await request(app)
+        .get(`/api/customer/by-phone/${phoneWithoutPlus}`)
+        .set('Authorization', `Bearer ${userToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(MockedCustomerService.prototype.getCustomerBySenderPhone).toHaveBeenCalledWith(
+        phoneWithoutPlus
+      );
+    });
+
+    it('should return 500 when service throws error', async () => {
+      MockedCustomerService.prototype.getCustomerBySenderPhone.mockRejectedValue(
+        new Error('Database connection error')
+      );
+
+      const response = await request(app)
+        .get(`/api/customer/by-phone/${encodedPhone}`)
+        .set('Authorization', `Bearer ${userToken}`)
+        .expect(500);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Database connection error');
     });
   });
 });

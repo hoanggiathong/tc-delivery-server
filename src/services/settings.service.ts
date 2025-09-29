@@ -1,13 +1,14 @@
+import { AppError } from '@/middlewares/error.middleware';
 import {
-  Settings,
+  IProductConfig,
+  IProductConfigResponse,
   ISettings,
   IShippingRateConfig,
   IShippingRateConfigResponse,
+  Settings,
   SettingsMetadata,
-  IProductConfig,
-  IProductConfigResponse,
 } from '@/models/settings.model';
-import { AppError } from '@/middlewares/error.middleware';
+import { IBankConfig, IBankConfigResponse } from '@/types/setting.type';
 import mongoose from 'mongoose';
 
 export class SettingsService {
@@ -523,5 +524,43 @@ export class SettingsService {
       }
       throw new AppError('Failed to delete shipping rate', 500);
     }
+  }
+
+  async createBanksWithDefaults(banks: Partial<IBankConfig>[]): Promise<boolean> {
+    try {
+      const banksWithDefaults = banks.map(bank => ({
+        _id: bank._id || new mongoose.Types.ObjectId(),
+        name: bank.name || '',
+        image: bank.image || '',
+      })) as IBankConfig[];
+
+      return this.updateSetting('banks_list', banksWithDefaults);
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throw new AppError('Failed to create products with defaults', 500);
+    }
+  }
+
+  private async getBankListInternal(): Promise<IBankConfig[]> {
+    const banks = await this.getSetting<IBankConfig[]>('banks_list');
+    return banks || [];
+  }
+
+  async getBankList(): Promise<IBankConfigResponse[]> {
+    const banks = await this.getBankListInternal();
+    if (!banks || banks.length === 0) {
+      return [];
+    }
+
+    // Transform banks to include id field
+    const result = banks.map(bank => ({
+      id: bank._id?.toString() || '',
+      name: bank.name,
+      image: bank.image,
+    }));
+
+    return result;
   }
 }

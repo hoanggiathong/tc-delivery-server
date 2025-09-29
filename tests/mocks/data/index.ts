@@ -8,6 +8,8 @@
 export {
   // Customer mocks
   createMockCustomer,
+  createMockCustomerWithBank,
+  createMockCustomerBank,
   createMockCustomerResponse,
   createMockCustomerRequest,
   createMockCustomerList,

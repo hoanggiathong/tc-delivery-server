@@ -2,6 +2,8 @@ import QRCode from 'qrcode';
 import JsBarcode from 'jsbarcode';
 import { createCanvas } from 'canvas';
 import htmlPdf from 'html-pdf-node';
+import fs from 'fs';
+import path from 'path';
 import { IDelivery } from '@/models/delivery.model';
 import { ICustomer } from '@/models/customer.model';
 import { IRoute } from '@/models/route.model';
@@ -38,7 +40,7 @@ export interface DeliveryReceiptData {
     value: number;
     isFragile: boolean;
     homeDeliveryCost: number;
-    specialInstructions: string[];
+    notes: string;
   };
 
   // Payment info
@@ -68,6 +70,55 @@ export interface PopulatedDelivery
 
 export class DeliveryReceiptService {
   private static readonly COMPANY_NAME = 'TÔ CHÂU Group';
+
+  /**
+   * Load company logo SVG
+   */
+  private loadCompanyLogo(): string {
+    try {
+      const logoPath = path.join(__dirname, '../assets/images/gia-phuoc-express-logo-name.svg');
+      const logoSvg = fs.readFileSync(logoPath, 'utf-8');
+      return logoSvg;
+    } catch (error) {
+      // Logo file not found, using company name instead
+      return '';
+    }
+  }
+
+  /**
+   * Load checkbox checked SVG
+   */
+  private loadCheckboxSvg(): string {
+    try {
+      const checkboxPath = path.join(__dirname, '../assets/images/checkbox-checked.svg');
+      const checkboxSvg = fs.readFileSync(checkboxPath, 'utf-8');
+      return checkboxSvg;
+    } catch (error) {
+      // Checkbox SVG not found, using CSS fallback
+      return '';
+    }
+  }
+
+  /**
+   * Format phone number to xxxx.xxx.xxx format and convert +84 to 0
+   */
+  private formatPhoneNumber(phone: string): string {
+    // Remove all spaces and special characters except +
+    let cleanPhone = phone.replace(/[^\d+]/g, '');
+
+    // Convert +84 to 0
+    if (cleanPhone.startsWith('+84')) {
+      cleanPhone = '0' + cleanPhone.substring(3);
+    }
+
+    // Format to xxxx.xxx.xxx
+    if (cleanPhone.length === 10) {
+      return `${cleanPhone.substring(0, 4)}.${cleanPhone.substring(4, 7)}.${cleanPhone.substring(7)}`;
+    }
+
+    // If not standard length, return as is
+    return cleanPhone;
+  }
 
   /**
    * Generate barcode as base64 data URL
@@ -107,8 +158,8 @@ export class DeliveryReceiptService {
    * Transform delivery data for receipt
    */
   private transformDeliveryData(delivery: PopulatedDelivery): DeliveryReceiptData {
-    const currentDate = new Date();
-    const dateStr = `${currentDate.getDate().toString().padStart(2, '0')}/${(currentDate.getMonth() + 1).toString().padStart(2, '0')}/${currentDate.getFullYear().toString().slice(-2)}`;
+    const currentDate = delivery.updatedAt;
+    const displayDate = `${currentDate.getDate().toString().padStart(2, '0')}/${(currentDate.getMonth() + 1).toString().padStart(2, '0')}/${currentDate.getFullYear().toString().slice(-2)}`;
 
     // Calculate expiry date (current date + 7 days)
     const expiryDate = new Date(currentDate);
@@ -119,7 +170,7 @@ export class DeliveryReceiptService {
       receiptNumber: delivery.code,
       subCode: delivery.subCode,
       fullCode: delivery.fullCode,
-      date: dateStr,
+      date: displayDate,
       expiryDate: expiryDateStr,
       barcode: delivery.fullCode,
       trackingCode: delivery.fullCode,
@@ -127,12 +178,12 @@ export class DeliveryReceiptService {
       toRoute: delivery.toRoute,
       sender: {
         name: delivery.sender.name,
-        phone: delivery.sender.phone,
+        phone: this.formatPhoneNumber(delivery.sender.phone),
         address: delivery.fromRoute.address || '',
       },
       recipient: {
         name: delivery.receiver.name,
-        phone: delivery.receiver.phone,
+        phone: this.formatPhoneNumber(delivery.receiver.phone),
         address: delivery.homeDelivery || delivery.toRoute.name,
       },
       packageInfo: {
@@ -141,7 +192,7 @@ export class DeliveryReceiptService {
         value: delivery.itemValue,
         homeDeliveryCost: delivery.homeDeliveryCost,
         isFragile: delivery.notes?.toLowerCase().includes('dễ vỡ') || false,
-        specialInstructions: delivery.notes ? [delivery.notes] : [],
+        notes: delivery.notes || '',
       },
       payment: {
         shippingFee: delivery.cost + delivery.itemCost,
@@ -165,6 +216,8 @@ export class DeliveryReceiptService {
     qrCodeDataURL: string,
     qrCodeSubDataURL: string
   ): string {
+    const companyLogoSvg = this.loadCompanyLogo();
+    const checkboxSvg = this.loadCheckboxSvg();
     return `
     <!DOCTYPE html>
     <html lang="vi">
@@ -195,33 +248,136 @@ export class DeliveryReceiptService {
           padding: 3mm;
         }
 
+        .text-bold {
+          font-weight: bold;
+        }
+
+        .text-2xl {
+          font-size: 2rem;
+          font-weight: bold;
+        }
+
+        .text-3xl {
+          font-size: 3rem;
+          font-weight: bold;
+        }
+
+        .text-5xl {
+          font-size: 5rem;
+          font-weight: bold;
+        }
+
+        .text-6xl {
+          font-size: 6rem;
+          font-weight: bold;
+        }
+
+        .flex-row {
+          display: flex;
+          flex-direction: row;
+        }
+
+        .flex-col {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .center {
+          justify-content: center;
+          align-items: center;
+        }
+
+        .space-between {
+          justify-content: space-between;
+        }
+
+        .flex-1 {
+          flex: 1;
+        }
+
+        .flex-2 {
+          flex: 2;
+        }
+
+        .flex-3 {
+          flex: 3;
+        }
+
+        .mr-2 {
+          margin-right: 2mm;
+        }
+
+        .mr-3 {
+          margin-right: 3mm;
+        }
+
+        .ml-2 {
+          margin-left: 2mm;
+        }
+
+        .ml-3 {
+          margin-left: 3mm;
+        }
+
+        .gap-1 {
+          gap: 1mm;
+        }
+
+        .gap-2 {
+          gap: 2mm;
+        }
+
+        .mt-auto {
+          margin-top: auto;
+        }
+
+        .mt-0 {
+          margin-top: 0;
+        }
+
+        .mb-0 {
+          margin-bottom: 0;
+        }
+
+        .checkbox {
+          display: inline-block;
+          width: 12px;
+          height: 12px;
+          border: 1px solid #000;
+          margin-right: 5px;
+          position: relative;
+          vertical-align: middle;
+        }
+
+        .checkbox.checked::after {
+          content: '';
+          position: absolute;
+          left: 3px;
+          top: 0px;
+          width: 3px;
+          height: 6px;
+          border: solid #000;
+          border-width: 0 2px 2px 0;
+          transform: rotate(45deg);
+        }
+
+        .info-row svg {
+          width: 12px;
+          height: 12px;
+          margin-right: 5px;
+          vertical-align: middle;
+        }
+
         .header {
           display: flex;
           justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 2mm;
-          padding-bottom: 1mm;
-          font-size: 13px;
-        }
-
-        .header-left {
-          flex: 1;
-        }
-
-        .header-center {
-          flex: 1;
-          text-align: center;
-        }
-
-        .header-right {
-          flex: 1;
-          text-align: right;
+          align-items: stretch;
+          font-size: 1.1rem;
         }
 
         .receipt-number {
-          font-size: 32px;
+          font-size: 8rem;
           font-weight: bold;
-          margin: 2mm 0;
         }
 
         .company-name {
@@ -230,13 +386,21 @@ export class DeliveryReceiptService {
           margin-bottom: 1mm;
         }
 
+        .company-logo svg {
+          max-height: 16mm;
+          max-width: 40mm;
+          height: auto;
+          width: auto;
+        }
+
         .barcode {
-          margin: 2mm 0;
+          margin: 0;
+          padding: 0;
         }
 
         .barcode img {
-          max-width: 100%;
-          height: auto;
+          width: 40mm;
+          height: 20mm;
         }
 
         .customer-section {
@@ -288,13 +452,13 @@ export class DeliveryReceiptService {
         }
 
         .qr-code img {
-          width: 40px;
-          height: 40px;
+          width: 50px;
+          height: 50px;
         }
 
         .divider {
           border-top: 2px dashed #000;
-          margin: 3mm 0;
+          margin: 2mm 0;
           position: relative;
         }
 
@@ -401,29 +565,37 @@ export class DeliveryReceiptService {
       <div class="receipt">
         <!-- Header Section -->
         <div class="header">
-          <div class="header-left">
-            <div>Người nhận: ${data.recipient.name}</div>
+          <div class="header-left flex-col flex-1 gap-2">
+            <div>Người nhận:</div>
+            <div class="text-bold">${data.recipient.name}</div>
             ${data.payment.collectCost > 0 ? `<div>Thu hộ: <span class="amount">${data.payment.collectCost.toLocaleString('vi-VN')}</span> đồng</div>` : ''}
-            <div>ĐT: ${data.recipient.phone}</div>
-            <div>Địa chỉ: ${data.recipient.address}</div>
+            <div>ĐT: <span class="text-bold">${data.recipient.phone}</span></div>
+            <div><span class="text-bold">${data.recipient.address}</span></div>
           </div>
 
-          <div class="header-center">
-            <div class="receipt-number">${data.receiptNumber.slice(-4)}</div>
-            <div class="barcode">
+          <div class="flex-col flex-2 center" style="gap: 0;">
+            <div class="barcode flex-row center" style="margin: 0; padding: 0;">
+              <span class="text-2xl mr-2">${data.date}</span>
               <img src="${barcodeDataURL}" alt="Barcode">
+              <span class="text-2xl">SL: ${data.packageInfo.quantity}</span>
             </div>
+            <div class="receipt-number" style="height:8rem; margin: -0.5rem; margin-top: -1.5rem;">${data.receiptNumber.slice(-4)}</div>
           </div>
 
-          <div class="header-right">
-            <div>SL: ${data.packageInfo.quantity}</div>
-            <div>GTN: <span class="amount">${data.packageInfo.homeDeliveryCost.toLocaleString('vi-VN')} đồng</span></div>
-            <div>Nợ cước: <span class="amount">${data.payment.total.toLocaleString('vi-VN')} đồng</span></div>
-            <div>${data.fromRoute.name}-${data.toRoute.name}</div>
-            <div>Tr.G:<span class="amount">${data.packageInfo.value.toLocaleString('vi-VN')} đồng</span></div>
-            <div class="qr-code">
-              <h3>${data.subCode}</h3>
-              <img src="${qrCodeSubDataURL}" alt="QR Code Sub Code">
+          <div class="header-right flex-col flex-1 gap-2">
+            <div class="flex-col flex-1 gap-2">
+              ${data.packageInfo.homeDeliveryCost > 0 ? `<div><span class="text-bold">GTN:</span> <span class="amount">${data.packageInfo.homeDeliveryCost.toLocaleString('vi-VN')} đồng</span></div>` : ''}
+              ${data.payment.total > 0 ? `<div><span class="text-bold">Nợ cước:</span> <span class="amount">${data.payment.total.toLocaleString('vi-VN')} đồng</span></div>` : ''}
+            </div>
+            <div class="flex-col flex-1 gap-2">
+              <div class="text-bold">${data.fromRoute.name} - ${data.toRoute.name}</div>
+              ${data.packageInfo.value > 0 ? `<div><span class="text-bold">Tr.G:</span> <span class="amount">${data.packageInfo.value.toLocaleString('vi-VN')} đồng</span></div>` : ''}
+            </div>
+            <div class="flex-row mt-auto" style="align-items: end;">
+              <div class="qr-code">
+                <h3>${data.subCode}</h3>
+                <img src="${qrCodeSubDataURL}" alt="QR Code Sub Code">
+              </div>
             </div>
           </div>
         </div>
@@ -434,9 +606,9 @@ export class DeliveryReceiptService {
         <!-- Company Info -->
         <div class="header">
           <div class="header-left">
-            <div class="company-name">${data.company.name}</div>
+            ${companyLogoSvg ? `<div class="company-logo">${companyLogoSvg}</div>` : `<div class="company-name">${data.company.name}</div>`}
           </div>
-          <div class="header-center">
+          <div class="header-center flex-col flex-2 center">
             <div style="font-size: 18px; font-weight: bold;">BIÊN NHẬN GỬI HÀNG</div>
             <div>(Liên 2: Giao cho khách hàng)</div>
           </div>
@@ -451,25 +623,32 @@ export class DeliveryReceiptService {
         <!-- Customer Information -->
         <div class="customer-section">
           <div class="sender">
-            <div class="section-title">Người gửi: ${data.sender.name}</div>
-            <div class="info-row">Điện thoại: ${data.sender.phone}</div>
-            <div class="info-row">Địa chỉ: ${data.sender.address}</div>
+            <div>Người gửi: <span class="text-bold">${data.sender.name}</span></div>
+            <div class="info-row">Điện thoại: <span class="text-bold">${data.sender.phone}</span></div>
+            <div class="info-row">Địa chỉ: <span class="text-bold">${data.sender.address}</span></div>
           </div>
 
           <div class="recipient">
-            <div class="section-title">Người nhận: ${data.recipient.name}</div>
-            <div class="info-row">Điện thoại: ${data.recipient.phone}</div>
-            <div class="info-row">Địa chỉ: ${data.recipient.address}</div>
+            <div>Người nhận: <span class="text-bold">${data.recipient.name}</span></div>
+            <div class="info-row">Điện thoại: <span class="text-bold">${data.recipient.phone}</span></div>
+            <div class="info-row">Địa chỉ: <span class="text-bold">${data.recipient.address}</span></div>
           </div>
         </div>
 
         <!-- Package Information -->
         <div class="package-info">
-          <div class="info-row">Tên hàng: ${data.packageInfo.description}</div>
-          <div class="info-row">Số lượng: ${data.packageInfo.quantity}</div>
-          <div class="info-row">Nợ cước: <span class="amount">${data.payment.total.toLocaleString('vi-VN')} đồng</span></div>
-          <div class="info-row">Hàng có khai giá trị: <span class="amount">${data.packageInfo.value.toLocaleString('vi-VN')} đồng</span></div>
-          <div class="info-row">Ghi chú: ${data.sender.address}</div>
+          <div class="info-row">Tên hàng: <span class="text-bold">${data.packageInfo.description}</span></div>
+          <div class="info-row">Số lượng: <span class="text-bold">${data.packageInfo.quantity}</span></div>
+          ${data.payment.total > 0 ? `<div class="info-row">Nợ cước: <span class="amount">${data.payment.total.toLocaleString('vi-VN')} đồng</span></div>` : ''}
+          <div class="info-row">
+          ${checkboxSvg ? checkboxSvg : '<span class="checkbox checked"></span>'}
+          ${
+            data.packageInfo.value > 0
+              ? `Hàng kê khai giá trị: <span class="amount">
+          ${data.packageInfo.value.toLocaleString('vi-VN')} đồng</span> <span class="text-bold ml-3">(Mang đúng CMND)</span>`
+              : 'Hàng không kê khai giá trị'
+          }</div>
+          ${data.packageInfo.notes ? `<div class="info-row">Ghi chú: <span class="text-bold">${data.packageInfo.notes}</span></div>` : ''}
         </div>
 
         <!-- Payment Information -->
@@ -525,7 +704,7 @@ export class DeliveryReceiptService {
 
       // Validate that we have valid data URLs
       if (!barcodeDataURL.startsWith('data:image/') || !qrCodeDataURL.startsWith('data:image/')) {
-        console.warn('Invalid barcode or QR code data URL, using fallbacks');
+        // Invalid barcode or QR code data URL, using fallbacks
       }
 
       // Generate HTML
@@ -552,24 +731,38 @@ export class DeliveryReceiptService {
           bottom: '10mm',
           left: '10mm',
         },
-        printBackground: true,
+        printBackground: false,
         displayHeaderFooter: false,
+        headless: true,
+        dumpio: false,
       };
 
       const file = { content: html };
 
+      // Add dumpio: false to explicitly prevent stdout/stderr piping from Puppeteer
+      const optionsWithDumpio = {
+        ...options,
+        dumpio: false,
+        pipe: false,
+        // Add environment variables to suppress Chrome output
+        env: {
+          ...process.env,
+          PUPPETEER_DISABLE_HEADLESS_WARNING: 'true',
+          CHROME_LOG_FILE: '/dev/null',
+        },
+      };
+
       return new Promise<Buffer>((resolve, reject) => {
-        htmlPdf.generatePdf(file, options, (err: any, buffer: Buffer) => {
+        htmlPdf.generatePdf(file, optionsWithDumpio, (err: any, buffer: Buffer) => {
           if (err) {
             reject(err);
           } else {
-            console.log('PDF generated successfully, size:', buffer.length);
             resolve(buffer);
           }
         });
       });
     } catch (error) {
-      console.error('PDF generation error:', error);
+      // PDF generation error logged internally
       throw new Error(`Failed to generate PDF receipt: ${error}`);
     }
   }
@@ -580,7 +773,7 @@ export class DeliveryReceiptService {
   public async generateReceiptHTMLPreview(delivery: PopulatedDelivery): Promise<string> {
     try {
       const receiptData = this.transformDeliveryData(delivery);
-      const barcodeDataURL = await this.generateBarcode(delivery.fullCode);
+      const barcodeDataURL = await this.generateBarcode(delivery.subCode);
       const qrCodeDataURL = await this.generateQRCode(delivery.fullCode);
       const qrCodeSubDataURL = await this.generateQRCode(delivery.subCode);
 

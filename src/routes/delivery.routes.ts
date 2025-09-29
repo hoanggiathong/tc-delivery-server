@@ -12,6 +12,7 @@ import {
   deliveryCostReportSchema,
   deliveryReceiptSchema,
   deliveryFullCodeSchema,
+  deleteDeliveryByFullCodeSchema,
 } from '@/schemas/delivery.schema';
 
 const router = Router();
@@ -258,6 +259,14 @@ router.put(
   validate(updateDeliverySchema),
   deliveryController.updateDelivery
 );
+
+// Delete delivery by fullCode with password verification
+router.delete(
+  '/by-fullcode/:fullCode',
+  validate(deleteDeliveryByFullCodeSchema),
+  deliveryController.deleteDeliveryByFullCode
+);
+
 router.delete('/:id', validate(deliveryParamsSchema), deliveryController.deleteDelivery);
 
 export default router;

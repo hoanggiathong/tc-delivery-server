@@ -1,17 +1,18 @@
-import { Response } from 'express';
-import { SettingsService } from '@/services/settings.service';
 import { AppError } from '@/middlewares/error.middleware';
 import {
   CalculateShippingFeeInput,
-  UpdateShippingRatesInput,
-  UpdateProductListInput,
-  DeleteShippingRateInput,
-  UpdateShippingRateByIdInput,
   DeleteProductInput,
+  DeleteShippingRateInput,
+  UpdateBankListInput,
   UpdateProductByIdInput,
+  UpdateProductListInput,
+  UpdateShippingRateByIdInput,
+  UpdateShippingRatesInput,
 } from '@/schemas/settings.schema';
-import { AuthRequest, ApiResponse } from '@/types';
+import { SettingsService } from '@/services/settings.service';
+import { ApiResponse, AuthRequest } from '@/types';
 import Logger from '@/utils/logger';
+import { Response } from 'express';
 
 export class SettingsController {
   private settingsService: SettingsService;
@@ -803,6 +804,88 @@ export class SettingsController {
       };
 
       res.status(statusCode).json(response);
+    }
+  };
+
+  getBankList = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const banks = await this.settingsService.getBankList();
+
+      Logger.info('Bank list retrieved successfully', {
+        userId: req.user.userId,
+      });
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Bank list retrieved successfully',
+        data: banks,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Failed to get bank list', {
+        error: error instanceof Error ? error.message : error,
+        userId: req.user?.userId,
+      });
+
+      const message = error instanceof Error ? error.message : 'Failed to get bank list';
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(500).json(response);
+    }
+  };
+
+  createBanks = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { banks }: UpdateBankListInput['body'] = req.body;
+      const success = await this.settingsService.createBanksWithDefaults(banks);
+
+      Logger.info('Banks creation attempted', {
+        success,
+        userId: req.user.userId,
+      });
+
+      const response: ApiResponse = {
+        success,
+        message: success ? 'Banks created successfully' : 'Failed to create Banks',
+      };
+
+      res.status(201).json(response);
+    } catch (error) {
+      Logger.error('Failed to create banks', {
+        error: error instanceof Error ? error.message : error,
+        userId: req.user?.userId,
+        requestBody: req.body,
+      });
+
+      const message = error instanceof Error ? error.message : 'Failed to create banks';
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(400).json(response);
     }
   };
 }

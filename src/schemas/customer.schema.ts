@@ -106,6 +106,16 @@ export const deleteImageSchema = z.object({
   }),
 });
 
+export const getCustomerByPhoneSchema = z.object({
+  params: z.object({
+    senderPhone: z
+      .string()
+      .min(1, 'Sender phone is required')
+      .regex(/^\+?[1-9]\d{1,14}$/, 'Please enter a valid phone number')
+      .trim(),
+  }),
+});
+
 export const updateCustomerBankSchema = z.object({
   body: z.object({
     phone: z
@@ -150,4 +160,7 @@ export const updateCustomerBankSchema = z.object({
 export type CreateCustomerRequest = z.infer<typeof createCustomerSchema>['body'];
 export type UpdateCustomerRequest = z.infer<typeof updateCustomerSchema>['body'];
 export type UploadImageRequest = z.infer<typeof uploadImageSchema>['body'];
+export type GetCustomerByPhoneRequest = {
+  params: z.infer<typeof getCustomerByPhoneSchema>['params'];
+};
 export type UpdateCustomerBankRequest = z.infer<typeof updateCustomerBankSchema>['body'];

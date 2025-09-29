@@ -92,6 +92,7 @@ export class MoneyDeliveryService {
         id: populated.fromRoute._id,
         code: populated.fromRoute.code,
         name: populated.fromRoute.name,
+        address: populated.fromRoute.address,
         createdAt: populated.fromRoute.createdAt,
         updatedAt: populated.fromRoute.updatedAt,
       },
@@ -99,6 +100,7 @@ export class MoneyDeliveryService {
         id: populated.toRoute._id,
         code: populated.toRoute.code,
         name: populated.toRoute.name,
+        address: populated.toRoute.address,
         createdAt: populated.toRoute.createdAt,
         updatedAt: populated.toRoute.updatedAt,
       },
@@ -147,6 +149,7 @@ export class MoneyDeliveryService {
         id: moneyDelivery.fromRoute._id,
         code: moneyDelivery.fromRoute.code,
         name: moneyDelivery.fromRoute.name,
+        address: moneyDelivery.fromRoute.address,
         createdAt: moneyDelivery.fromRoute.createdAt,
         updatedAt: moneyDelivery.fromRoute.updatedAt,
       },
@@ -154,6 +157,7 @@ export class MoneyDeliveryService {
         id: moneyDelivery.toRoute._id,
         code: moneyDelivery.toRoute.code,
         name: moneyDelivery.toRoute.name,
+        address: moneyDelivery.toRoute.address,
         createdAt: moneyDelivery.toRoute.createdAt,
         updatedAt: moneyDelivery.toRoute.updatedAt,
       },
@@ -354,8 +358,8 @@ export class MoneyDeliveryService {
         .populate([
           { path: 'sender', select: '_id name phone createdAt updatedAt' },
           { path: 'receiver', select: '_id name phone createdAt updatedAt' },
-          { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
-          { path: 'toRoute', select: '_id code name createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
           { path: 'createdByUser', select: '_id username' },
         ])
         .lean();
@@ -381,8 +385,8 @@ export class MoneyDeliveryService {
         .populate([
           { path: 'sender', select: '_id name phone createdAt updatedAt' },
           { path: 'receiver', select: '_id name phone createdAt updatedAt' },
-          { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
-          { path: 'toRoute', select: '_id code name createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
           { path: 'createdByUser', select: '_id username' },
         ])
         .sort({ createdAt: -1 })
@@ -445,6 +449,7 @@ export class MoneyDeliveryService {
         id: toRoute._id,
         code: toRoute.code,
         name: toRoute.name,
+        address: toRoute.address,
         createdAt: toRoute.createdAt,
         updatedAt: toRoute.updatedAt,
       },
@@ -452,6 +457,7 @@ export class MoneyDeliveryService {
         id: fromRoute._id,
         code: fromRoute.code,
         name: fromRoute.name,
+        address: fromRoute.address,
         createdAt: fromRoute.createdAt,
         updatedAt: fromRoute.updatedAt,
       },
@@ -487,8 +493,8 @@ export class MoneyDeliveryService {
         .populate([
           { path: 'sender', select: '_id name phone createdAt updatedAt' },
           { path: 'receiver', select: '_id name phone createdAt updatedAt' },
-          { path: 'fromRoute', select: '_id code name createdAt updatedAt' },
-          { path: 'toRoute', select: '_id code name createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
           { path: 'createdByUser', select: '_id username' },
         ])
         .lean();
@@ -719,6 +725,7 @@ export class MoneyDeliveryService {
                     id: { $toString: '$toRoute._id' },
                     code: '$toRoute.code',
                     name: '$toRoute.name',
+                    address: '$toRoute.address',
                   },
                   sendMoneyAmount: 1,
                   sendCost: 1,
@@ -809,7 +816,7 @@ export class MoneyDeliveryService {
       const selectedRouteId = userRouteInfo.selectedRouteId;
 
       // Get route information
-      const route = await Route.findById(selectedRouteId).select('_id code name').lean();
+      const route = await Route.findById(selectedRouteId).select('_id code name address').lean();
       if (!route) {
         throw new Error('Selected route not found');
       }
@@ -935,6 +942,7 @@ export class MoneyDeliveryService {
                     id: { $toString: '$toRoute._id' },
                     code: '$toRoute.code',
                     name: '$toRoute.name',
+                    address: '$toRoute.address',
                   },
                   sendMoneyAmount: 1,
                   sendCost: 1,
@@ -1032,6 +1040,7 @@ export class MoneyDeliveryService {
             id: route._id.toString(),
             code: route.code,
             name: route.name,
+            address: route.address || '',
           },
         },
       };
