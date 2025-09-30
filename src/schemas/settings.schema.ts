@@ -18,6 +18,7 @@ const productSchema = z.object({
 
 const bankSchema = z.object({
   name: z.string().min(1, 'Bank name is required'),
+  code: z.string().trim(),
   image: z.string().trim().optional(),
 });
 
@@ -226,8 +227,8 @@ export const updateBankListSchema = z.object({
       .array(bankSchema)
       .min(1, 'At least one bank is required')
       .refine(
-        products => {
-          const names = products.map(product => product.name.toLowerCase().trim());
+        banks => {
+          const names = banks.map(bank => bank.name.toLowerCase().trim());
           const uniqueNames = new Set(names);
           return names.length === uniqueNames.size;
         },

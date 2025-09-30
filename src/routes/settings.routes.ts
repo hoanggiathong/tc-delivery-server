@@ -603,16 +603,23 @@ router.post(
  *                   properties:
  *                     name:
  *                       type: string
- *                       example: "Vietcombank (VCB)"
+ *                       example: "Ngân hàng TMCP Á Châu"
+ *                     code:
+ *                       type: string
+ *                       example: "ACB"
  *           examples:
  *             createProducts:
  *               summary: Create products example
  *               value:
  *                 banks:
- *                   - name: "Vietcombank (VCB)"
- *                   - name: "VietinBank (CTG)"
- *                   - name: "VPBank (VPB)"
- *                   - name: "Techcombank (TCB)"
+ *                   - name: "Ngân hàng TMCP Phát triển TP. Hồ Chí Minh"
+ *                     code: "HDBank"
+ *                   - name: "Ngân hàng TMCP Á Châu"
+ *                     code: "ACB"
+ *                   - name: "Ngân hàng Nông nghiệp và Phát triển Nông thôn Việt Nam"
+ *                     code: "AGRIBANK"
+ *                   - name: "Ngân hàng TMCP Đầu tư và Phát triển Việt Nam"
+ *                     code: "BIDV"
  *     responses:
  *       201:
  *         description: Banks created successfully

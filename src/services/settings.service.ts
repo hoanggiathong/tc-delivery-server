@@ -531,6 +531,7 @@ export class SettingsService {
       const banksWithDefaults = banks.map(bank => ({
         _id: bank._id || new mongoose.Types.ObjectId(),
         name: bank.name || '',
+        code: bank.code || '',
         image: bank.image || '',
       })) as IBankConfig[];
 
@@ -558,6 +559,7 @@ export class SettingsService {
     const result = banks.map(bank => ({
       id: bank._id?.toString() || '',
       name: bank.name,
+      code: bank.code,
       image: bank.image,
     }));
 
