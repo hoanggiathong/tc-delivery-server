@@ -1,8 +1,8 @@
-import { RemovedDelivery } from '@/models/removed-delivery.model';
+import { RemovedDelivery } from '@/models/delivery-removed.model';
 import { Delivery } from '@/models/delivery.model';
 import { User } from '@/models/user.model';
 import { Types } from 'mongoose';
-import { IDeleteDeliveryResponse } from '@/types/removed-delivery.type';
+import { IDeleteDeliveryResponse } from '@/types/delivery-removed.type';
 import Logger from '@/utils/logger';
 
 export class RemovedDeliveryService {

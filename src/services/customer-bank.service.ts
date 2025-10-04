@@ -1,4 +1,4 @@
-import { CustomerBank, ICustomerBank } from '@/models/customerBank.model';
+import { CustomerBank, ICustomerBank } from '@/models/customer-bank.model';
 import Logger from '@/utils/logger';
 
 export interface BankCreateData {
