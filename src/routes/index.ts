@@ -10,6 +10,7 @@ import routeRoutes from './route.routes';
 import settingsRoutes from './settings.routes';
 import testRoutes from './test.routes';
 import userRouteRoutes from './user-route.routes';
+import userRoutes from './user.route';
 
 const router = Router();
 
@@ -20,6 +21,7 @@ router.use('/delivery', deliveryRoutes);
 router.use('/money-deliveries', moneyDeliveryRoutes);
 router.use('/route', routeRoutes);
 router.use('/user-route', userRouteRoutes);
+router.use('/user', userRoutes);
 router.use('/settings', settingsRoutes);
 router.use('/draft-deliveries', draftDeliveryRoutes);
 router.use('/debt-management', debtManagementRoutes);

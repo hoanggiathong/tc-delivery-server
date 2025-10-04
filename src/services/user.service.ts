@@ -1,6 +1,12 @@
-import { User } from '@/models/user.model';
+import { AppError } from '@/middlewares/error.middleware';
 import { Route } from '@/models/route.model';
-import { Types } from 'mongoose';
+import { User } from '@/models/user.model';
+import {
+  IAdditionalInformationProduct,
+  IAdditionalInformationProductInput,
+  IAdditionalInformationProductResponse,
+} from '@/types/user.type';
+import mongoose, { Types } from 'mongoose';
 
 export interface IUserSelectedRouteInfo {
   userId: string;
@@ -83,5 +89,55 @@ export class UserService {
     }
 
     return user.selectedRouteId;
+  }
+
+  async updateAdditionalInformationProductWithDefaults(
+    userId: string,
+    listAdditionalInformationProduct: IAdditionalInformationProductInput[]
+  ): Promise<boolean> {
+    try {
+      const additionalInformationProductWithDefaults: IAdditionalInformationProduct[] =
+        listAdditionalInformationProduct
+          .map(item => ({
+            _id: new mongoose.Types.ObjectId(),
+            content: item.content || '',
+            position: item.position,
+          }))
+          .sort((a, b) => a.position - b.position);
+
+      const result = await User.findOneAndUpdate(
+        { _id: userId },
+        {
+          additionalInformationProductConfig: additionalInformationProductWithDefaults,
+          updatedAt: new Date(),
+        },
+        { upsert: true, new: true, runValidators: true }
+      );
+      return !!result;
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throw new AppError('Failed to update additional information product with defaults', 500);
+    }
+  }
+
+  async getListAdditionalInformationProductByAccount(
+    userId: string
+  ): Promise<IAdditionalInformationProductResponse[]> {
+    const user = await User.findById(userId);
+
+    const additionalInformationProductList = user?.additionalInformationProductConfig;
+    if (!additionalInformationProductList || additionalInformationProductList.length === 0) {
+      return [];
+    }
+
+    const result = additionalInformationProductList.map((item: IAdditionalInformationProduct) => ({
+      id: item._id?.toString() || '',
+      content: item.content,
+      position: item.position,
+    }));
+
+    return result;
   }
 }

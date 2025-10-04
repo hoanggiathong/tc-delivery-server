@@ -1,6 +1,6 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import { IAdditionalInformationProduct, UserRole } from '@/types/user.type';
 import bcrypt from 'bcryptjs';
-import { UserRole } from '@/types/user.type';
+import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IUser extends Document {
   _id: string;
@@ -10,6 +10,7 @@ export interface IUser extends Document {
   selectedRouteId?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
+  additionalInformationProductConfig: IAdditionalInformationProduct[];
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -41,6 +42,11 @@ const userSchema = new Schema<IUser>(
       ref: 'Route',
       required: false,
       default: null,
+    },
+    additionalInformationProductConfig: {
+      type: Schema.Types.Mixed,
+      required: false,
+      default: [],
     },
   },
   {
