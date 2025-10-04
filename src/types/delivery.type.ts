@@ -17,6 +17,7 @@ export interface IDeliveryResponse extends BaseEntity {
   fromRoute: IRouteResponse;
   toRoute: IRouteResponse;
   name: string;
+  nameProductAndAdditionalInformation?: string;
   quantity: number;
   cost: number;
   homeDelivery?: string;
@@ -50,6 +51,7 @@ export interface IDeliveryCreateRequest {
   fromRouteId: string;
   toRouteId: string;
   name: string;
+  nameProductAndAdditionalInformation?: string;
   quantity?: number;
   cost: number;
   homeDelivery?: string;
@@ -123,6 +125,7 @@ export interface IDeliveryWithPopulatedRefs {
   fromRoute: IRoute;
   toRoute: IRoute;
   name: string;
+  nameProductAndAdditionalInformation?: string;
   quantity: number;
   cost: number;
   homeDelivery?: string;
@@ -224,6 +227,7 @@ export interface IDeliveryLeanPopulated {
     updatedAt: Date;
   };
   name: string;
+  nameProductAndAdditionalInformation?: string;
   cost: number;
   homeDelivery?: string;
   homeDeliveryCost: number;
@@ -327,7 +331,6 @@ export interface IDeliveryReportItem {
   collectForCustomer: number;
   collectForCustomerCost: number;
   totalCost: number;
-
   paymentType?: 'paid' | 'debt' | 'free';
   notes?: string;
 }
@@ -378,6 +381,7 @@ export interface ITodayDeliveryItem {
   fullCode?: string;
   subCode?: string;
   name: string;
+  nameProductAndAdditionalInformation?: string;
   quantity?: number;
   sender: {
     name: string;
