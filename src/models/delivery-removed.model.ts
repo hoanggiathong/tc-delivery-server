@@ -235,6 +235,7 @@ const removedDeliverySchema = new Schema<IRemovedDelivery>(
   },
   {
     timestamps: false, // We manage our own timestamps
+    collection: 'removedDeliveries',
     toJSON: {
       transform: function (_doc, ret) {
         const { _id, __v, ...rest } = ret;

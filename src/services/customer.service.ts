@@ -1,21 +1,24 @@
-import { Types } from 'mongoose';
-import fs from 'fs';
-import path from 'path';
-import QRCode from 'qrcode';
 import { Customer, ICustomer, ICustomerImage } from '@/models/customer.model';
 import { CreateCustomerRequest, UpdateCustomerRequest } from '@/schemas/customer.schema';
+import { BankCreateData, CustomerBankService } from '@/services/customer-bank.service';
 import { UserService } from '@/services/user.service';
-import { CustomerBankService, BankCreateData } from '@/services/customerBank.service';
-import Logger from '@/utils/logger';
 import { generateVersionedUrl } from '@/utils/image-url.utils';
+import Logger from '@/utils/logger';
+import fs from 'fs';
+import { Types } from 'mongoose';
+import path from 'path';
+import QRCode from 'qrcode';
+import { CustomerBankRemovedService } from './customer-bank-removed.service';
 
 export class CustomerService {
   private userService: UserService;
   private customerBankService: CustomerBankService;
+  private customerBankRemovedService: CustomerBankRemovedService;
 
   constructor() {
     this.userService = new UserService();
     this.customerBankService = new CustomerBankService();
+    this.customerBankRemovedService = new CustomerBankRemovedService();
   }
 
   /**
@@ -772,6 +775,49 @@ export class CustomerService {
         phone,
         type,
         routeId,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * delete images of customer and bank info
+   */
+  async deleteImagesAndBankInfo(userId: string, customerId: string): Promise<boolean> {
+    try {
+      const customer = await Customer.findOne({ _id: customerId });
+      if (!customer) {
+        throw new Error('Customer not found');
+      }
+
+      if (customer.bankId) {
+        // move customer bank to customer bank removed
+        await this.customerBankRemovedService.moveCustomerBankToCustomerBankRemoved(
+          userId,
+          customerId,
+          customer.bankId.toString()
+        );
+
+        // delete images
+        const listImages = customer.images;
+        for (const image of listImages) {
+          // Delete physical file
+          const imagePath = path.join('public', image.url);
+          if (fs.existsSync(imagePath)) {
+            fs.unlinkSync(imagePath);
+          }
+
+          // update customer images
+          await Customer.findByIdAndUpdate(customerId, { images: [], bankId: null });
+        }
+      }
+
+      return true;
+    } catch (error) {
+      Logger.error('Failed to delete images and bank info', {
+        error: error instanceof Error ? error.message : error,
+        userId,
+        customerId,
       });
       throw error;
     }

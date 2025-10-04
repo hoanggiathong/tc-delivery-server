@@ -1,5 +1,5 @@
 import { ICustomer } from '@/models/customer.model';
-import { ICustomerBank } from '@/models/customerBank.model';
+import { ICustomerBank } from '@/models/customer-bank.model';
 import { ICustomerResponse } from '@/types/customer.type';
 import { Types } from 'mongoose';
 

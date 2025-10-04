@@ -714,4 +714,38 @@ export class CustomerController {
       });
     }
   };
+
+  /**
+   * Delete customer images and bank info
+   */
+  deleteImagesAndBankInfo = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+
+      const id = req.params.id;
+
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'User not authenticated',
+        });
+        return;
+      }
+
+      await this.customerService.deleteImagesAndBankInfo(userId, id);
+
+      res.status(200).json({
+        success: true,
+        message: 'Image deleted successfully',
+      });
+    } catch (error) {
+      console.error('Delete images and bank info error:', error);
+      const statusCode =
+        error instanceof Error && error.message === 'Customer not found' ? 404 : 500;
+      res.status(statusCode).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to delete images and bank info',
+      });
+    }
+  };
 }
