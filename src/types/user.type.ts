@@ -1,4 +1,4 @@
-import { Document } from 'mongoose';
+import mongoose, { Document } from 'mongoose';
 
 // Role enum
 export enum UserRole {
@@ -157,3 +157,20 @@ export const canCreateRole = (userRole: UserRole, targetRole: UserRole): boolean
 export const hasHigherOrEqualRole = (userRole: UserRole, targetRole: UserRole): boolean => {
   return ROLE_HIERARCHY[userRole] >= ROLE_HIERARCHY[targetRole];
 };
+
+export interface IAdditionalInformationProductInput {
+  content: string;
+  position: number;
+}
+
+export interface IAdditionalInformationProduct {
+  _id?: mongoose.Types.ObjectId;
+  content: string;
+  position: number;
+}
+
+export interface IAdditionalInformationProductResponse {
+  id: string;
+  content: string;
+  position: number;
+}
