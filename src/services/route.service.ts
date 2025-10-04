@@ -25,6 +25,7 @@ export class RouteService {
       id: route._id.toString(),
       code: route.code,
       name: route.name,
+      surcharge: route.surcharge,
       address: route.address,
       createdAt: route.createdAt,
       updatedAt: route.updatedAt,
