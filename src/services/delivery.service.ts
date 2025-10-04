@@ -295,6 +295,7 @@ export class DeliveryService {
       fromRoute: selectedRouteId,
       toRoute: data.toRouteId,
       name: data.name,
+      nameProductAndAdditionalInformation: data.nameProductAndAdditionalInformation,
       quantity: data.quantity || 1,
       cost: data.cost,
       homeDelivery: data.homeDelivery,
