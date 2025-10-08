@@ -39,9 +39,9 @@ export class UserRouteService {
    */
   private async transformUserRouteToResponse(userRoute: IUserRoute): Promise<IUserRouteResponse> {
     const populated = await userRoute.populate([
-      { path: 'userId', select: '_id username role' },
+      { path: 'userId', select: '_id username name role' },
       { path: 'routeId', select: '_id code name' },
-      { path: 'assignedBy', select: '_id username role' },
+      { path: 'assignedBy', select: '_id username name role' },
     ]);
 
     const populatedUserRoute = populated as any;
@@ -54,6 +54,7 @@ export class UserRouteService {
       user: {
         id: populatedUserRoute.userId._id,
         username: populatedUserRoute.userId.username,
+        name: populatedUserRoute.userId.name,
         role: populatedUserRoute.userId.role,
         createdAt: populatedUserRoute.userId.createdAt,
         updatedAt: populatedUserRoute.userId.updatedAt,
@@ -68,6 +69,7 @@ export class UserRouteService {
       assignedByUser: {
         id: populatedUserRoute.assignedBy._id,
         username: populatedUserRoute.assignedBy.username,
+        name: populatedUserRoute.assignedBy.name,
         role: populatedUserRoute.assignedBy.role,
         createdAt: populatedUserRoute.assignedBy.createdAt,
         updatedAt: populatedUserRoute.assignedBy.updatedAt,
@@ -94,6 +96,7 @@ export class UserRouteService {
       user: {
         id: userRoute.userId._id,
         username: userRoute.userId.username,
+        name: userRoute.userId.name,
         role: userRoute.userId.role as UserRole,
         createdAt: userRoute.createdAt,
         updatedAt: userRoute.updatedAt,
@@ -109,6 +112,7 @@ export class UserRouteService {
       assignedByUser: {
         id: userRoute.assignedBy._id,
         username: userRoute.assignedBy.username,
+        name: userRoute.assignedBy.name,
         role: userRoute.assignedBy.role as UserRole,
         createdAt: userRoute.createdAt,
         updatedAt: userRoute.updatedAt,

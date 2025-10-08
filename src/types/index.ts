@@ -22,8 +22,8 @@ export * from './user-route.type';
 // Base interface for common entity fields
 export interface BaseEntity {
   id: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface JWTPayload {

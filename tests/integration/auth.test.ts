@@ -37,6 +37,7 @@ describe('Auth Endpoints', () => {
       const mockUser = {
         id: 'user123',
         username: 'testuser',
+        name: 'Test User',
         role: UserRole.USER,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -103,6 +104,7 @@ describe('Auth Endpoints', () => {
       const mockUser = {
         id: 'user123',
         username: 'testuser',
+        name: 'Test User',
         role: UserRole.USER,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -147,6 +149,7 @@ describe('Auth Endpoints', () => {
       const mockUser = {
         id: 'user123',
         username: 'testuser',
+        name: 'Test User',
         role: UserRole.USER,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -202,6 +205,7 @@ describe('Auth Endpoints', () => {
         {
           id: 'user1',
           username: 'user1',
+          name: 'Test User',
           role: UserRole.USER,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -209,6 +213,7 @@ describe('Auth Endpoints', () => {
         {
           id: 'user2',
           username: 'user2',
+          name: 'Test User',
           role: UserRole.MANAGER,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -256,6 +261,7 @@ describe('Auth Endpoints', () => {
       const mockUser = {
         id: 'user123',
         username: 'testuser',
+        name: 'Test User',
         role: UserRole.USER,
         selectedRouteId: 'route123',
         createdAt: new Date(),
@@ -284,6 +290,7 @@ describe('Auth Endpoints', () => {
       const mockUser = {
         id: 'user123',
         username: 'testuser',
+        name: 'Test User',
         role: UserRole.USER,
         selectedRouteId: null,
         createdAt: new Date(),
@@ -367,6 +374,7 @@ describe('Auth Endpoints', () => {
       const mockUser = {
         id: 'user123',
         username: 'testuser',
+        name: 'Test User',
         role: UserRole.USER,
         selectedRouteId: null,
         createdAt: new Date(),
@@ -390,6 +398,7 @@ describe('Auth Endpoints', () => {
       const mockUser = {
         id: 'user123',
         username: 'testuser',
+        name: 'Test User',
         role: UserRole.USER,
         selectedRouteId: undefined,
         createdAt: new Date(),

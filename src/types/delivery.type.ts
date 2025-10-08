@@ -38,7 +38,8 @@ export interface IDeliveryResponse extends BaseEntity {
   };
   notes?: string;
   totalCost: number;
-  paymentType?: 'paid' | 'debt' | 'free';
+  paymentType?: 'paid' | 'debt';
+  isFree?: boolean;
   createdByUser: string;
 }
 
@@ -71,7 +72,7 @@ export interface IDeliveryCreateRequest {
     convertedWeight?: number;
   };
   notes?: string;
-  paymentType?: 'paid' | 'debt' | 'free';
+  paymentType?: 'paid' | 'debt';
 }
 
 // Delivery update request interface
@@ -101,7 +102,7 @@ export interface IDeliveryUpdateRequest {
     convertedWeight?: number;
   };
   notes?: string;
-  paymentType?: 'paid' | 'debt' | 'free';
+  paymentType?: 'paid' | 'debt';
 }
 
 // Interface for populated delivery (when sender, receiver, fromRoute, toRoute, createdByUser are populated)
@@ -146,7 +147,7 @@ export interface IDeliveryWithPopulatedRefs {
   };
   notes?: string;
   totalCost: number;
-  paymentType?: 'paid' | 'debt' | 'free';
+  paymentType?: 'paid' | 'debt';
   createdByUser: {
     _id: string;
     username: string;
@@ -199,32 +200,32 @@ export interface IDeliveryLeanPopulated {
     name: string;
     phone: string;
     routeId: Types.ObjectId;
-    createdAt: Date;
-    updatedAt: Date;
+    createdAt?: Date;
+    updatedAt?: Date;
   };
   receiver: {
     _id: string;
     name: string;
     phone: string;
     routeId: Types.ObjectId;
-    createdAt: Date;
-    updatedAt: Date;
+    createdAt?: Date;
+    updatedAt?: Date;
   };
   fromRoute: {
     _id: string;
     code: string;
     name: string;
     address: string;
-    createdAt: Date;
-    updatedAt: Date;
+    createdAt?: Date;
+    updatedAt?: Date;
   };
   toRoute: {
     _id: string;
     code: string;
     name: string;
     address: string;
-    createdAt: Date;
-    updatedAt: Date;
+    createdAt?: Date;
+    updatedAt?: Date;
   };
   name: string;
   nameProductAndAdditionalInformation?: string;
@@ -239,13 +240,15 @@ export interface IDeliveryLeanPopulated {
   collectForCustomerNote?: string;
   notes?: string;
   totalCost: number;
-  paymentType?: 'paid' | 'debt' | 'free';
+  paymentType?: 'paid' | 'debt';
   createdByUser: {
     _id: string;
     username: string;
+    name: string;
   };
-  createdAt: Date;
-  updatedAt: Date;
+  isFree?: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 // Frequent customers interfaces
@@ -331,7 +334,7 @@ export interface IDeliveryReportItem {
   collectForCustomer: number;
   collectForCustomerCost: number;
   totalCost: number;
-  paymentType?: 'paid' | 'debt' | 'free';
+  paymentType?: 'paid' | 'debt';
   notes?: string;
 }
 
@@ -406,7 +409,7 @@ export interface ITodayDeliveryItem {
   collectForCustomerCost?: number;
   collectForCustomerNote?: string;
   totalCost: number;
-  paymentType?: 'paid' | 'debt' | 'free';
+  paymentType?: 'paid' | 'debt';
   notes?: string;
   details?: {
     weight?: number;

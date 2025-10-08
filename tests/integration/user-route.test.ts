@@ -31,6 +31,7 @@ describe('User Route Integration Tests', () => {
     user: {
       id: '507f1f77bcf86cd799439013',
       username: 'testuser',
+      name: 'Test User',
       role: UserRole.USER,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -45,6 +46,7 @@ describe('User Route Integration Tests', () => {
     assignedByUser: {
       id: '507f1f77bcf86cd799439011',
       username: 'manager',
+      name: 'Manager User',
       role: UserRole.MANAGER,
       createdAt: new Date(),
       updatedAt: new Date(),

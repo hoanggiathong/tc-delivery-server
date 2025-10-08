@@ -4,6 +4,7 @@ export const createMockUser = (overrides: Partial<IUserResponse> = {}): IUserRes
   return {
     id: 'user-id-1',
     username: 'testuser',
+    name: 'Test User',
     role: UserRole.ADMIN,
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2023-01-01'),
@@ -40,6 +41,7 @@ export const mockAuthUsersForIntegration = {
   basicUser: {
     id: 'user123',
     username: 'testuser',
+    name: 'Test User',
     role: UserRole.USER,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -47,6 +49,7 @@ export const mockAuthUsersForIntegration = {
   userWithRoute: {
     id: 'user123',
     username: 'testuser',
+    name: 'Test User',
     role: UserRole.USER,
     selectedRouteId: 'route123',
     createdAt: new Date(),
@@ -55,6 +58,7 @@ export const mockAuthUsersForIntegration = {
   userWithNullRoute: {
     id: 'user123',
     username: 'testuser',
+    name: 'Test User',
     role: UserRole.USER,
     selectedRouteId: null,
     createdAt: new Date(),
@@ -63,6 +67,7 @@ export const mockAuthUsersForIntegration = {
   userWithUndefinedRoute: {
     id: 'user123',
     username: 'testuser',
+    name: 'Test User',
     role: UserRole.USER,
     selectedRouteId: undefined,
     createdAt: new Date(),

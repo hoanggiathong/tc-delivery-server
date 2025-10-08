@@ -30,6 +30,7 @@ export class AuthService {
       const newUser = new User({
         username: data.username,
         password: data.password,
+        name: data.name,
         role: data.role || UserRole.USER,
       });
 
@@ -56,6 +57,7 @@ export class AuthService {
       const newUser = new User({
         username: data.username,
         password: data.password,
+        name: data.name,
         role: data.role,
       });
 

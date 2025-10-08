@@ -6,6 +6,7 @@ export interface IUser extends Document {
   _id: string;
   username: string;
   password: string;
+  name: string;
   role: UserRole;
   selectedRouteId?: mongoose.Types.ObjectId;
   createdAt: Date;
@@ -30,6 +31,13 @@ const userSchema = new Schema<IUser>(
       required: [true, 'Password is required'],
       minlength: [6, 'Password must be at least 6 characters'],
       select: false, // Don't include password in queries by default
+    },
+    name: {
+      type: String,
+      required: [true, 'Name is required'],
+      trim: true,
+      minlength: [1, 'Name must be at least 1 character'],
+      maxlength: [100, 'Name must not exceed 100 characters'],
     },
     role: {
       type: String,
