@@ -1,4 +1,4 @@
-import { Delivery, IDelivery } from '@/models/delivery.model';
+import { Delivery } from '@/models/delivery.model';
 import { Route } from '@/models/route.model';
 import { Types, PipelineStage } from 'mongoose';
 import { CustomerService } from '@/services/customer.service';
@@ -9,7 +9,6 @@ import {
   IDeliveryCreateRequest,
   IDeliveryUpdateRequest,
   IDeliveryResponse,
-  IDeliveryWithPopulatedRefs,
   IDeliveryLeanPopulated,
   INextCodeResponse,
   IFrequentCustomer,
@@ -91,92 +90,10 @@ export class DeliveryService {
   }
 
   /**
-   * Type assertion helper for populated delivery objects
-   */
-  private toPopulatedDelivery(delivery: unknown): IDeliveryWithPopulatedRefs {
-    return delivery as IDeliveryWithPopulatedRefs;
-  }
-
-  /**
    * Type assertion helper for lean populated delivery objects
    */
   private toPopulatedDeliveryLean(delivery: unknown): IDeliveryLeanPopulated {
     return delivery as IDeliveryLeanPopulated;
-  }
-
-  /**
-   * Transform IDelivery to IDeliveryResponse
-   */
-  private async transformDeliveryToResponse(delivery: IDelivery): Promise<IDeliveryResponse> {
-    // Populate sender, receiver, fromRoute, toRoute and createdByUser
-    const populatedDelivery = await delivery.populate([
-      { path: 'sender', select: '_id name phone routeId createdAt updatedAt' },
-      { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
-      { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
-      { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
-      { path: 'createdByUser', select: '_id username' },
-    ]);
-
-    const populated = this.toPopulatedDelivery(populatedDelivery);
-
-    return {
-      id: populated._id,
-      code: populated.code,
-      fullCode: populated.fullCode,
-      subCode: populated.subCode,
-      sender: {
-        id: populated.sender._id,
-        name: populated.sender.name,
-        phone: populated.sender.phone,
-        fromRouteId: populated.sender.routeId.toString(),
-        toRouteId: populated.receiver.routeId.toString(),
-        createdAt: populated.sender.createdAt,
-        updatedAt: populated.sender.updatedAt,
-      },
-      receiver: {
-        id: populated.receiver._id,
-        name: populated.receiver.name,
-        phone: populated.receiver.phone,
-        fromRouteId: populated.sender.routeId.toString(),
-        toRouteId: populated.receiver.routeId.toString(),
-        createdAt: populated.receiver.createdAt,
-        updatedAt: populated.receiver.updatedAt,
-      },
-      fromRoute: {
-        id: populated.fromRoute._id,
-        code: populated.fromRoute.code,
-        name: populated.fromRoute.name,
-        address: populated.fromRoute.address,
-        createdAt: populated.fromRoute.createdAt,
-        updatedAt: populated.fromRoute.updatedAt,
-      },
-      toRoute: {
-        id: populated.toRoute._id,
-        code: populated.toRoute.code,
-        name: populated.toRoute.name,
-        address: populated.toRoute.address,
-        createdAt: populated.toRoute.createdAt,
-        updatedAt: populated.toRoute.updatedAt,
-      },
-      name: populated.name,
-      quantity: populated.quantity,
-      cost: populated.cost,
-      homeDelivery: populated.homeDelivery,
-      homeDeliveryCost: populated.homeDeliveryCost,
-      itemValue: populated.itemValue,
-      itemCost: populated.itemCost,
-      collectCost: populated.collectCost,
-      collectForCustomer: populated.collectForCustomer,
-      collectForCustomerCost: populated.collectForCustomerCost,
-      collectForCustomerNote: populated.collectForCustomerNote,
-      details: populated.details,
-      notes: populated.notes,
-      totalCost: populated.totalCost,
-      paymentType: populated.paymentType,
-      createdByUser: populated.createdByUser.username,
-      createdAt: populated.createdAt,
-      updatedAt: populated.updatedAt,
-    };
   }
 
   /**
@@ -194,35 +111,47 @@ export class DeliveryService {
         id: delivery.sender._id,
         name: delivery.sender.name,
         phone: delivery.sender.phone,
-        fromRouteId: delivery.sender.routeId.toString(),
-        toRouteId: delivery.receiver.routeId.toString(),
-        createdAt: delivery.sender.createdAt,
-        updatedAt: delivery.sender.updatedAt,
+        ...(delivery.sender.routeId && { fromRouteId: delivery.sender.routeId.toString() }),
+        ...(delivery.sender.bankId && {
+          bank: {
+            id: delivery.sender.bankId._id,
+            name: delivery.sender.bankId.name,
+            bankName: delivery.sender.bankId.bankName,
+            bankAccount: delivery.sender.bankId.bankAccount,
+            ...(delivery.sender.bankId.bankBranch && {
+              bankBranch: delivery.sender.bankId.bankBranch,
+            }),
+            ...(delivery.sender.bankId.bankAddress && {
+              bankAddress: delivery.sender.bankId.bankAddress,
+            }),
+          },
+        }),
+        ...(delivery.sender.createdAt && { createdAt: delivery.sender.createdAt }),
+        ...(delivery.sender.updatedAt && { updatedAt: delivery.sender.updatedAt }),
       },
       receiver: {
         id: delivery.receiver._id,
         name: delivery.receiver.name,
         phone: delivery.receiver.phone,
-        fromRouteId: delivery.sender.routeId.toString(),
-        toRouteId: delivery.receiver.routeId.toString(),
-        createdAt: delivery.receiver.createdAt,
-        updatedAt: delivery.receiver.updatedAt,
+        ...(delivery.receiver.routeId && { toRouteId: delivery.receiver.routeId.toString() }),
+        ...(delivery.receiver.createdAt && { createdAt: delivery.receiver.createdAt }),
+        ...(delivery.receiver.updatedAt && { updatedAt: delivery.receiver.updatedAt }),
       },
       fromRoute: {
         id: delivery.fromRoute._id,
         code: delivery.fromRoute.code,
         name: delivery.fromRoute.name,
         address: delivery.fromRoute.address,
-        createdAt: delivery.fromRoute.createdAt,
-        updatedAt: delivery.fromRoute.updatedAt,
+        ...(delivery.fromRoute.createdAt && { createdAt: delivery.fromRoute.createdAt }),
+        ...(delivery.fromRoute.updatedAt && { updatedAt: delivery.fromRoute.updatedAt }),
       },
       toRoute: {
         id: delivery.toRoute._id,
         code: delivery.toRoute.code,
         name: delivery.toRoute.name,
         address: delivery.toRoute.address,
-        createdAt: delivery.toRoute.createdAt,
-        updatedAt: delivery.toRoute.updatedAt,
+        ...(delivery.toRoute.createdAt && { createdAt: delivery.toRoute.createdAt }),
+        ...(delivery.toRoute.updatedAt && { updatedAt: delivery.toRoute.updatedAt }),
       },
       name: delivery.name,
       quantity: delivery.quantity,
@@ -239,7 +168,8 @@ export class DeliveryService {
       notes: delivery.notes,
       totalCost: delivery.totalCost,
       paymentType: delivery.paymentType,
-      createdByUser: delivery.createdByUser.username,
+      createdByUser: delivery.createdByUser.name,
+      isFree: delivery.isFree,
       createdAt: delivery.createdAt,
       updatedAt: delivery.updatedAt,
     };
@@ -295,6 +225,7 @@ export class DeliveryService {
       fromRoute: selectedRouteId,
       toRoute: data.toRouteId,
       name: data.name,
+      nameProductAndAdditionalInformation: data.nameProductAndAdditionalInformation,
       quantity: data.quantity || 1,
       cost: data.cost,
       homeDelivery: data.homeDelivery,
@@ -312,7 +243,32 @@ export class DeliveryService {
     });
 
     await delivery.save();
-    return this.transformDeliveryToResponse(delivery);
+
+    // Query the saved delivery with populate and lean
+    const populatedDelivery = await Delivery.findById(delivery._id)
+      .populate([
+        {
+          path: 'sender',
+          select: '_id name phone routeId createdAt updatedAt',
+          populate: {
+            path: 'bankId',
+            select: '_id name bankName bankAccount bankBranch bankAddress',
+          },
+        },
+        { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
+        { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
+        { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
+        { path: 'createdByUser', select: '_id username name' },
+      ])
+      .lean();
+
+    if (!populatedDelivery) {
+      throw new Error('Failed to retrieve created delivery');
+    }
+
+    return this.transformDeliveryToResponseOptimized(
+      this.toPopulatedDeliveryLean(populatedDelivery)
+    );
   }
 
   /**
@@ -409,17 +365,33 @@ export class DeliveryService {
     }
 
     // Update delivery
-    const updatedDelivery = await Delivery.findByIdAndUpdate(
-      id,
-      { $set: updateData },
-      { new: true, runValidators: true }
-    );
+    await Delivery.findByIdAndUpdate(id, { $set: updateData }, { runValidators: true });
 
-    if (!updatedDelivery) {
-      throw new Error('Failed to update delivery');
+    // Query the updated delivery with populate and lean
+    const populatedDelivery = await Delivery.findById(id)
+      .populate([
+        {
+          path: 'sender',
+          select: '_id name phone routeId createdAt updatedAt',
+          populate: {
+            path: 'bankId',
+            select: '_id name bankName bankAccount bankBranch bankAddress',
+          },
+        },
+        { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
+        { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
+        { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
+        { path: 'createdByUser', select: '_id username name' },
+      ])
+      .lean();
+
+    if (!populatedDelivery) {
+      throw new Error('Failed to retrieve updated delivery');
     }
 
-    return this.transformDeliveryToResponse(updatedDelivery);
+    return this.transformDeliveryToResponseOptimized(
+      this.toPopulatedDeliveryLean(populatedDelivery)
+    );
   }
 
   /**
@@ -429,11 +401,18 @@ export class DeliveryService {
     try {
       const delivery = await Delivery.findById(id)
         .populate([
-          { path: 'sender', select: '_id name phone createdAt updatedAt' },
-          { path: 'receiver', select: '_id name phone createdAt updatedAt' },
+          {
+            path: 'sender',
+            select: '_id name phone routeId createdAt updatedAt',
+            populate: {
+              path: 'bankId',
+              select: '_id name bankName bankAccount bankBranch bankAddress',
+            },
+          },
+          { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
           { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
           { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
-          { path: 'createdByUser', select: '_id username' },
+          { path: 'createdByUser', select: '_id username name' },
         ])
         .lean();
 
@@ -508,11 +487,18 @@ export class DeliveryService {
     try {
       const deliveries = await Delivery.find({})
         .populate([
-          { path: 'sender', select: '_id name phone createdAt updatedAt' },
-          { path: 'receiver', select: '_id name phone createdAt updatedAt' },
+          {
+            path: 'sender',
+            select: '_id name phone routeId createdAt updatedAt',
+            populate: {
+              path: 'bankId',
+              select: '_id name bankName bankAccount bankBranch bankAddress',
+            },
+          },
+          { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
           { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
           { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
-          { path: 'createdByUser', select: '_id username' },
+          { path: 'createdByUser', select: '_id username name' },
         ])
         .sort({ createdAt: -1 })
         .lean();
@@ -551,11 +537,18 @@ export class DeliveryService {
         sender: { $in: senderIds },
       })
         .populate([
-          { path: 'sender', select: '_id name phone createdAt updatedAt' },
-          { path: 'receiver', select: '_id name phone createdAt updatedAt' },
+          {
+            path: 'sender',
+            select: '_id name phone routeId createdAt updatedAt',
+            populate: {
+              path: 'bankId',
+              select: '_id name bankName bankAccount bankBranch bankAddress',
+            },
+          },
+          { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
           { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
           { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
-          { path: 'createdByUser', select: '_id username' },
+          { path: 'createdByUser', select: '_id username name' },
         ])
         .sort({ createdAt: -1 })
         .lean();
@@ -724,11 +717,18 @@ export class DeliveryService {
       fromRoute: userRouteInfo.selectedRouteId,
     })
       .populate([
-        { path: 'sender', select: '_id name phone routeId createdAt updatedAt' },
-        { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
-        { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
-        { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
-        { path: 'createdByUser', select: '_id username' },
+        {
+          path: 'sender',
+          select: '_id name phone bankId',
+          populate: {
+            path: 'bankId',
+            select: '_id name bankName bankAccount bankBranch bankAddress',
+          },
+        },
+        { path: 'receiver', select: '_id name phone' },
+        { path: 'fromRoute', select: '_id code name address phone' },
+        { path: 'toRoute', select: '_id code name address' },
+        { path: 'createdByUser', select: '_id username name' },
       ])
       .lean();
 

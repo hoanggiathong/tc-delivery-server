@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { DeliveryService } from '@/services/delivery.service';
 import { DeliveryReceiptService } from '@/services/delivery-receipt.service';
-import { RemovedDeliveryService } from '@/services/removed-delivery.service';
+import { RemovedDeliveryService } from '@/services/delivery-removed.service';
 import {
   CreateDeliveryRequest,
   UpdateDeliveryRequest,
@@ -697,7 +697,7 @@ export class DeliveryController {
    * /api/delivery/by-fullcode/{fullCode}:
    *   delete:
    *     summary: Delete delivery by fullCode with password verification
-   *     tags: [Deliveries]
+   *     tags: [Delivery]
    *     security:
    *       - bearerAuth: []
    *     parameters:

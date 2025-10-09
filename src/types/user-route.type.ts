@@ -40,6 +40,7 @@ export interface IUserRouteLeanPopulated {
   userId: {
     _id: string;
     username: string;
+    name: string;
     role: string;
   };
   routeId: {
@@ -53,6 +54,7 @@ export interface IUserRouteLeanPopulated {
   assignedBy: {
     _id: string;
     username: string;
+    name: string;
     role: string;
   };
   createdAt: Date;

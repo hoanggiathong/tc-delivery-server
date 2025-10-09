@@ -13,7 +13,6 @@ export const createMockDelivery = (
       name: 'John Doe',
       phone: '1234567890',
       fromRouteId: '507f1f77bcf86cd799439011',
-      toRouteId: '507f1f77bcf86cd799439012',
       createdAt: new Date('2023-01-01'),
       updatedAt: new Date('2023-01-01'),
     },
@@ -21,7 +20,6 @@ export const createMockDelivery = (
       id: 'customer-id-2',
       name: 'Jane Doe',
       phone: '0987654321',
-      fromRouteId: '507f1f77bcf86cd799439011',
       toRouteId: '507f1f77bcf86cd799439012',
       createdAt: new Date('2023-01-01'),
       updatedAt: new Date('2023-01-01'),
@@ -54,6 +52,7 @@ export const createMockDelivery = (
     notes: 'Test delivery notes',
     totalCost: 58000, // 50000 + 5000 + 3000 (cost + itemCost + collectForCustomerCost, homeDeliveryCost excluded)
     paymentType: 'paid',
+    isFree: false,
     createdByUser: 'testuser',
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2023-01-01'),
@@ -116,6 +115,33 @@ export const createMockDeliveryList = (count: number = 3): IDeliveryResponse[] =
       cost: 30000 + index * 10000,
     })
   );
+};
+
+/**
+ * Create mock delivery with bank info in sender (for testing nested populate)
+ */
+export const createMockDeliveryWithBank = (
+  overrides: Partial<IDeliveryResponse> = {}
+): IDeliveryResponse => {
+  return createMockDelivery({
+    sender: {
+      id: 'customer-id-1',
+      name: 'John Doe',
+      phone: '1234567890',
+      fromRouteId: '507f1f77bcf86cd799439011',
+      bank: {
+        id: 'bank-id-1',
+        name: 'John Doe',
+        bankName: 'Vietcombank',
+        bankAccount: '1234567890',
+        bankBranch: 'Ho Chi Minh Branch',
+        bankAddress: '123 Nguyen Hue, District 1, HCMC',
+      },
+      createdAt: new Date('2023-01-01'),
+      updatedAt: new Date('2023-01-01'),
+    },
+    ...overrides,
+  });
 };
 
 // ===== INTEGRATION TEST MOCKS =====

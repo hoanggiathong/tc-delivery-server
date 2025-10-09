@@ -29,6 +29,11 @@ export const registerSchema = z.object({
         /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
         'Password must contain at least one lowercase letter, one uppercase letter, and one number'
       ),
+    name: z
+      .string()
+      .min(1, 'Name must be at least 1 character')
+      .max(100, 'Name must not exceed 100 characters')
+      .trim(),
     role: z.nativeEnum(UserRole).optional().default(UserRole.USER),
   }),
 });
@@ -48,6 +53,11 @@ export const createUserSchema = z.object({
         /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
         'Password must contain at least one lowercase letter, one uppercase letter, and one number'
       ),
+    name: z
+      .string()
+      .min(1, 'Name must be at least 1 character')
+      .max(100, 'Name must not exceed 100 characters')
+      .trim(),
     role: z.nativeEnum(UserRole),
   }),
 });

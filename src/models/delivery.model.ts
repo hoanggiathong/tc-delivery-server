@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import { PaymentType } from '@/types';
 
 export interface IDelivery extends Document {
   _id: string;
@@ -10,6 +11,7 @@ export interface IDelivery extends Document {
   fromRoute: mongoose.Types.ObjectId;
   toRoute: mongoose.Types.ObjectId;
   name: string;
+  nameProductAndAdditionalInformation: string;
   quantity: number;
   cost: number;
   homeDelivery?: string;
@@ -30,7 +32,7 @@ export interface IDelivery extends Document {
   };
   notes?: string;
   totalCost: number;
-  paymentType: 'paid' | 'debt'; // 'paid' (default), 'debt' (nợ)
+  paymentType: PaymentType; // 'paid' (default), 'debt' (nợ)
   isFree: boolean; // Miễn phí (default false)
   createdByUser: mongoose.Types.ObjectId;
   createdAt: Date;
@@ -186,6 +188,11 @@ const deliverySchema = new Schema<IDelivery>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: [true, 'Created by user is required'],
+    },
+    nameProductAndAdditionalInformation: {
+      type: String,
+      required: [true, 'Item name and additional information is required'],
+      trim: true,
     },
   },
   {

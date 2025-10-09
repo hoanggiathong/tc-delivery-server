@@ -40,6 +40,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, { canView: UserRole[]; canCreate
 export interface IUserBase {
   _id: string;
   username: string;
+  name: string;
   role: UserRole;
   selectedRouteId?: string | null;
   createdAt: Date;
@@ -51,6 +52,7 @@ export interface IUser extends Document {
   _id: string;
   username: string;
   password: string;
+  name: string;
   role: UserRole;
   selectedRouteId?: string | null;
   createdAt: Date;
@@ -62,6 +64,7 @@ export interface IUser extends Document {
 export interface IUserResponse {
   id: string;
   username: string;
+  name: string;
   role: UserRole;
   selectedRouteId?: string | null;
   createdAt: Date;
@@ -79,6 +82,7 @@ export interface JWTPayload {
 export interface IUserLean {
   _id: string;
   username: string;
+  name: string;
   role: UserRole;
   selectedRouteId?: string | null;
   createdAt: Date;
@@ -101,6 +105,7 @@ export const transformUserToResponse = (user: IUser | any): IUserResponse => {
   return {
     id: user._id.toString(),
     username: user.username,
+    name: user.name,
     role: user.role,
     selectedRouteId: user.selectedRouteId?.toString() || null,
     createdAt: user.createdAt,
@@ -116,6 +121,7 @@ export const transformUserLeanToResponse = (user: IUserLean): IUserResponse => {
   return {
     id: user._id.toString(),
     username: user.username,
+    name: user.name,
     role: user.role,
     selectedRouteId: user.selectedRouteId?.toString() || null,
     createdAt: user.createdAt,

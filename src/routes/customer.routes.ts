@@ -333,4 +333,42 @@ router.delete(
   customerController.deleteImage
 );
 
+/**
+ * @swagger
+ * /api/customer/stop-using-images-and-bank-info/{id}:
+ *   delete:
+ *     summary: Stop using images and bank info
+ *     tags: [Customer]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: "507f1f77bcf86cd799439011"
+ *     responses:
+ *       200:
+ *         description: Images and bank info stopped using successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Images and bank info stopped using successfully"
+ */
+router.delete(
+  '/stop-using-images-and-bank-info/:id',
+  authenticateToken,
+  requireRole([UserRole.USER, UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]),
+  validate(customerParamsSchema),
+  customerController.deleteImagesAndBankInfo
+);
+
 export default router;

@@ -31,6 +31,7 @@ export class AuthController {
    *             required:
    *               - username
    *               - password
+   *               - name
    *             properties:
    *               username:
    *                 type: string
@@ -39,6 +40,10 @@ export class AuthController {
    *               password:
    *                 type: string
    *                 minLength: 6
+   *                 maxLength: 100
+   *               name:
+   *                 type: string
+   *                 minLength: 1
    *                 maxLength: 100
    *     responses:
    *       201:
@@ -132,6 +137,8 @@ export class AuthController {
    *                           type: string
    *                         username:
    *                           type: string
+   *                         name:
+   *                           type: string
    *                         role:
    *                           type: string
    *                         selectedRouteId:
@@ -148,6 +155,7 @@ export class AuthController {
    *                     user:
    *                       id: "507f1f77bcf86cd799439040"
    *                       username: "user123"
+   *                       name: "Nguyen Van A"
    *                       role: "user"
    *                       selectedRouteId: "507f1f77bcf86cd799439011"
    *                     token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
@@ -160,6 +168,7 @@ export class AuthController {
    *                     user:
    *                       id: "507f1f77bcf86cd799439041"
    *                       username: "admin"
+   *                       name: "Admin User"
    *                       role: "admin"
    *                       selectedRouteId: null
    *                     token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
@@ -243,11 +252,14 @@ export class AuthController {
    *             required:
    *               - username
    *               - password
+   *               - name
    *               - role
    *             properties:
    *               username:
    *                 type: string
    *               password:
+   *                 type: string
+   *               name:
    *                 type: string
    *               role:
    *                 type: string

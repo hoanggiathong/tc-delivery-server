@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-export interface ICustomerBank extends Document {
+export interface ICustomerBankRemoved extends Document {
   _id: string;
   name: string;
   bankName: string;
@@ -10,10 +10,22 @@ export interface ICustomerBank extends Document {
   qrCodeUrl: string;
   createdAt: Date;
   updatedAt: Date;
+
+  // Removal metadata
+  customerId: mongoose.Types.ObjectId;
+  deletedBy: mongoose.Types.ObjectId;
+  deletedAt: Date;
+  expiredAt: Date;
 }
 
-const customerBankSchema = new Schema<ICustomerBank>(
+const customerBankRemovedSchema = new Schema<ICustomerBankRemoved>(
   {
+    customerId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Customer',
+      required: [true, 'Customer ID is required'],
+      index: true,
+    },
     name: {
       type: String,
       required: [true, 'Name is required'],
@@ -47,9 +59,29 @@ const customerBankSchema = new Schema<ICustomerBank>(
       trim: true,
       default: '',
     },
+
+    // Removal metadata
+    deletedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: [true, 'Deleted by user is required'],
+      index: true,
+    },
+    deletedAt: {
+      type: Date,
+      required: [true, 'Deleted date is required'],
+      default: Date.now,
+      index: true,
+    },
+    expiredAt: {
+      type: Date,
+      required: [true, 'Expiration date is required'],
+      index: { expireAfterSeconds: 0 }, // TTL index for automatic cleanup
+    },
   },
   {
     timestamps: true,
+    collection: 'customerBankRemoved',
     toJSON: {
       transform: function (_doc, ret) {
         const { _id, __v, ...rest } = ret;
@@ -60,14 +92,14 @@ const customerBankSchema = new Schema<ICustomerBank>(
 );
 
 // Index for bank account uniqueness
-customerBankSchema.index({ bankAccount: 1 }, { unique: true });
+customerBankRemovedSchema.index({ bankAccount: 1 }, { unique: true });
 
 // Performance indexes for search
-customerBankSchema.index({ name: 'text' }); // Text index for name search
-customerBankSchema.index({ bankName: 1 }); // Index for bank name search
+customerBankRemovedSchema.index({ name: 'text' }); // Text index for name search
+customerBankRemovedSchema.index({ bankName: 1 }); // Index for bank name search
 
-export const CustomerBank = mongoose.model<ICustomerBank>(
-  'CustomerBank',
-  customerBankSchema,
-  'customerBank'
+export const CustomerBankRemoved = mongoose.model<ICustomerBankRemoved>(
+  'CustomerBankRemoved',
+  customerBankRemovedSchema,
+  'customerBankRemoved'
 );

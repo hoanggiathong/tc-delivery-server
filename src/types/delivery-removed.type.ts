@@ -1,4 +1,4 @@
-import { IRemovedDelivery } from '@/models/removed-delivery.model';
+import { IRemovedDelivery } from '@/models/delivery-removed.model';
 import { ICustomer } from '@/models/customer.model';
 import { IRoute } from '@/models/route.model';
 import { IUser } from '@/models/user.model';

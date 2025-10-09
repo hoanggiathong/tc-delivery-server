@@ -34,6 +34,7 @@ export const createDeliverySchema = z.object({
       .regex(/^[0-9a-fA-F]{24}$/, 'Please provide a valid to route ID')
       .trim(),
     name: z.string().min(1, 'Item name is required').trim(),
+    nameProductAndAdditionalInformation: z.string().trim().optional(),
     quantity: z.number().min(1, 'Quantity must be at least 1').default(1).optional(),
     cost: z.number().min(0, 'Cost must be positive'),
     homeDelivery: z.string().trim().optional(),
@@ -99,6 +100,7 @@ export const updateDeliverySchema = z.object({
       .trim()
       .optional(),
     name: z.string().min(1, 'Item name is required').trim().optional(),
+    nameProductAndAdditionalInformation: z.string().trim().optional(),
     quantity: z.number().min(1, 'Quantity must be at least 1').optional(),
     cost: z.number().min(0, 'Cost must be positive').optional(),
     homeDelivery: z.string().trim().optional(),
