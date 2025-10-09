@@ -22,8 +22,8 @@ const customerBankRemovedSchema = new Schema<ICustomerBankRemoved>(
   {
     customerId: {
       type: Schema.Types.ObjectId,
-      ref: 'CustomerBank',
-      required: [true, 'Customer bank is required'],
+      ref: 'Customer',
+      required: [true, 'Customer ID is required'],
       index: true,
     },
     name: {

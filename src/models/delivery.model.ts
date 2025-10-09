@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import { PaymentType } from '@/types';
 
 export interface IDelivery extends Document {
   _id: string;
@@ -31,7 +32,7 @@ export interface IDelivery extends Document {
   };
   notes?: string;
   totalCost: number;
-  paymentType: 'paid' | 'debt'; // 'paid' (default), 'debt' (nợ)
+  paymentType: PaymentType; // 'paid' (default), 'debt' (nợ)
   isFree: boolean; // Miễn phí (default false)
   createdByUser: mongoose.Types.ObjectId;
   createdAt: Date;

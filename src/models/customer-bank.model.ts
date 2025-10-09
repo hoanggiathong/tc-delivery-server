@@ -12,6 +12,29 @@ export interface ICustomerBank extends Document {
   updatedAt: Date;
 }
 
+// Lean interface for populated bankId (without Document methods)
+export interface ICustomerBankLean {
+  _id: string;
+  name: string;
+  bankName: string;
+  bankAccount: string;
+  bankBranch?: string;
+  bankAddress?: string;
+  qrCodeUrl?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+// Response interface for bank info (API response format with 'id' instead of '_id')
+export interface ICustomerBankResponse {
+  id: string;
+  name: string;
+  bankName: string;
+  bankAccount: string;
+  bankBranch?: string;
+  bankAddress?: string;
+}
+
 const customerBankSchema = new Schema<ICustomerBank>(
   {
     name: {

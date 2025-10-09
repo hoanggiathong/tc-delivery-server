@@ -1,3 +1,5 @@
+import { PaymentType } from './index';
+
 export interface IDraftDeliveryInput {
   senderName: string;
   senderPhone: string;
@@ -25,7 +27,8 @@ export interface IDraftDeliveryInput {
     convertedWeight?: number;
   };
   notes?: string;
-  paymentType?: 'paid' | 'debt' | 'free' | null;
+  paymentType?: PaymentType;
+  isFree?: boolean;
 }
 
 export interface IDraftDeliveryResponse {
@@ -67,7 +70,8 @@ export interface IDraftDeliveryResponse {
   };
   notes?: string;
   totalCost: number;
-  paymentType?: 'paid' | 'debt' | 'free' | null;
+  paymentType?: PaymentType;
+  isFree?: boolean;
   createdByUser: {
     id: string;
     username: string;

@@ -1,4 +1,5 @@
 import { BaseEntity } from '.';
+import { ICustomerBankResponse } from '@/models/customer-bank.model';
 
 // Customer response interface
 export interface ICustomerResponse extends BaseEntity {
@@ -6,6 +7,7 @@ export interface ICustomerResponse extends BaseEntity {
   phone: string;
   fromRouteId?: string;
   toRouteId?: string;
+  bank?: ICustomerBankResponse;
 }
 
 // Customer creation request interface

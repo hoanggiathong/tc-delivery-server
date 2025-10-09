@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import { PaymentType } from '@/types';
 
 export interface IDraftDelivery extends Document {
   _id: string;
@@ -30,7 +31,8 @@ export interface IDraftDelivery extends Document {
   };
   notes?: string;
   totalCost: number;
-  paymentType: 'paid' | 'debt' | 'free';
+  paymentType: PaymentType;
+  isFree: boolean;
   createdByUser: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -172,8 +174,13 @@ const draftDeliverySchema = new Schema<IDraftDelivery>(
     },
     paymentType: {
       type: String,
-      enum: ['paid', 'debt', 'free'],
+      enum: ['paid', 'debt'],
       default: 'paid',
+      required: true,
+    },
+    isFree: {
+      type: Boolean,
+      default: false,
       required: true,
     },
     createdByUser: {
@@ -196,8 +203,12 @@ const draftDeliverySchema = new Schema<IDraftDelivery>(
 
 // Pre-save middleware for totalCost calculation
 draftDeliverySchema.pre('save', function (next) {
-  // Calculate totalCost = cost + itemCost + collectForCustomerCost
-  this.totalCost = this.cost + this.itemCost + this.collectForCustomerCost;
+  // Calculate totalCost: if isFree, then 0; otherwise cost + itemCost + collectForCustomerCost
+  if (this.isFree) {
+    this.totalCost = 0;
+  } else {
+    this.totalCost = this.cost + this.itemCost + this.collectForCustomerCost;
+  }
   next();
 });
 
@@ -205,11 +216,12 @@ draftDeliverySchema.pre('save', function (next) {
 draftDeliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next) {
   const update = this.getUpdate() as any;
   if (update) {
-    // Only calculate if at least one cost field is being updated
+    // Only calculate if at least one cost field or isFree is being updated
     if (
       update.cost !== undefined ||
       update.itemCost !== undefined ||
-      update.collectForCustomerCost !== undefined
+      update.collectForCustomerCost !== undefined ||
+      update.isFree !== undefined
     ) {
       // Get current document to merge with updates
       const currentDoc = await this.model.findOne(this.getQuery());
@@ -220,9 +232,14 @@ draftDeliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next)
           update.collectForCustomerCost !== undefined
             ? update.collectForCustomerCost
             : currentDoc.collectForCustomerCost;
+        const isFree = update.isFree !== undefined ? update.isFree : currentDoc.isFree;
 
-        // Calculate totalCost
-        update.totalCost = cost + itemCost + collectForCustomerCost;
+        // Calculate totalCost: if isFree, then 0; otherwise cost + itemCost + collectForCustomerCost
+        if (isFree) {
+          update.totalCost = 0;
+        } else {
+          update.totalCost = cost + itemCost + collectForCustomerCost;
+        }
       }
     }
   }

@@ -81,6 +81,22 @@ erDiagram
         datetime updatedAt "tự động cập nhật"
     }
 
+    CUSTOMER_BANK_REMOVED {
+        ObjectId _id PK
+        ObjectId customerId FK "tham chiếu: CUSTOMERS, bắt buộc (để revert lại vào Customer.bankId)"
+        string name "bắt buộc, tối đa 100 ký tự, trim"
+        string bankName "tên ngân hàng, bắt buộc, tối đa 100 ký tự, trim"
+        string bankAccount UK "số tài khoản, bắt buộc, tối đa 50 ký tự, trim, duy nhất"
+        string bankBranch "chi nhánh, tùy chọn, tối đa 100 ký tự, trim"
+        string bankAddress "địa chỉ ngân hàng, tùy chọn, tối đa 200 ký tự, trim"
+        string qrCodeUrl "URL mã QR đã bị xóa, tùy chọn"
+        ObjectId deletedBy FK "tham chiếu: USERS, bắt buộc, user đã xóa"
+        datetime deletedAt "thời điểm xóa, bắt buộc, mặc định hiện tại"
+        datetime expiredAt "thời điểm hết hạn, bắt buộc, TTL index (tự động xóa sau 90 ngày)"
+        datetime createdAt "tự động tạo"
+        datetime updatedAt "tự động cập nhật"
+    }
+
     DELIVERIES {
         ObjectId _id PK
         string code "10 chữ số: DDMMYY+random sequence(0001-9999)"
@@ -91,6 +107,7 @@ erDiagram
         ObjectId fromRoute FK "tham chiếu: ROUTES, bắt buộc (từ user.selectedRouteId)"
         ObjectId toRoute FK "tham chiếu: ROUTES, bắt buộc"
         string name "tên hàng hóa, bắt buộc, trim"
+        string nameProductAndAdditionalInformation "thông tin bổ sung, tùy chọn, trim"
         number quantity "số lượng hàng hóa, bắt buộc, tối thiểu 1, mặc định 1"
         number cost "phí vận chuyển, bắt buộc, tối thiểu 0"
         string homeDelivery "địa chỉ giao hàng, tùy chọn, trim"
@@ -100,7 +117,7 @@ erDiagram
         number collectCost "thu hộ, bắt buộc, tối thiểu 0"
         number collectForCustomer "thu dùm khách hàng, bắt buộc, tối thiểu 0, mặc định 0"
         number collectForCustomerCost "phí phụ thu, bắt buộc, tối thiểu 0"
-        number totalCost "tính toán: cost+itemCost(phí trị giá)+collectForCustomerCost"
+        number totalCost "tính toán: isFree ? 0 : (cost+itemCost+collectForCustomerCost)"
         string collectForCustomerNote "tùy chọn, trim"
         object details "thông tin chi tiết hàng hóa, tùy chọn"
         number details_weight "khối lượng (kg), tùy chọn, tối thiểu 0"
@@ -111,7 +128,7 @@ erDiagram
         number details_convertedWeight "khối lượng quy đổi, tùy chọn, tối thiểu 0"
         string notes "tùy chọn, trim"
         enum paymentType "paid|debt, mặc định paid, loại thanh toán"
-        boolean isFree "miễn phí, mặc định false"
+        boolean isFree "miễn phí, bắt buộc, mặc định false"
         ObjectId createdByUser FK "tham chiếu: USERS, bắt buộc"
         datetime createdAt "tự động tạo"
         datetime updatedAt "tự động cập nhật"
@@ -128,8 +145,8 @@ erDiagram
         ObjectId toRoute FK "tham chiếu: ROUTES, bắt buộc"
         number sendMoneyAmount "số tiền gửi, bắt buộc, tối thiểu 0"
         number sendCost "phí dịch vụ, bắt buộc, tối thiểu 0"
-        enum transferType "regular|express, mặc định regular"
-        boolean isFree "miễn phí, mặc định false"
+        enum transferType "regular|express, bắt buộc, mặc định regular"
+        boolean isFree "miễn phí, bắt buộc, mặc định false"
         number totalCost "tính toán: isFree ? 0 : sendCost"
         string notes "tùy chọn, trim"
         ObjectId createdByUser FK "tham chiếu: USERS, bắt buộc"
@@ -156,7 +173,6 @@ erDiagram
         number collectCost "thu hộ, bắt buộc, tối thiểu 0"
         number collectForCustomer "thu dùm khách hàng, bắt buộc, tối thiểu 0, mặc định 0"
         number collectForCustomerCost "phí phụ thu, bắt buộc, tối thiểu 0"
-        number totalCost "tính toán: cost+itemCost+collectForCustomerCost"
         string collectForCustomerNote "tùy chọn, trim"
         object details "thông tin chi tiết hàng hóa, tùy chọn"
         number details_weight "khối lượng (kg), tùy chọn, tối thiểu 0"
@@ -166,7 +182,9 @@ erDiagram
         boolean details_isOverweight "quá tải, mặc định false"
         number details_convertedWeight "khối lượng quy đổi, tùy chọn, tối thiểu 0"
         string notes "tùy chọn, trim"
-        enum paymentType "paid|debt|free, mặc định paid"
+        enum paymentType "paid|debt, bắt buộc, mặc định paid"
+        boolean isFree "miễn phí, bắt buộc, mặc định false"
+        number totalCost "tính toán: isFree ? 0 : (cost+itemCost+collectForCustomerCost)"
         ObjectId createdByUser FK "tham chiếu: USERS, bắt buộc"
         datetime createdAt "tự động tạo, TTL 90 ngày"
         datetime updatedAt "tự động cập nhật"
@@ -530,6 +548,7 @@ erDiagram
   - **Retry Logic**: Lên tới 50 attempts để tránh collision
 - **Enhanced DELIVERIES & DRAFT_DELIVERIES**: Thêm quantity và details fields
   - **Quantity field**: Số lượng hàng hóa (bắt buộc, tối thiểu 1, mặc định 1)
+  - **nameProductAndAdditionalInformation field**: Thông tin bổ sung về sản phẩm (tùy chọn, trim)
   - **Details object**: Thông tin chi tiết hàng hóa (tùy chọn)
     - `weight`: Khối lượng (kg)
     - `length`, `width`, `height`: Kích thước (cm)

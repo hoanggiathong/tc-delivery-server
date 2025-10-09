@@ -26,6 +26,9 @@ export interface BaseEntity {
   updatedAt?: Date;
 }
 
+// Payment types for deliveries and drafts
+export type PaymentType = 'paid' | 'debt';
+
 export interface JWTPayload {
   userId: string;
   username: string;

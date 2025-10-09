@@ -251,7 +251,6 @@ export class DraftDeliveryService {
       throw new Error('You can only convert your own drafts');
     }
 
-    // Prepare delivery data
     const deliveryData = {
       senderName: draft.senderName,
       senderPhone: draft.senderPhone,
@@ -271,6 +270,7 @@ export class DraftDeliveryService {
       collectForCustomerNote: draft.collectForCustomerNote,
       notes: draft.notes,
       paymentType: draft.paymentType,
+      isFree: draft.isFree,
     };
 
     // Create actual delivery

@@ -1,11 +1,12 @@
 import { Types } from 'mongoose';
-import { BaseEntity } from '.';
+import { BaseEntity, PaymentType } from '.';
 import { ICustomerResponse } from './customer.type';
 import { IRouteResponse } from './route.type';
 import { ICustomer } from '@/models/customer.model';
 import { IDelivery } from '@/models/delivery.model';
 import { IUser } from '@/models/user.model';
 import { IRoute } from '@/models/route.model';
+import { ICustomerBankLean } from '@/models/customer-bank.model';
 
 // Delivery response interface
 export interface IDeliveryResponse extends BaseEntity {
@@ -38,7 +39,7 @@ export interface IDeliveryResponse extends BaseEntity {
   };
   notes?: string;
   totalCost: number;
-  paymentType?: 'paid' | 'debt';
+  paymentType?: PaymentType;
   isFree?: boolean;
   createdByUser: string;
 }
@@ -72,7 +73,7 @@ export interface IDeliveryCreateRequest {
     convertedWeight?: number;
   };
   notes?: string;
-  paymentType?: 'paid' | 'debt';
+  paymentType?: PaymentType;
 }
 
 // Delivery update request interface
@@ -102,7 +103,7 @@ export interface IDeliveryUpdateRequest {
     convertedWeight?: number;
   };
   notes?: string;
-  paymentType?: 'paid' | 'debt';
+  paymentType?: PaymentType;
 }
 
 // Interface for populated delivery (when sender, receiver, fromRoute, toRoute, createdByUser are populated)
@@ -147,7 +148,7 @@ export interface IDeliveryWithPopulatedRefs {
   };
   notes?: string;
   totalCost: number;
-  paymentType?: 'paid' | 'debt';
+  paymentType?: PaymentType;
   createdByUser: {
     _id: string;
     username: string;
@@ -200,6 +201,7 @@ export interface IDeliveryLeanPopulated {
     name: string;
     phone: string;
     routeId: Types.ObjectId;
+    bankId?: ICustomerBankLean;
     createdAt?: Date;
     updatedAt?: Date;
   };
@@ -240,7 +242,7 @@ export interface IDeliveryLeanPopulated {
   collectForCustomerNote?: string;
   notes?: string;
   totalCost: number;
-  paymentType?: 'paid' | 'debt';
+  paymentType?: PaymentType;
   createdByUser: {
     _id: string;
     username: string;
@@ -334,7 +336,7 @@ export interface IDeliveryReportItem {
   collectForCustomer: number;
   collectForCustomerCost: number;
   totalCost: number;
-  paymentType?: 'paid' | 'debt';
+  paymentType?: PaymentType;
   notes?: string;
 }
 
@@ -409,7 +411,7 @@ export interface ITodayDeliveryItem {
   collectForCustomerCost?: number;
   collectForCustomerNote?: string;
   totalCost: number;
-  paymentType?: 'paid' | 'debt';
+  paymentType?: PaymentType;
   notes?: string;
   details?: {
     weight?: number;

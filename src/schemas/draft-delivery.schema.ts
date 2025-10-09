@@ -48,7 +48,8 @@ export const createDraftDeliverySchema = z.object({
       })
       .optional(),
     notes: z.string().max(1000, 'Notes are too long').optional(),
-    paymentType: z.enum(['paid', 'debt', 'free']).default('paid').optional(),
+    paymentType: z.enum(['paid', 'debt']).default('paid').optional(),
+    isFree: z.boolean().default(false).optional(),
   }),
 });
 
@@ -91,7 +92,8 @@ export const updateDraftDeliverySchema = z.object({
       })
       .optional(),
     notes: z.string().max(1000).optional(),
-    paymentType: z.enum(['paid', 'debt', 'free']).optional(),
+    paymentType: z.enum(['paid', 'debt']).optional(),
+    isFree: z.boolean().optional(),
   }),
 });
 
