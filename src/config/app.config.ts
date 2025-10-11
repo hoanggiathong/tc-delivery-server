@@ -24,9 +24,16 @@ export const getBaseUrl = (): string => {
 
 /**
  * Application configuration object
+ * Uses getter for baseUrl to ensure it's evaluated at runtime after env vars are loaded
  */
 export const appConfig = {
-  baseUrl: getBaseUrl(),
-  nodeEnv: process.env.NODE_ENV || 'development',
-  port: process.env.PORT || 3000,
+  get baseUrl(): string {
+    return getBaseUrl();
+  },
+  get nodeEnv(): string {
+    return process.env.NODE_ENV || 'development';
+  },
+  get port(): string | number {
+    return process.env.PORT || 3000;
+  },
 };
