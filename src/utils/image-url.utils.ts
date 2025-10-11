@@ -15,6 +15,30 @@ export function generateVersionedUrl(basePath: string, timestamp?: number): stri
 }
 
 /**
+ * Generate a full image URL with domain, path, and version parameter
+ * @param basePath - The base path of the image (e.g., '/uploads/customers/123/image.png')
+ * @param baseUrl - The base URL/domain (e.g., 'https://uat.giaphuocexpress.vn')
+ * @param timestamp - Optional timestamp, defaults to current time
+ * @returns Full URL with domain and version (e.g., 'https://uat.giaphuocexpress.vn/uploads/customers/123/image.png?v=1734567890123')
+ */
+export function generateFullImageUrl(
+  basePath: string,
+  baseUrl: string,
+  timestamp?: number
+): string {
+  // Remove trailing slash from baseUrl if present
+  const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+
+  // Ensure basePath starts with /
+  const cleanBasePath = basePath.startsWith('/') ? basePath : `/${basePath}`;
+
+  // Generate versioned URL
+  const versionedPath = generateVersionedUrl(cleanBasePath, timestamp);
+
+  return `${cleanBaseUrl}${versionedPath}`;
+}
+
+/**
  * Extract base path from versioned URL by removing version parameter
  * @param versionedUrl - URL with version parameter
  * @returns Base path without version parameter

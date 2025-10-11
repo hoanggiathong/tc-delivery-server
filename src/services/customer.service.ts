@@ -2,13 +2,14 @@ import { Customer, ICustomer, ICustomerImage } from '@/models/customer.model';
 import { CreateCustomerRequest, UpdateCustomerRequest } from '@/schemas/customer.schema';
 import { BankCreateData, CustomerBankService } from '@/services/customer-bank.service';
 import { UserService } from '@/services/user.service';
-import { generateVersionedUrl } from '@/utils/image-url.utils';
+import { generateFullImageUrl } from '@/utils/image-url.utils';
 import Logger from '@/utils/logger';
 import fs from 'fs';
 import { Types } from 'mongoose';
 import path from 'path';
 import QRCode from 'qrcode';
 import { CustomerBankRemovedService } from './customer-bank-removed.service';
+import { appConfig } from '@/config/app.config';
 
 export class CustomerService {
   private userService: UserService;
@@ -39,7 +40,7 @@ export class CustomerService {
       const qrFileName = 'bank-qrcode.png';
       const qrFilePath = path.join(customerDir, qrFileName);
       const qrBaseUrl = `/uploads/customers/${customerId}/${qrFileName}`;
-      const qrUrl = generateVersionedUrl(qrBaseUrl);
+      const qrUrl = generateFullImageUrl(qrBaseUrl, appConfig.baseUrl);
 
       // Remove existing QR code if exists
       if (fs.existsSync(qrFilePath)) {
@@ -483,7 +484,7 @@ export class CustomerService {
       const images: ICustomerImage[] = [...(customer.images || [])];
       const baseUrl = `/uploads/customers/${customer._id}/${filename}`;
       images[imageIndex - 1] = {
-        url: generateVersionedUrl(baseUrl),
+        url: generateFullImageUrl(baseUrl, appConfig.baseUrl),
         rotate: rotate,
       };
 
@@ -549,7 +550,7 @@ export class CustomerService {
     const images: ICustomerImage[] = [...(customer.images || [])];
     const baseUrl = `/uploads/customers/${customerId}/${filename}`;
     images[imageIndex - 1] = {
-      url: generateVersionedUrl(baseUrl),
+      url: generateFullImageUrl(baseUrl, appConfig.baseUrl),
       rotate: rotate,
     };
     customer.images = images.filter(img => img && img.url).slice(0, 5);
@@ -742,7 +743,7 @@ export class CustomerService {
           // Update images array at specific index with versioned URL
           const baseUrl = `/uploads/customers/${customer._id}/${filename}`;
           images[imageData.index - 1] = {
-            url: generateVersionedUrl(baseUrl),
+            url: generateFullImageUrl(baseUrl, appConfig.baseUrl),
             rotate: imageData.rotate,
           };
 

@@ -26,10 +26,14 @@ module.exports = {
       instances: 1, // Number of instances (can increase to 'max' or specific number)
       exec_mode: 'fork', // or 'cluster' for multi-instance
 
+      // Load environment variables from file
+      env_file: '.env.production',
+
       // Environment variables
       env: {
         NODE_ENV: 'production',
         PORT: 3011,
+        BASE_URL: 'https://giaphuocexpress.vn',
         PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'true',
         PUPPETEER_EXECUTABLE_PATH: '/usr/bin/chromium-browser',
         PUPPETEER_ARGS:
@@ -66,10 +70,14 @@ module.exports = {
       instances: 1, // Number of instances for UAT
       exec_mode: 'fork',
 
+      // Load environment variables from file
+      env_file: '.env.uat',
+
       // Environment variables
       env: {
         NODE_ENV: 'uat',
         PORT: 3010,
+        BASE_URL: 'https://uat.giaphuocexpress.vn',
         PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'true',
         PUPPETEER_EXECUTABLE_PATH: '/usr/bin/chromium-browser',
         PUPPETEER_ARGS:
