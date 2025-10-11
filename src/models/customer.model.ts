@@ -1,4 +1,6 @@
 import mongoose, { Document, Schema, Types } from 'mongoose';
+import { appConfig } from '@/config/app.config';
+import { generateFullImageUrl, extractBasePath } from '@/utils/image-url.utils';
 
 export interface ICustomerImage {
   url: string;
@@ -87,6 +89,18 @@ const customerSchema = new Schema<ICustomer>(
     toJSON: {
       transform: function (_doc, ret) {
         const { _id, __v, ...rest } = ret;
+
+        // Transform image URLs to include domain
+        if (rest.images && Array.isArray(rest.images)) {
+          rest.images = rest.images.map((img: ICustomerImage) => {
+            const basePath = extractBasePath(img.url);
+            return {
+              ...img,
+              url: generateFullImageUrl(basePath, appConfig.baseUrl),
+            };
+          });
+        }
+
         return { id: _id, ...rest };
       },
     },
