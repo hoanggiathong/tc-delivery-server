@@ -31,8 +31,16 @@ erDiagram
         string password "mã hóa bcrypt, tối thiểu 6 ký tự, select:false"
         enum role "superadmin|admin|manager|user, mặc định:user"
         ObjectId selectedRouteId FK "tham chiếu: ROUTES, tùy chọn, mặc định:null"
+        array additionalInformationProductConfig "cấu hình thông tin bổ sung sản phẩm, mặc định []"
         datetime createdAt "tự động tạo"
         datetime updatedAt "tự động cập nhật"
+    }
+
+    ADDITIONAL_INFORMATION_PRODUCT_CONFIG {
+        ObjectId _id "unique identifier cho mỗi config"
+        string content "nội dung thông tin, bắt buộc, tối đa 500 ký tự, trim"
+        number position "vị trí sắp xếp, bắt buộc, tối thiểu 1"
+        boolean selected "đánh dấu config được chọn, mặc định false"
     }
 
     ROUTES {
@@ -241,6 +249,17 @@ erDiagram
 - **Mật khẩu**: Tối thiểu 6 ký tự, mã hóa bằng bcrypt (salt rounds: 12)
 - **Phân cấp vai trò**: user(1) → manager(2) → admin(3) → superadmin(4)
 - **Tuyến đường đã chọn**: Tham chiếu tùy chọn đến tuyến đường ưa thích của người dùng
+- **Cấu hình thông tin bổ sung sản phẩm (additionalInformationProductConfig)**:
+  - Array các cấu hình thông tin bổ sung cho sản phẩm, mặc định `[]`
+  - Mỗi config có: `_id` (ObjectId), `content` (string, max 500 ký tự), `position` (number ≥ 1), `selected` (boolean, mặc định false)
+  - **Quy tắc nghiệp vụ**:
+    - Tối thiểu 1 config, tối đa 6 configs
+    - Position phải duy nhất (không được trùng lặp)
+    - Chỉ có tối đa 1 config có `selected = true`
+    - Nếu không có config nào được chọn, tự động chọn config đầu tiên (position nhỏ nhất)
+  - **API Endpoints**:
+    - `GET /api/user/additional-information-product-by-account` - Lấy danh sách configs
+    - `PUT /api/user/additional-information-product-by-account` - Cập nhật configs (auto-select first if none selected)
 
 #### Bảng CUSTOMERS
 - **Ràng buộc duy nhất**: Tổ hợp phone + type phải duy nhất (một số điện thoại có thể có cả customer delivery và money)
@@ -588,9 +607,20 @@ erDiagram
   - Express: isFree = false → sử dụng expressShippingFee từ settings
 - **Routes Enhancement**: Thêm các trường mới cho bảng ROUTES
   - `distance`: Khoảng cách tuyến đường (number, optional, ≥ 0)
-  - `surcharge`: Phụ phí tuyến đường (number, optional, ≥ 0)  
+  - `surcharge`: Phụ phí tuyến đường (number, optional, ≥ 0)
   - `surchargeUnit`: Đơn vị phụ phí ('percentage' | 'fixed', mặc định 'percentage')
   - Hỗ trợ tính phụ phí linh hoạt theo phần trăm hoặc số tiền cố định
+- **Users Enhancement**: Thêm cấu hình thông tin bổ sung sản phẩm
+  - **additionalInformationProductConfig**: Array configs cho thông tin bổ sung sản phẩm (mặc định [])
+  - **Config Structure**: Mỗi config có `_id`, `content` (max 500 chars), `position` (1-6), `selected` (boolean)
+  - **Auto-Selection Logic**: Tự động chọn config đầu tiên nếu không có config nào được đánh dấu selected
+  - **Validation Rules**:
+    - Min 1, max 6 configs
+    - Position phải unique (không trùng lặp)
+    - Chỉ có tối đa 1 config được selected
+  - **API Endpoints**:
+    - `GET /api/user/additional-information-product-by-account` - Lấy configs của user
+    - `PUT /api/user/additional-information-product-by-account` - Cập nhật configs với auto-selection
 
 ### Cân Nhắc Migration và Mở Rộng
 
