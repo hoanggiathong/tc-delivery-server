@@ -39,6 +39,7 @@ export interface IDeliveryResponse extends BaseEntity {
   };
   notes?: string;
   totalCost: number;
+  actualRevenue: number;
   paymentType?: PaymentType;
   isFree?: boolean;
   createdByUser: string;
@@ -148,6 +149,7 @@ export interface IDeliveryWithPopulatedRefs {
   };
   notes?: string;
   totalCost: number;
+  actualRevenue: number;
   paymentType?: PaymentType;
   createdByUser: {
     _id: string;
@@ -242,6 +244,7 @@ export interface IDeliveryLeanPopulated {
   collectForCustomerNote?: string;
   notes?: string;
   totalCost: number;
+  actualRevenue: number;
   paymentType?: PaymentType;
   createdByUser: {
     _id: string;
@@ -295,7 +298,8 @@ export interface IDeliveryCostReportSummary {
   totalCollectCost: number;
   totalCollectForCustomer: number;
   totalCollectForCustomerCost: number;
-  totalRevenue: number; // Tổng thu (totalCost của tất cả deliveries)
+  totalRevenue: number; // Tổng thu (totalCost của tất cả deliveries) - backward compatibility
+  totalActualRevenue: number; // Tổng thực thu (bao gồm cả tiền thu dùm)
 
   // Phân loại theo paymentType
   normalPaymentCount: number;
@@ -336,6 +340,7 @@ export interface IDeliveryReportItem {
   collectForCustomer: number;
   collectForCustomerCost: number;
   totalCost: number;
+  actualRevenue: number;
   paymentType?: PaymentType;
   notes?: string;
 }
@@ -373,6 +378,7 @@ export interface ITodayDeliverySummary {
   totalDeliveries: number; // Total number of deliveries (count by delivery count)
   totalQuantity: number; // Total quantity (sum of all delivery quantities)
   totalCost: number; // Total shipping cost (sum of all totalCost)
+  totalActualRevenue: number; // Total actual revenue (sum of all actualRevenue)
   totalItemCost: number;
   totalCollectCost: number; // Total collect cost
   totalCollectForCustomer: number; // Total collect for customer amount
@@ -411,6 +417,7 @@ export interface ITodayDeliveryItem {
   collectForCustomerCost?: number;
   collectForCustomerNote?: string;
   totalCost: number;
+  actualRevenue: number;
   paymentType?: PaymentType;
   notes?: string;
   details?: {

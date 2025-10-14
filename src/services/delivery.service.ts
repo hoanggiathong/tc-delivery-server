@@ -167,6 +167,7 @@ export class DeliveryService {
       details: delivery.details,
       notes: delivery.notes,
       totalCost: delivery.totalCost,
+      actualRevenue: delivery.actualRevenue,
       paymentType: delivery.paymentType,
       createdByUser: delivery.createdByUser.name,
       isFree: delivery.isFree,
@@ -907,6 +908,7 @@ export class DeliveryService {
             collectForCustomer: 1,
             collectForCustomerCost: 1,
             totalCost: 1,
+            actualRevenue: 1,
             paymentType: 1,
             notes: 1,
           },
@@ -925,6 +927,7 @@ export class DeliveryService {
                   _id: null,
                   totalDeliveries: { $sum: 1 },
                   totalCost: { $sum: '$totalCost' },
+                  totalActualRevenue: { $sum: '$actualRevenue' },
                   totalHomeDeliveryCost: { $sum: '$homeDeliveryCost' },
                   totalItemCost: { $sum: '$itemCost' },
                   totalItemValue: { $sum: '$itemValue' },
@@ -1013,6 +1016,7 @@ export class DeliveryService {
           collectForCustomer: number;
           collectForCustomerCost: number;
           totalCost: number;
+          actualRevenue: number;
           paymentType: 'debt' | 'free' | null;
           notes?: string;
         }) => ({
@@ -1035,12 +1039,12 @@ export class DeliveryService {
           collectForCustomer: d.collectForCustomer,
           collectForCustomerCost: d.collectForCustomerCost,
           totalCost: d.totalCost,
+          actualRevenue: d.actualRevenue,
           paymentType: d.paymentType,
           notes: d.notes,
         })
       );
 
-      // Build summary with calculated averages
       const summary: IDeliveryCostReportSummary = {
         totalDeliveries: summaryData.totalDeliveries || 0,
         totalCost: summaryData.totalCost || 0,
@@ -1051,6 +1055,7 @@ export class DeliveryService {
         totalCollectForCustomer: summaryData.totalCollectForCustomer || 0,
         totalCollectForCustomerCost: summaryData.totalCollectForCustomerCost || 0,
         totalRevenue: summaryData.totalCost || 0,
+        totalActualRevenue: summaryData.totalActualRevenue || 0,
 
         normalPaymentCount: summaryData.normalPaymentCount || 0,
         normalPaymentAmount: summaryData.normalPaymentAmount || 0,
@@ -1208,9 +1213,11 @@ export class DeliveryService {
             collectForCustomerCost: 1,
             collectForCustomerNote: 1,
             totalCost: 1,
+            actualRevenue: 1,
             paymentType: 1,
             notes: 1,
             details: 1,
+            nameProductAndAdditionalInformation: 1,
           },
         },
         // Facet for data and summary (no pagination needed)
@@ -1226,6 +1233,7 @@ export class DeliveryService {
                   totalDeliveries: { $sum: 1 },
                   totalQuantity: { $sum: '$quantity' },
                   totalCost: { $sum: '$totalCost' },
+                  totalActualRevenue: { $sum: '$actualRevenue' },
                   totalItemCost: { $sum: '$itemCost' },
                   totalCollectCost: { $sum: '$collectCost' },
                   totalCollectForCustomer: { $sum: '$collectForCustomer' },
@@ -1252,6 +1260,7 @@ export class DeliveryService {
           fullCode?: string;
           subCode?: string;
           name: string;
+          nameProductAndAdditionalInformation?: string;
           quantity?: number;
           createdAt: Date;
           updatedAt?: Date;
@@ -1268,6 +1277,7 @@ export class DeliveryService {
           collectForCustomerCost?: number;
           collectForCustomerNote?: string;
           totalCost: number;
+          actualRevenue: number;
           paymentType: 'debt' | 'free' | null;
           notes?: string;
           details?: {
@@ -1284,6 +1294,7 @@ export class DeliveryService {
           fullCode: d.fullCode,
           subCode: d.subCode,
           name: d.name,
+          nameProductAndAdditionalInformation: d.nameProductAndAdditionalInformation,
           quantity: d.quantity,
           sender: d.sender,
           receiver: d.receiver,
@@ -1303,6 +1314,7 @@ export class DeliveryService {
           collectForCustomerCost: d.collectForCustomerCost,
           collectForCustomerNote: d.collectForCustomerNote,
           totalCost: d.totalCost,
+          actualRevenue: d.actualRevenue,
           paymentType: d.paymentType,
           notes: d.notes,
           details: d.details,
@@ -1311,16 +1323,16 @@ export class DeliveryService {
         })
       );
 
-      // Build summary
       const summary: ITodayDeliverySummary = {
         totalDeliveries: summaryData.totalDeliveries || 0,
         totalQuantity: summaryData.totalQuantity || 0,
         totalCost: summaryData.totalCost || 0,
+        totalActualRevenue: summaryData.totalActualRevenue || 0,
         totalItemCost: summaryData.totalItemCost || 0,
         totalCollectCost: summaryData.totalCollectCost || 0,
         totalCollectForCustomer: summaryData.totalCollectForCustomer || 0,
         totalCollectForCustomerCost: summaryData.totalCollectForCustomerCost || 0,
-        date: today.toISOString().split('T')[0], // Format as YYYY-MM-DD
+        date: today.toISOString().split('T')[0],
       };
 
       // Build route info

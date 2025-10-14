@@ -32,6 +32,7 @@ export interface IDelivery extends Document {
   };
   notes?: string;
   totalCost: number;
+  actualRevenue: number; // Tổng thực thu (bao gồm cả tiền thu dùm)
   paymentType: PaymentType; // 'paid' (default), 'debt' (nợ)
   isFree: boolean; // Miễn phí (default false)
   createdByUser: mongoose.Types.ObjectId;
@@ -136,6 +137,12 @@ const deliverySchema = new Schema<IDelivery>(
       min: [0, 'Total cost must be positive'],
       default: 0,
     },
+    actualRevenue: {
+      type: Number,
+      required: false, // Will be calculated by pre-save middleware
+      min: [0, 'Actual revenue must be positive'],
+      default: 0,
+    },
     collectForCustomerNote: {
       type: String,
       trim: true,
@@ -216,12 +223,17 @@ deliverySchema.pre('save', function (next) {
     return next(new Error('From route and to route cannot be the same'));
   }
 
-  // Calculate totalCost: if isFree, then 0; otherwise cost + itemCost + collectForCustomerCost
+  // Calculate totalCost (service fees only: cost + itemCost + collectForCustomerCost + homeDeliveryCost)
   if (this.isFree) {
     this.totalCost = 0;
   } else {
-    this.totalCost = this.cost + this.itemCost + this.collectForCustomerCost;
+    this.totalCost =
+      this.cost + this.itemCost + this.collectForCustomerCost + this.homeDeliveryCost;
   }
+
+  // Calculate actualRevenue (totalCost + collectCost + collectForCustomer)
+  this.actualRevenue = this.totalCost + this.collectCost + this.collectForCustomer;
+
   next();
 });
 
@@ -251,6 +263,8 @@ deliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next) {
       update.itemCost !== undefined ||
       update.collectCost !== undefined ||
       update.collectForCustomerCost !== undefined ||
+      update.collectForCustomer !== undefined ||
+      update.homeDeliveryCost !== undefined ||
       update.isFree !== undefined
     ) {
       // Get current document to merge with updates
@@ -258,18 +272,31 @@ deliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next) {
       if (currentDoc) {
         const cost = update.cost !== undefined ? update.cost : currentDoc.cost;
         const itemCost = update.itemCost !== undefined ? update.itemCost : currentDoc.itemCost;
+        const collectCost =
+          update.collectCost !== undefined ? update.collectCost : currentDoc.collectCost;
         const collectForCustomerCost =
           update.collectForCustomerCost !== undefined
             ? update.collectForCustomerCost
             : currentDoc.collectForCustomerCost;
+        const collectForCustomer =
+          update.collectForCustomer !== undefined
+            ? update.collectForCustomer
+            : currentDoc.collectForCustomer;
+        const homeDeliveryCost =
+          update.homeDeliveryCost !== undefined
+            ? update.homeDeliveryCost
+            : currentDoc.homeDeliveryCost;
         const isFree = update.isFree !== undefined ? update.isFree : currentDoc.isFree;
 
-        // Calculate totalCost: if isFree, then 0; otherwise cost + itemCost + collectForCustomerCost
+        // Calculate totalCost (service fees only: cost + itemCost + collectForCustomerCost + homeDeliveryCost)
         if (isFree) {
           update.totalCost = 0;
         } else {
-          update.totalCost = cost + itemCost + collectForCustomerCost;
+          update.totalCost = cost + itemCost + collectForCustomerCost + homeDeliveryCost;
         }
+
+        // Calculate actualRevenue (totalCost + collectCost + collectForCustomer)
+        update.actualRevenue = update.totalCost + collectCost + collectForCustomer;
       }
     }
   }

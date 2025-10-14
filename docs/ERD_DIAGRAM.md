@@ -117,7 +117,8 @@ erDiagram
         number collectCost "thu hộ, bắt buộc, tối thiểu 0"
         number collectForCustomer "thu dùm khách hàng, bắt buộc, tối thiểu 0, mặc định 0"
         number collectForCustomerCost "phí phụ thu, bắt buộc, tối thiểu 0"
-        number totalCost "tính toán: isFree ? 0 : (cost+itemCost+collectForCustomerCost)"
+        number totalCost "phí dịch vụ, tính toán: isFree ? 0 : (cost+itemCost+collectForCustomerCost+homeDeliveryCost)"
+        number actualRevenue "tổng thực thu, tính toán: isFree ? (collectCost+collectForCustomer) : (totalCost+collectCost+collectForCustomer)"
         string collectForCustomerNote "tùy chọn, trim"
         object details "thông tin chi tiết hàng hóa, tùy chọn"
         number details_weight "khối lượng (kg), tùy chọn, tối thiểu 0"
@@ -184,7 +185,8 @@ erDiagram
         string notes "tùy chọn, trim"
         enum paymentType "paid|debt, bắt buộc, mặc định paid"
         boolean isFree "miễn phí, bắt buộc, mặc định false"
-        number totalCost "tính toán: isFree ? 0 : (cost+itemCost+collectForCustomerCost)"
+        number totalCost "phí dịch vụ, tính toán: isFree ? 0 : (cost+itemCost+collectForCustomerCost+homeDeliveryCost)"
+        number actualRevenue "tổng thực thu, tính toán: isFree ? (collectCost+collectForCustomer) : (totalCost+collectCost+collectForCustomer)"
         ObjectId createdByUser FK "tham chiếu: USERS, bắt buộc"
         datetime createdAt "tự động tạo, TTL 90 ngày"
         datetime updatedAt "tự động cập nhật"
@@ -291,8 +293,14 @@ erDiagram
   - Tổng chi phí được tính tự động qua middleware
   - Số lượng phải tối thiểu 1
 - **Tính toán chi phí**:
-  - `totalCost = isFree ? 0 : (cost + itemCost + collectForCustomerCost)`
-  - Nếu isFree = true thì totalCost = 0, bất kể các chi phí khác
+  - `totalCost` (Phí dịch vụ = cước phí + phí trị giá + phụ phí + cước GTN):
+    - Khi isFree = false: `cost + itemCost + collectForCustomerCost + homeDeliveryCost`
+    - Khi isFree = true: `0` (miễn phí hoàn toàn)
+  - `actualRevenue` (Tổng thực thu bao gồm phí dịch vụ + thu hộ + thu dùm):
+    - Khi isFree = false: `totalCost + collectCost + collectForCustomer`
+    - Khi isFree = true: `collectCost + collectForCustomer` (chỉ thu hộ + thu dùm)
+  - Phân biệt: totalCost chỉ bao gồm phí dịch vụ, actualRevenue bao gồm cả tiền thu hộ (collectCost) và thu dùm (collectForCustomer)
+  - Lưu ý: collectCost (thu hộ) KHÔNG tính vào phí dịch vụ nhưng tính vào tổng thực thu vì đây là tiền thực tế thu từ khách
 - **Thông tin chi tiết hàng hóa (details)**:
   - `weight`: Khối lượng thực tế của hàng hóa (kg)
   - `length`, `width`, `height`: Kích thước hàng hóa (cm)
@@ -343,6 +351,9 @@ erDiagram
   - Số lượng phải tối thiểu 1
   - Hỗ trợ thông tin chi tiết hàng hóa (weight, dimensions, overweight status)
 - **Chuyển đổi**: Có thể convert draft thành delivery chính thức với code và customer records
+- **Tính toán chi phí**: Giống bảng DELIVERIES
+  - `totalCost` tính phí dịch vụ
+  - `actualRevenue` tính tổng thực thu (bao gồm collectForCustomer)
 - **Index Strategy**:
   - `{fromRoute: 1, createdByUser: 1, createdAt: -1}` - Query chính
   - `{createdByUser: 1, createdAt: -1}` - User's drafts
@@ -559,9 +570,15 @@ erDiagram
   - **paymentType**: 'paid' (mặc định) hoặc 'debt' (loại bỏ 'free')
   - **isFree**: Boolean field riêng biệt để đánh dấu miễn phí (mặc định false)
   - Logic: Khi isFree = true thì totalCost = 0, bất kể paymentType
-- **Cập Nhật Công Thức TotalCost**: Tích hợp logic isFree và loại bỏ `homeDeliveryCost`
-  - Công thức cũ: `totalCost = cost + homeDeliveryCost + itemCost(phí trị giá) + collectForCustomerCost`
-  - Công thức mới: `totalCost = isFree ? 0 : (cost + itemCost + collectForCustomerCost)`
+- **Tách Biệt Phí Dịch Vụ và Tổng Thực Thu**: Thêm field `actualRevenue` vào DELIVERIES và DRAFT_DELIVERIES
+  - **totalCost** (Phí dịch vụ = cước phí + phí trị giá + phụ phí + cước GTN):
+    - Khi isFree = false: `cost + itemCost + collectForCustomerCost + homeDeliveryCost`
+    - Khi isFree = true: `0` (miễn phí hoàn toàn)
+    - **Loại bỏ collectCost** ra khỏi công thức (thu hộ là tiền của khách, không phải phí dịch vụ)
+  - **actualRevenue** (Tổng thực thu bao gồm phí dịch vụ + thu hộ + thu dùm):
+    - Khi isFree = false: `totalCost + collectCost + collectForCustomer`
+    - Khi isFree = true: `collectCost + collectForCustomer` (chỉ thu hộ + thu dùm)
+  - **Phân biệt**: totalCost chỉ phí dịch vụ, actualRevenue bao gồm cả tiền thu hộ (collectCost) và thu dùm (collectForCustomer)
 - **Money Delivery Transfer Types**: Cập nhật hình thức chuyển tiền cho MONEY_DELIVERIES
   - Cập nhật field `transferType`: regular (mặc định), express (loại bỏ 'free')
   - Thêm field `isFree`: boolean (mặc định false) - tách riêng logic miễn phí
