@@ -10,7 +10,6 @@ import {
   deliveryCodeSchema,
   frequentCustomersSchema,
   deliveryCostReportSchema,
-  deliveryReceiptSchema,
   deliveryFullCodeSchema,
   deleteDeliveryByFullCodeSchema,
 } from '@/schemas/delivery.schema';
@@ -239,18 +238,6 @@ router.get(
   '/frequent-customers/:senderIdentifier',
   validate(frequentCustomersSchema),
   deliveryController.getFrequentCustomers
-);
-
-router.get(
-  '/receipt/:code',
-  validate(deliveryReceiptSchema),
-  deliveryController.generateDeliveryReceiptByCode
-);
-
-router.get(
-  '/receipt-preview/:code',
-  validate(deliveryReceiptSchema),
-  deliveryController.generateDeliveryReceiptPreview
 );
 
 router.put(

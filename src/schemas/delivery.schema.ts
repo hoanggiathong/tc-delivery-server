@@ -228,18 +228,6 @@ export type DeliveryCodeParams = z.infer<typeof deliveryCodeSchema>['params'];
 export type FrequentCustomersParams = z.infer<typeof frequentCustomersSchema>['params'];
 export type DeliveryCostReportQuery = z.infer<typeof deliveryCostReportSchema>['query'];
 
-// Schema for delivery receipt by code
-export const deliveryReceiptSchema = z.object({
-  params: z.object({
-    code: z
-      .string()
-      .min(10, 'Delivery code must be at least 10 characters')
-      .max(10, 'Delivery code must be exactly 10 characters')
-      .regex(/^\d{10}$/, 'Invalid delivery code format. Expected: 10 digits (e.g., 2412170001)')
-      .trim(),
-  }),
-});
-
 // Schema for delivery fullCode parameter
 export const deliveryFullCodeSchema = z.object({
   params: z.object({
@@ -252,7 +240,6 @@ export const deliveryFullCodeSchema = z.object({
   }),
 });
 
-export type DeliveryReceiptParams = z.infer<typeof deliveryReceiptSchema>['params'];
 export type DeliveryFullCodeParams = z.infer<typeof deliveryFullCodeSchema>['params'];
 
 // Schema for deleting delivery by fullCode with password verification

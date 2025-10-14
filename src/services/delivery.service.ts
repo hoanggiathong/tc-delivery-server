@@ -18,8 +18,8 @@ import {
   ITodayDeliveryReport,
   ITodayDeliverySummary,
   ITodayDeliveryItem,
+  IDeliveryPopulated,
 } from '@/types/delivery.type';
-import { PopulatedDelivery } from '@/services/delivery-receipt.service';
 import { ICustomer } from '@/models/customer.model';
 import Logger from '@/utils/logger';
 
@@ -429,7 +429,7 @@ export class DeliveryService {
   /**
    * Get delivery by ID with full population for PDF generation
    */
-  async getDeliveryByIdWithPopulation(id: string): Promise<PopulatedDelivery | null> {
+  async getDeliveryByIdWithPopulation(id: string): Promise<IDeliveryPopulated | null> {
     try {
       const delivery = await Delivery.findById(id).populate([
         { path: 'sender', model: 'Customer' },
@@ -442,39 +442,11 @@ export class DeliveryService {
         return null;
       }
 
-      return delivery as unknown as PopulatedDelivery;
+      return delivery as unknown as IDeliveryPopulated;
     } catch (error) {
       Logger.error('Failed to get delivery with population', {
         error: error instanceof Error ? error.message : error,
         deliveryId: id,
-      });
-      return null;
-    }
-  }
-
-  /**
-   * Get delivery by code with full population for PDF generation
-   */
-  async getDeliveryByCodeWithPopulation(code: string): Promise<PopulatedDelivery | null> {
-    try {
-      const delivery = await Delivery.findOne({ code })
-        .populate([
-          { path: 'sender', model: 'Customer' },
-          { path: 'receiver', model: 'Customer' },
-          { path: 'fromRoute', model: 'Route' },
-          { path: 'toRoute', model: 'Route' },
-        ])
-        .lean();
-
-      if (!delivery) {
-        return null;
-      }
-
-      return delivery as unknown as PopulatedDelivery;
-    } catch (error) {
-      Logger.error('Failed to get delivery by code with population', {
-        error: error instanceof Error ? error.message : error,
-        deliveryCode: code,
       });
       return null;
     }

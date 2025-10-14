@@ -1,6 +1,5 @@
 import { Response } from 'express';
 import { DeliveryService } from '@/services/delivery.service';
-import { DeliveryReceiptService } from '@/services/delivery-receipt.service';
 import { RemovedDeliveryService } from '@/services/delivery-removed.service';
 import {
   CreateDeliveryRequest,
@@ -12,12 +11,10 @@ import Logger from '@/utils/logger';
 
 export class DeliveryController {
   private deliveryService: DeliveryService;
-  private receiptService: DeliveryReceiptService;
   private removedDeliveryService: RemovedDeliveryService;
 
   constructor() {
     this.deliveryService = new DeliveryService();
-    this.receiptService = new DeliveryReceiptService();
     this.removedDeliveryService = new RemovedDeliveryService();
   }
 
@@ -1740,192 +1737,6 @@ export class DeliveryController {
       };
 
       res.status(statusCode).json(response);
-    }
-  };
-
-  /**
-   * @swagger
-   * /api/delivery/receipt/{code}:
-   *   get:
-   *     summary: Generate PDF receipt for delivery by code
-   *     tags: [Delivery]
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: path
-   *         name: code
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: Delivery code
-   *         example: "0907250001"
-   *     responses:
-   *       200:
-   *         description: PDF receipt generated successfully
-   *         content:
-   *           application/pdf:
-   *             schema:
-   *               type: string
-   *               format: binary
-   *         headers:
-   *           Content-Disposition:
-   *             schema:
-   *               type: string
-   *               example: "attachment; filename=delivery-receipt-0907250001.pdf"
-   *       404:
-   *         description: Delivery not found
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 success:
-   *                   type: boolean
-   *                   example: false
-   *                 message:
-   *                   type: string
-   *                   example: "Delivery not found"
-   *       401:
-   *         description: Unauthorized
-   *       500:
-   *         description: Failed to generate PDF receipt
-   */
-  generateDeliveryReceiptByCode = async (req: AuthRequest, res: Response): Promise<void> => {
-    try {
-      if (!req.user) {
-        const response: ApiResponse = {
-          success: false,
-          message: 'Unauthorized',
-        };
-        res.status(401).json(response);
-        return;
-      }
-
-      const { code } = req.params;
-
-      // Get delivery by code with populated references
-      const delivery = await this.deliveryService.getDeliveryByCodeWithPopulation(code);
-
-      if (!delivery) {
-        Logger.warn('Delivery not found for receipt generation', {
-          deliveryCode: code,
-          userId: req.user.userId,
-        });
-        const response: ApiResponse = {
-          success: false,
-          message: 'Delivery not found',
-        };
-        res.status(404).json(response);
-        return;
-      }
-
-      // Generate PDF receipt
-      const pdfBuffer = await this.receiptService.generateReceiptPDF(delivery);
-
-      Logger.info('PDF receipt generated successfully', {
-        deliveryId: delivery.id,
-        deliveryCode: delivery.code,
-        userId: req.user.userId,
-      });
-
-      // Set response headers for PDF download
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader(
-        'Content-Disposition',
-        `attachment; filename=delivery-receipt-${delivery.code}.pdf`
-      );
-      res.setHeader('Content-Length', pdfBuffer.length);
-
-      res.send(pdfBuffer);
-    } catch (error) {
-      Logger.error('Failed to generate delivery receipt', {
-        error: error instanceof Error ? error.message : error,
-        deliveryCode: req.params.code,
-        userId: req.user?.userId,
-      });
-
-      const message = error instanceof Error ? error.message : 'Failed to generate PDF receipt';
-      const response: ApiResponse = {
-        success: false,
-        message,
-      };
-
-      res.status(500).json(response);
-    }
-  };
-
-  /**
-   * @swagger
-   * /api/delivery/receipt-preview/{code}:
-   *   get:
-   *     summary: Generate HTML preview for delivery receipt
-   *     tags: [Delivery]
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: path
-   *         name: code
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: Delivery code
-   *         example: "0907250001"
-   *     responses:
-   *       200:
-   *         description: HTML preview generated successfully
-   *         content:
-   *           text/html:
-   *             schema:
-   *               type: string
-   *       404:
-   *         description: Delivery not found
-   *       401:
-   *         description: Unauthorized
-   */
-  generateDeliveryReceiptPreview = async (req: AuthRequest, res: Response): Promise<void> => {
-    try {
-      if (!req.user) {
-        const response: ApiResponse = {
-          success: false,
-          message: 'Unauthorized',
-        };
-        res.status(401).json(response);
-        return;
-      }
-
-      const { code } = req.params;
-
-      // Get delivery by code with populated references
-      const delivery = await this.deliveryService.getDeliveryByCodeWithPopulation(code);
-
-      if (!delivery) {
-        const response: ApiResponse = {
-          success: false,
-          message: 'Delivery not found',
-        };
-        res.status(404).json(response);
-        return;
-      }
-
-      // Generate HTML preview
-      const html = await this.receiptService.generateReceiptHTMLPreview(delivery);
-
-      res.setHeader('Content-Type', 'text/html');
-      res.send(html);
-    } catch (error) {
-      Logger.error('Failed to generate delivery receipt preview', {
-        error: error instanceof Error ? error.message : error,
-        deliveryCode: req.params.code,
-        userId: req.user?.userId,
-      });
-
-      const message = error instanceof Error ? error.message : 'Failed to generate HTML preview';
-      const response: ApiResponse = {
-        success: false,
-        message,
-      };
-
-      res.status(500).json(response);
     }
   };
 }
