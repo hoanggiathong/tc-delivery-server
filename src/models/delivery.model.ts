@@ -191,7 +191,7 @@ const deliverySchema = new Schema<IDelivery>(
     },
     nameProductAndAdditionalInformation: {
       type: String,
-      required: [true, 'Item name and additional information is required'],
+      required: false,
       trim: true,
     },
   },
