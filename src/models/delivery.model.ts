@@ -1,5 +1,5 @@
-import mongoose, { Document, Schema } from 'mongoose';
 import { PaymentType } from '@/types';
+import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IDelivery extends Document {
   _id: string;
@@ -38,6 +38,12 @@ export interface IDelivery extends Document {
   createdByUser: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
+  isReturn: boolean;
+  inventory?: any;
+  smsType?: string;
+  timeToSendSMS?: Date;
+  upItems?: string;
+  downItems?: string;
 }
 
 const deliverySchema = new Schema<IDelivery>(
@@ -200,6 +206,27 @@ const deliverySchema = new Schema<IDelivery>(
       type: String,
       required: false,
       trim: true,
+    },
+    isReturn: {
+      type: Boolean,
+      default: false,
+    },
+    smsType: {
+      type: String,
+      // enum: RETURN_DELIVERIES_SMS_TYPE,
+      // default: RETURN_DELIVERIES_SMS_TYPE.SMS,
+    },
+    timeToSendSMS: {
+      type: Date,
+    },
+    inventory: {
+      type: String,
+    },
+    upItems: {
+      type: String,
+    },
+    downItems: {
+      type: String,
     },
   },
   {

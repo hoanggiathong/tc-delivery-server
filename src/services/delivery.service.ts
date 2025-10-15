@@ -22,6 +22,7 @@ import {
 } from '@/types/delivery.type';
 import { ICustomer } from '@/models/customer.model';
 import Logger from '@/utils/logger';
+import { PaymentType } from '@/types';
 
 export class DeliveryService {
   private customerService: CustomerService;
@@ -1278,7 +1279,7 @@ export class DeliveryService {
           collectForCustomerNote?: string;
           totalCost: number;
           actualRevenue: number;
-          paymentType: 'debt' | 'free' | null;
+          paymentType: PaymentType;
           notes?: string;
           details?: {
             weight?: number;
