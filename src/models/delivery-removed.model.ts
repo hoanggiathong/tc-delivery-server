@@ -51,7 +51,6 @@ const removedDeliverySchema = new Schema<IRemovedDelivery>(
     originalDeliveryId: {
       type: Schema.Types.ObjectId,
       required: [true, 'Original delivery ID is required'],
-      index: true,
     },
     code: {
       type: String,
@@ -63,7 +62,6 @@ const removedDeliverySchema = new Schema<IRemovedDelivery>(
       type: String,
       required: [true, 'Full code is required'],
       trim: true,
-      index: true,
     },
     subCode: {
       type: String,
@@ -213,7 +211,6 @@ const removedDeliverySchema = new Schema<IRemovedDelivery>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: [true, 'Deleted by user is required'],
-      index: true,
     },
     reason: {
       type: String,
@@ -225,7 +222,6 @@ const removedDeliverySchema = new Schema<IRemovedDelivery>(
       type: Date,
       required: [true, 'Deleted date is required'],
       default: Date.now,
-      index: true,
     },
     expiredAt: {
       type: Date,

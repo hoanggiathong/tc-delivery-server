@@ -16,6 +16,9 @@ export interface ICustomer extends Document {
   type: 'delivery' | 'money';
   bankId: Types.ObjectId;
   images: ICustomerImage[];
+  address: string;
+  identityCardIssuedDate: Date;
+  identityCardNumber: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -82,6 +85,15 @@ const customerSchema = new Schema<ICustomer>(
         },
         message: 'Maximum 5 images allowed',
       },
+    },
+    address: {
+      type: String,
+    },
+    identityCardIssuedDate: {
+      type: Date,
+    },
+    identityCardNumber: {
+      type: String,
     },
   },
   {

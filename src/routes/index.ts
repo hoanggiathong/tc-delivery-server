@@ -11,6 +11,7 @@ import settingsRoutes from './settings.routes';
 import testRoutes from './test.routes';
 import userRouteRoutes from './user-route.routes';
 import userRoutes from './user.route';
+import returnDeliveriesRoutes from './return-deliveries.route';
 
 const router = Router();
 
@@ -26,5 +27,6 @@ router.use('/settings', settingsRoutes);
 router.use('/draft-deliveries', draftDeliveryRoutes);
 router.use('/debt-management', debtManagementRoutes);
 router.use('/debt', debtRoutes);
+router.use('/return-deliveries', returnDeliveriesRoutes);
 
 export default router;

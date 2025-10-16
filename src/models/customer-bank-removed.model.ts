@@ -24,7 +24,6 @@ const customerBankRemovedSchema = new Schema<ICustomerBankRemoved>(
       type: Schema.Types.ObjectId,
       ref: 'Customer',
       required: [true, 'Customer ID is required'],
-      index: true,
     },
     name: {
       type: String,
@@ -65,13 +64,11 @@ const customerBankRemovedSchema = new Schema<ICustomerBankRemoved>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: [true, 'Deleted by user is required'],
-      index: true,
     },
     deletedAt: {
       type: Date,
       required: [true, 'Deleted date is required'],
       default: Date.now,
-      index: true,
     },
     expiredAt: {
       type: Date,

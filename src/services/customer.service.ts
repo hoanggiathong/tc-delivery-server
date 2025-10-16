@@ -9,6 +9,7 @@ import { Types } from 'mongoose';
 import path from 'path';
 import QRCode from 'qrcode';
 import { CustomerBankRemovedService } from './customer-bank-removed.service';
+import { TYPE_DELIVERY_CUSTOMER } from '@/const/customer.const';
 
 export class CustomerService {
   private userService: UserService;
@@ -150,7 +151,7 @@ export class CustomerService {
    */
   async getFrequentReceivers(
     senderPhone: string,
-    type: 'delivery' | 'money',
+    type: TYPE_DELIVERY_CUSTOMER,
     userId: string
   ): Promise<ICustomer[]> {
     try {
@@ -196,7 +197,7 @@ export class CustomerService {
    */
   async getCustomerByPhoneAndType(
     phone: string,
-    type: 'delivery' | 'money'
+    type: TYPE_DELIVERY_CUSTOMER
   ): Promise<ICustomer | null> {
     try {
       const customer = await Customer.findOne({ phone, type });

@@ -59,3 +59,14 @@ export const getListReturnDeliveriesSchema = z
     message: 'Start date must be before or equal to end date',
     path: ['query', 'startDate'],
   });
+
+// Schema for get information receiver
+export const getInformationReceiverSchema = z.object({
+  params: z.object({
+    phoneReceiver: z
+      .string()
+      .min(1, 'Phone receiver is required')
+      .max(100, 'Phone receiver must not exceed 100 characters')
+      .trim(),
+  }),
+});

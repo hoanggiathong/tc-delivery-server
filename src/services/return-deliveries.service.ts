@@ -1,21 +1,29 @@
+import { TYPE_DELIVERY_CUSTOMER } from '@/const/customer.const';
 import { SORT_BY_RETURN_DELIVERIES } from '@/const/return-deliveries.const';
+import { ICustomer } from '@/models/customer.model';
 import { Delivery } from '@/models/delivery.model';
 import {
   IReturnDeliveryLeanPopulated,
   IReturnDeliveryResponse,
 } from '@/types/return-delivery.type';
 import { Types } from 'mongoose';
+import { CustomerService } from './customer.service';
 import { DeliveryService } from './delivery.service';
 import { UserService } from './user.service';
+import { ICustomerInformationResponse } from '@/types/customer.type';
+import { IRouteResponse } from '@/types/route.type';
+import { RouteService } from './route.service';
 
 export class ReturnDeliveriesService {
-  // private customerService: CustomerService;
+  private customerService: CustomerService;
+  private routeService: RouteService;
   // private settingsService: SettingsService;
   private userService: UserService;
   private deliveryService: DeliveryService;
 
   constructor() {
-    // this.customerService = new CustomerService();
+    this.customerService = new CustomerService();
+    this.routeService = new RouteService();
     // this.settingsService = new SettingsService();
     this.userService = new UserService();
     this.deliveryService = new DeliveryService();
@@ -39,7 +47,7 @@ export class ReturnDeliveriesService {
     };
 
     if (phoneReceiver) {
-      (where as any)['receiver.phone'] = phoneReceiver;
+      (where as any)['receiver.phonze'] = phoneReceiver;
     }
 
     //handle sort
@@ -133,5 +141,42 @@ export class ReturnDeliveriesService {
    */
   private toPopulatedReturnDeliveryLean(returnDelivery: unknown): IReturnDeliveryLeanPopulated[] {
     return returnDelivery as IReturnDeliveryLeanPopulated[];
+  }
+
+  async getInformationReceiver(phoneReceiver: string): Promise<ICustomerInformationResponse | []> {
+    try {
+      const receiver: ICustomer | null = await this.customerService.getCustomerByPhoneAndType(
+        phoneReceiver,
+        TYPE_DELIVERY_CUSTOMER.DELIVERY
+      );
+
+      if (!receiver) {
+        return [];
+      }
+
+      const route: IRouteResponse | null = await this.routeService.getRouteById(
+        receiver.routeId.toString()
+      );
+
+      return {
+        id: receiver._id.toString(),
+        name: receiver.name,
+        phone: receiver.phone,
+        route: {
+          id: receiver.routeId.toString(),
+          code: route?.code,
+          name: route?.name,
+        },
+        type: receiver.type,
+        address: receiver.address,
+        identityCardIssuedDate: receiver.identityCardIssuedDate,
+        identityCardNumber: receiver.identityCardNumber,
+        images: receiver.images,
+        createdAt: receiver.createdAt,
+        updatedAt: receiver.updatedAt,
+      } as ICustomerInformationResponse;
+    } catch (error) {
+      throw new Error('get information receiver failed');
+    }
   }
 }

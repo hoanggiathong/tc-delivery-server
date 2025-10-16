@@ -22,6 +22,7 @@ import {
   IMoneyDeliveryCostReportSummary,
   IMoneyDeliveryReportItem,
 } from '@/types/money-delivery.type';
+import { TYPE_DELIVERY_CUSTOMER } from '@/const/customer.const';
 
 export class MoneyDeliveryService {
   private customerService: CustomerService;
@@ -538,7 +539,7 @@ export class MoneyDeliveryService {
     try {
       const receivers = await this.customerService.getFrequentReceivers(
         senderIdentifier,
-        'money',
+        TYPE_DELIVERY_CUSTOMER.MONEY,
         userId
       );
 
@@ -548,7 +549,7 @@ export class MoneyDeliveryService {
 
       const sender = await this.customerService.getCustomerByPhoneAndType(
         senderIdentifier,
-        'money'
+        TYPE_DELIVERY_CUSTOMER.MONEY
       );
 
       if (!sender) {
