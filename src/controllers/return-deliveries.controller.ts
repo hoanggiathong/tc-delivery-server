@@ -1,6 +1,9 @@
 import { ReturnDeliveriesService } from '@/services/return-deliveries.service';
-import { ApiResponse, AuthRequest } from '@/types';
-import { IReturnDeliveryListRequest } from '@/types/return-delivery.type';
+import { ApiResponse, AuthRequest, AuthRequestWithFileUploads } from '@/types';
+import {
+  IReturnDeliveryListRequest,
+  IReturnDeliveryUpdateRequest,
+} from '@/types/return-delivery.type';
 import { Response } from 'express';
 
 export class ReturnDeliveriesController {
@@ -247,7 +250,7 @@ export class ReturnDeliveriesController {
       };
       res.status(200).json(response);
     } catch (error) {
-      console.error('get information receiver error:', error);
+      // console.error('get information receiver error:', error);
       const message = error instanceof Error ? error.message : 'get information receiver failed';
       const response: ApiResponse = {
         success: false,
@@ -257,32 +260,140 @@ export class ReturnDeliveriesController {
     }
   };
 
-  // updateStatusReturnDelivery = async (
-  //   req: AuthRequestWithFileUploads,
-  //   res: Response
-  // ): Promise<void> => {
-  //   try {
-  //     const { phoneReceiver } = req.params;
+  /**
+   * @swagger
+   * /api/return-deliveries/update-status:
+   *   put:
+   *     summary: Update status of return deliveries
+   *     tags: [Return Deliveries]
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         multipart/form-data:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               arrayListReturnDelivery:
+   *                 type: string
+   *                 description: JSON string of array list return delivery
+   *                 example: '[{"deliveryId":"507f1f77bcf86cd799439011","customerId":"507f1f77bcf86cd799439012","images":[{"url":"","rotate":0}],"address":"123 ABC Street","identityCardIssuedDate":"2024-01-01","identityCardNumber":"123456789","imagesIdentityCard":"","imagesDeliveries":[{"url":"","rotate":0}]}]'
+   *               images:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *                   format: binary
+   *                 description: Uploaded images for return delivery (customer images + delivery images)
+   *           examples:
+   *             singleReturn:
+   *               summary: Single return delivery
+   *               value:
+   *                 arrayListReturnDelivery: '[{"deliveryId":"507f1f77bcf86cd799439011","customerId":"507f1f77bcf86cd799439012","images":[{"url":"","rotate":0}],"address":"123 ABC Street","identityCardIssuedDate":"2024-01-01","identityCardNumber":"123456789","imagesIdentityCard":"","imagesDeliveries":[{"url":"","rotate":0}]}]'
+   *             multipleReturns:
+   *               summary: Multiple return deliveries
+   *               value:
+   *                 arrayListReturnDelivery: '[{"deliveryId":"507f1f77bcf86cd799439011","customerId":"507f1f77bcf86cd799439012"},{"deliveryId":"507f1f77bcf86cd799439013","customerId":"507f1f77bcf86cd799439014"}]'
+   *     responses:
+   *       200:
+   *         description: Return delivery status updated successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "update status return delivery successful"
+   *       400:
+   *         description: Validation error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Array list return delivery is empty"
+   *       404:
+   *         description: Delivery or customer not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Delivery with ID not found"
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "update status return delivery failed"
+   */
+  updateStatusReturnDelivery = async (
+    req: AuthRequestWithFileUploads,
+    res: Response
+  ): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+      // Parse the JSON string from FormData
+      let updateData: IReturnDeliveryUpdateRequest;
+      try {
+        updateData = JSON.parse(req.body.arrayListReturnDelivery);
+      } catch (parseError) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Invalid JSON format for arrayListReturnDelivery',
+        };
+        res.status(400).json(response);
+        return;
+      }
 
-  //     const result = await this.returnDeliveriesService.updateStatusReturnDelivery(
-  //       phoneReceiver,
-  //       req.body
-  //     );
-  //     const response: ApiResponse = {
-  //       success: true,
-  //       message: 'update status return delivery successful',
-  //       data: result,
-  //     };
-  //     res.status(200).json(response);
-  //   } catch (error) {
-  //     console.error('update status return delivery error:', error);
-  //     const message =
-  //       error instanceof Error ? error.message : 'update status return delivery failed';
-  //     const response: ApiResponse = {
-  //       success: false,
-  //       message,
-  //     };
-  //     res.status(500).json(response);
-  //   }
-  // };
+      await this.returnDeliveriesService.updateStatusReturnDelivery(
+        req.user?.userId,
+        updateData,
+        req.files as Express.Multer.File[]
+      );
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'update status return delivery successful',
+      };
+      res.status(200).json(response);
+    } catch (error) {
+      // console.error('update status return delivery error:', error);
+      const message =
+        error instanceof Error ? error.message : 'update status return delivery failed';
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+      res.status(500).json(response);
+    }
+  };
 }

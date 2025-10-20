@@ -39,6 +39,7 @@ export interface IDelivery extends Document {
   createdAt: Date;
   updatedAt: Date;
   isReturn: boolean;
+  isCollectForCustomerCost?: boolean;
   inventory?: any;
   smsType?: string;
   timeToSendSMS?: Date;
@@ -214,6 +215,10 @@ const deliverySchema = new Schema<IDelivery>(
       trim: true,
     },
     isReturn: {
+      type: Boolean,
+      default: false,
+    },
+    isCollectForCustomerCost: {
       type: Boolean,
       default: false,
     },

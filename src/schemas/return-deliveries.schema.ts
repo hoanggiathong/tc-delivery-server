@@ -70,3 +70,37 @@ export const getInformationReceiverSchema = z.object({
       .trim(),
   }),
 });
+
+// Schema for update status return delivery
+export const updateStatusReturnDeliverySchema = z.object({
+  body: z.object({
+    arrayListReturnDelivery: z
+      .array(
+        z.object({
+          deliveryId: z.string().min(1, 'Delivery ID is required'),
+          customerId: z.string().min(1, 'Customer ID is required'),
+          images: z
+            .array(
+              z.object({
+                url: z.string().url('Invalid image URL'),
+                rotate: z.number().min(0).max(270).optional(),
+              })
+            )
+            .optional(),
+          address: z.string().optional(),
+          identityCardIssuedDate: z.string().optional(),
+          identityCardNumber: z.string().optional(),
+          imagesIdentityCard: z.string().optional(),
+          imagesDeliveries: z
+            .array(
+              z.object({
+                url: z.string().url('Invalid image URL'),
+                rotate: z.number().min(0).max(270).optional(),
+              })
+            )
+            .optional(),
+        })
+      )
+      .min(1, 'At least one return delivery item is required'),
+  }),
+});

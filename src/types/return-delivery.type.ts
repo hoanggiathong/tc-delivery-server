@@ -86,3 +86,24 @@ export interface IReturnDeliveryLeanPopulated {
   smsType?: string;
   timeToSendSMS?: Date;
 }
+
+export interface IReturnDeliveryUpdateItem {
+  deliveryId: string;
+  customerId: string;
+  images?: Array<{
+    url: string;
+    rotate?: number;
+  }>;
+  address?: string;
+  identityCardIssuedDate?: string;
+  identityCardNumber?: string;
+  imagesIdentityCard?: string;
+  imagesDeliveries?: Array<{
+    url: string;
+    rotate?: number;
+  }>;
+}
+
+export interface IReturnDeliveryUpdateRequest {
+  arrayListReturnDelivery: IReturnDeliveryUpdateItem[];
+}
