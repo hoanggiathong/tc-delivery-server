@@ -1,5 +1,13 @@
 import { PaymentType } from '.';
 
+export interface IReturnDeliveryListRequest {
+  startDate: string;
+  endDate: string;
+  keySort?: string;
+  phoneReceiver?: string;
+  typeSort?: 1 | -1;
+}
+
 export interface IReturnDeliveryResponse {
   id: string;
   code: string;
@@ -56,7 +64,7 @@ export interface IReturnDeliveryLeanPopulated {
     phone: string;
   };
   toRoute: {
-    id: string;
+    _id: string;
     code: string;
     name: string;
   };
