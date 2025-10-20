@@ -1,5 +1,6 @@
 import { ReturnDeliveriesService } from '@/services/return-deliveries.service';
-import { ApiResponse, AuthRequest, AuthRequestWithFileUploads } from '@/types';
+import { ApiResponse, AuthRequest } from '@/types';
+import { IReturnDeliveryListRequest } from '@/types/return-delivery.type';
 import { Response } from 'express';
 
 export class ReturnDeliveriesController {
@@ -25,7 +26,7 @@ export class ReturnDeliveriesController {
    *           type: string
    *           format: date
    *         description: Start date for filtering (ISO format). Cannot be more than 1 month in the past.
-   *         example: "2025-10-17"
+   *         example: "2025-10-01T00:00:00.000Z"
    *       - in: query
    *         name: endDate
    *         required: true
@@ -33,7 +34,7 @@ export class ReturnDeliveriesController {
    *           type: string
    *           format: date
    *         description: End date for filtering (ISO format). Cannot be in the future.
-   *         example: "2025-10-17"
+   *         example: "2025-10-31T23:59:59.999Z"
    *       - in: query
    *         name: phoneReceiver
    *         schema:
@@ -96,8 +97,10 @@ export class ReturnDeliveriesController {
         return;
       }
 
+      const query: IReturnDeliveryListRequest = req.query as unknown as IReturnDeliveryListRequest;
+
       const result = await this.returnDeliveriesService.getListReturnDeliveries(
-        req,
+        query,
         req.user?.userId
       );
 
@@ -254,32 +257,32 @@ export class ReturnDeliveriesController {
     }
   };
 
-  updateStatusReturnDelivery = async (
-    req: AuthRequestWithFileUploads,
-    res: Response
-  ): Promise<void> => {
-    try {
-      const { phoneReceiver } = req.params;
+  // updateStatusReturnDelivery = async (
+  //   req: AuthRequestWithFileUploads,
+  //   res: Response
+  // ): Promise<void> => {
+  //   try {
+  //     const { phoneReceiver } = req.params;
 
-      const result = await this.returnDeliveriesService.updateStatusReturnDelivery(
-        phoneReceiver,
-        req.body
-      );
-      const response: ApiResponse = {
-        success: true,
-        message: 'update status return delivery successful',
-        data: result,
-      };
-      res.status(200).json(response);
-    } catch (error) {
-      console.error('update status return delivery error:', error);
-      const message =
-        error instanceof Error ? error.message : 'update status return delivery failed';
-      const response: ApiResponse = {
-        success: false,
-        message,
-      };
-      res.status(500).json(response);
-    }
-  };
+  //     const result = await this.returnDeliveriesService.updateStatusReturnDelivery(
+  //       phoneReceiver,
+  //       req.body
+  //     );
+  //     const response: ApiResponse = {
+  //       success: true,
+  //       message: 'update status return delivery successful',
+  //       data: result,
+  //     };
+  //     res.status(200).json(response);
+  //   } catch (error) {
+  //     console.error('update status return delivery error:', error);
+  //     const message =
+  //       error instanceof Error ? error.message : 'update status return delivery failed';
+  //     const response: ApiResponse = {
+  //       success: false,
+  //       message,
+  //     };
+  //     res.status(500).json(response);
+  //   }
+  // };
 }

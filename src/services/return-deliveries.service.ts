@@ -4,9 +4,9 @@ import { ICustomer } from '@/models/customer.model';
 import { Delivery } from '@/models/delivery.model';
 import {
   IReturnDeliveryLeanPopulated,
+  IReturnDeliveryListRequest,
   IReturnDeliveryResponse,
 } from '@/types/return-delivery.type';
-import { Types } from 'mongoose';
 import { CustomerService } from './customer.service';
 import { DeliveryService } from './delivery.service';
 import { UserService } from './user.service';
@@ -30,26 +30,43 @@ export class ReturnDeliveriesService {
     this.deliveryService = new DeliveryService();
     this.moneyDeliveryService = new MoneyDeliveryService();
   }
-  async getListReturnDeliveries(req: any, userId: string): Promise<IReturnDeliveryResponse[]> {
-    const { startDate, endDate, keySort, phoneReceiver } = req.query;
+  async getListReturnDeliveries(
+    query: IReturnDeliveryListRequest,
+    userId: string
+  ): Promise<IReturnDeliveryResponse[]> {
+    const { startDate, endDate, keySort, phoneReceiver } = query;
 
-    let { typeSort } = req.query;
+    let typeSort = query.typeSort;
 
     const start = new Date(String(startDate));
 
     const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
 
-    const toId = new Types.ObjectId(String(selectedRouteId));
     let sort = {};
 
     const where = {
-      toRoute: toId,
+      toRoute: selectedRouteId,
       createdAt: { $gte: start, $lte: endDate },
       isReturn: false,
     };
 
+    // Handle phone receiver filter by finding customer first
     if (phoneReceiver) {
-      (where as any)['receiver.phonze'] = phoneReceiver;
+      try {
+        const receiverCustomer = await this.customerService.getCustomerByPhoneAndType(
+          phoneReceiver,
+          TYPE_DELIVERY_CUSTOMER.DELIVERY
+        );
+
+        if (receiverCustomer) {
+          (where as Record<string, unknown>).receiver = receiverCustomer._id;
+        } else {
+          // If no customer found with this phone, return empty result
+          return [];
+        }
+      } catch (error) {
+        throw new Error('Error finding receiver by phone number');
+      }
     }
 
     //handle sort
@@ -106,7 +123,7 @@ export class ReturnDeliveriesService {
             phone: item.receiver.phone,
           },
           toRoute: {
-            id: item.toRoute.id.toString(),
+            id: item.toRoute._id.toString(),
             code: item.toRoute.code,
             name: item.toRoute.name,
           },
