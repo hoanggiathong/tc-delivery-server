@@ -20,3 +20,9 @@ export const uploadMiddleware = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
   fileFilter: fileFilter,
 });
+
+export const uploadMultipleImages = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: fileFilter,
+}).array('images', 5); // Allow up to 5 images

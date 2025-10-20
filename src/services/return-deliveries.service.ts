@@ -6,6 +6,7 @@ import {
   IReturnDeliveryLeanPopulated,
   IReturnDeliveryListRequest,
   IReturnDeliveryResponse,
+  IReturnDeliveryUpdateRequest,
 } from '@/types/return-delivery.type';
 import { CustomerService } from './customer.service';
 import { DeliveryService } from './delivery.service';
@@ -14,6 +15,9 @@ import { ICustomerInformationResponse } from '@/types/customer.type';
 import { IRouteResponse } from '@/types/route.type';
 import { RouteService } from './route.service';
 import { MoneyDeliveryService } from './money-delivery.service';
+import Logger from '@/utils/logger';
+import path from 'path';
+import fs from 'fs';
 
 export class ReturnDeliveriesService {
   private customerService: CustomerService;
@@ -198,26 +202,240 @@ export class ReturnDeliveriesService {
       throw new Error('get information receiver failed');
     }
   }
-}
 
-// async function updateStatusReturnDelivery(phoneReceiver: string): Promise<void> {
-//   try {
-//     // todo: check array return delivery
-//     // if arrray is empty, => return error
-//     // if array >1
-//     // => don't handle field returnDeliveryImages
-//     // => check field collectForCustomer > 0
-//     // => call service money delivery to handle data and create new money delivery
-//     // => update status return delivery with field isReturn = true
-//     // => update field note with string 'Đã trả hàng + now date' + old value of note
-//     // if array = 1
-//     // => handle field returnDeliveryImages
-//     // => handle field images of customer to update images and infor
-//     // => check field collectForCustomer > 0
-//     // => call service money delivery to handle data and create new money delivery
-//     // => then update status return delivery with field isReturn = true
-//     // => update field note with string 'Đã trả hàng + now date' + old value of note
-//   } catch (error) {
-//     throw new Error('update status return delivery failed');
-//   }
-// }
+  async updateStatusReturnDelivery(
+    userId: string,
+    updateData: IReturnDeliveryUpdateRequest,
+    uploadedFiles?: Express.Multer.File[]
+  ): Promise<void> {
+    try {
+      const { arrayListReturnDelivery } = updateData;
+
+      // Check array return delivery
+      if (!arrayListReturnDelivery || arrayListReturnDelivery.length === 0) {
+        throw new Error('Array list return delivery is empty');
+      }
+
+      const now = new Date();
+      const returnDateString = `Đã trả hàng ${now.toLocaleDateString('vi-VN')}`;
+
+      if (arrayListReturnDelivery.length === 1) {
+        // Handle single return delivery
+        const singleItem = arrayListReturnDelivery[0];
+
+        // Get delivery by ID
+        const delivery = await Delivery.findById(singleItem.deliveryId).populate([
+          'sender',
+          'receiver',
+          'fromRoute',
+          'toRoute',
+        ]);
+        if (!delivery) {
+          throw new Error(`Delivery with ID ${singleItem.deliveryId} not found`);
+        }
+
+        // Get customer by ID
+        const customer = await this.customerService.getCustomerById(singleItem.customerId);
+        if (!customer) {
+          throw new Error(`Customer with ID ${singleItem.customerId} not found`);
+        }
+
+        // Handle file images to save in folder (only for single delivery)
+        if (
+          singleItem.imagesDeliveries &&
+          singleItem.imagesDeliveries.length > 0 &&
+          uploadedFiles
+        ) {
+          const returnDeliveryImages = [];
+          const customerImagesStartIndex = singleItem.images ? singleItem.images.length : 0;
+
+          for (let j = 0; j < singleItem.imagesDeliveries.length; j++) {
+            const imageInfo = singleItem.imagesDeliveries[j];
+            const fileIndex = customerImagesStartIndex + j;
+
+            if (uploadedFiles[fileIndex]) {
+              const file = uploadedFiles[fileIndex];
+
+              // Create delivery folder if not exists
+              const deliveryFolder = path.join('public/uploads/deliveries', singleItem.deliveryId);
+              if (!fs.existsSync(deliveryFolder)) {
+                fs.mkdirSync(deliveryFolder, { recursive: true });
+              }
+
+              // Save delivery image
+              const ext = path.extname(file.originalname);
+              const filename = `delivery_${j + 1}${ext}`;
+              const filePath = path.join(deliveryFolder, filename);
+              fs.writeFileSync(filePath, file.buffer);
+
+              const baseUrl = `/uploads/deliveries/${singleItem.deliveryId}/${filename}`;
+              returnDeliveryImages.push({
+                url: baseUrl,
+                rotate: imageInfo.rotate || 0,
+              });
+            }
+          }
+
+          // Handle to and save value and url for field returnDeliveryImages
+          delivery.returnDeliveryImages = returnDeliveryImages;
+        }
+
+        // Handle field images of customer to update images and info
+        if (singleItem.images && singleItem.images.length > 0 && uploadedFiles) {
+          for (let j = 0; j < singleItem.images.length; j++) {
+            const imageInfo = singleItem.images[j];
+            const fileIndex = j;
+
+            if (uploadedFiles[fileIndex]) {
+              const file = uploadedFiles[fileIndex];
+              await this.customerService.uploadImageById(
+                singleItem.customerId,
+                j + 1, // Image index starts from 1
+                file.buffer,
+                file.originalname,
+                imageInfo.rotate || 0
+              );
+            }
+          }
+        }
+
+        // Update customer information if provided
+        if (
+          singleItem.address ||
+          singleItem.identityCardIssuedDate ||
+          singleItem.identityCardNumber
+        ) {
+          const updateCustomerData: Record<string, unknown> = {};
+
+          if (singleItem.address) {
+            updateCustomerData.address = singleItem.address;
+          }
+          if (singleItem.identityCardIssuedDate) {
+            updateCustomerData.identityCardIssuedDate = singleItem.identityCardIssuedDate;
+          }
+          if (singleItem.identityCardNumber) {
+            updateCustomerData.identityCardNumber = singleItem.identityCardNumber;
+          }
+
+          await this.customerService.updateCustomer(singleItem.customerId, updateCustomerData);
+        }
+
+        // Check field collectForCustomer > 0
+        if (delivery.collectForCustomer > 0) {
+          // Call service money delivery to handle data and create new money delivery
+          await this.moneyDeliveryService.createMoneyDelivery(
+            {
+              senderName: (delivery.sender as unknown as Record<string, unknown>).name as string,
+              senderPhone: (delivery.sender as unknown as Record<string, unknown>).phone as string,
+              receiverName: customer.name,
+              receiverPhone: customer.phone,
+              toRouteId: delivery.toRoute._id.toString(),
+              sendMoneyAmount: delivery.collectForCustomer,
+              sendCost: 0,
+              transferType: 'regular',
+              isFree: false,
+              notes: `Thu dùm từ giao hàng ${delivery.fullCode}`,
+            },
+            userId
+          );
+        }
+
+        // Check field collectForCustomerCost > 0
+        if (delivery.collectForCustomerCost > 0) {
+          // Then update status with field isCollectForCustomerCost = true
+          delivery.isCollectForCustomerCost = true;
+        }
+
+        // Then update status return delivery with field isReturn = true
+        delivery.isReturn = true;
+        // Update field note with string 'Đã trả hàng + now date' + old value of note
+        delivery.notes = `${returnDateString}, ${delivery.notes}`;
+        delivery.updatedAt = now;
+        await delivery.save();
+      } else {
+        // Handle multiple return deliveries (array > 1)
+        for (const item of arrayListReturnDelivery) {
+          // Get delivery by ID
+          const delivery = await Delivery.findById(item.deliveryId).populate([
+            'sender',
+            'receiver',
+            'fromRoute',
+            'toRoute',
+          ]);
+          if (!delivery) {
+            throw new Error(`Delivery with ID ${item.deliveryId} not found`);
+          }
+
+          // Get customer by ID
+          const customer = await this.customerService.getCustomerById(item.customerId);
+          if (!customer) {
+            throw new Error(`Customer with ID ${item.customerId} not found`);
+          }
+
+          // Don't handle field returnDeliveryImages for multiple deliveries
+
+          // Update customer information if provided
+          if (item.address || item.identityCardIssuedDate || item.identityCardNumber) {
+            const updateCustomerData: Record<string, unknown> = {};
+
+            if (item.address) {
+              updateCustomerData.address = item.address;
+            }
+            if (item.identityCardIssuedDate) {
+              updateCustomerData.identityCardIssuedDate = item.identityCardIssuedDate;
+            }
+            if (item.identityCardNumber) {
+              updateCustomerData.identityCardNumber = item.identityCardNumber;
+            }
+
+            await this.customerService.updateCustomer(item.customerId, updateCustomerData);
+          }
+
+          // Check field collectForCustomer > 0
+          if (delivery.collectForCustomer > 0) {
+            // Call service money delivery to handle data and create new money delivery
+            await this.moneyDeliveryService.createMoneyDelivery(
+              {
+                senderName: (delivery.sender as unknown as Record<string, unknown>).name as string,
+                senderPhone: (delivery.sender as unknown as Record<string, unknown>)
+                  .phone as string,
+                receiverName: customer.name,
+                receiverPhone: customer.phone,
+                toRouteId: delivery.toRoute._id.toString(),
+                sendMoneyAmount: delivery.collectForCustomer,
+                sendCost: delivery.collectForCustomerCost || 0,
+                transferType: 'regular',
+                isFree: false,
+                notes: `Thu dùm từ giao hàng ${delivery.fullCode}`,
+              },
+              userId
+            );
+          }
+
+          // Check field collectForCustomerCost > 0
+          if (delivery.collectForCustomerCost > 0) {
+            // Then update status with field isCollectForCustomerCost = true
+            delivery.isCollectForCustomerCost = true;
+          }
+
+          // Then update status return delivery with field isReturn = true
+          delivery.isReturn = true;
+          // Update field note with string 'Đã trả hàng + now date' + old value of note
+          delivery.notes = `${returnDateString}, ${delivery.notes}`;
+          delivery.updatedAt = now;
+          await delivery.save();
+        }
+      }
+
+      Logger.info('Return delivery status updated successfully', {
+        deliveryCount: arrayListReturnDelivery.length,
+        timestamp: now,
+      });
+    } catch (error) {
+      Logger.error('Failed to update return delivery status', {
+        error: error instanceof Error ? error.message : error,
+      });
+      throw new Error('update status return delivery failed');
+    }
+  }
+}

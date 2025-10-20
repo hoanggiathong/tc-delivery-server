@@ -1,10 +1,12 @@
 import { ReturnDeliveriesController } from '@/controllers/return-deliveries.controller';
 import { authenticateToken } from '@/middlewares/auth.middleware';
 import { requireRole } from '@/middlewares/role.middleware';
+import { uploadMultipleImages } from '@/middlewares/upload.middleware';
 import { validate } from '@/middlewares/validation.middleware';
 import {
   getInformationReceiverSchema,
   getListReturnDeliveriesSchema,
+  updateStatusReturnDeliverySchema,
 } from '@/schemas/return-deliveries.schema';
 import { UserRole } from '@/types/user.type';
 import { Router } from 'express';
@@ -26,6 +28,13 @@ router.get(
   '/get-list-return-deliveries',
   validate(getListReturnDeliveriesSchema),
   returnDeliveriesController.getListReturnDeliveries
+);
+
+router.put(
+  '/update-status',
+  uploadMultipleImages,
+  validate(updateStatusReturnDeliverySchema),
+  returnDeliveriesController.updateStatusReturnDelivery
 );
 
 export default router;
