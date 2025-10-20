@@ -94,7 +94,7 @@ export class UserService {
   async updateAdditionalInformationProductWithDefaults(
     userId: string,
     listAdditionalInformationProduct: IAdditionalInformationProductInput[]
-  ): Promise<boolean> {
+  ): Promise<IAdditionalInformationProductResponse[]> {
     try {
       // Sort by position first
       const sortedList = listAdditionalInformationProduct.sort((a, b) => a.position - b.position);
@@ -119,7 +119,18 @@ export class UserService {
         },
         { upsert: true, new: true, runValidators: true }
       );
-      return !!result;
+
+      if (!result) {
+        throw new AppError('User not found', 404);
+      }
+
+      // Return the updated list in response format
+      return additionalInformationProductWithDefaults.map(item => ({
+        id: item._id?.toString() || '',
+        content: item.content,
+        position: item.position,
+        selected: item.selected === true,
+      }));
     } catch (error) {
       if (error instanceof AppError) {
         throw error;
