@@ -1,5 +1,5 @@
 import { ReturnDeliveriesService } from '@/services/return-deliveries.service';
-import { ApiResponse, AuthRequest } from '@/types';
+import { ApiResponse, AuthRequest, AuthRequestWithFileUploads } from '@/types';
 import { Response } from 'express';
 
 export class ReturnDeliveriesController {
@@ -25,7 +25,7 @@ export class ReturnDeliveriesController {
    *           type: string
    *           format: date
    *         description: Start date for filtering (ISO format). Cannot be more than 1 month in the past.
-   *         example: "2024-01-01"
+   *         example: "2025-10-17"
    *       - in: query
    *         name: endDate
    *         required: true
@@ -33,12 +33,12 @@ export class ReturnDeliveriesController {
    *           type: string
    *           format: date
    *         description: End date for filtering (ISO format). Cannot be in the future.
-   *         example: "2024-01-31"
+   *         example: "2025-10-17"
    *       - in: query
    *         name: phoneReceiver
    *         schema:
    *           type: string
-   *           pattern: '^[0-9]+$'
+   *           pattern: '^\+?[1-9]\d{1,14}$'
    *         description: Phone receiver
    *         example: "+84123456789"
    *       - in: query
@@ -246,6 +246,35 @@ export class ReturnDeliveriesController {
     } catch (error) {
       console.error('get information receiver error:', error);
       const message = error instanceof Error ? error.message : 'get information receiver failed';
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+      res.status(500).json(response);
+    }
+  };
+
+  updateStatusReturnDelivery = async (
+    req: AuthRequestWithFileUploads,
+    res: Response
+  ): Promise<void> => {
+    try {
+      const { phoneReceiver } = req.params;
+
+      const result = await this.returnDeliveriesService.updateStatusReturnDelivery(
+        phoneReceiver,
+        req.body
+      );
+      const response: ApiResponse = {
+        success: true,
+        message: 'update status return delivery successful',
+        data: result,
+      };
+      res.status(200).json(response);
+    } catch (error) {
+      console.error('update status return delivery error:', error);
+      const message =
+        error instanceof Error ? error.message : 'update status return delivery failed';
       const response: ApiResponse = {
         success: false,
         message,
