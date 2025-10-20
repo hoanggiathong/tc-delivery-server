@@ -1,5 +1,5 @@
-import mongoose, { Document, Schema } from 'mongoose';
 import { PaymentType } from '@/types';
+import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IDelivery extends Document {
   _id: string;
@@ -38,6 +38,18 @@ export interface IDelivery extends Document {
   createdByUser: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
+  isReturn: boolean;
+  inventory?: any;
+  smsType?: string;
+  timeToSendSMS?: Date;
+  upItems?: string;
+  downItems?: string;
+  returnDeliveryImages?: IReturnDeliveryImage[];
+}
+
+export interface IReturnDeliveryImage {
+  url: string;
+  rotate: number;
 }
 
 const deliverySchema = new Schema<IDelivery>(
@@ -200,6 +212,56 @@ const deliverySchema = new Schema<IDelivery>(
       type: String,
       required: false,
       trim: true,
+    },
+    isReturn: {
+      type: Boolean,
+      default: false,
+    },
+    smsType: {
+      type: String,
+      // enum: RETURN_DELIVERIES_SMS_TYPE,
+      // default: RETURN_DELIVERIES_SMS_TYPE.SMS,
+    },
+    timeToSendSMS: {
+      type: Date,
+    },
+    inventory: {
+      type: String,
+    },
+    upItems: {
+      type: String,
+    },
+    downItems: {
+      type: String,
+    },
+    returnDeliveryImages: {
+      type: [
+        {
+          url: {
+            type: String,
+            required: true,
+            trim: true,
+          },
+          rotate: {
+            type: Number,
+            default: 0,
+            enum: [0, 90, 180, 270],
+            validate: {
+              validator: function (value: number) {
+                return [0, 90, 180, 270].includes(value);
+              },
+              message: 'Rotate must be 0, 90, 180, or 270 degrees',
+            },
+          },
+        },
+      ],
+      default: [],
+      validate: {
+        validator: function (images: IReturnDeliveryImage[]) {
+          return images.length <= 5;
+        },
+        message: 'Maximum 5 images allowed',
+      },
     },
   },
   {

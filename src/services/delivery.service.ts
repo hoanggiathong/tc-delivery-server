@@ -22,6 +22,8 @@ import {
 } from '@/types/delivery.type';
 import { ICustomer } from '@/models/customer.model';
 import Logger from '@/utils/logger';
+import { PaymentType } from '@/types';
+import { TYPE_DELIVERY_CUSTOMER } from '@/const/customer.const';
 
 export class DeliveryService {
   private customerService: CustomerService;
@@ -747,7 +749,7 @@ export class DeliveryService {
     try {
       const receivers = await this.customerService.getFrequentReceivers(
         senderIdentifier,
-        'delivery',
+        TYPE_DELIVERY_CUSTOMER.DELIVERY,
         userId
       );
 
@@ -757,7 +759,7 @@ export class DeliveryService {
 
       const sender = await this.customerService.getCustomerByPhoneAndType(
         senderIdentifier,
-        'delivery'
+        TYPE_DELIVERY_CUSTOMER.DELIVERY
       );
 
       if (!sender) {
@@ -1278,7 +1280,7 @@ export class DeliveryService {
           collectForCustomerNote?: string;
           totalCost: number;
           actualRevenue: number;
-          paymentType: 'debt' | 'free' | null;
+          paymentType: PaymentType;
           notes?: string;
           details?: {
             weight?: number;
