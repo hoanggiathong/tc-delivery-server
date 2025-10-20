@@ -47,7 +47,7 @@ export const getListReturnDeliveriesSchema = z
         .transform(val => new Date(val)),
       phoneReceiver: z
         .string()
-        .regex(/^[0-9]+$/, 'Please provide a valid phone receiver')
+        .regex(/^\+?[1-9]\d{1,14}$/, 'Please provide a valid phone receiver')
         .trim()
         .optional(),
       keySort: keySortOptionalSchema,

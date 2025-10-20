@@ -13,6 +13,7 @@ import { UserService } from './user.service';
 import { ICustomerInformationResponse } from '@/types/customer.type';
 import { IRouteResponse } from '@/types/route.type';
 import { RouteService } from './route.service';
+import { MoneyDeliveryService } from './money-delivery.service';
 
 export class ReturnDeliveriesService {
   private customerService: CustomerService;
@@ -20,13 +21,14 @@ export class ReturnDeliveriesService {
   // private settingsService: SettingsService;
   private userService: UserService;
   private deliveryService: DeliveryService;
-
+  private moneyDeliveryService: MoneyDeliveryService;
   constructor() {
     this.customerService = new CustomerService();
     this.routeService = new RouteService();
     // this.settingsService = new SettingsService();
     this.userService = new UserService();
     this.deliveryService = new DeliveryService();
+    this.moneyDeliveryService = new MoneyDeliveryService();
   }
   async getListReturnDeliveries(req: any, userId: string): Promise<IReturnDeliveryResponse[]> {
     const { startDate, endDate, keySort, phoneReceiver } = req.query;
@@ -180,3 +182,25 @@ export class ReturnDeliveriesService {
     }
   }
 }
+
+// async function updateStatusReturnDelivery(phoneReceiver: string): Promise<void> {
+//   try {
+//     // todo: check array return delivery
+//     // if arrray is empty, => return error
+//     // if array >1
+//     // => don't handle field returnDeliveryImages
+//     // => check field collectForCustomer > 0
+//     // => call service money delivery to handle data and create new money delivery
+//     // => update status return delivery with field isReturn = true
+//     // => update field note with string 'Đã trả hàng + now date' + old value of note
+//     // if array = 1
+//     // => handle field returnDeliveryImages
+//     // => handle field images of customer to update images and infor
+//     // => check field collectForCustomer > 0
+//     // => call service money delivery to handle data and create new money delivery
+//     // => then update status return delivery with field isReturn = true
+//     // => update field note with string 'Đã trả hàng + now date' + old value of note
+//   } catch (error) {
+//     throw new Error('update status return delivery failed');
+//   }
+// }
