@@ -8,12 +8,18 @@ export interface IReturnDeliveryListRequest {
   typeSort?: 1 | -1;
 }
 
+export interface IReturnDeliveryListDebtOfReturnDeliveriesTodayRequest {
+  startDate: string;
+  endDate: string;
+}
+
 export interface IReturnDeliveryResponse {
   id: string;
   code: string;
   fullCode?: string;
   subCode?: string;
   quantity?: number;
+  name?: string;
   sender: {
     name: string;
     phone: string;
@@ -48,6 +54,8 @@ export interface IReturnDeliveryResponse {
   inventory: any;
   smsType?: string;
   timeToSendSMS?: Date;
+  quantityReturn?: number;
+  dateReturn?: Date;
 }
 
 export interface IReturnDeliveryLeanPopulated {
@@ -55,6 +63,7 @@ export interface IReturnDeliveryLeanPopulated {
   code: string;
   fullCode: string;
   subCode: string;
+  name: string;
   sender: {
     name: string;
     phone: string;
@@ -71,6 +80,9 @@ export interface IReturnDeliveryLeanPopulated {
   cost: number;
   homeDelivery: string;
   homeDeliveryCost: number;
+  collectCost?: number;
+  collectForCustomer?: number;
+  collectForCustomerCost?: number;
   itemValue: number;
   itemCost: number;
   totalCost: number;
@@ -85,6 +97,8 @@ export interface IReturnDeliveryLeanPopulated {
   inventory?: string;
   smsType?: string;
   timeToSendSMS?: Date;
+  quantityReturn?: number;
+  dateReturn?: Date;
 }
 
 export interface IReturnDeliveryUpdateItem {

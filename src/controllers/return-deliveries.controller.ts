@@ -2,6 +2,7 @@ import { ReturnDeliveriesService } from '@/services/return-deliveries.service';
 import { ApiResponse, AuthRequest, AuthRequestWithFileUploads } from '@/types';
 import {
   IReturnDeliveryListRequest,
+  IReturnDeliveryListDebtOfReturnDeliveriesTodayRequest,
   IReturnDeliveryUpdateRequest,
 } from '@/types/return-delivery.type';
 import { Response } from 'express';
@@ -393,6 +394,344 @@ export class ReturnDeliveriesController {
         success: false,
         message,
       };
+      res.status(500).json(response);
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/return-deliveries/get-list-debt-of-return-deliveries-today:
+   *   get:
+   *     summary: Get list debt of return deliveries today
+   *     tags: [Return Deliveries]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: startDate
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Start date for filtering (ISO format)
+   *         example: "2025-10-01T00:00:00.000Z"
+   *       - in: query
+   *         name: endDate
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: End date for filtering (ISO format)
+   *         example: "2025-10-31T23:59:59.999Z"
+   *     responses:
+   *       200:
+   *         description: Get list debt of return deliveries today successful
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "get list debt of return deliveries today successful"
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ReturnDeliveryResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "get list debt of return deliveries today failed"
+   */
+  getListDebtOfReturnDeliveriesToday = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const query: IReturnDeliveryListDebtOfReturnDeliveriesTodayRequest =
+        req.query as unknown as IReturnDeliveryListDebtOfReturnDeliveriesTodayRequest;
+
+      const result = await this.returnDeliveriesService.getListDebtOfReturnDeliveriesToday(
+        query,
+        req.user?.userId
+      );
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'get list debt of return deliveries today successful',
+        data: result,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      console.error('get list debt of return deliveries today error:', error);
+
+      const message =
+        error instanceof Error ? error.message : 'get list debt of return deliveries today failed';
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(500).json(response);
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/return-deliveries/get-list-collect-for-customer-not-collected:
+   *   get:
+   *     summary: Get list collect for customer of return deliveries not collected
+   *     tags: [Return Deliveries]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Get list collect for customer of return deliveries not collected successful
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "get list collect for customer of return deliveries not collected successful"
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ReturnDeliveryResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "get list collect for customer of return deliveries not collected failed"
+   */
+  getListCollectForCustomerOfReturnDeliveriesNotCollected = async (
+    req: AuthRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const result =
+        await this.returnDeliveriesService.getListCollectForCustomerOfReturnDeliveriesNotCollected(
+          req.user?.userId
+        );
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'get list collect for customer of return deliveries not collected successful',
+        data: result,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      console.error(
+        'get list collect for customer of return deliveries not collected error:',
+        error
+      );
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'get list collect for customer of return deliveries not collected failed';
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(500).json(response);
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/return-deliveries/get-list-all-return-deliveries:
+   *   get:
+   *     summary: Get list all return deliveries
+   *     tags: [Return Deliveries]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Get list all return deliveries successful
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "get list all return deliveries successful"
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ReturnDeliveryResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "get list all return deliveries failed"
+   */
+  getListAllReturnDeliveries = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const result = await this.returnDeliveriesService.getListAllReturnDeliveries(
+        req.user?.userId
+      );
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'get list all return deliveries successful',
+        data: result,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      console.error('get list all return deliveries error:', error);
+
+      const message =
+        error instanceof Error ? error.message : 'get list all return deliveries failed';
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(500).json(response);
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/return-deliveries/get-list-return-deliveries-is-return:
+   *   get:
+   *     summary: Get list return deliveries is return
+   *     tags: [Return Deliveries]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Get list return deliveries is return successful
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "get list return deliveries is return successful"
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ReturnDeliveryResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "get list return deliveries is return failed"
+   */
+  getListReturnDeliveriesIsReturn = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const result = await this.returnDeliveriesService.getListReturnDeliveriesIsReturn(
+        req.user?.userId
+      );
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'get list return deliveries is return successful',
+        data: result,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      console.error('get list return deliveries is return error:', error);
+
+      const message =
+        error instanceof Error ? error.message : 'get list return deliveries is return failed';
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
       res.status(500).json(response);
     }
   };

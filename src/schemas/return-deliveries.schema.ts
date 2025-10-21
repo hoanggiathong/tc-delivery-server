@@ -104,3 +104,42 @@ export const updateStatusReturnDeliverySchema = z.object({
       .min(1, 'At least one return delivery item is required'),
   }),
 });
+
+// Schema for get list debt of return deliveries today
+export const getListDebtOfReturnDeliveriesTodaySchema = z
+  .object({
+    query: z.object({
+      startDate: z
+        .string()
+        .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid start date in ISO format')
+        .transform(val => new Date(val))
+        .refine(val => {
+          const oneMonthAgo = new Date();
+          oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+          return val >= oneMonthAgo;
+        }, 'Start date cannot be more than 1 month in the past'),
+      endDate: z
+        .string()
+        .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid end date in ISO format')
+        .transform(val => new Date(val)),
+    }),
+  })
+  .refine(data => data.query.startDate <= data.query.endDate, {
+    message: 'Start date must be before or equal to end date',
+    path: ['query', 'startDate'],
+  });
+
+// Schema for get list collect for customer not collected (no parameters needed)
+export const getListCollectForCustomerNotCollectedSchema = z.object({
+  query: z.object({}).optional(),
+});
+
+// Schema for get list all return deliveries (no parameters needed)
+export const getListAllReturnDeliveriesSchema = z.object({
+  query: z.object({}).optional(),
+});
+
+// Schema for get list return deliveries is return (no parameters needed)
+export const getListReturnDeliveriesIsReturnSchema = z.object({
+  query: z.object({}).optional(),
+});

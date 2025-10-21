@@ -7,6 +7,10 @@ import {
   getInformationReceiverSchema,
   getListReturnDeliveriesSchema,
   updateStatusReturnDeliverySchema,
+  getListDebtOfReturnDeliveriesTodaySchema,
+  getListCollectForCustomerNotCollectedSchema,
+  getListAllReturnDeliveriesSchema,
+  getListReturnDeliveriesIsReturnSchema,
 } from '@/schemas/return-deliveries.schema';
 import { UserRole } from '@/types/user.type';
 import { Router } from 'express';
@@ -35,6 +39,30 @@ router.put(
   uploadMultipleImages,
   validate(updateStatusReturnDeliverySchema),
   returnDeliveriesController.updateStatusReturnDelivery
+);
+
+router.get(
+  '/get-list-debt-of-return-deliveries-today',
+  validate(getListDebtOfReturnDeliveriesTodaySchema),
+  returnDeliveriesController.getListDebtOfReturnDeliveriesToday
+);
+
+router.get(
+  '/get-list-collect-for-customer-not-collected',
+  validate(getListCollectForCustomerNotCollectedSchema),
+  returnDeliveriesController.getListCollectForCustomerOfReturnDeliveriesNotCollected
+);
+
+router.get(
+  '/get-list-all-return-deliveries',
+  validate(getListAllReturnDeliveriesSchema),
+  returnDeliveriesController.getListAllReturnDeliveries
+);
+
+router.get(
+  '/get-list-return-deliveries-is-return',
+  validate(getListReturnDeliveriesIsReturnSchema),
+  returnDeliveriesController.getListReturnDeliveriesIsReturn
 );
 
 export default router;

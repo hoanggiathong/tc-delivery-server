@@ -4,6 +4,7 @@ import { ICustomer } from '@/models/customer.model';
 import { Delivery } from '@/models/delivery.model';
 import {
   IReturnDeliveryLeanPopulated,
+  IReturnDeliveryListDebtOfReturnDeliveriesTodayRequest,
   IReturnDeliveryListRequest,
   IReturnDeliveryResponse,
   IReturnDeliveryUpdateRequest,
@@ -34,6 +35,7 @@ export class ReturnDeliveriesService {
     this.deliveryService = new DeliveryService();
     this.moneyDeliveryService = new MoneyDeliveryService();
   }
+
   async getListReturnDeliveries(
     query: IReturnDeliveryListRequest,
     userId: string
@@ -116,6 +118,7 @@ export class ReturnDeliveriesService {
         (item: IReturnDeliveryLeanPopulated) => ({
           id: item._id.toString(),
           code: item.code,
+          name: item.name,
           fullCode: item.fullCode,
           subCode: item.subCode,
           sender: {
@@ -134,6 +137,8 @@ export class ReturnDeliveriesService {
           cost: item.cost,
           homeDelivery: item.homeDelivery,
           homeDeliveryCost: item.homeDeliveryCost,
+          collectForCustomer: item.collectForCustomer,
+          collectForCustomerCost: item.collectForCustomerCost,
           itemValue: item.itemValue,
           itemCost: item.itemCost,
           totalCost: item.totalCost,
@@ -148,6 +153,9 @@ export class ReturnDeliveriesService {
           inventory: item.inventory || '',
           smsType: item.smsType || '',
           timeToSendSMS: item.timeToSendSMS,
+          quantityReturn: item.quantityReturn || 0,
+          dateReturn: item.dateReturn,
+          collectCost: item.collectCost || 0,
         })
       );
       return returnDeliveriesResponse;
@@ -155,7 +163,7 @@ export class ReturnDeliveriesService {
       if (error instanceof Error) {
         throw error;
       }
-      throw new Error('get list payment debt management failed');
+      throw new Error('get list return deliveries failed');
     }
   }
 
@@ -351,6 +359,7 @@ export class ReturnDeliveriesService {
         // Update field note with string 'Đã trả hàng + now date' + old value of note
         delivery.notes = `${returnDateString}, ${delivery.notes}`;
         delivery.updatedAt = now;
+        delivery.dateReturn = now;
         await delivery.save();
       } else {
         // Handle multiple return deliveries (array > 1)
@@ -423,6 +432,7 @@ export class ReturnDeliveriesService {
           // Update field note with string 'Đã trả hàng + now date' + old value of note
           delivery.notes = `${returnDateString}, ${delivery.notes}`;
           delivery.updatedAt = now;
+          delivery.dateReturn = now;
           await delivery.save();
         }
       }
@@ -436,6 +446,347 @@ export class ReturnDeliveriesService {
         error: error instanceof Error ? error.message : error,
       });
       throw new Error('update status return delivery failed');
+    }
+  }
+
+  // danh sach cac don hang co no cuoc cua don da tra hang hien tai
+  async getListDebtOfReturnDeliveriesToday(
+    query: IReturnDeliveryListDebtOfReturnDeliveriesTodayRequest,
+    userId: string
+  ): Promise<IReturnDeliveryResponse[]> {
+    const { startDate, endDate } = query;
+
+    const start = new Date(String(startDate));
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(String(endDate));
+    end.setHours(23, 59, 59, 999);
+    const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
+
+    const where = {
+      toRoute: selectedRouteId,
+      createdAt: { $gte: start, $lte: end },
+      isReturn: true,
+    };
+
+    try {
+      const returnDeliveries = await Delivery.find(where)
+        .populate([
+          {
+            path: 'sender',
+            select: '_id name phone routeId createdAt updatedAt',
+          },
+          { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
+          { path: 'createdByUser', select: '_id username name' },
+        ])
+        .sort({ createdAt: -1 })
+        .lean();
+
+      const populatedReturnDeliveries = await this.toPopulatedReturnDeliveryLean(returnDeliveries);
+
+      const returnDeliveriesResponse: IReturnDeliveryResponse[] = populatedReturnDeliveries.map(
+        (item: IReturnDeliveryLeanPopulated) => ({
+          id: item._id.toString(),
+          code: item.code,
+          name: item.name,
+          fullCode: item.fullCode,
+          subCode: item.subCode,
+          sender: {
+            name: item.sender.name,
+            phone: item.sender.phone,
+          },
+          receiver: {
+            name: item.receiver.name,
+            phone: item.receiver.phone,
+          },
+          toRoute: {
+            id: item.toRoute._id.toString(),
+            code: item.toRoute.code,
+            name: item.toRoute.name,
+          },
+          cost: item.cost,
+          homeDelivery: item.homeDelivery,
+          homeDeliveryCost: item.homeDeliveryCost,
+          collectForCustomer: item.collectForCustomer,
+          collectForCustomerCost: item.collectForCustomerCost,
+          itemValue: item.itemValue,
+          itemCost: item.itemCost,
+          totalCost: item.totalCost,
+          actualRevenue: item.actualRevenue,
+          paymentType: item.paymentType,
+          notes: item.notes,
+          isReturn: item.isReturn,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+          upItems: item.upItems || '',
+          downItems: item.downItems || '',
+          inventory: item.inventory || '',
+          smsType: item.smsType || '',
+          timeToSendSMS: item.timeToSendSMS,
+          quantityReturn: item.quantityReturn || 0,
+          dateReturn: item.dateReturn,
+        })
+      );
+      return returnDeliveriesResponse;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('get list debt of return deliveries today failed');
+    }
+  }
+
+  // danh sach thu ho cua tra hang chua duoc thu ho
+  async getListCollectForCustomerOfReturnDeliveriesNotCollected(
+    userId: string
+  ): Promise<IReturnDeliveryResponse[]> {
+    const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
+
+    const where = {
+      toRoute: selectedRouteId,
+      isReturn: true,
+      isCollectForCustomerCost: { $ne: true },
+    };
+
+    try {
+      const returnDeliveries = await Delivery.find(where)
+        .populate([
+          {
+            path: 'sender',
+            select: '_id name phone routeId createdAt updatedAt',
+          },
+          { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
+          { path: 'createdByUser', select: '_id username name' },
+        ])
+        .sort({ createdAt: -1 })
+        .lean();
+
+      const populatedReturnDeliveries = await this.toPopulatedReturnDeliveryLean(returnDeliveries);
+
+      const returnDeliveriesResponse: IReturnDeliveryResponse[] = populatedReturnDeliveries.map(
+        (item: IReturnDeliveryLeanPopulated) => ({
+          id: item._id.toString(),
+          code: item.code,
+          name: item.name,
+          fullCode: item.fullCode,
+          subCode: item.subCode,
+          sender: {
+            name: item.sender.name,
+            phone: item.sender.phone,
+          },
+          receiver: {
+            name: item.receiver.name,
+            phone: item.receiver.phone,
+          },
+          toRoute: {
+            id: item.toRoute._id.toString(),
+            code: item.toRoute.code,
+            name: item.toRoute.name,
+          },
+          cost: item.cost,
+          homeDelivery: item.homeDelivery,
+          homeDeliveryCost: item.homeDeliveryCost,
+          collectForCustomer: item.collectForCustomer,
+          collectForCustomerCost: item.collectForCustomerCost,
+          itemValue: item.itemValue,
+          itemCost: item.itemCost,
+          totalCost: item.totalCost,
+          actualRevenue: item.actualRevenue,
+          paymentType: item.paymentType,
+          notes: item.notes,
+          isReturn: item.isReturn,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+          upItems: item.upItems || '',
+          downItems: item.downItems || '',
+          inventory: item.inventory || '',
+          smsType: item.smsType || '',
+          timeToSendSMS: item.timeToSendSMS,
+          quantityReturn: item.quantityReturn || 0,
+          dateReturn: item.dateReturn,
+        })
+      );
+      return returnDeliveriesResponse;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('get list collect for customer of return deliveries failed');
+    }
+  }
+
+  // danh sach tat ca don hang cu da tra
+  async getListAllReturnDeliveries(userId: string): Promise<IReturnDeliveryResponse[]> {
+    const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
+
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+
+    // 45 days ago
+    const start = new Date(end.setDate(end.getDate() - 45));
+    start.setHours(0, 0, 0, 0);
+
+    const where = {
+      toRoute: selectedRouteId,
+      createdAt: { $gte: start, $lte: end },
+    };
+
+    try {
+      const returnDeliveries = await Delivery.find(where)
+        .populate([
+          {
+            path: 'sender',
+            select: '_id name phone routeId createdAt updatedAt',
+          },
+          { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
+          { path: 'createdByUser', select: '_id username name' },
+        ])
+        .sort({ createdAt: -1 })
+        .lean();
+
+      const populatedReturnDeliveries = await this.toPopulatedReturnDeliveryLean(returnDeliveries);
+
+      const returnDeliveriesResponse: IReturnDeliveryResponse[] = populatedReturnDeliveries.map(
+        (item: IReturnDeliveryLeanPopulated) => ({
+          id: item._id.toString(),
+          code: item.code,
+          name: item.name,
+          fullCode: item.fullCode,
+          subCode: item.subCode,
+          sender: {
+            name: item.sender.name,
+            phone: item.sender.phone,
+          },
+          receiver: {
+            name: item.receiver.name,
+            phone: item.receiver.phone,
+          },
+          toRoute: {
+            id: item.toRoute._id.toString(),
+            code: item.toRoute.code,
+            name: item.toRoute.name,
+          },
+          cost: item.cost,
+          homeDelivery: item.homeDelivery,
+          homeDeliveryCost: item.homeDeliveryCost,
+          collectForCustomer: item.collectForCustomer,
+          collectForCustomerCost: item.collectForCustomerCost,
+          itemValue: item.itemValue,
+          itemCost: item.itemCost,
+          totalCost: item.totalCost,
+          actualRevenue: item.actualRevenue,
+          paymentType: item.paymentType,
+          notes: item.notes,
+          isReturn: item.isReturn,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+          upItems: item.upItems || '',
+          downItems: item.downItems || '',
+          inventory: item.inventory || '',
+          smsType: item.smsType || '',
+          timeToSendSMS: item.timeToSendSMS,
+          quantityReturn: item.quantityReturn || 0,
+          dateReturn: item.dateReturn,
+        })
+      );
+      return returnDeliveriesResponse;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('get list all return deliveries failed');
+    }
+  }
+
+  // danh sach cac don hang cu da tra hang
+  async getListReturnDeliveriesIsReturn(userId: string): Promise<IReturnDeliveryResponse[]> {
+    const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
+
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+
+    // 45 days ago
+    const start = new Date(end.setDate(end.getDate() - 45));
+    start.setHours(0, 0, 0, 0);
+
+    const where = {
+      toRoute: selectedRouteId,
+      createdAt: { $gte: start, $lte: end },
+      isReturn: true,
+    };
+
+    try {
+      const returnDeliveries = await Delivery.find(where)
+        .populate([
+          {
+            path: 'sender',
+            select: '_id name phone routeId createdAt updatedAt',
+          },
+          { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
+          { path: 'createdByUser', select: '_id username name' },
+        ])
+        .sort({ createdAt: -1 })
+        .lean();
+
+      const populatedReturnDeliveries = await this.toPopulatedReturnDeliveryLean(returnDeliveries);
+
+      const returnDeliveriesResponse: IReturnDeliveryResponse[] = populatedReturnDeliveries.map(
+        (item: IReturnDeliveryLeanPopulated) => ({
+          id: item._id.toString(),
+          code: item.code,
+          name: item.name,
+          fullCode: item.fullCode,
+          subCode: item.subCode,
+          sender: {
+            name: item.sender.name,
+            phone: item.sender.phone,
+          },
+          receiver: {
+            name: item.receiver.name,
+            phone: item.receiver.phone,
+          },
+          toRoute: {
+            id: item.toRoute._id.toString(),
+            code: item.toRoute.code,
+            name: item.toRoute.name,
+          },
+          cost: item.cost,
+          homeDelivery: item.homeDelivery,
+          homeDeliveryCost: item.homeDeliveryCost,
+          collectForCustomer: item.collectForCustomer,
+          collectForCustomerCost: item.collectForCustomerCost,
+          itemValue: item.itemValue,
+          itemCost: item.itemCost,
+          totalCost: item.totalCost,
+          actualRevenue: item.actualRevenue,
+          paymentType: item.paymentType,
+          notes: item.notes,
+          isReturn: item.isReturn,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+          upItems: item.upItems || '',
+          downItems: item.downItems || '',
+          inventory: item.inventory || '',
+          smsType: item.smsType || '',
+          timeToSendSMS: item.timeToSendSMS,
+          quantityReturn: item.quantityReturn || 0,
+          dateReturn: item.dateReturn,
+        })
+      );
+      return returnDeliveriesResponse;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('get list return deliveries is return failed');
     }
   }
 }

@@ -38,14 +38,16 @@ export interface IDelivery extends Document {
   createdByUser: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
-  isReturn: boolean;
-  isCollectForCustomerCost?: boolean;
-  inventory?: any;
+  isReturn: boolean; // tra hang
+  isCollectForCustomerCost?: boolean; // da thu ho cho khach hang
+  inventory?: any; // kho
   smsType?: string;
   timeToSendSMS?: Date;
-  upItems?: string;
-  downItems?: string;
+  upItems?: string; // len hang
+  downItems?: string; //xuong hang
+  quantityReturn: number; // so luong tra hang
   returnDeliveryImages?: IReturnDeliveryImage[];
+  dateReturn?: Date; // ngay tra hang
 }
 
 export interface IReturnDeliveryImage {
@@ -239,6 +241,14 @@ const deliverySchema = new Schema<IDelivery>(
     downItems: {
       type: String,
     },
+    quantityReturn: {
+      type: Number,
+      default: 0,
+    },
+    dateReturn: {
+      type: Date,
+      default: null,
+    },
     returnDeliveryImages: {
       type: [
         {
@@ -392,5 +402,8 @@ deliverySchema.index({ sender: 1, receiver: 1, toRoute: 1 });
 deliverySchema.index({ receiver: 1, toRoute: 1 });
 // Optimized index for cost report queries
 deliverySchema.index({ fromRoute: 1, createdAt: -1 }); // Cost report by route and date
+
+deliverySchema.index({ toRoute: 1, isReturn: 1, isCollectForCustomerCost: 1 });
+deliverySchema.index({ toRoute: 1, createdAt: -1, isReturn: 1 });
 
 export const Delivery = mongoose.model<IDelivery>('Delivery', deliverySchema);
