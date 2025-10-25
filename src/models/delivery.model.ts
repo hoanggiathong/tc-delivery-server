@@ -226,6 +226,7 @@ const deliverySchema = new Schema<IDelivery>(
     },
     smsType: {
       type: String,
+      default: null,
       // enum: RETURN_DELIVERIES_SMS_TYPE,
       // default: RETURN_DELIVERIES_SMS_TYPE.SMS,
     },
@@ -234,12 +235,15 @@ const deliverySchema = new Schema<IDelivery>(
     },
     inventory: {
       type: String,
+      default: null,
     },
     upItems: {
       type: String,
+      default: null,
     },
     downItems: {
       type: String,
+      default: null,
     },
     quantityReturn: {
       type: Number,

@@ -1,3 +1,4 @@
+import { IReturnDeliveryImage } from '@/models/delivery.model';
 import { PaymentType } from '.';
 
 export interface IReturnDeliveryListRequest {
@@ -99,6 +100,7 @@ export interface IReturnDeliveryLeanPopulated {
   timeToSendSMS?: Date;
   quantityReturn?: number;
   dateReturn?: Date;
+  returnDeliveryImages?: IReturnDeliveryImage[];
 }
 
 export interface IReturnDeliveryUpdateItem {

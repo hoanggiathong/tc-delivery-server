@@ -6,11 +6,15 @@ import { validate } from '@/middlewares/validation.middleware';
 import {
   getInformationReceiverSchema,
   getListReturnDeliveriesSchema,
-  updateStatusReturnDeliverySchema,
   getListDebtOfReturnDeliveriesTodaySchema,
   getListCollectForCustomerNotCollectedSchema,
   getListAllReturnDeliveriesSchema,
   getListReturnDeliveriesIsReturnSchema,
+  getDetailImagesReturnDeliverySchema,
+  updateNoteReturnDeliverySchema,
+  uploadReturnDeliveryImagesSchema,
+  updateStatusWithImagesSchema,
+  updateStatusWithoutImagesSchema,
 } from '@/schemas/return-deliveries.schema';
 import { UserRole } from '@/types/user.type';
 import { Router } from 'express';
@@ -34,11 +38,19 @@ router.get(
   returnDeliveriesController.getListReturnDeliveries
 );
 
+// New API 1: Update status with images (case data = 1)
 router.put(
-  '/update-status',
+  '/update-status-with-images',
   uploadMultipleImages,
-  validate(updateStatusReturnDeliverySchema),
-  returnDeliveriesController.updateStatusReturnDelivery
+  validate(updateStatusWithImagesSchema),
+  returnDeliveriesController.updateStatusWithImages
+);
+
+// New API 2: Update status without images (case update data only)
+router.put(
+  '/update-status-without-images',
+  validate(updateStatusWithoutImagesSchema),
+  returnDeliveriesController.updateStatusWithoutImages
 );
 
 router.get(
@@ -63,6 +75,25 @@ router.get(
   '/get-list-return-deliveries-is-return',
   validate(getListReturnDeliveriesIsReturnSchema),
   returnDeliveriesController.getListReturnDeliveriesIsReturn
+);
+
+router.get(
+  '/get-detail-images-return-delivery/:deliveryId',
+  validate(getDetailImagesReturnDeliverySchema),
+  returnDeliveriesController.getDetailImagesReturnDelivery
+);
+
+router.put(
+  '/update-note-return-delivery/:deliveryId',
+  validate(updateNoteReturnDeliverySchema),
+  returnDeliveriesController.updateNoteReturnDelivery
+);
+
+router.put(
+  '/upload-images',
+  uploadMultipleImages,
+  validate(uploadReturnDeliveryImagesSchema),
+  returnDeliveriesController.uploadImagesReturnDelivery
 );
 
 export default router;
