@@ -162,6 +162,50 @@ describe('Delivery Endpoints', () => {
       expect(response.body.success).toBe(false);
       expect(response.body.message).toBe('Failed to create delivery');
     });
+
+    it('should return 400 when carryCost > 0 but homeDelivery is empty', async () => {
+      MockedDeliveryService.prototype.createDelivery.mockRejectedValue(
+        new Error('homeDelivery is required when carryCost or homeDeliveryCost is greater than 0')
+      );
+
+      const invalidData = {
+        ...validDeliveryData,
+        homeDelivery: '', // Empty homeDelivery
+        carryCost: 20000, // But carryCost > 0
+        homeDeliveryCost: 0,
+      };
+
+      const response = await request(app)
+        .post('/api/delivery')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send(invalidData)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('homeDelivery is required');
+    });
+
+    it('should return 400 when homeDeliveryCost > 0 but homeDelivery is empty', async () => {
+      MockedDeliveryService.prototype.createDelivery.mockRejectedValue(
+        new Error('homeDelivery is required when carryCost or homeDeliveryCost is greater than 0')
+      );
+
+      const invalidData = {
+        ...validDeliveryData,
+        homeDelivery: '', // Empty homeDelivery
+        carryCost: 0,
+        homeDeliveryCost: 30000, // But homeDeliveryCost > 0
+      };
+
+      const response = await request(app)
+        .post('/api/delivery')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send(invalidData)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('homeDelivery is required');
+    });
   });
 
   describe('PUT /api/delivery/:id', () => {

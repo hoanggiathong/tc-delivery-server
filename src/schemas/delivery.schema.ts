@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { DELIVERY_IDENTIFIER_PATTERN, VALIDATION_MESSAGES } from '@/utils/validation-patterns';
+import { VehicleType } from '@/models/delivery.model';
 
 export const createDeliverySchema = z.object({
   body: z.object({
@@ -38,7 +39,13 @@ export const createDeliverySchema = z.object({
     quantity: z.number().min(1, 'Quantity must be at least 1').default(1).optional(),
     cost: z.number().min(0, 'Cost must be positive'),
     homeDelivery: z.string().trim().optional(),
-    homeDeliveryCost: z.number().min(0, 'Home delivery cost must be positive').default(0),
+    homeDeliveryCost: z
+      .number()
+      .min(0, 'Home delivery cost must be positive')
+      .default(0)
+      .optional(),
+    carryCost: z.number().min(0, 'Carry cost must be positive').default(0).optional(),
+    vehicleType: z.nativeEnum(VehicleType).default(VehicleType.MOTORBIKE).optional(),
     itemValue: z.number().min(0, 'Item value must be positive'),
     itemCost: z.number().min(0, 'Item cost must be positive'),
     collectCost: z.number().min(0, 'Collect cost must be positive'),
@@ -109,6 +116,8 @@ export const updateDeliverySchema = z.object({
       .min(0, 'Home delivery cost must be positive')
       .default(0)
       .optional(),
+    carryCost: z.number().min(0, 'Carry cost must be positive').default(0).optional(),
+    vehicleType: z.nativeEnum(VehicleType).default(VehicleType.MOTORBIKE).optional(),
     itemValue: z.number().min(0, 'Item value must be positive').optional(),
     itemCost: z.number().min(0, 'Item cost must be positive').optional(),
     collectCost: z.number().min(0, 'Collect cost must be positive').optional(),

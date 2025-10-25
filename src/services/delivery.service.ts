@@ -5,6 +5,7 @@ import { CustomerService } from '@/services/customer.service';
 import { CodeGeneratorService } from '@/services/code-generator.service';
 import { SettingsService } from '@/services/settings.service';
 import { UserService } from '@/services/user.service';
+import { CustomerAddressHistoryService } from '@/services/customer-address-history.service';
 import {
   IDeliveryCreateRequest,
   IDeliveryUpdateRequest,
@@ -29,11 +30,13 @@ export class DeliveryService {
   private customerService: CustomerService;
   private settingsService: SettingsService;
   private userService: UserService;
+  private customerAddressHistoryService: CustomerAddressHistoryService;
 
   constructor() {
     this.customerService = new CustomerService();
     this.settingsService = new SettingsService();
     this.userService = new UserService();
+    this.customerAddressHistoryService = new CustomerAddressHistoryService();
   }
 
   /**
@@ -233,6 +236,8 @@ export class DeliveryService {
       cost: data.cost,
       homeDelivery: data.homeDelivery,
       homeDeliveryCost: data.homeDeliveryCost,
+      carryCost: data.carryCost,
+      vehicleType: data.vehicleType,
       itemValue: data.itemValue,
       itemCost: data.itemCost,
       collectCost: data.collectCost,
@@ -246,6 +251,19 @@ export class DeliveryService {
     });
 
     await delivery.save();
+
+    // Auto-create address history if homeDelivery exists
+    if (delivery.homeDelivery && delivery.homeDelivery.trim() !== '') {
+      try {
+        await this.customerAddressHistoryService.createFromDelivery(delivery);
+      } catch (error) {
+        // Log error but don't fail delivery creation
+        Logger.warn('Failed to create address history', {
+          deliveryId: delivery._id,
+          error: error instanceof Error ? error.message : error,
+        });
+      }
+    }
 
     // Query the saved delivery with populate and lean
     const populatedDelivery = await Delivery.findById(delivery._id)

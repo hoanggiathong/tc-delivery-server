@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import authRoutes from './auth.routes';
 import customerRoutes from './customer.routes';
+import customerAddressHistoryRoutes from './customer-address-history.routes';
 import debtManagementRoutes from './debt-management.route';
 import debtRoutes from './debt.routes';
 import deliveryRoutes from './delivery.routes';
@@ -18,6 +19,7 @@ const router = Router();
 router.use('/test', testRoutes);
 router.use('/auth', authRoutes);
 router.use('/customer', customerRoutes);
+router.use('/customer-address-history', customerAddressHistoryRoutes);
 router.use('/delivery', deliveryRoutes);
 router.use('/money-deliveries', moneyDeliveryRoutes);
 router.use('/route', routeRoutes);

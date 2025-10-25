@@ -3,7 +3,7 @@ import { BaseEntity, PaymentType } from '.';
 import { ICustomerResponse } from './customer.type';
 import { IRouteResponse } from './route.type';
 import { ICustomer } from '@/models/customer.model';
-import { IDelivery } from '@/models/delivery.model';
+import { IDelivery, VehicleType } from '@/models/delivery.model';
 import { IUser } from '@/models/user.model';
 import { IRoute } from '@/models/route.model';
 import { ICustomerBankLean } from '@/models/customer-bank.model';
@@ -22,7 +22,10 @@ export interface IDeliveryResponse extends BaseEntity {
   quantity: number;
   cost: number;
   homeDelivery?: string;
-  homeDeliveryCost: number;
+  homeDeliveryCost?: number;
+  carryCost?: number;
+  homeDeliveryCostTotal?: number;
+  vehicleType?: VehicleType;
   itemValue: number;
   itemCost: number;
   collectCost: number;
@@ -58,7 +61,9 @@ export interface IDeliveryCreateRequest {
   quantity?: number;
   cost: number;
   homeDelivery?: string;
-  homeDeliveryCost: number;
+  homeDeliveryCost?: number;
+  carryCost?: number;
+  vehicleType?: VehicleType;
   itemValue: number;
   itemCost: number;
   collectCost: number;
@@ -89,6 +94,8 @@ export interface IDeliveryUpdateRequest {
   cost?: number;
   homeDelivery?: string;
   homeDeliveryCost?: number;
+  carryCost?: number;
+  vehicleType?: VehicleType;
   itemValue?: number;
   itemCost?: number;
   collectCost?: number;
@@ -132,7 +139,10 @@ export interface IDeliveryWithPopulatedRefs {
   quantity: number;
   cost: number;
   homeDelivery?: string;
-  homeDeliveryCost: number;
+  homeDeliveryCost?: number;
+  carryCost?: number;
+  homeDeliveryCostTotal?: number;
+  vehicleType?: VehicleType;
   itemValue: number;
   itemCost: number;
   collectCost: number;
@@ -235,7 +245,10 @@ export interface IDeliveryLeanPopulated {
   nameProductAndAdditionalInformation?: string;
   cost: number;
   homeDelivery?: string;
-  homeDeliveryCost: number;
+  homeDeliveryCost?: number;
+  carryCost?: number;
+  homeDeliveryCostTotal?: number;
+  vehicleType?: VehicleType;
   itemValue: number;
   itemCost: number;
   collectCost: number;
@@ -333,7 +346,10 @@ export interface IDeliveryReportItem {
 
   // Chi tiết chi phí
   cost: number;
-  homeDeliveryCost: number;
+  homeDeliveryCost?: number;
+  carryCost?: number;
+  homeDeliveryCostTotal?: number;
+  vehicleType?: VehicleType;
   itemCost: number;
   itemValue: number;
   collectCost: number;

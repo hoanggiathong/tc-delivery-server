@@ -24,6 +24,8 @@ erDiagram
     CUSTOMERS }o--|| ROUTES : "thuộc tuyến đường"
     CUSTOMERS }o--o| CUSTOMER_BANK : "có thông tin ngân hàng"
     CUSTOMERS ||--o{ CUSTOMERS : "người nhận thường xuyên"
+    CUSTOMERS ||--o{ CUSTOMER_ADDRESS_HISTORY : "có lịch sử địa chỉ"
+    DELIVERIES ||--o| CUSTOMER_ADDRESS_HISTORY : "tự động tạo history"
 
     USERS {
         ObjectId _id PK
@@ -119,7 +121,10 @@ erDiagram
         number quantity "số lượng hàng hóa, bắt buộc, tối thiểu 1, mặc định 1"
         number cost "phí vận chuyển, bắt buộc, tối thiểu 0"
         string homeDelivery "địa chỉ giao hàng, tùy chọn, trim"
-        number homeDeliveryCost "bắt buộc, tối thiểu 0, mặc định 0"
+        number homeDeliveryCost "tùy chọn, tối thiểu 0, mặc định 0"
+        number carryCost "phí bốc xếp, tùy chọn, tối thiểu 0, mặc định 0"
+        number homeDeliveryCostTotal "tổng phí giao tận nhà (carryCost+homeDeliveryCost), tùy chọn"
+        enum vehicleType "motorbike|small-truck|large-truck, bắt buộc, mặc định motorbike"
         number itemValue "giá trị hàng hóa, bắt buộc, tối thiểu 0"
         number itemCost "phí trị giá, bắt buộc, tối thiểu 0"
         number collectCost "thu hộ, bắt buộc, tối thiểu 0"
@@ -163,6 +168,17 @@ erDiagram
         datetime updatedAt "tự động cập nhật"
     }
 
+    CUSTOMER_ADDRESS_HISTORY {
+        ObjectId _id PK
+        ObjectId customerId FK "tham chiếu: CUSTOMERS, bắt buộc"
+        string address "địa chỉ giao hàng, bắt buộc, tối đa 500 ký tự, trim"
+        number homeDeliveryCost "phí giao hàng, bắt buộc, tối thiểu 0, mặc định 0"
+        number carryCost "phí bốc xếp, bắt buộc, tối thiểu 0, mặc định 0"
+        number homeDeliveryTotalCost "tổng phí (carryCost+homeDeliveryCost), bắt buộc"
+        enum vehicleType "motorbike|small-truck|large-truck, bắt buộc, mặc định motorbike"
+        datetime createdAt "tự động tạo"
+        datetime updatedAt "tự động cập nhật"
+    }
 
     DRAFT_DELIVERIES {
         ObjectId _id PK
@@ -235,6 +251,7 @@ erDiagram
 - `users` - Tài khoản người dùng và xác thực
 - `customers` - Cơ sở dữ liệu thông tin khách hàng (delivery và money)
 - `customerBank` - Thông tin ngân hàng của khách hàng
+- `customerAddressHistory` - Lịch sử địa chỉ giao hàng tận nhà của khách hàng
 - `routes` - Cấu hình tuyến đường vận chuyển
 - `userRoutes` - Mối quan hệ nhiều-nhiều giữa người dùng và tuyến đường
 - `deliveries` - Giao dịch vận chuyển thông thường
@@ -420,6 +437,29 @@ erDiagram
     - `DELETE /api/settings/products/{id}` - Xóa 1 product theo ObjectId
 - **Index hiệu suất**: Unique index trên trường `name`
 
+#### Bảng CUSTOMER_ADDRESS_HISTORY
+- **Mục đích**: Lưu lịch sử địa chỉ giao hàng tận nhà của khách hàng để tái sử dụng
+- **Phone-based API Access**: Tất cả endpoints sử dụng `phone` thay vì `customerId`
+  - Service layer tự động chuyển đổi: `phone` → tìm customer (type='delivery') → `customerId` → query history
+  - Định dạng phone: `/^\+?[1-9]\d{1,14}$/` (international format, không bắt đầu bằng 0)
+- **Auto-create trigger**: Tự động tạo address history khi tạo delivery có `homeDelivery` không rỗng
+  - Trigger trong `DeliveryService.create()` sau khi tạo delivery thành công
+  - Non-blocking operation (log error only, không fail delivery creation)
+- **20-record limit**: Tối đa 20 records per customer
+  - FIFO pattern: Xóa record cũ nhất khi đạt giới hạn
+  - Enforce trước khi create new record
+- **Tính toán chi phí**:
+  - `homeDeliveryTotalCost = carryCost + homeDeliveryCost`
+  - Tự động tính toán khi tạo mới hoặc cập nhật
+- **Ownership verification**: Khi xóa, verify phone → customerId → addressHistory ownership
+- **Quyền truy cập**: Chỉ cần authentication, không giới hạn role
+- **API Endpoints**:
+  - `GET /api/customer-address-history/:phone` - Lấy tất cả address history của customer theo phone (sorted by createdAt DESC)
+  - `POST /api/customer-address-history/:phone` - Tạo mới address history manually theo phone
+  - `DELETE /api/customer-address-history/:phone/:addressHistoryId` - Xóa address history với ownership verification
+- **Index hiệu suất**: `{customerId: 1, createdAt: -1}` - Compound index cho query và sorting
+- **Sorting**: Luôn sort theo `createdAt: -1` (newest first) khi truy vấn
+
 ### Tối Ưu Hóa Hiệu Suất
 
 #### Chiến Lược Index Database
@@ -439,6 +479,7 @@ erDiagram
    - `{subCode: 1}` - Index cho tracking và debug purposes
 6. **Settings Index**: `{name: 1}` - Unique index cho settings name lookup
 7. **Settings Performance**: `{isActive: 1}` - Index cho active settings filter
+8. **Customer Address History Index**: `{customerId: 1, createdAt: -1}` - Compound index cho query theo customer và sorting theo thời gian
 
 #### Tính Năng Tối Ưu Truy Vấn
 - **Lean Queries**: Cho các thao tác chỉ đọc để giảm sử dụng bộ nhớ
@@ -621,6 +662,22 @@ erDiagram
   - **API Endpoints**:
     - `GET /api/user/additional-information-product-by-account` - Lấy configs của user
     - `PUT /api/user/additional-information-product-by-account` - Cập nhật configs với auto-selection
+- **New Table: CUSTOMER_ADDRESS_HISTORY**: Thêm bảng lịch sử địa chỉ giao hàng tận nhà
+  - Lưu lịch sử địa chỉ homeDelivery của khách hàng để tái sử dụng
+  - Phone-based API access: Sử dụng `phone` thay vì `customerId` cho tất cả endpoints
+  - Auto-create trigger: Tự động tạo khi tạo delivery có homeDelivery không rỗng
+  - 20-record limit per customer: FIFO pattern, xóa record cũ nhất khi đạt giới hạn
+  - Fields: customerId, address, homeDeliveryCost, carryCost, homeDeliveryTotalCost, vehicleType
+  - Index: `{customerId: 1, createdAt: -1}` cho query và sorting hiệu quả
+  - **API Endpoints**:
+    - `GET /api/customer-address-history/:phone` - Lấy tất cả address history (sorted newest first)
+    - `POST /api/customer-address-history/:phone` - Tạo mới address history manually
+    - `DELETE /api/customer-address-history/:phone/:addressHistoryId` - Xóa với ownership verification
+- **Enhanced DELIVERIES Table**: Thêm fields cho giao hàng tận nhà
+  - `carryCost`: Phí bốc xếp (optional, min 0, default 0)
+  - `homeDeliveryCostTotal`: Tổng phí giao tận nhà (carryCost + homeDeliveryCost, optional)
+  - `vehicleType`: Loại xe (motorbike|small-truck|large-truck, required, default motorbike)
+  - VehicleType enum được share giữa Delivery và CustomerAddressHistory models
 
 ### Cân Nhắc Migration và Mở Rộng
 

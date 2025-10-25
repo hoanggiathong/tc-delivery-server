@@ -1,6 +1,12 @@
 import { PaymentType } from '@/types';
 import mongoose, { Document, Schema } from 'mongoose';
 
+export enum VehicleType {
+  MOTORBIKE = 'motorbike',
+  SMALL_TRUCK = 'small-truck',
+  LARGE_TRUCK = 'large-truck',
+}
+
 export interface IDelivery extends Document {
   _id: string;
   code: string;
@@ -16,6 +22,9 @@ export interface IDelivery extends Document {
   cost: number;
   homeDelivery?: string;
   homeDeliveryCost: number;
+  carryCost: number; // Phí bốc xếp
+  homeDeliveryCostTotal?: number; // Tổng phí giao tận nhà (carryCost + homeDeliveryCost)
+  vehicleType: VehicleType; // Loại phương tiện
   itemValue: number;
   itemCost: number;
   collectCost: number; // Thu hộ
@@ -114,9 +123,26 @@ const deliverySchema = new Schema<IDelivery>(
     },
     homeDeliveryCost: {
       type: Number,
-      required: [true, 'Home delivery cost is required'],
+      required: false,
       min: [0, 'Home delivery cost must be positive'],
       default: 0,
+    },
+    carryCost: {
+      type: Number,
+      required: false,
+      min: [0, 'Carry cost must be positive'],
+      default: 0,
+    },
+    homeDeliveryCostTotal: {
+      type: Number,
+      required: false,
+      min: [0, 'Home delivery cost total must be positive'],
+    },
+    vehicleType: {
+      type: String,
+      enum: Object.values(VehicleType),
+      required: [true, 'Vehicle type is required'],
+      default: VehicleType.MOTORBIKE,
     },
     itemValue: {
       type: Number,
@@ -290,6 +316,23 @@ deliverySchema.pre('save', function (next) {
     return next(new Error('From route and to route cannot be the same'));
   }
 
+  // Validation: homeDelivery is required when carryCost or homeDeliveryCost > 0
+  if (
+    (this.carryCost > 0 || this.homeDeliveryCost > 0) &&
+    (!this.homeDelivery || this.homeDelivery.trim() === '')
+  ) {
+    return next(
+      new Error('homeDelivery is required when carryCost or homeDeliveryCost is greater than 0')
+    );
+  }
+
+  // Calculate homeDeliveryCostTotal
+  if (this.homeDelivery && this.homeDelivery.trim() !== '') {
+    this.homeDeliveryCostTotal = this.carryCost + this.homeDeliveryCost;
+  } else {
+    this.homeDeliveryCostTotal = undefined;
+  }
+
   // Calculate totalCost (service fees only: cost + itemCost + collectForCustomerCost + homeDeliveryCost)
   if (this.isFree) {
     this.totalCost = 0;
@@ -332,6 +375,8 @@ deliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next) {
       update.collectForCustomerCost !== undefined ||
       update.collectForCustomer !== undefined ||
       update.homeDeliveryCost !== undefined ||
+      update.carryCost !== undefined ||
+      update.homeDelivery !== undefined ||
       update.isFree !== undefined
     ) {
       // Get current document to merge with updates
@@ -353,7 +398,29 @@ deliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next) {
           update.homeDeliveryCost !== undefined
             ? update.homeDeliveryCost
             : currentDoc.homeDeliveryCost;
+        const carryCost = update.carryCost !== undefined ? update.carryCost : currentDoc.carryCost;
+        const homeDelivery =
+          update.homeDelivery !== undefined ? update.homeDelivery : currentDoc.homeDelivery;
         const isFree = update.isFree !== undefined ? update.isFree : currentDoc.isFree;
+
+        // Validation: homeDelivery is required when carryCost or homeDeliveryCost > 0
+        if (
+          (carryCost > 0 || homeDeliveryCost > 0) &&
+          (!homeDelivery || homeDelivery.trim() === '')
+        ) {
+          return next(
+            new Error(
+              'homeDelivery is required when carryCost or homeDeliveryCost is greater than 0'
+            )
+          );
+        }
+
+        // Calculate homeDeliveryCostTotal
+        if (homeDelivery && homeDelivery.trim() !== '') {
+          update.homeDeliveryCostTotal = carryCost + homeDeliveryCost;
+        } else {
+          update.homeDeliveryCostTotal = undefined;
+        }
 
         // Calculate totalCost (service fees only: cost + itemCost + collectForCustomerCost + homeDeliveryCost)
         if (isFree) {
