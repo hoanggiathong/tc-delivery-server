@@ -1,6 +1,7 @@
 import mongoose, { Document, Schema, Types } from 'mongoose';
 import { appConfig } from '@/config/app.config';
 import { generateFullImageUrl, extractBasePath } from '@/utils/image-url.utils';
+import { PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES } from '@/utils/validation-patterns';
 
 export interface ICustomerImage {
   url: string;
@@ -35,7 +36,7 @@ const customerSchema = new Schema<ICustomer>(
       type: String,
       required: [true, 'Phone is required'],
       trim: true,
-      match: [/^\+?[1-9]\d{1,14}$/, 'Please enter a valid phone number'],
+      match: [PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER],
     },
     routeId: {
       type: Schema.Types.ObjectId,

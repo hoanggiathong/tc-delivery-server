@@ -25,8 +25,8 @@ export class CustomerAddressHistoryController {
    *         schema:
    *           type: string
    *           pattern: ^\+?[1-9]\d{1,14}$
-   *         description: Customer phone number
-   *         example: "0901234567"
+   *         description: Customer phone number (international format)
+   *         example: "+84901234567"
    *     responses:
    *       200:
    *         description: Address history retrieved successfully
@@ -150,8 +150,8 @@ export class CustomerAddressHistoryController {
    *         schema:
    *           type: string
    *           pattern: ^\+?[1-9]\d{1,14}$
-   *         description: Customer phone number
-   *         example: "0901234567"
+   *         description: Customer phone number (international format)
+   *         example: "+84901234567"
    *     requestBody:
    *       required: true
    *       content:
@@ -272,8 +272,8 @@ export class CustomerAddressHistoryController {
    *         schema:
    *           type: string
    *           pattern: ^\+?[1-9]\d{1,14}$
-   *         description: Customer phone number
-   *         example: "0901234567"
+   *         description: Customer phone number (international format)
+   *         example: "+84901234567"
    *       - in: path
    *         name: addressHistoryId
    *         required: true

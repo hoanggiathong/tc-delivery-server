@@ -251,7 +251,7 @@ erDiagram
 - `users` - Tài khoản người dùng và xác thực
 - `customers` - Cơ sở dữ liệu thông tin khách hàng (delivery và money)
 - `customerBank` - Thông tin ngân hàng của khách hàng
-- `customerAddressHistory` - Lịch sử địa chỉ giao hàng tận nhà của khách hàng
+- `customerAddressHistories` - Lịch sử địa chỉ giao hàng tận nhà của khách hàng
 - `routes` - Cấu hình tuyến đường vận chuyển
 - `userRoutes` - Mối quan hệ nhiều-nhiều giữa người dùng và tuyến đường
 - `deliveries` - Giao dịch vận chuyển thông thường

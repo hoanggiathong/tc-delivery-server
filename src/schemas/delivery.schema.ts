@@ -1,5 +1,10 @@
 import { z } from 'zod';
-import { DELIVERY_IDENTIFIER_PATTERN, VALIDATION_MESSAGES } from '@/utils/validation-patterns';
+import {
+  DELIVERY_IDENTIFIER_PATTERN,
+  PHONE_NUMBER_PATTERN,
+  OBJECTID_PATTERN,
+  VALIDATION_MESSAGES,
+} from '@/utils/validation-patterns';
 import { VehicleType } from '@/models/delivery.model';
 
 export const createDeliverySchema = z.object({
@@ -12,7 +17,7 @@ export const createDeliverySchema = z.object({
     senderPhone: z
       .string()
       .min(1, 'Sender phone is required')
-      .regex(/^\+?[1-9]\d{1,14}$/, 'Please enter a valid sender phone number')
+      .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
       .trim(),
     receiverName: z
       .string()
@@ -22,17 +27,17 @@ export const createDeliverySchema = z.object({
     receiverPhone: z
       .string()
       .min(1, 'Receiver phone is required')
-      .regex(/^\+?[1-9]\d{1,14}$/, 'Please enter a valid receiver phone number')
+      .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
       .trim(),
     fromRouteId: z
       .string()
       .min(1, 'From route ID is required')
-      .regex(/^[0-9a-fA-F]{24}$/, 'Please provide a valid from route ID')
+      .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
       .trim(),
     toRouteId: z
       .string()
       .min(1, 'To route ID is required')
-      .regex(/^[0-9a-fA-F]{24}$/, 'Please provide a valid to route ID')
+      .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
       .trim(),
     name: z.string().min(1, 'Item name is required').trim(),
     nameProductAndAdditionalInformation: z.string().trim().optional(),
@@ -79,7 +84,7 @@ export const updateDeliverySchema = z.object({
     senderPhone: z
       .string()
       .min(1, 'Sender phone is required')
-      .regex(/^\+?[1-9]\d{1,14}$/, 'Please enter a valid sender phone number')
+      .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
       .trim()
       .optional(),
     receiverName: z
@@ -91,19 +96,19 @@ export const updateDeliverySchema = z.object({
     receiverPhone: z
       .string()
       .min(1, 'Receiver phone is required')
-      .regex(/^\+?[1-9]\d{1,14}$/, 'Please enter a valid receiver phone number')
+      .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
       .trim()
       .optional(),
     fromRouteId: z
       .string()
       .min(1, 'From route ID is required')
-      .regex(/^[0-9a-fA-F]{24}$/, 'Please provide a valid from route ID')
+      .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
       .trim()
       .optional(),
     toRouteId: z
       .string()
       .min(1, 'To route ID is required')
-      .regex(/^[0-9a-fA-F]{24}$/, 'Please provide a valid to route ID')
+      .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
       .trim()
       .optional(),
     name: z.string().min(1, 'Item name is required').trim().optional(),
@@ -158,7 +163,7 @@ export const getNextCodeSchema = z.object({
     toRouteId: z
       .string()
       .min(1, 'To route ID is required')
-      .regex(/^[0-9a-fA-F]{24}$/, 'Please provide a valid to route ID')
+      .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
       .trim(),
   }),
 });

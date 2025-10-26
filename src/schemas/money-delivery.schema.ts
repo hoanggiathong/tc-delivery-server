@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import {
   MONEY_DELIVERY_IDENTIFIER_PATTERN,
+  PHONE_NUMBER_PATTERN,
+  OBJECTID_PATTERN,
   VALIDATION_MESSAGES,
 } from '@/utils/validation-patterns';
 
@@ -14,7 +16,7 @@ export const createMoneyDeliverySchema = z.object({
     senderPhone: z
       .string()
       .min(1, 'Sender phone is required')
-      .regex(/^\+?[1-9]\d{1,14}$/, 'Please enter a valid sender phone number')
+      .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
       .trim(),
     receiverName: z
       .string()
@@ -24,12 +26,12 @@ export const createMoneyDeliverySchema = z.object({
     receiverPhone: z
       .string()
       .min(1, 'Receiver phone is required')
-      .regex(/^\+?[1-9]\d{1,14}$/, 'Please enter a valid receiver phone number')
+      .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
       .trim(),
     toRouteId: z
       .string()
       .min(1, 'To route ID is required')
-      .regex(/^[0-9a-fA-F]{24}$/, 'Please provide a valid to route ID')
+      .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
       .trim(),
     sendMoneyAmount: z.number().min(0, 'Send money amount must be positive'),
     sendCost: z.number().min(0, 'Send cost must be positive'),
@@ -50,7 +52,7 @@ export const updateMoneyDeliverySchema = z.object({
     senderPhone: z
       .string()
       .min(1, 'Sender phone is required')
-      .regex(/^\+?[1-9]\d{1,14}$/, 'Please enter a valid sender phone number')
+      .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
       .trim()
       .optional(),
     receiverName: z
@@ -62,13 +64,13 @@ export const updateMoneyDeliverySchema = z.object({
     receiverPhone: z
       .string()
       .min(1, 'Receiver phone is required')
-      .regex(/^\+?[1-9]\d{1,14}$/, 'Please enter a valid receiver phone number')
+      .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
       .trim()
       .optional(),
     toRouteId: z
       .string()
       .min(1, 'To route ID is required')
-      .regex(/^[0-9a-fA-F]{24}$/, 'Please provide a valid to route ID')
+      .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
       .trim()
       .optional(),
     sendMoneyAmount: z.number().min(0, 'Send money amount must be positive').optional(),
@@ -91,7 +93,7 @@ export const getNextMoneyDeliveryCodeSchema = z.object({
     toRouteId: z
       .string()
       .min(1, 'To route ID is required')
-      .regex(/^[0-9a-fA-F]{24}$/, 'Please provide a valid to route ID')
+      .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
       .trim(),
   }),
 });
@@ -193,7 +195,7 @@ export const updateMoneyDeliveryByFullCodeSchema = z.object({
       senderPhone: z
         .string()
         .min(1, 'Sender phone is required')
-        .regex(/^\+?[1-9]\d{1,14}$/, 'Please enter a valid sender phone number')
+        .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
         .trim()
         .optional(),
       receiverName: z
@@ -205,13 +207,13 @@ export const updateMoneyDeliveryByFullCodeSchema = z.object({
       receiverPhone: z
         .string()
         .min(1, 'Receiver phone is required')
-        .regex(/^\+?[1-9]\d{1,14}$/, 'Please enter a valid receiver phone number')
+        .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
         .trim()
         .optional(),
       toRouteId: z
         .string()
         .min(1, 'To route ID is required')
-        .regex(/^[0-9a-fA-F]{24}$/, 'Please provide a valid to route ID')
+        .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
         .trim()
         .optional(),
     })

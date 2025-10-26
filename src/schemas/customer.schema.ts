@@ -1,4 +1,9 @@
 import { z } from 'zod';
+import {
+  PHONE_NUMBER_PATTERN,
+  OBJECTID_PATTERN,
+  VALIDATION_MESSAGES,
+} from '@/utils/validation-patterns';
 
 export const createCustomerSchema = z.object({
   body: z.object({
@@ -10,15 +15,15 @@ export const createCustomerSchema = z.object({
     phone: z
       .string()
       .min(1, 'Phone is required')
-      .regex(/^\+?[1-9]\d{1,14}$/, 'Please enter a valid phone number')
+      .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
       .trim(),
     routeId: z
       .string()
       .min(1, 'Route ID is required')
-      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid route ID format'),
+      .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID),
     type: z.enum(['delivery', 'money']).default('delivery'),
     relativeReceiver: z
-      .array(z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid customer ID format'))
+      .array(z.string().regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID))
       .optional()
       .default([]),
   }),
@@ -36,17 +41,17 @@ export const updateCustomerSchema = z.object({
       phone: z
         .string()
         .min(1, 'Phone is required')
-        .regex(/^\+?[1-9]\d{1,14}$/, 'Please enter a valid phone number')
+        .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
         .trim()
         .optional(),
       routeId: z
         .string()
         .min(1, 'Route ID is required')
-        .regex(/^[0-9a-fA-F]{24}$/, 'Invalid route ID format')
+        .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
         .optional(),
       type: z.enum(['delivery', 'money']).optional(),
       relativeReceiver: z
-        .array(z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid customer ID format'))
+        .array(z.string().regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID))
         .optional(),
     })
     .refine(data => data.name || data.phone || data.routeId || data.type || data.relativeReceiver, {
@@ -70,12 +75,12 @@ export const uploadImageSchema = z.object({
     phone: z
       .string()
       .min(1, 'Phone is required')
-      .regex(/^\+?[1-9]\d{1,14}$/, 'Please enter a valid phone number')
+      .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
       .trim(),
     routeId: z
       .string()
       .min(1, 'Route ID is required')
-      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid route ID format'),
+      .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID),
     type: z.enum(['delivery', 'money']).default('delivery'),
     imageIndex: z.coerce.number().min(1).max(5),
     rotate: z.coerce
@@ -89,7 +94,7 @@ export const uploadImageSchema = z.object({
 
 export const updateImageRotationSchema = z.object({
   params: z.object({
-    id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid customer ID'),
+    id: z.string().regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID),
     index: z.string().regex(/^[1-5]$/, 'Index must be between 1 and 5'),
   }),
   body: z.object({
@@ -101,7 +106,7 @@ export const updateImageRotationSchema = z.object({
 
 export const deleteImageSchema = z.object({
   params: z.object({
-    id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid customer ID'),
+    id: z.string().regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID),
     index: z.string().regex(/^[1-5]$/, 'Index must be between 1 and 5'),
   }),
 });
@@ -111,7 +116,7 @@ export const getCustomerByPhoneSchema = z.object({
     senderPhone: z
       .string()
       .min(1, 'Sender phone is required')
-      .regex(/^\+?[1-9]\d{1,14}$/, 'Please enter a valid phone number')
+      .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
       .trim(),
   }),
 });
@@ -121,7 +126,7 @@ export const updateCustomerBankSchema = z.object({
     phone: z
       .string()
       .min(1, 'Phone is required')
-      .regex(/^\+?[1-9]\d{1,14}$/, 'Please enter a valid phone number')
+      .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
       .trim(),
     name: z
       .string()

@@ -53,6 +53,7 @@ const customerAddressHistorySchema = new Schema<ICustomerAddressHistory>(
   },
   {
     timestamps: true,
+    collection: 'customerAddressHistories',
     toJSON: {
       transform: function (_doc, ret) {
         const { _id, __v, ...rest } = ret;

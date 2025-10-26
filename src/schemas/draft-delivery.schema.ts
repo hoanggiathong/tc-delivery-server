@@ -1,14 +1,16 @@
 import { z } from 'zod';
-
-// Reusable phone validation
-const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+import {
+  PHONE_NUMBER_PATTERN,
+  OBJECTID_PATTERN,
+  VALIDATION_MESSAGES,
+} from '@/utils/validation-patterns';
 
 export const createDraftDeliverySchema = z.object({
   body: z.object({
     senderName: z.string().min(1, 'Sender name is required').max(100, 'Sender name is too long'),
     senderPhone: z
       .string()
-      .regex(phoneRegex, 'Invalid phone number format')
+      .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
       .min(1, 'Sender phone is required'),
     receiverName: z
       .string()
@@ -16,10 +18,10 @@ export const createDraftDeliverySchema = z.object({
       .max(100, 'Receiver name is too long'),
     receiverPhone: z
       .string()
-      .regex(phoneRegex, 'Invalid phone number format')
+      .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
       .min(1, 'Receiver phone is required'),
-    fromRouteId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format'),
-    toRouteId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format'),
+    fromRouteId: z.string().regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID),
+    toRouteId: z.string().regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID),
     name: z.string().min(1, 'Item name is required').max(200, 'Item name is too long'),
     quantity: z.number().min(1, 'Quantity must be at least 1').default(1).optional(),
     cost: z.number().min(0, 'Cost must be non-negative'),
@@ -55,21 +57,21 @@ export const createDraftDeliverySchema = z.object({
 
 export const updateDraftDeliverySchema = z.object({
   params: z.object({
-    id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format'),
+    id: z.string().regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID),
   }),
   body: z.object({
     senderName: z.string().min(1).max(100).optional(),
-    senderPhone: z.string().regex(phoneRegex, 'Invalid phone number format').optional(),
+    senderPhone: z
+      .string()
+      .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
+      .optional(),
     receiverName: z.string().min(1).max(100).optional(),
-    receiverPhone: z.string().regex(phoneRegex, 'Invalid phone number format').optional(),
-    fromRouteId: z
+    receiverPhone: z
       .string()
-      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format')
+      .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
       .optional(),
-    toRouteId: z
-      .string()
-      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format')
-      .optional(),
+    fromRouteId: z.string().regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID).optional(),
+    toRouteId: z.string().regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID).optional(),
     name: z.string().min(1).max(200).optional(),
     quantity: z.number().min(1, 'Quantity must be at least 1').optional(),
     cost: z.number().min(0).optional(),
@@ -99,19 +101,19 @@ export const updateDraftDeliverySchema = z.object({
 
 export const getDraftDeliveryByIdSchema = z.object({
   params: z.object({
-    id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format'),
+    id: z.string().regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID),
   }),
 });
 
 export const deleteDraftDeliverySchema = z.object({
   params: z.object({
-    id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format'),
+    id: z.string().regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID),
   }),
 });
 
 export const convertDraftToDeliverySchema = z.object({
   params: z.object({
-    id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format'),
+    id: z.string().regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID),
   }),
 });
 

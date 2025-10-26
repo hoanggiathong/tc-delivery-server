@@ -1,5 +1,10 @@
 import { z } from 'zod';
 import { VehicleType } from '@/models/delivery.model';
+import {
+  PHONE_NUMBER_PATTERN,
+  OBJECTID_PATTERN,
+  VALIDATION_MESSAGES,
+} from '@/utils/validation-patterns';
 
 // Schema for getting address history by phone
 export const getAddressHistoryParamsSchema = z.object({
@@ -7,7 +12,7 @@ export const getAddressHistoryParamsSchema = z.object({
     phone: z
       .string()
       .min(1, 'Phone is required')
-      .regex(/^\+?[1-9]\d{1,14}$/, 'Invalid phone number format'),
+      .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER),
   }),
 });
 
@@ -17,7 +22,7 @@ export const createAddressHistorySchema = z.object({
     phone: z
       .string()
       .min(1, 'Phone is required')
-      .regex(/^\+?[1-9]\d{1,14}$/, 'Invalid phone number format'),
+      .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER),
   }),
   body: z.object({
     address: z
@@ -37,11 +42,11 @@ export const deleteAddressHistorySchema = z.object({
     phone: z
       .string()
       .min(1, 'Phone is required')
-      .regex(/^\+?[1-9]\d{1,14}$/, 'Invalid phone number format'),
+      .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER),
     addressHistoryId: z
       .string()
       .min(1, 'Address history ID is required')
-      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid address history ID format'),
+      .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID),
   }),
 });
 

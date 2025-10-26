@@ -1,5 +1,6 @@
 import { SORT_BY_DEBT } from '@/const/debt.const';
 import z from 'zod';
+import { OBJECTID_PATTERN, VALIDATION_MESSAGES } from '@/utils/validation-patterns';
 
 const SortBySchema = z.union([
   z.literal(SORT_BY_DEBT.TO_ROUTE),
@@ -51,7 +52,7 @@ export const getListDebtSchema = z
       fromRouteId: z
         .string()
         .min(1, 'From route ID is required')
-        .regex(/^[0-9a-fA-F]{24}$/, 'Please provide a valid from route ID')
+        .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
         .trim(),
       keySort: keySortOptionalSchema,
       typeSort: typeSortOptionalSchema,
