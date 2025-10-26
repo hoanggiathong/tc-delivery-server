@@ -2,6 +2,7 @@ import { ReturnDeliveriesService } from '@/services/return-deliveries.service';
 import { ApiResponse, AuthRequest, AuthRequestWithFileUploads } from '@/types';
 import {
   IReturnDeliveryListRequest,
+  IReturnDeliveryListDebtOfReturnDeliveriesTodayRequest,
   IReturnDeliveryUpdateRequest,
 } from '@/types/return-delivery.type';
 import { Response } from 'express';
@@ -262,41 +263,32 @@ export class ReturnDeliveriesController {
 
   /**
    * @swagger
-   * /api/return-deliveries/update-status:
-   *   put:
-   *     summary: Update status of return deliveries
+   * /api/return-deliveries/get-list-debt-of-return-deliveries-today:
+   *   get:
+   *     summary: Get list debt of return deliveries today
    *     tags: [Return Deliveries]
    *     security:
    *       - bearerAuth: []
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         multipart/form-data:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               arrayListReturnDelivery:
-   *                 type: string
-   *                 description: JSON string of array list return delivery
-   *                 example: '[{"deliveryId":"507f1f77bcf86cd799439011","customerId":"507f1f77bcf86cd799439012","images":[{"url":"","rotate":0}],"address":"123 ABC Street","identityCardIssuedDate":"2024-01-01","identityCardNumber":"123456789","imagesIdentityCard":"","imagesDeliveries":[{"url":"","rotate":0}]}]'
-   *               images:
-   *                 type: array
-   *                 items:
-   *                   type: string
-   *                   format: binary
-   *                 description: Uploaded images for return delivery (customer images + delivery images)
-   *           examples:
-   *             singleReturn:
-   *               summary: Single return delivery
-   *               value:
-   *                 arrayListReturnDelivery: '[{"deliveryId":"507f1f77bcf86cd799439011","customerId":"507f1f77bcf86cd799439012","images":[{"url":"","rotate":0}],"address":"123 ABC Street","identityCardIssuedDate":"2024-01-01","identityCardNumber":"123456789","imagesIdentityCard":"","imagesDeliveries":[{"url":"","rotate":0}]}]'
-   *             multipleReturns:
-   *               summary: Multiple return deliveries
-   *               value:
-   *                 arrayListReturnDelivery: '[{"deliveryId":"507f1f77bcf86cd799439011","customerId":"507f1f77bcf86cd799439012"},{"deliveryId":"507f1f77bcf86cd799439013","customerId":"507f1f77bcf86cd799439014"}]'
+   *     parameters:
+   *       - in: query
+   *         name: startDate
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Start date for filtering (ISO format)
+   *         example: "2025-10-01T00:00:00.000Z"
+   *       - in: query
+   *         name: endDate
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: End date for filtering (ISO format)
+   *         example: "2025-10-31T23:59:59.999Z"
    *     responses:
    *       200:
-   *         description: Return delivery status updated successfully
+   *         description: Get list debt of return deliveries today successful
    *         content:
    *           application/json:
    *             schema:
@@ -307,7 +299,949 @@ export class ReturnDeliveriesController {
    *                   example: true
    *                 message:
    *                   type: string
-   *                   example: "update status return delivery successful"
+   *                   example: "get list debt of return deliveries today successful"
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ReturnDeliveryResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "get list debt of return deliveries today failed"
+   */
+  getListDebtOfReturnDeliveriesToday = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const query: IReturnDeliveryListDebtOfReturnDeliveriesTodayRequest =
+        req.query as unknown as IReturnDeliveryListDebtOfReturnDeliveriesTodayRequest;
+
+      const result = await this.returnDeliveriesService.getListDebtOfReturnDeliveriesToday(
+        query,
+        req.user?.userId
+      );
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'get list debt of return deliveries today successful',
+        data: result,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      console.error('get list debt of return deliveries today error:', error);
+
+      const message =
+        error instanceof Error ? error.message : 'get list debt of return deliveries today failed';
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(500).json(response);
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/return-deliveries/get-list-collect-for-customer-not-collected:
+   *   get:
+   *     summary: Get list collect for customer of return deliveries not collected
+   *     tags: [Return Deliveries]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Get list collect for customer of return deliveries not collected successful
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "get list collect for customer of return deliveries not collected successful"
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ReturnDeliveryResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "get list collect for customer of return deliveries not collected failed"
+   */
+  getListCollectForCustomerOfReturnDeliveriesNotCollected = async (
+    req: AuthRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const result =
+        await this.returnDeliveriesService.getListCollectForCustomerOfReturnDeliveriesNotCollected(
+          req.user?.userId
+        );
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'get list collect for customer of return deliveries not collected successful',
+        data: result,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      console.error(
+        'get list collect for customer of return deliveries not collected error:',
+        error
+      );
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'get list collect for customer of return deliveries not collected failed';
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(500).json(response);
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/return-deliveries/get-list-all-return-deliveries:
+   *   get:
+   *     summary: Get list all return deliveries
+   *     tags: [Return Deliveries]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Get list all return deliveries successful
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "get list all return deliveries successful"
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ReturnDeliveryResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "get list all return deliveries failed"
+   */
+  getListAllReturnDeliveries = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const result = await this.returnDeliveriesService.getListAllReturnDeliveries(
+        req.user?.userId
+      );
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'get list all return deliveries successful',
+        data: result,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      console.error('get list all return deliveries error:', error);
+
+      const message =
+        error instanceof Error ? error.message : 'get list all return deliveries failed';
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(500).json(response);
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/return-deliveries/get-list-return-deliveries-is-return:
+   *   get:
+   *     summary: Get list return deliveries is return
+   *     tags: [Return Deliveries]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Get list return deliveries is return successful
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "get list return deliveries is return successful"
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ReturnDeliveryResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "get list return deliveries is return failed"
+   */
+  getListReturnDeliveriesIsReturn = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const result = await this.returnDeliveriesService.getListReturnDeliveriesIsReturn(
+        req.user?.userId
+      );
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'get list return deliveries is return successful',
+        data: result,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      console.error('get list return deliveries is return error:', error);
+
+      const message =
+        error instanceof Error ? error.message : 'get list return deliveries is return failed';
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(500).json(response);
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/return-deliveries/get-detail-images-return-delivery/{deliveryId}:
+   *   get:
+   *     summary: Get detail images return delivery
+   *     tags: [Return Deliveries]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: deliveryId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Delivery ID
+   *     responses:
+   *       200:
+   *         description: Get detail images return delivery successful
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "get detail images return delivery successful"
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ReturnDeliveryImage'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "get detail images return delivery failed"
+   */
+  getDetailImagesReturnDelivery = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { deliveryId } = req.params;
+      const result = await this.returnDeliveriesService.getDetailImagesReturnDelivery(deliveryId);
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'get detail images return delivery successful',
+        data: result,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      console.error('get detail images return delivery error:', error);
+
+      const message =
+        error instanceof Error ? error.message : 'get detail images return delivery failed';
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(500).json(response);
+    }
+  };
+
+  updateNoteReturnDelivery = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { deliveryId } = req.params;
+      const { note } = req.body;
+      const result = await this.returnDeliveriesService.updateNoteReturnDelivery(deliveryId, note);
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'update note return delivery successful',
+        data: result,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      console.error('update note return delivery error:', error);
+
+      const message = error instanceof Error ? error.message : 'update note return delivery failed';
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(500).json(response);
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/return-deliveries/upload-images:
+   *   put:
+   *     summary: Upload images to return delivery
+   *     tags: [Return Deliveries]
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         multipart/form-data:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - deliveryId
+   *             properties:
+   *               deliveryId:
+   *                 type: string
+   *                 pattern: '^[0-9a-fA-F]{24}$'
+   *                 example: '507f1f77bcf86cd799439011'
+   *                 description: Return delivery ID
+   *               # Multiple images support (up to 5 images)
+   *               images:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *                   format: binary
+   *                 maxItems: 5
+   *                 description: Array of image files to upload (optional, max 5)
+   *               images[0][index]:
+   *                 type: integer
+   *                 minimum: 1
+   *                 maximum: 5
+   *                 example: 1
+   *                 description: Index for first image (1-5)
+   *               images[0][rotate]:
+   *                 type: integer
+   *                 enum: [0, 90, 180, 270]
+   *                 default: 0
+   *                 description: Rotation angle for first image
+   *               images[1][index]:
+   *                 type: integer
+   *                 minimum: 1
+   *                 maximum: 5
+   *                 example: 2
+   *                 description: Index for second image (1-5)
+   *               images[1][rotate]:
+   *                 type: integer
+   *                 enum: [0, 90, 180, 270]
+   *                 default: 0
+   *                 description: Rotation angle for second image
+   *     responses:
+   *       200:
+   *         description: Images uploaded successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: 'Images uploaded successfully'
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     returnDelivery:
+   *                       type: object
+   *       400:
+   *         description: Validation error or business logic error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   examples:
+   *                     validation:
+   *                       value: 'Validation failed: Delivery ID is required'
+   *                     not_found:
+   *                       value: 'Return delivery not found'
+   *       401:
+   *         description: Unauthorized - Invalid or missing token
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: 'Unauthorized'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: 'Internal server error'
+   */
+  uploadImagesReturnDelivery = async (
+    req: AuthRequestWithFileUploads,
+    res: Response
+  ): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { deliveryId, images } = req.body;
+      const filesObject = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+
+      // Prepare image data for multiple images
+      let imagesData: Array<{
+        index: number;
+        buffer: Buffer;
+        originalName: string;
+        rotate: number;
+      }> = [];
+
+      // Handle multiple images
+      if (
+        filesObject &&
+        !Array.isArray(filesObject) &&
+        filesObject.images &&
+        filesObject.images.length > 0 &&
+        images
+      ) {
+        imagesData = filesObject.images.map((file, idx) => ({
+          index: images[idx]?.index || idx + 1,
+          buffer: file.buffer,
+          originalName: file.originalname,
+          rotate: images[idx]?.rotate || 0,
+        }));
+      }
+
+      const result = await this.returnDeliveriesService.uploadImagesReturnDelivery(
+        deliveryId,
+        imagesData.length > 0 ? imagesData : undefined
+      );
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Images uploaded successfully',
+        data: { returnDelivery: result },
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      console.error('Upload images error:', error);
+
+      let statusCode = 400;
+      const message = error instanceof Error ? error.message : 'Failed to upload images';
+
+      // Handle specific error cases
+      if (message === 'Return delivery not found') {
+        statusCode = 404;
+      }
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(statusCode).json(response);
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/return-deliveries/update-status-with-images:
+   *   put:
+   *     summary: Update status of return delivery with images (new formData format)
+   *     tags: [Return Deliveries]
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         multipart/form-data:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - deliveryId
+   *               - customerId
+   *             properties:
+   *               deliveryId:
+   *                 type: string
+   *                 example: "507f1f77bcf86cd799439011"
+   *                 description: Return delivery ID
+   *               customerId:
+   *                 type: string
+   *                 example: "507f1f77bcf86cd799439012"
+   *                 description: Customer ID
+   *               address:
+   *                 type: string
+   *                 example: "123 ABC Street"
+   *                 description: Customer address (optional)
+   *               identityCardIssuedDate:
+   *                 type: string
+   *                 example: "2024-01-01"
+   *                 description: Identity card issued date (optional)
+   *               identityCardNumber:
+   *                 type: string
+   *                 example: "123456789"
+   *                 description: Identity card number (optional)
+   *               imagesIdentityCard:
+   *                 type: string
+   *                 example: "base64_image_string"
+   *                 description: Identity card image (optional)
+   *               # Customer images support (up to 5 images)
+   *               customerImages:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *                   format: binary
+   *                 maxItems: 5
+   *                 description: Array of customer image files (optional, max 5)
+   *               customerImages[0][index]:
+   *                 type: integer
+   *                 minimum: 1
+   *                 maximum: 5
+   *                 example: 1
+   *                 description: Index for first customer image (1-5)
+   *               customerImages[0][rotate]:
+   *                 type: integer
+   *                 enum: [0, 90, 180, 270]
+   *                 default: 0
+   *                 description: Rotation angle for first customer image
+   *               # Return delivery images support (up to 5 images)
+   *               images:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *                   format: binary
+   *                 maxItems: 5
+   *                 description: Array of return delivery image files (optional, max 5)
+   *               images[0][index]:
+   *                 type: integer
+   *                 minimum: 1
+   *                 maximum: 5
+   *                 example: 1
+   *                 description: Index for first return delivery image (1-5)
+   *               images[0][rotate]:
+   *                 type: integer
+   *                 enum: [0, 90, 180, 270]
+   *                 default: 0
+   *                 description: Rotation angle for first return delivery image
+   *               images[1][index]:
+   *                 type: integer
+   *                 minimum: 1
+   *                 maximum: 5
+   *                 example: 2
+   *                 description: Index for second return delivery image (1-5)
+   *               images[1][rotate]:
+   *                 type: integer
+   *                 enum: [0, 90, 180, 270]
+   *                 default: 0
+   *                 description: Rotation angle for second return delivery image
+   *           examples:
+   *             withImages:
+   *               summary: Update with return delivery images
+   *               value:
+   *                 deliveryId: "507f1f77bcf86cd799439011"
+   *                 customerId: "507f1f77bcf86cd799439012"
+   *                 address: "123 ABC Street"
+   *                 identityCardIssuedDate: "2024-01-01"
+   *                 identityCardNumber: "123456789"
+   *             withoutImages:
+   *               summary: Update without images
+   *               value:
+   *                 deliveryId: "507f1f77bcf86cd799439011"
+   *                 customerId: "507f1f77bcf86cd799439012"
+   *                 address: "123 ABC Street"
+   *     responses:
+   *       200:
+   *         description: Return delivery status updated with images successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Return delivery status updated with images successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     delivery:
+   *                       type: object
+   *       400:
+   *         description: Validation error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Delivery ID is required"
+   *       404:
+   *         description: Delivery or customer not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Delivery with ID not found"
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Failed to update status with images"
+   */
+  updateStatusWithImages = async (
+    req: AuthRequestWithFileUploads,
+    res: Response
+  ): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const {
+        deliveryId,
+        customerId,
+        address,
+        identityCardIssuedDate,
+        identityCardNumber,
+        customerImages,
+        images,
+      } = req.body;
+      const filesObject = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+
+      // Prepare image data for customer images
+      let customerImagesData: Array<{
+        index: number;
+        buffer: Buffer;
+        originalName: string;
+        rotate: number;
+      }> = [];
+
+      // Prepare image data for return delivery images
+      let imagesData: Array<{
+        index: number;
+        buffer: Buffer;
+        originalName: string;
+        rotate: number;
+      }> = [];
+
+      // Handle customer images
+      if (
+        filesObject &&
+        !Array.isArray(filesObject) &&
+        filesObject.customerImages &&
+        filesObject.customerImages.length > 0 &&
+        customerImages
+      ) {
+        customerImagesData = filesObject.customerImages.map((file, idx) => ({
+          index: customerImages[idx]?.index || idx + 1,
+          buffer: file.buffer,
+          originalName: file.originalname,
+          rotate: customerImages[idx]?.rotate || 0,
+        }));
+      }
+
+      // Handle return delivery images
+      if (
+        filesObject &&
+        !Array.isArray(filesObject) &&
+        filesObject.images &&
+        filesObject.images.length > 0 &&
+        images
+      ) {
+        imagesData = filesObject.images.map((file, idx) => ({
+          index: images[idx]?.index || idx + 1,
+          buffer: file.buffer,
+          originalName: file.originalname,
+          rotate: images[idx]?.rotate || 0,
+        }));
+      }
+
+      const result = await this.returnDeliveriesService.updateStatusWithImages(
+        req.user?.userId,
+        {
+          deliveryId,
+          customerId,
+          address,
+          identityCardIssuedDate,
+          identityCardNumber,
+        },
+        customerImagesData.length > 0 ? customerImagesData : undefined,
+        imagesData.length > 0 ? imagesData : undefined
+      );
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Return delivery status updated with images successfully',
+        data: { delivery: result },
+      };
+      res.status(200).json(response);
+    } catch (error) {
+      console.error('Update status with images error:', error);
+
+      let statusCode = 400;
+      const message =
+        error instanceof Error ? error.message : 'Failed to update status with images';
+
+      // Handle specific error cases
+      if (message.includes('not found')) {
+        statusCode = 404;
+      }
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+      res.status(statusCode).json(response);
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/return-deliveries/update-status-without-images:
+   *   put:
+   *     summary: Update status of return deliveries without images (case update data only)
+   *     tags: [Return Deliveries]
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               arrayListReturnDelivery:
+   *                 type: array
+   *                 items:
+   *                   type: object
+   *                   properties:
+   *                     deliveryId:
+   *                       type: string
+   *                       example: "507f1f77bcf86cd799439011"
+   *                     customerId:
+   *                       type: string
+   *                       example: "507f1f77bcf86cd799439012"
+   *                     address:
+   *                       type: string
+   *                       example: "123 ABC Street"
+   *                     identityCardIssuedDate:
+   *                       type: string
+   *                       example: "2024-01-01"
+   *                     identityCardNumber:
+   *                       type: string
+   *                       example: "123456789"
+   *                 example: [{"deliveryId":"507f1f77bcf86cd799439011","customerId":"507f1f77bcf86cd799439012","address":"123 ABC Street","identityCardIssuedDate":"2024-01-01","identityCardNumber":"123456789"}]
+   *           examples:
+   *             singleReturn:
+   *               summary: Single return delivery without images
+   *               value:
+   *                 arrayListReturnDelivery: [{"deliveryId":"507f1f77bcf86cd799439011","customerId":"507f1f77bcf86cd799439012","address":"123 ABC Street","identityCardIssuedDate":"2024-01-01","identityCardNumber":"123456789"}]
+   *             multipleReturns:
+   *               summary: Multiple return deliveries without images
+   *               value:
+   *                 arrayListReturnDelivery: [{"deliveryId":"507f1f77bcf86cd799439011","customerId":"507f1f77bcf86cd799439012"},{"deliveryId":"507f1f77bcf86cd799439013","customerId":"507f1f77bcf86cd799439014"}]
+   *     responses:
+   *       200:
+   *         description: Return delivery status updated without images successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Return delivery status updated without images successfully"
    *       400:
    *         description: Validation error
    *         content:
@@ -346,12 +1280,9 @@ export class ReturnDeliveriesController {
    *                   example: false
    *                 message:
    *                   type: string
-   *                   example: "update status return delivery failed"
+   *                   example: "Failed to update status without images"
    */
-  updateStatusReturnDelivery = async (
-    req: AuthRequestWithFileUploads,
-    res: Response
-  ): Promise<void> => {
+  updateStatusWithoutImages = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       if (!req.user) {
         const response: ApiResponse = {
@@ -361,34 +1292,23 @@ export class ReturnDeliveriesController {
         res.status(401).json(response);
         return;
       }
-      // Parse the JSON string from FormData
-      let updateData: IReturnDeliveryUpdateRequest;
-      try {
-        updateData = JSON.parse(req.body.arrayListReturnDelivery);
-      } catch (parseError) {
-        const response: ApiResponse = {
-          success: false,
-          message: 'Invalid JSON format for arrayListReturnDelivery',
-        };
-        res.status(400).json(response);
-        return;
-      }
 
-      await this.returnDeliveriesService.updateStatusReturnDelivery(
+      const updateData: IReturnDeliveryUpdateRequest = req.body;
+
+      await this.returnDeliveriesService.updateStatusReturnDeliveryWithoutImages(
         req.user?.userId,
-        updateData,
-        req.files as Express.Multer.File[]
+        updateData
       );
 
       const response: ApiResponse = {
         success: true,
-        message: 'update status return delivery successful',
+        message: 'Return delivery status updated without images successfully',
       };
       res.status(200).json(response);
     } catch (error) {
-      // console.error('update status return delivery error:', error);
+      console.error('Update status without images error:', error);
       const message =
-        error instanceof Error ? error.message : 'update status return delivery failed';
+        error instanceof Error ? error.message : 'Failed to update status without images';
       const response: ApiResponse = {
         success: false,
         message,
