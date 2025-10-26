@@ -89,12 +89,15 @@ const customerSchema = new Schema<ICustomer>(
     },
     address: {
       type: String,
+      default: null,
     },
     identityCardIssuedDate: {
       type: Date,
+      default: null,
     },
     identityCardNumber: {
       type: String,
+      default: null,
     },
   },
   {
