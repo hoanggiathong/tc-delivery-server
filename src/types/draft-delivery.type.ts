@@ -1,4 +1,5 @@
 import { PaymentType } from './index';
+import { VehicleType } from '@/models/delivery.model';
 
 export interface IDraftDeliveryInput {
   senderName: string;
@@ -12,6 +13,8 @@ export interface IDraftDeliveryInput {
   cost: number;
   homeDelivery?: string;
   homeDeliveryCost: number;
+  carryCost?: number;
+  vehicleType?: VehicleType;
   itemValue: number;
   itemCost: number;
   collectCost: number;
@@ -54,6 +57,9 @@ export interface IDraftDeliveryResponse {
   cost: number;
   homeDelivery?: string;
   homeDeliveryCost: number;
+  carryCost: number;
+  homeDeliveryCostTotal?: number;
+  vehicleType: VehicleType;
   itemValue: number;
   itemCost: number;
   collectCost: number;

@@ -53,6 +53,22 @@ export class DraftDeliveryController {
    *               cost:
    *                 type: number
    *                 example: 30000
+   *               homeDelivery:
+   *                 type: string
+   *                 example: "123 Nguyễn Văn Linh, Q7"
+   *               homeDeliveryCost:
+   *                 type: number
+   *                 default: 0
+   *                 example: 15000
+   *               carryCost:
+   *                 type: number
+   *                 default: 0
+   *                 example: 10000
+   *               vehicleType:
+   *                 type: string
+   *                 enum: [motorbike, small-truck, large-truck]
+   *                 default: motorbike
+   *                 example: "motorbike"
    *               itemValue:
    *                 type: number
    *                 example: 500000
@@ -106,6 +122,9 @@ export class DraftDeliveryController {
    *                 name: "Quần áo"
    *                 quantity: 1
    *                 cost: 30000
+   *                 homeDeliveryCost: 0
+   *                 carryCost: 0
+   *                 vehicleType: "motorbike"
    *                 itemValue: 500000
    *                 itemCost: 5000
    *                 collectForCustomer: 0
@@ -123,6 +142,10 @@ export class DraftDeliveryController {
    *                 name: "Điện thoại"
    *                 quantity: 2
    *                 cost: 50000
+   *                 homeDelivery: "123 Nguyễn Văn Linh, Q7"
+   *                 homeDeliveryCost: 15000
+   *                 carryCost: 10000
+   *                 vehicleType: "small-truck"
    *                 itemValue: 15000000
    *                 itemCost: 150000
    *                 collectForCustomer: 15000000
@@ -171,6 +194,9 @@ export class DraftDeliveryController {
    *                     cost: 30000
    *                     homeDelivery: null
    *                     homeDeliveryCost: 0
+   *                     carryCost: 0
+   *                     homeDeliveryCostTotal: undefined
+   *                     vehicleType: "motorbike"
    *                     itemValue: 500000
    *                     itemCost: 5000
    *                     collectCost: 0
@@ -292,6 +318,15 @@ export class DraftDeliveryController {
    *                 type: number
    *               collectForCustomerCost:
    *                 type: number
+   *               homeDelivery:
+   *                 type: string
+   *               homeDeliveryCost:
+   *                 type: number
+   *               carryCost:
+   *                 type: number
+   *               vehicleType:
+   *                 type: string
+   *                 enum: [motorbike, small-truck, large-truck]
    *               details:
    *                 type: object
    *                 properties:
@@ -360,6 +395,9 @@ export class DraftDeliveryController {
    *                     cost: 45000
    *                     homeDelivery: null
    *                     homeDeliveryCost: 0
+   *                     carryCost: 0
+   *                     homeDeliveryCostTotal: undefined
+   *                     vehicleType: "motorbike"
    *                     itemValue: 500000
    *                     itemCost: 5000
    *                     collectCost: 0
@@ -512,6 +550,9 @@ export class DraftDeliveryController {
    *                         cost: 50000
    *                         homeDelivery: "123 Nguyễn Văn Linh, Q7"
    *                         homeDeliveryCost: 15000
+   *                         carryCost: 10000
+   *                         homeDeliveryCostTotal: 25000
+   *                         vehicleType: "small-truck"
    *                         itemValue: 15000000
    *                         itemCost: 150000
    *                         collectCost: 0
@@ -635,6 +676,9 @@ export class DraftDeliveryController {
    *                     cost: 30000
    *                     homeDelivery: null
    *                     homeDeliveryCost: 0
+   *                     carryCost: 0
+   *                     homeDeliveryCostTotal: undefined
+   *                     vehicleType: "motorbike"
    *                     itemValue: 500000
    *                     itemCost: 5000
    *                     collectCost: 0

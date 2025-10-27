@@ -193,6 +193,9 @@ erDiagram
         number cost "phí vận chuyển, bắt buộc, tối thiểu 0"
         string homeDelivery "địa chỉ giao hàng, tùy chọn, trim"
         number homeDeliveryCost "bắt buộc, tối thiểu 0, mặc định 0"
+        number carryCost "phí bốc xếp, tùy chọn, tối thiểu 0, mặc định 0"
+        number homeDeliveryCostTotal "tổng phí giao tận nhà (carryCost+homeDeliveryCost), tùy chọn"
+        enum vehicleType "motorbike|small-truck|large-truck, bắt buộc, mặc định motorbike"
         number itemValue "giá trị hàng hóa, bắt buộc, tối thiểu 0"
         number itemCost "phí trị giá, bắt buộc, tối thiểu 0"
         number collectCost "thu hộ, bắt buộc, tối thiểu 0"
@@ -386,6 +389,9 @@ erDiagram
   - Tự động xóa sau 90 ngày (TTL index)
   - Số lượng phải tối thiểu 1
   - Hỗ trợ thông tin chi tiết hàng hóa (weight, dimensions, overweight status)
+  - **Validation giao hàng tận nhà**: `homeDelivery` bắt buộc khi `carryCost > 0` hoặc `homeDeliveryCost > 0`
+  - **Tính toán tự động**: `homeDeliveryCostTotal = carryCost + homeDeliveryCost` khi có `homeDelivery`
+  - **Loại xe**: Hỗ trợ 3 loại (motorbike, small-truck, large-truck) cho phí bốc xếp phù hợp
 - **Chuyển đổi**: Có thể convert draft thành delivery chính thức với code và customer records
 - **Tính toán chi phí**: Giống bảng DELIVERIES
   - `totalCost` tính phí dịch vụ
@@ -673,11 +679,14 @@ erDiagram
     - `GET /api/customer-address-history/:phone` - Lấy tất cả address history (sorted newest first)
     - `POST /api/customer-address-history/:phone` - Tạo mới address history manually
     - `DELETE /api/customer-address-history/:phone/:addressHistoryId` - Xóa với ownership verification
-- **Enhanced DELIVERIES Table**: Thêm fields cho giao hàng tận nhà
+- **Enhanced DELIVERIES & DRAFT_DELIVERIES Tables**: Thêm fields cho giao hàng tận nhà
   - `carryCost`: Phí bốc xếp (optional, min 0, default 0)
   - `homeDeliveryCostTotal`: Tổng phí giao tận nhà (carryCost + homeDeliveryCost, optional)
   - `vehicleType`: Loại xe (motorbike|small-truck|large-truck, required, default motorbike)
-  - VehicleType enum được share giữa Delivery và CustomerAddressHistory models
+  - VehicleType enum được share giữa Delivery, DraftDelivery và CustomerAddressHistory models
+  - **Validation**: homeDelivery bắt buộc khi carryCost > 0 hoặc homeDeliveryCost > 0
+  - **Auto-calculation**: homeDeliveryCostTotal tự động tính = carryCost + homeDeliveryCost
+  - Cả DELIVERIES và DRAFT_DELIVERIES đều có cấu trúc fields và validation giống nhau
 
 ### Cân Nhắc Migration và Mở Rộng
 

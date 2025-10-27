@@ -4,6 +4,7 @@ import {
   OBJECTID_PATTERN,
   VALIDATION_MESSAGES,
 } from '@/utils/validation-patterns';
+import { VehicleType } from '@/models/delivery.model';
 
 export const createDraftDeliverySchema = z.object({
   body: z.object({
@@ -27,6 +28,8 @@ export const createDraftDeliverySchema = z.object({
     cost: z.number().min(0, 'Cost must be non-negative'),
     homeDelivery: z.string().max(500, 'Home delivery address is too long').optional(),
     homeDeliveryCost: z.number().min(0, 'Home delivery cost must be non-negative').default(0),
+    carryCost: z.number().min(0, 'Carry cost must be non-negative').default(0).optional(),
+    vehicleType: z.nativeEnum(VehicleType).default(VehicleType.MOTORBIKE).optional(),
     itemValue: z.number().min(0, 'Item value must be non-negative').default(0),
     itemCost: z.number().min(0, 'Item cost must be non-negative').default(0),
     collectCost: z.number().min(0, 'Collect cost must be non-negative').default(0),
@@ -77,6 +80,8 @@ export const updateDraftDeliverySchema = z.object({
     cost: z.number().min(0).optional(),
     homeDelivery: z.string().max(500).optional(),
     homeDeliveryCost: z.number().min(0).optional(),
+    carryCost: z.number().min(0).optional(),
+    vehicleType: z.nativeEnum(VehicleType).optional(),
     itemValue: z.number().min(0).optional(),
     itemCost: z.number().min(0).optional(),
     collectCost: z.number().min(0).optional(),

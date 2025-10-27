@@ -60,3 +60,16 @@ export {
   mockUpdatedMoneyDeliveryForIntegration,
   mockMoneyDeliveryWithAlphaRoutes,
 } from './money-deliveries';
+
+export {
+  // Draft Delivery mocks
+  createMockDraftDelivery,
+  createMockDraftDeliveryWithHomeDelivery,
+  createMockDraftDeliveryRequest,
+  createMockDraftDeliveryRequestWithHomeDelivery,
+  createMockDraftDeliveryList,
+  // Draft Delivery integration test mocks
+  mockDraftDeliveryForIntegration,
+  mockDraftDeliveryWithHomeDeliveryForIntegration,
+  mockDraftDeliveriesListForIntegration,
+} from './draft-deliveries';
