@@ -682,6 +682,61 @@ export class ReturnDeliveriesController {
     }
   };
 
+  /**
+   * @swagger
+   * /api/return-deliveries/update-note-return-delivery/{deliveryId}:
+   *   put:
+   *     summary: Update note return delivery
+   *     tags: [Return Deliveries]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: deliveryId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Delivery ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               note:
+   *                 type: string
+   *                 description: Note
+   *     responses:
+   *       200:
+   *         description: Update note return delivery successful
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "update note return delivery successful"
+   *                 data:
+   *                   type: object
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "update note return delivery failed"
+   */
   updateNoteReturnDelivery = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       if (!req.user) {
@@ -1206,28 +1261,15 @@ export class ReturnDeliveriesController {
    *                     deliveryId:
    *                       type: string
    *                       example: "507f1f77bcf86cd799439011"
-   *                     customerId:
-   *                       type: string
-   *                       example: "507f1f77bcf86cd799439012"
-   *                     address:
-   *                       type: string
-   *                       example: "123 ABC Street"
-   *                     identityCardIssuedDate:
-   *                       type: string
-   *                       example: "2024-01-01"
-   *                     identityCardNumber:
-   *                       type: string
-   *                       example: "123456789"
-   *                 example: [{"deliveryId":"507f1f77bcf86cd799439011","customerId":"507f1f77bcf86cd799439012","address":"123 ABC Street","identityCardIssuedDate":"2024-01-01","identityCardNumber":"123456789"}]
    *           examples:
    *             singleReturn:
    *               summary: Single return delivery without images
    *               value:
-   *                 arrayListReturnDelivery: [{"deliveryId":"507f1f77bcf86cd799439011","customerId":"507f1f77bcf86cd799439012","address":"123 ABC Street","identityCardIssuedDate":"2024-01-01","identityCardNumber":"123456789"}]
+   *                 arrayListReturnDelivery: [{"deliveryId":"507f1f77bcf86cd799439011"}]
    *             multipleReturns:
    *               summary: Multiple return deliveries without images
    *               value:
-   *                 arrayListReturnDelivery: [{"deliveryId":"507f1f77bcf86cd799439011","customerId":"507f1f77bcf86cd799439012"},{"deliveryId":"507f1f77bcf86cd799439013","customerId":"507f1f77bcf86cd799439014"}]
+   *                 arrayListReturnDelivery: [{"deliveryId":"507f1f77bcf86cd799439011"},{"deliveryId":"507f1f77bcf86cd799439013"}]
    *     responses:
    *       200:
    *         description: Return delivery status updated without images successfully

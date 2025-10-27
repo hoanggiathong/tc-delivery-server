@@ -209,13 +209,13 @@ export const updateStatusWithoutImagesSchema = z.object({
             .string()
             .min(1, 'Delivery ID is required')
             .regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format'),
-          customerId: z
-            .string()
-            .min(1, 'Customer ID is required')
-            .regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format'),
-          address: z.string().optional(),
-          identityCardIssuedDate: z.string().optional(),
-          identityCardNumber: z.string().optional(),
+          // customerId: z
+          //   .string()
+          //   .min(1, 'Customer ID is required')
+          //   .regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format'),
+          // address: z.string().optional(),
+          // identityCardIssuedDate: z.string().optional(),
+          // identityCardNumber: z.string().optional(),
         })
       )
       .min(1, 'At least one return delivery item is required'),

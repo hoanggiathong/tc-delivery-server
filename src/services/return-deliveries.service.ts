@@ -769,29 +769,6 @@ export class ReturnDeliveriesService {
           throw new Error(`Delivery with ID ${item.deliveryId} not found`);
         }
 
-        // Get customer by ID
-        const customer = await this.customerService.getCustomerById(item.customerId);
-        if (!customer) {
-          throw new Error(`Customer with ID ${item.customerId} not found`);
-        }
-
-        // Update customer information if provided
-        if (item.address || item.identityCardIssuedDate || item.identityCardNumber) {
-          const updateCustomerData: Record<string, unknown> = {};
-
-          if (item.address) {
-            updateCustomerData.address = item.address;
-          }
-          if (item.identityCardIssuedDate) {
-            updateCustomerData.identityCardIssuedDate = item.identityCardIssuedDate;
-          }
-          if (item.identityCardNumber) {
-            updateCustomerData.identityCardNumber = item.identityCardNumber;
-          }
-
-          await this.customerService.updateCustomer(item.customerId, updateCustomerData);
-        }
-
         // Check field collectForCustomer > 0
         if (delivery.collectForCustomer > 0) {
           // Call service money delivery to handle data and create new money delivery
@@ -799,8 +776,10 @@ export class ReturnDeliveriesService {
             {
               senderName: (delivery.sender as unknown as Record<string, unknown>).name as string,
               senderPhone: (delivery.sender as unknown as Record<string, unknown>).phone as string,
-              receiverName: customer.name,
-              receiverPhone: customer.phone,
+              receiverName: (delivery.receiver as unknown as Record<string, unknown>)
+                .name as string,
+              receiverPhone: (delivery.receiver as unknown as Record<string, unknown>)
+                .phone as string,
               toRouteId: delivery.toRoute._id.toString(),
               sendMoneyAmount: delivery.collectForCustomer,
               sendCost: delivery.collectForCustomerCost || 0,
