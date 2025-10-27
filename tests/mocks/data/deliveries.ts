@@ -95,7 +95,7 @@ export const createMockDeliveryRequestWithoutHome = (overrides: any = {}) => {
     toRouteId: '507f1f77bcf86cd799439012',
     name: 'Test Package',
     cost: 50000,
-    // homeDeliveryCost omitted to use default value of 0
+    homeDeliveryCost: 0,
     itemValue: 100000,
     itemCost: 5000,
     collectCost: 2000,
