@@ -157,6 +157,13 @@ export class ReturnDeliveriesService {
           quantityReturn: item.quantityReturn || 0,
           dateReturn: item.dateReturn,
           collectCost: item.collectCost || 0,
+          isCollectForCustomer: item.isCollectForCustomer,
+          isCollectCost: item.isCollectCost,
+          createdByUser: {
+            _id: item.createdByUser._id.toString(),
+            username: item.createdByUser.username,
+            name: item.createdByUser.name,
+          },
         })
       );
       return returnDeliveriesResponse;
@@ -290,6 +297,13 @@ export class ReturnDeliveriesService {
           timeToSendSMS: item.timeToSendSMS,
           quantityReturn: item.quantityReturn || 0,
           dateReturn: item.dateReturn,
+          isCollectForCustomer: item.isCollectForCustomer,
+          isCollectCost: item.isCollectCost,
+          createdByUser: {
+            _id: item.createdByUser._id.toString(),
+            username: item.createdByUser.username,
+            name: item.createdByUser.name,
+          },
         })
       );
       return returnDeliveriesResponse;
@@ -310,7 +324,7 @@ export class ReturnDeliveriesService {
     const where = {
       toRoute: selectedRouteId,
       isReturn: true,
-      isCollectForCustomerCost: { $ne: true },
+      isCollectForCustomer: { $ne: true },
     };
 
     try {
@@ -371,6 +385,101 @@ export class ReturnDeliveriesService {
           timeToSendSMS: item.timeToSendSMS,
           quantityReturn: item.quantityReturn || 0,
           dateReturn: item.dateReturn,
+          isCollectForCustomer: item.isCollectForCustomer,
+          isCollectCost: item.isCollectCost,
+          createdByUser: {
+            _id: item.createdByUser._id.toString(),
+            username: item.createdByUser.username,
+            name: item.createdByUser.name,
+          },
+        })
+      );
+      return returnDeliveriesResponse;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('get list collect for customer of return deliveries failed');
+    }
+  }
+
+  // danh sach thu ho cua tra hang chua duoc thu ho
+  async getListCollectCostOfReturnDeliveriesNotCollected(
+    userId: string
+  ): Promise<IReturnDeliveryResponse[]> {
+    const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
+
+    const where = {
+      toRoute: selectedRouteId,
+      isReturn: true,
+      isCollectCost: { $ne: true },
+    };
+
+    try {
+      const returnDeliveries = await Delivery.find(where)
+        .populate([
+          {
+            path: 'sender',
+            select: '_id name phone routeId createdAt updatedAt',
+          },
+          { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
+          { path: 'createdByUser', select: '_id username name' },
+        ])
+        .sort({ createdAt: -1 })
+        .lean();
+
+      const populatedReturnDeliveries = await this.toPopulatedReturnDeliveryLean(returnDeliveries);
+
+      const returnDeliveriesResponse: IReturnDeliveryResponse[] = populatedReturnDeliveries.map(
+        (item: IReturnDeliveryLeanPopulated) => ({
+          id: item._id.toString(),
+          code: item.code,
+          name: item.name,
+          fullCode: item.fullCode,
+          subCode: item.subCode,
+          sender: {
+            name: item.sender.name,
+            phone: item.sender.phone,
+          },
+          receiver: {
+            name: item.receiver.name,
+            phone: item.receiver.phone,
+          },
+          toRoute: {
+            id: item.toRoute._id.toString(),
+            code: item.toRoute.code,
+            name: item.toRoute.name,
+          },
+          cost: item.cost,
+          homeDelivery: item.homeDelivery,
+          homeDeliveryCost: item.homeDeliveryCost,
+          collectForCustomer: item.collectForCustomer,
+          collectForCustomerCost: item.collectForCustomerCost,
+          itemValue: item.itemValue,
+          itemCost: item.itemCost,
+          totalCost: item.totalCost,
+          actualRevenue: item.actualRevenue,
+          paymentType: item.paymentType,
+          notes: item.notes,
+          isReturn: item.isReturn,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+          upItems: item.upItems || '',
+          downItems: item.downItems || '',
+          inventory: item.inventory || '',
+          smsType: item.smsType || '',
+          timeToSendSMS: item.timeToSendSMS,
+          quantityReturn: item.quantityReturn || 0,
+          dateReturn: item.dateReturn,
+          isCollectForCustomer: item.isCollectForCustomer,
+          isCollectCost: item.isCollectCost,
+          createdByUser: {
+            _id: item.createdByUser._id.toString(),
+            username: item.createdByUser.username,
+            name: item.createdByUser.name,
+          },
         })
       );
       return returnDeliveriesResponse;
@@ -456,6 +565,13 @@ export class ReturnDeliveriesService {
           timeToSendSMS: item.timeToSendSMS,
           quantityReturn: item.quantityReturn || 0,
           dateReturn: item.dateReturn,
+          isCollectForCustomer: item.isCollectForCustomer,
+          isCollectCost: item.isCollectCost,
+          createdByUser: {
+            _id: item.createdByUser._id.toString(),
+            username: item.createdByUser.username,
+            name: item.createdByUser.name,
+          },
         })
       );
       return returnDeliveriesResponse;
@@ -542,6 +658,13 @@ export class ReturnDeliveriesService {
           timeToSendSMS: item.timeToSendSMS,
           quantityReturn: item.quantityReturn || 0,
           dateReturn: item.dateReturn,
+          isCollectForCustomer: item.isCollectForCustomer,
+          isCollectCost: item.isCollectCost,
+          createdByUser: {
+            _id: item.createdByUser._id.toString(),
+            username: item.createdByUser.username,
+            name: item.createdByUser.name,
+          },
         })
       );
       return returnDeliveriesResponse;
@@ -701,12 +824,14 @@ export class ReturnDeliveriesService {
           },
           userId
         );
+
+        delivery.isCollectForCustomer = true;
       }
 
-      // Check field collectForCustomerCost > 0
-      if (delivery.collectForCustomerCost > 0) {
-        // Then update status with field isCollectForCustomerCost = true
-        delivery.isCollectForCustomerCost = true;
+      // Check field collectCost > 0
+      if (delivery.collectCost > 0) {
+        // Then update status with field isCollectCost = true
+        delivery.isCollectCost = true;
       }
 
       // Then update status return delivery with field isReturn = true
@@ -789,12 +914,13 @@ export class ReturnDeliveriesService {
             },
             userId
           );
+          delivery.isCollectForCustomer = true;
         }
 
         // Check field collectForCustomerCost > 0
-        if (delivery.collectForCustomerCost > 0) {
+        if (delivery.collectCost > 0) {
           // Then update status with field isCollectForCustomerCost = true
-          delivery.isCollectForCustomerCost = true;
+          delivery.isCollectCost = true;
         }
 
         // Then update status return delivery with field isReturn = true

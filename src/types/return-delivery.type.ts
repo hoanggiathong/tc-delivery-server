@@ -49,14 +49,21 @@ export interface IReturnDeliveryResponse {
   notes?: string;
   createdAt: Date;
   updatedAt?: Date;
-  upItems?: any;
-  downItems?: any;
+  upItems?: string;
+  downItems?: string;
   isReturn: boolean;
-  inventory: any;
+  inventory: string;
   smsType?: string;
   timeToSendSMS?: Date;
   quantityReturn?: number;
   dateReturn?: Date;
+  isCollectForCustomer?: boolean;
+  isCollectCost?: boolean;
+  createdByUser: {
+    _id: string;
+    username: string;
+    name: string;
+  };
 }
 
 export interface IReturnDeliveryLeanPopulated {
@@ -101,6 +108,13 @@ export interface IReturnDeliveryLeanPopulated {
   quantityReturn?: number;
   dateReturn?: Date;
   returnDeliveryImages?: IReturnDeliveryImage[];
+  isCollectForCustomer?: boolean;
+  isCollectCost?: boolean;
+  createdByUser: {
+    _id: string;
+    username: string;
+    name: string;
+  };
 }
 
 export interface IReturnDeliveryUpdateItem {
