@@ -48,8 +48,9 @@ export interface IDelivery extends Document {
   createdAt: Date;
   updatedAt: Date;
   isReturn: boolean; // tra hang
-  isCollectForCustomerCost?: boolean; // da thu ho cho khach hang
-  inventory?: any; // kho
+  isCollectForCustomer?: boolean; // da thu ho cho khach hang
+  isCollectCost?: boolean; // da thu ho cho khach hang
+  inventory?: string; // kho
   smsType?: string;
   timeToSendSMS?: Date;
   upItems?: string; // len hang
@@ -246,7 +247,11 @@ const deliverySchema = new Schema<IDelivery>(
       type: Boolean,
       default: false,
     },
-    isCollectForCustomerCost: {
+    isCollectForCustomer: {
+      type: Boolean,
+      default: false,
+    },
+    isCollectCost: {
       type: Boolean,
       default: false,
     },

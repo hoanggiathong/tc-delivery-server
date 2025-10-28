@@ -100,6 +100,11 @@ export const getListCollectForCustomerNotCollectedSchema = z.object({
   query: z.object({}).optional(),
 });
 
+// Schema for get list collect cost of return deliveries not collected
+export const getListCollectCostOfReturnDeliveriesNotCollectedSchema = z.object({
+  query: z.object({}).optional(),
+});
+
 // Schema for get list all return deliveries (no parameters needed)
 export const getListAllReturnDeliveriesSchema = z.object({
   query: z.object({}).optional(),

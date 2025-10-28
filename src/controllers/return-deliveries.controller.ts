@@ -453,6 +453,22 @@ export class ReturnDeliveriesController {
    *     tags: [Return Deliveries]
    *     security:
    *       - bearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: startDate
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Start date for filtering (ISO format)
+   *         example: "2025-10-01T00:00:00.000Z"
+   *       - in: query
+   *         name: endDate
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: End date for filtering (ISO format)
    *     responses:
    *       200:
    *         description: Get list all return deliveries successful
@@ -763,6 +779,146 @@ export class ReturnDeliveriesController {
       console.error('update note return delivery error:', error);
 
       const message = error instanceof Error ? error.message : 'update note return delivery failed';
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(500).json(response);
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/return-deliveries/get-list-collect-cost-of-return-deliveries-not-collected:
+   *   get:
+   *     summary: Get list collect cost of return deliveries not collected
+   *     tags: [Return Deliveries]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Get list collect cost of return deliveries not collected successful
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "get list collect cost of return deliveries not collected successful"
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       id:
+   *                         type: string
+   *                         example: "507f1f77bcf86cd799439011"
+   *                       code:
+   *                         type: string
+   *                         example: "2412170001"
+   *                       fullCode:
+   *                         type: string
+   *                         example: "2412170001"
+   *                       sender:
+   *                         type: object
+   *                         properties:
+   *                           name:
+   *                             type: string
+   *                             example: "Nguyễn Văn A"
+   *                           phone:
+   *                             type: string
+   *                             example: "+84912345678"
+   *                       receiver:
+   *                         type: object
+   *                         properties:
+   *                           name:
+   *                             type: string
+   *                             example: "Trần Thị B"
+   *                           phone:
+   *                             type: string
+   *                             example: "+84987654321"
+   *                       collectCost:
+   *                         type: number
+   *                         example: 50000
+   *                       collectForCustomer:
+   *                         type: number
+   *                         example: 1000000
+   *                       collectForCustomerCost:
+   *                         type: number
+   *                         example: 50000
+   *                       totalCollectCost:
+   *                         type: number
+   *                         example: 100000
+   *                       createdAt:
+   *                         type: string
+   *                         format: date-time
+   *                         example: "2024-12-17T10:00:00.000Z"
+   *       401:
+   *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Unauthorized"
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "get list collect cost of return deliveries not collected failed"
+   */
+  getListCollectCostOfReturnDeliveriesNotCollected = async (
+    req: AuthRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const result =
+        await this.returnDeliveriesService.getListCollectCostOfReturnDeliveriesNotCollected(
+          req.user.userId
+        );
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'get list collect cost of return deliveries not collected successful',
+        data: result,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      console.error('get list collect cost of return deliveries not collected error:', error);
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'get list collect cost of return deliveries not collected failed';
 
       const response: ApiResponse = {
         success: false,

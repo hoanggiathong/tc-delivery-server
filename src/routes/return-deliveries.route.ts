@@ -15,6 +15,7 @@ import {
   uploadReturnDeliveryImagesSchema,
   updateStatusWithImagesSchema,
   updateStatusWithoutImagesSchema,
+  getListCollectCostOfReturnDeliveriesNotCollectedSchema,
 } from '@/schemas/return-deliveries.schema';
 import { UserRole } from '@/types/user.type';
 import { Router } from 'express';
@@ -57,6 +58,12 @@ router.get(
   '/get-list-debt-of-return-deliveries-today',
   validate(getListDebtOfReturnDeliveriesTodaySchema),
   returnDeliveriesController.getListDebtOfReturnDeliveriesToday
+);
+
+router.get(
+  '/get-list-collect-cost-of-return-deliveries-not-collected',
+  validate(getListCollectCostOfReturnDeliveriesNotCollectedSchema),
+  returnDeliveriesController.getListCollectCostOfReturnDeliveriesNotCollected
 );
 
 router.get(
