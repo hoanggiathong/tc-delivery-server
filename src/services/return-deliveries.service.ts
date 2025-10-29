@@ -741,7 +741,7 @@ export class ReturnDeliveriesService {
       originalName: string;
       rotate: number;
     }>,
-    imagesData?: Array<{
+    returnDeliveryImagesData?: Array<{
       index: number;
       buffer: Buffer;
       originalName: string;
@@ -784,8 +784,11 @@ export class ReturnDeliveriesService {
       }
 
       // Handle return delivery images upload if provided
-      if (imagesData && imagesData.length > 0) {
-        const uploadedImages = await this.handleUploadImagesReturnDelivery(deliveryId, imagesData);
+      if (returnDeliveryImagesData && returnDeliveryImagesData.length > 0) {
+        const uploadedImages = await this.handleUploadImagesReturnDelivery(
+          deliveryId,
+          returnDeliveryImagesData
+        );
         delivery.returnDeliveryImages = uploadedImages;
       }
 
@@ -848,7 +851,7 @@ export class ReturnDeliveriesService {
         deliveryId,
         customerId,
         hasCustomerImages: customerImagesData && customerImagesData.length > 0,
-        hasReturnDeliveryImages: imagesData && imagesData.length > 0,
+        hasReturnDeliveryImages: returnDeliveryImagesData && returnDeliveryImagesData.length > 0,
         timestamp: now,
       });
 

@@ -1179,31 +1179,31 @@ export class ReturnDeliveriesController {
    *                 default: 0
    *                 description: Rotation angle for first customer image
    *               # Return delivery images support (up to 5 images)
-   *               images:
+   *               returnDeliveryImages:
    *                 type: array
    *                 items:
    *                   type: string
    *                   format: binary
    *                 maxItems: 5
    *                 description: Array of return delivery image files (optional, max 5)
-   *               images[0][index]:
+   *               returnDeliveryImages[0][index]:
    *                 type: integer
    *                 minimum: 1
    *                 maximum: 5
    *                 example: 1
    *                 description: Index for first return delivery image (1-5)
-   *               images[0][rotate]:
+   *               returnDeliveryImages[0][rotate]:
    *                 type: integer
    *                 enum: [0, 90, 180, 270]
    *                 default: 0
    *                 description: Rotation angle for first return delivery image
-   *               images[1][index]:
+   *               returnDeliveryImages[1][index]:
    *                 type: integer
    *                 minimum: 1
    *                 maximum: 5
    *                 example: 2
    *                 description: Index for second return delivery image (1-5)
-   *               images[1][rotate]:
+   *               returnDeliveryImages[1][rotate]:
    *                 type: integer
    *                 enum: [0, 90, 180, 270]
    *                 default: 0
@@ -1303,7 +1303,7 @@ export class ReturnDeliveriesController {
         identityCardIssuedDate,
         identityCardNumber,
         customerImages,
-        images,
+        returnDeliveryImages,
       } = req.body;
       const filesObject = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
 
@@ -1316,7 +1316,7 @@ export class ReturnDeliveriesController {
       }> = [];
 
       // Prepare image data for return delivery images
-      let imagesData: Array<{
+      let returnDeliveryImagesData: Array<{
         index: number;
         buffer: Buffer;
         originalName: string;
@@ -1343,15 +1343,15 @@ export class ReturnDeliveriesController {
       if (
         filesObject &&
         !Array.isArray(filesObject) &&
-        filesObject.images &&
-        filesObject.images.length > 0 &&
-        images
+        filesObject.returnDeliveryImages &&
+        filesObject.returnDeliveryImages.length > 0 &&
+        returnDeliveryImages
       ) {
-        imagesData = filesObject.images.map((file, idx) => ({
-          index: images[idx]?.index || idx + 1,
+        returnDeliveryImagesData = filesObject.returnDeliveryImages.map((file, idx) => ({
+          index: returnDeliveryImages[idx]?.index || idx + 1,
           buffer: file.buffer,
           originalName: file.originalname,
-          rotate: images[idx]?.rotate || 0,
+          rotate: returnDeliveryImages[idx]?.rotate || 0,
         }));
       }
 
@@ -1365,7 +1365,7 @@ export class ReturnDeliveriesController {
           identityCardNumber,
         },
         customerImagesData.length > 0 ? customerImagesData : undefined,
-        imagesData.length > 0 ? imagesData : undefined
+        returnDeliveryImagesData.length > 0 ? returnDeliveryImagesData : undefined
       );
 
       const response: ApiResponse = {
