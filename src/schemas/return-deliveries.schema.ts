@@ -187,7 +187,7 @@ export const updateStatusWithImagesSchema = z.object({
       .max(5, 'Maximum 5 customer images allowed')
       .optional(),
     // Return delivery images support
-    images: z
+    returnDeliveryImages: z
       .array(
         z.object({
           index: z.coerce.number().min(1).max(5),
