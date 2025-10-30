@@ -5,41 +5,71 @@ import {
   OBJECTID_PATTERN,
   VALIDATION_MESSAGES,
 } from '@/utils/validation-patterns';
+import {
+  MoneyDeliveryStatus,
+  MoneyDeliveryType,
+  TransferType,
+} from '@/models/money-delivery.model';
 
-export const createMoneyDeliverySchema = z.object({
-  body: z.object({
-    senderName: z
-      .string()
-      .min(1, 'Sender name is required')
-      .max(100, 'Sender name must not exceed 100 characters')
-      .trim(),
-    senderPhone: z
-      .string()
-      .min(1, 'Sender phone is required')
-      .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
-      .trim(),
-    receiverName: z
-      .string()
-      .min(1, 'Receiver name is required')
-      .max(100, 'Receiver name must not exceed 100 characters')
-      .trim(),
-    receiverPhone: z
-      .string()
-      .min(1, 'Receiver phone is required')
-      .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
-      .trim(),
-    toRouteId: z
-      .string()
-      .min(1, 'To route ID is required')
-      .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
-      .trim(),
-    sendMoneyAmount: z.number().min(0, 'Send money amount must be positive'),
-    sendCost: z.number().min(0, 'Send cost must be positive'),
-    transferType: z.enum(['regular', 'express']).optional(),
-    isFree: z.boolean().optional(),
-    notes: z.string().trim().optional(),
-  }),
-});
+export const createMoneyDeliverySchema = z
+  .object({
+    body: z.object({
+      senderName: z
+        .string()
+        .min(1, 'Sender name is required')
+        .max(100, 'Sender name must not exceed 100 characters')
+        .trim(),
+      senderPhone: z
+        .string()
+        .min(1, 'Sender phone is required')
+        .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
+        .trim(),
+      receiverName: z
+        .string()
+        .min(1, 'Receiver name is required')
+        .max(100, 'Receiver name must not exceed 100 characters')
+        .trim(),
+      receiverPhone: z
+        .string()
+        .min(1, 'Receiver phone is required')
+        .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
+        .trim(),
+      toRouteId: z
+        .string()
+        .min(1, 'To route ID is required')
+        .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
+        .trim(),
+      sendMoneyAmount: z.number().min(0, 'Send money amount must be positive'),
+      sendCost: z.number().min(0, 'Send cost must be positive'),
+      transferType: z.nativeEnum(TransferType).optional(),
+      isFree: z.boolean().optional(),
+      notes: z.string().trim().optional(),
+      status: z.nativeEnum(MoneyDeliveryStatus).optional(),
+      type: z.nativeEnum(MoneyDeliveryType).optional(),
+      deliveryId: z
+        .string()
+        .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
+        .trim()
+        .optional(),
+    }),
+  })
+  .refine(
+    data => {
+      const { type, deliveryId } = data.body;
+      if (type === 'collect' || type === 'collectForCustomer') {
+        return !!deliveryId;
+      }
+      if (type === 'normal' && deliveryId) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message:
+        'deliveryId is required when type is "collect" or "collectForCustomer", and must be null when type is "normal"',
+      path: ['body', 'deliveryId'],
+    }
+  );
 
 export const updateMoneyDeliverySchema = z.object({
   body: z.object({
@@ -75,9 +105,11 @@ export const updateMoneyDeliverySchema = z.object({
       .optional(),
     sendMoneyAmount: z.number().min(0, 'Send money amount must be positive').optional(),
     sendCost: z.number().min(0, 'Send cost must be positive').optional(),
-    transferType: z.enum(['regular', 'express']).optional(),
+    transferType: z.nativeEnum(TransferType).optional(),
     isFree: z.boolean().optional(),
     notes: z.string().trim().optional(),
+    status: z.nativeEnum(MoneyDeliveryStatus).optional(),
+    deliveryId: z.string().regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID).trim().optional(),
   }),
 });
 

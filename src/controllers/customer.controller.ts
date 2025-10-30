@@ -509,6 +509,7 @@ export class CustomerController {
     try {
       const { name, phone, routeId, type, imageIndex, rotate } = req.body as UploadImageRequest;
       const file = req.file;
+      const userId = req.user?.userId;
 
       if (!file) {
         res.status(400).json({
@@ -526,7 +527,8 @@ export class CustomerController {
         imageIndex,
         file.buffer,
         file.originalname,
-        rotate || 0
+        rotate || 0,
+        userId
       );
 
       res.status(200).json({
@@ -551,6 +553,7 @@ export class CustomerController {
       const { id } = req.params;
       const { imageIndex, rotate } = req.body;
       const file = req.file;
+      const userId = req.user?.userId;
 
       if (!file) {
         res.status(400).json({
@@ -565,7 +568,8 @@ export class CustomerController {
         imageIndex,
         file.buffer,
         file.originalname,
-        rotate || 0
+        rotate || 0,
+        userId
       );
 
       res.status(200).json({
@@ -592,8 +596,14 @@ export class CustomerController {
     try {
       const { id, index } = req.params;
       const { rotate } = req.body;
+      const userId = req.user?.userId;
 
-      const customer = await this.customerService.updateImageRotation(id, parseInt(index), rotate);
+      const customer = await this.customerService.updateImageRotation(
+        id,
+        parseInt(index),
+        rotate,
+        userId
+      );
 
       res.status(200).json({
         success: true,
@@ -680,11 +690,19 @@ export class CustomerController {
         }));
       }
 
-      // Update customer with all data
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'User not authenticated',
+        });
+        return;
+      }
+
       const customer = await this.customerService.updateCustomerBankInfo(
         phone,
         routeId,
         type || 'delivery',
+        userId,
         name,
         bankInfo,
         imagesData.length > 0 ? imagesData : undefined

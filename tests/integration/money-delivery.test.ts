@@ -7,6 +7,11 @@ import jwt from 'jsonwebtoken';
 import { UserRole } from '@/types/user.type';
 import { MoneyDeliveryService } from '../../src/services/money-delivery.service';
 import {
+  TransferType,
+  MoneyDeliveryStatus,
+  MoneyDeliveryType,
+} from '@/models/money-delivery.model';
+import {
   mockMoneyDeliveryForIntegration,
   mockMoneyDeliveryNextCodeResponseForIntegration,
   mockUpdatedMoneyDeliveryForIntegration,
@@ -135,9 +140,11 @@ describe('Money Delivery API Integration Tests', () => {
         },
         sendMoneyAmount: 2000000,
         sendCost: 75000,
-        transferType: 'regular' as const,
+        transferType: TransferType.REGULAR,
         isFree: false,
         totalCost: 75000,
+        status: MoneyDeliveryStatus.WAITING,
+        type: MoneyDeliveryType.NORMAL,
         createdByUser: 'user123',
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -184,7 +191,9 @@ describe('Money Delivery API Integration Tests', () => {
       },
       sendMoneyAmount: 1000000,
       sendCost: 50000,
-      transferType: 'regular' as const,
+      transferType: TransferType.REGULAR,
+      status: MoneyDeliveryStatus.WAITING,
+      type: MoneyDeliveryType.NORMAL,
       isFree: false,
       totalCost: 50000,
       createdByUser: 'user123',

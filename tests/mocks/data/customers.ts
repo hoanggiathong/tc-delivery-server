@@ -11,6 +11,7 @@ export const createMockCustomer = (overrides: Partial<ICustomer> = {}): ICustome
     routeId: new Types.ObjectId('507f1f77bcf86cd799439011'),
     relativeReceiver: [],
     type: 'delivery',
+    createdBy: new Types.ObjectId('507f1f77bcf86cd799439099'),
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2023-01-01'),
     ...overrides,

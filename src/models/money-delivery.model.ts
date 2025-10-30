@@ -1,5 +1,21 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+export enum MoneyDeliveryStatus {
+  WAITING = 'waiting',
+  DONE = 'done',
+}
+
+export enum MoneyDeliveryType {
+  NORMAL = 'normal',
+  COLLECT = 'collect',
+  COLLECT_FOR_CUSTOMER = 'collectForCustomer',
+}
+
+export enum TransferType {
+  REGULAR = 'regular',
+  EXPRESS = 'express',
+}
+
 export interface IMoneyDelivery extends Document {
   _id: string;
   code: string;
@@ -11,10 +27,13 @@ export interface IMoneyDelivery extends Document {
   toRoute: mongoose.Types.ObjectId;
   sendMoneyAmount: number;
   sendCost: number;
-  transferType: 'regular' | 'express';
+  transferType: TransferType;
   isFree: boolean;
   totalCost: number;
   notes?: string;
+  status: MoneyDeliveryStatus;
+  type: MoneyDeliveryType;
+  deliveryId?: mongoose.Types.ObjectId;
   createdByUser: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -70,8 +89,8 @@ const moneyDeliverySchema = new Schema<IMoneyDelivery>(
     },
     transferType: {
       type: String,
-      enum: ['regular', 'express'],
-      default: 'regular',
+      enum: Object.values(TransferType),
+      default: TransferType.REGULAR,
       required: true,
     },
     isFree: {
@@ -88,6 +107,23 @@ const moneyDeliverySchema = new Schema<IMoneyDelivery>(
     notes: {
       type: String,
       trim: true,
+    },
+    status: {
+      type: String,
+      enum: Object.values(MoneyDeliveryStatus),
+      default: MoneyDeliveryStatus.WAITING,
+      required: true,
+    },
+    type: {
+      type: String,
+      enum: Object.values(MoneyDeliveryType),
+      default: MoneyDeliveryType.NORMAL,
+      required: true,
+    },
+    deliveryId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Delivery',
+      required: false,
     },
     createdByUser: {
       type: Schema.Types.ObjectId,
@@ -119,12 +155,45 @@ moneyDeliverySchema.pre('save', async function (next) {
 
 // Business logic validation
 moneyDeliverySchema.pre('save', function (next) {
+  // Validate sender and receiver
   if (this.sender.toString() === this.receiver.toString()) {
     return next(new Error('Sender and receiver cannot be the same'));
   }
+
+  // Validate routes
   if (this.fromRoute.toString() === this.toRoute.toString()) {
     return next(new Error('From route and to route cannot be the same'));
   }
+
+  // Validate deliveryId based on type
+  if (
+    (this.type === MoneyDeliveryType.COLLECT ||
+      this.type === MoneyDeliveryType.COLLECT_FOR_CUSTOMER) &&
+    !this.deliveryId
+  ) {
+    return next(new Error('deliveryId is required when type is "collect" or "collectForCustomer"'));
+  }
+
+  if (this.type === MoneyDeliveryType.NORMAL && this.deliveryId) {
+    return next(new Error('deliveryId must be null when type is "normal"'));
+  }
+
+  // Prevent type changes after creation
+  if (!this.isNew && this.isModified('type')) {
+    return next(new Error('type field cannot be changed after creation'));
+  }
+
+  // Validate status transition (waiting → done only)
+  if (this.isModified('status') && !this.isNew) {
+    const originalDoc = (this as unknown as { $locals: { originalStatus?: MoneyDeliveryStatus } })
+      .$locals;
+    if (originalDoc?.originalStatus === MoneyDeliveryStatus.DONE) {
+      if (this.status === MoneyDeliveryStatus.WAITING) {
+        return next(new Error('Cannot change status from "done" back to "waiting"'));
+      }
+    }
+  }
+
   next();
 });
 
@@ -146,6 +215,45 @@ moneyDeliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next)
       update.fromRoute.toString() === update.toRoute.toString()
     ) {
       return next(new Error('From route and to route cannot be the same'));
+    }
+
+    // Prevent type changes in updates
+    if (update.type !== undefined) {
+      return next(new Error('type field cannot be changed after creation'));
+    }
+
+    // Validate status transition in updates
+    if (update.status !== undefined) {
+      const doc = await this.model.findOne(this.getQuery());
+      if (
+        doc &&
+        doc.status === MoneyDeliveryStatus.DONE &&
+        update.status === MoneyDeliveryStatus.WAITING
+      ) {
+        return next(new Error('Cannot change status from "done" back to "waiting"'));
+      }
+    }
+
+    // Validate deliveryId based on type
+    if (update.deliveryId !== undefined) {
+      const doc = await this.model.findOne(this.getQuery());
+      const effectiveType =
+        update.type !== undefined ? (update.type as MoneyDeliveryType) : doc?.type;
+
+      if (
+        effectiveType &&
+        (effectiveType === MoneyDeliveryType.COLLECT ||
+          effectiveType === MoneyDeliveryType.COLLECT_FOR_CUSTOMER) &&
+        !update.deliveryId
+      ) {
+        return next(
+          new Error('deliveryId is required when type is "collect" or "collectForCustomer"')
+        );
+      }
+
+      if (effectiveType === MoneyDeliveryType.NORMAL && update.deliveryId) {
+        return next(new Error('deliveryId must be null when type is "normal"'));
+      }
     }
 
     // Calculate totalCost based on isFree flag

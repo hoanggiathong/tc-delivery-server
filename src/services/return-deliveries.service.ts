@@ -3,12 +3,18 @@ import { SORT_BY_RETURN_DELIVERIES } from '@/const/return-deliveries.const';
 import { ICustomer } from '@/models/customer.model';
 import { Delivery, IReturnDeliveryImage } from '@/models/delivery.model';
 import {
+  MoneyDeliveryStatus,
+  MoneyDeliveryType,
+  TransferType,
+} from '@/models/money-delivery.model';
+import {
   IReturnDeliveryLeanPopulated,
   IReturnDeliveryListDebtOfReturnDeliveriesTodayRequest,
   IReturnDeliveryListRequest,
   IReturnDeliveryResponse,
   IReturnDeliveryUpdateRequest,
 } from '@/types/return-delivery.type';
+import { IDeliveryLeanPopulated } from '@/types/delivery.type';
 import { CustomerService } from './customer.service';
 import { DeliveryService } from './delivery.service';
 import { UserService } from './user.service';
@@ -16,6 +22,7 @@ import { ICustomerInformationResponse } from '@/types/customer.type';
 import { IRouteResponse } from '@/types/route.type';
 import { RouteService } from './route.service';
 import { MoneyDeliveryService } from './money-delivery.service';
+import { SettingsService } from './settings.service';
 import Logger from '@/utils/logger';
 import path from 'path';
 import fs from 'fs';
@@ -24,14 +31,14 @@ import { generateVersionedUrl } from '@/utils/image-url.utils';
 export class ReturnDeliveriesService {
   private customerService: CustomerService;
   private routeService: RouteService;
-  // private settingsService: SettingsService;
+  private settingsService: SettingsService;
   private userService: UserService;
   private deliveryService: DeliveryService;
   private moneyDeliveryService: MoneyDeliveryService;
   constructor() {
     this.customerService = new CustomerService();
     this.routeService = new RouteService();
-    // this.settingsService = new SettingsService();
+    this.settingsService = new SettingsService();
     this.userService = new UserService();
     this.deliveryService = new DeliveryService();
     this.moneyDeliveryService = new MoneyDeliveryService();
@@ -795,24 +802,66 @@ export class ReturnDeliveriesService {
         await this.customerService.updateCustomer(customerId, updateCustomerData);
       }
 
-      // Check field collectForCustomer > 0
-      if (delivery.collectForCustomer > 0) {
-        // Call service money delivery to handle data and create new money delivery
-        await this.moneyDeliveryService.createMoneyDelivery(
-          {
-            senderName: (delivery.sender as unknown as Record<string, unknown>).name as string,
-            senderPhone: (delivery.sender as unknown as Record<string, unknown>).phone as string,
-            receiverName: customer.name,
-            receiverPhone: customer.phone,
-            toRouteId: delivery.toRoute._id.toString(),
-            sendMoneyAmount: delivery.collectForCustomer,
-            sendCost: delivery.collectForCustomerCost || 0,
-            transferType: 'regular',
-            isFree: false,
-            notes: `Thu dùm từ giao hàng ${delivery.fullCode}`,
-          },
-          userId
-        );
+      // Get populated delivery data for money delivery creation
+      const populatedDeliveryData = await Delivery.findById(deliveryId)
+        .populate([
+          { path: 'sender', select: '_id name phone' },
+          { path: 'receiver', select: '_id name phone' },
+          { path: 'fromRoute', select: '_id code name' },
+          { path: 'toRoute', select: '_id code name' },
+        ])
+        .lean<IDeliveryLeanPopulated>();
+
+      if (populatedDeliveryData) {
+        const typedDelivery = populatedDeliveryData;
+
+        // Check field collectCost > 0 (thu hộ)
+        if (typedDelivery.collectCost > 0) {
+          await this.moneyDeliveryService.createMoneyDelivery(
+            {
+              senderName: typedDelivery.receiver.name,
+              senderPhone: typedDelivery.receiver.phone,
+              receiverName: typedDelivery.sender.name,
+              receiverPhone: typedDelivery.sender.phone,
+              toRouteId: typedDelivery.fromRoute._id.toString(),
+              sendMoneyAmount: typedDelivery.collectCost,
+              sendCost: await this.settingsService.calculateShippingFee(
+                typedDelivery.collectCost,
+                false,
+                false
+              ),
+              transferType: TransferType.REGULAR,
+              isFree: false,
+              notes: `Thu hộ từ giao hàng ${typedDelivery.fullCode}`,
+              status: MoneyDeliveryStatus.WAITING,
+              type: MoneyDeliveryType.COLLECT,
+              deliveryId: typedDelivery._id.toString(),
+            },
+            userId
+          );
+        }
+
+        // Check field collectForCustomer > 0 (thu dùm)
+        if (typedDelivery.collectForCustomer > 0) {
+          await this.moneyDeliveryService.createMoneyDelivery(
+            {
+              senderName: typedDelivery.receiver.name,
+              senderPhone: typedDelivery.receiver.phone,
+              receiverName: typedDelivery.sender.name,
+              receiverPhone: typedDelivery.sender.phone,
+              toRouteId: typedDelivery.fromRoute._id.toString(),
+              sendMoneyAmount: typedDelivery.collectForCustomer,
+              sendCost: typedDelivery.collectForCustomerCost || 0,
+              transferType: TransferType.REGULAR,
+              isFree: false,
+              notes: `Thu dùm từ giao hàng ${typedDelivery.fullCode}`,
+              status: MoneyDeliveryStatus.WAITING,
+              type: MoneyDeliveryType.COLLECT_FOR_CUSTOMER,
+              deliveryId: typedDelivery._id.toString(),
+            },
+            userId
+          );
+        }
       }
 
       // Then update status return delivery with field isReturn = true
@@ -875,26 +924,66 @@ export class ReturnDeliveriesService {
           throw new Error(`Delivery with ID ${item.deliveryId} not found`);
         }
 
-        // Check field collectForCustomer > 0
-        if (delivery.collectForCustomer > 0) {
-          // Call service money delivery to handle data and create new money delivery
-          await this.moneyDeliveryService.createMoneyDelivery(
-            {
-              senderName: (delivery.sender as unknown as Record<string, unknown>).name as string,
-              senderPhone: (delivery.sender as unknown as Record<string, unknown>).phone as string,
-              receiverName: (delivery.receiver as unknown as Record<string, unknown>)
-                .name as string,
-              receiverPhone: (delivery.receiver as unknown as Record<string, unknown>)
-                .phone as string,
-              toRouteId: delivery.toRoute._id.toString(),
-              sendMoneyAmount: delivery.collectForCustomer,
-              sendCost: delivery.collectForCustomerCost || 0,
-              transferType: 'regular',
-              isFree: false,
-              notes: `Thu dùm từ giao hàng ${delivery.fullCode}`,
-            },
-            userId
-          );
+        // Get populated delivery data for money delivery creation
+        const populatedDeliveryData = await Delivery.findById(item.deliveryId)
+          .populate([
+            { path: 'sender', select: '_id name phone' },
+            { path: 'receiver', select: '_id name phone' },
+            { path: 'fromRoute', select: '_id code name' },
+            { path: 'toRoute', select: '_id code name' },
+          ])
+          .lean<IDeliveryLeanPopulated>();
+
+        if (populatedDeliveryData) {
+          const typedDelivery = populatedDeliveryData;
+
+          // Check field collectCost > 0 (thu hộ)
+          if (typedDelivery.collectCost > 0) {
+            await this.moneyDeliveryService.createMoneyDelivery(
+              {
+                senderName: typedDelivery.receiver.name,
+                senderPhone: typedDelivery.receiver.phone,
+                receiverName: typedDelivery.sender.name,
+                receiverPhone: typedDelivery.sender.phone,
+                toRouteId: typedDelivery.fromRoute._id.toString(),
+                sendMoneyAmount: typedDelivery.collectCost,
+                sendCost: await this.settingsService.calculateShippingFee(
+                  typedDelivery.collectCost,
+                  false,
+                  false
+                ),
+                transferType: TransferType.REGULAR,
+                isFree: false,
+                notes: `Thu hộ từ giao hàng ${typedDelivery.fullCode}`,
+                status: MoneyDeliveryStatus.WAITING,
+                type: MoneyDeliveryType.COLLECT,
+                deliveryId: typedDelivery._id.toString(),
+              },
+              userId
+            );
+          }
+
+          // Check field collectForCustomer > 0 (thu dùm)
+          if (typedDelivery.collectForCustomer > 0) {
+            await this.moneyDeliveryService.createMoneyDelivery(
+              {
+                senderName: typedDelivery.receiver.name,
+                senderPhone: typedDelivery.receiver.phone,
+                receiverName: typedDelivery.sender.name,
+                receiverPhone: typedDelivery.sender.phone,
+                toRouteId: typedDelivery.fromRoute._id.toString(),
+                sendMoneyAmount: typedDelivery.collectForCustomer,
+                sendCost: typedDelivery.collectForCustomerCost || 0,
+                transferType: TransferType.REGULAR,
+                isFree: false,
+                notes: `Thu dùm từ giao hàng ${typedDelivery.fullCode}`,
+                status: MoneyDeliveryStatus.WAITING,
+                type: MoneyDeliveryType.COLLECT_FOR_CUSTOMER,
+                deliveryId: typedDelivery._id.toString(),
+              },
+              userId
+            );
+          }
         }
 
         // Then update status return delivery with field isReturn = true

@@ -1,4 +1,9 @@
 import { IMoneyDeliveryResponse } from '@/types/money-delivery.type';
+import {
+  MoneyDeliveryStatus,
+  MoneyDeliveryType,
+  TransferType,
+} from '@/models/money-delivery.model';
 
 export const createMockMoneyDelivery = (
   overrides: Partial<IMoneyDeliveryResponse> = {}
@@ -42,9 +47,11 @@ export const createMockMoneyDelivery = (
     },
     sendMoneyAmount: 1000000,
     sendCost: 50000,
-    transferType: 'regular' as const,
+    transferType: TransferType.REGULAR,
     isFree: false,
-    totalCost: 50000, // sendCost only
+    totalCost: 50000,
+    status: MoneyDeliveryStatus.WAITING,
+    type: MoneyDeliveryType.NORMAL,
     createdByUser: 'testuser',
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2023-01-01'),
@@ -146,9 +153,11 @@ export const mockMoneyDeliveryForIntegration = {
   },
   sendMoneyAmount: 1000000,
   sendCost: 50000,
-  transferType: 'regular' as const,
+  transferType: TransferType.REGULAR,
   isFree: false,
   totalCost: 50000,
+  status: MoneyDeliveryStatus.WAITING,
+  type: MoneyDeliveryType.NORMAL,
   notes: 'Ghi chú chuyển tiền',
   createdByUser: 'user123',
   createdAt: new Date(),
@@ -220,9 +229,11 @@ export const mockUpdatedMoneyDeliveryForIntegration = {
   },
   sendMoneyAmount: 2000000,
   sendCost: 75000,
-  transferType: 'express' as const,
+  transferType: TransferType.EXPRESS,
   isFree: false,
   totalCost: 75000,
+  status: MoneyDeliveryStatus.WAITING,
+  type: MoneyDeliveryType.NORMAL,
   notes: 'Updated notes',
   createdByUser: 'user123',
   createdAt: new Date(),
@@ -271,9 +282,11 @@ export const mockMoneyDeliveryWithAlphaRoutes = {
   },
   sendMoneyAmount: 5000000,
   sendCost: 150000,
-  transferType: 'regular' as const,
+  transferType: TransferType.REGULAR,
   isFree: false,
   totalCost: 150000,
+  status: MoneyDeliveryStatus.WAITING,
+  type: MoneyDeliveryType.NORMAL,
   notes: 'Complex route codes test',
   createdByUser: 'user123',
   createdAt: new Date(),

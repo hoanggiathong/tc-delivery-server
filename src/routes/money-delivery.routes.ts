@@ -52,6 +52,30 @@ const moneyDeliveryController = new MoneyDeliveryController();
  *         sendCost:
  *           type: number
  *           description: The cost for sending money
+ *         transferType:
+ *           type: string
+ *           enum: [regular, express]
+ *           description: Transfer type (regular or express)
+ *         isFree:
+ *           type: boolean
+ *           description: Whether the transfer is free
+ *         totalCost:
+ *           type: number
+ *           description: Total cost (sendCost only, excludes sendMoneyAmount)
+ *         status:
+ *           type: string
+ *           enum: [waiting, done]
+ *           description: Money delivery status (waiting or done)
+ *         type:
+ *           type: string
+ *           enum: [normal, collect, collectForCustomer]
+ *           description: Money delivery type (normal, collect from receiver, or collect for customer)
+ *         deliveryId:
+ *           type: string
+ *           description: Reference to delivery ID (required when type is collect or collectForCustomer)
+ *         notes:
+ *           type: string
+ *           description: Additional notes
  *         createdByUser:
  *           type: string
  *           description: The username of the user who created the money delivery
@@ -97,6 +121,27 @@ const moneyDeliveryController = new MoneyDeliveryController();
  *         sendCost:
  *           type: number
  *           description: Cost for sending money
+ *         transferType:
+ *           type: string
+ *           enum: [regular, express]
+ *           description: Transfer type (optional, defaults to regular)
+ *         isFree:
+ *           type: boolean
+ *           description: Whether the transfer is free (optional)
+ *         notes:
+ *           type: string
+ *           description: Additional notes (optional)
+ *         status:
+ *           type: string
+ *           enum: [waiting, done]
+ *           description: Money delivery status (optional, defaults to waiting)
+ *         type:
+ *           type: string
+ *           enum: [normal, collect, collectForCustomer]
+ *           description: Money delivery type (optional, defaults to normal)
+ *         deliveryId:
+ *           type: string
+ *           description: Delivery reference ID (required when type is collect or collectForCustomer)
  *     UpdateMoneyDeliveryRequest:
  *       type: object
  *       properties:
@@ -116,6 +161,24 @@ const moneyDeliveryController = new MoneyDeliveryController();
  *           type: number
  *         sendCost:
  *           type: number
+ *         transferType:
+ *           type: string
+ *           enum: [regular, express]
+ *           description: Transfer type
+ *         isFree:
+ *           type: boolean
+ *           description: Whether the transfer is free
+ *         notes:
+ *           type: string
+ *           description: Additional notes
+ *         status:
+ *           type: string
+ *           enum: [waiting, done]
+ *           description: Money delivery status (can only change from waiting to done)
+ *         deliveryId:
+ *           type: string
+ *           description: Delivery reference ID
+ *       description: Note - type field cannot be updated after creation
  */
 
 // All money delivery routes require authentication (any role)

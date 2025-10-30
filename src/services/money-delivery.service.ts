@@ -111,6 +111,9 @@ export class MoneyDeliveryService {
       isFree: populated.isFree,
       totalCost: populated.totalCost,
       notes: populated.notes,
+      status: populated.status,
+      type: populated.type,
+      deliveryId: populated.deliveryId?.toString(),
       createdByUser: populated.createdByUser.username,
       createdAt: populated.createdAt,
       updatedAt: populated.updatedAt,
@@ -168,6 +171,9 @@ export class MoneyDeliveryService {
       isFree: moneyDelivery.isFree,
       totalCost: moneyDelivery.totalCost,
       notes: moneyDelivery.notes,
+      status: moneyDelivery.status,
+      type: moneyDelivery.type,
+      deliveryId: moneyDelivery.deliveryId?.toString(),
       createdByUser: moneyDelivery.createdByUser.username,
       createdAt: moneyDelivery.createdAt,
       updatedAt: moneyDelivery.updatedAt,
@@ -244,7 +250,11 @@ export class MoneyDeliveryService {
       sendMoneyAmount: data.sendMoneyAmount,
       sendCost,
       transferType,
+      isFree: data.isFree,
       notes: data.notes,
+      status: data.status,
+      type: data.type,
+      deliveryId: data.deliveryId,
       createdByUser: userId,
     });
 
@@ -317,6 +327,15 @@ export class MoneyDeliveryService {
     }
     if (data.notes !== undefined) {
       updateData.notes = data.notes;
+    }
+    if (data.status !== undefined) {
+      updateData.status = data.status;
+    }
+    if (data.deliveryId !== undefined) {
+      updateData.deliveryId = data.deliveryId;
+    }
+    if (data.isFree !== undefined) {
+      updateData.isFree = data.isFree;
     }
 
     // Handle sendCost validation when transferType or sendMoneyAmount changes

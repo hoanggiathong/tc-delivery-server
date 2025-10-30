@@ -20,6 +20,7 @@ export interface ICustomer extends Document {
   address: string;
   identityCardIssuedDate: Date;
   identityCardNumber: string;
+  createdBy: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -97,6 +98,11 @@ const customerSchema = new Schema<ICustomer>(
     },
     identityCardNumber: {
       type: String,
+      default: null,
+    },
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
       default: null,
     },
   },

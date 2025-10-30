@@ -454,7 +454,8 @@ export class CustomerService {
     imageIndex: number,
     imageBuffer: Buffer,
     originalName: string,
-    rotate: number = 0
+    rotate: number = 0,
+    userId?: string
   ): Promise<ICustomer> {
     try {
       // Find or create customer using existing method
@@ -490,6 +491,12 @@ export class CustomerService {
 
       // Save updated customer
       customer.images = images.filter(img => img && img.url).slice(0, 5);
+
+      // Set createdBy if userId is provided
+      if (userId) {
+        customer.createdBy = new Types.ObjectId(userId);
+      }
+
       await customer.save();
 
       Logger.debug('Image uploaded for customer', {
@@ -519,7 +526,8 @@ export class CustomerService {
     imageIndex: number,
     imageBuffer: Buffer,
     originalName: string,
-    rotate: number = 0
+    rotate: number = 0,
+    userId?: string
   ): Promise<ICustomer> {
     const customer = await Customer.findById(customerId);
     if (!customer) {
@@ -555,6 +563,11 @@ export class CustomerService {
     };
     customer.images = images.filter(img => img && img.url).slice(0, 5);
 
+    // Set createdBy if userId is provided
+    if (userId) {
+      customer.createdBy = new Types.ObjectId(userId);
+    }
+
     return await customer.save();
   }
 
@@ -564,7 +577,8 @@ export class CustomerService {
   async updateImageRotation(
     customerId: string,
     imageIndex: number,
-    rotate: number
+    rotate: number,
+    userId?: string
   ): Promise<ICustomer> {
     const customer = await Customer.findById(customerId);
     if (!customer) {
@@ -577,6 +591,11 @@ export class CustomerService {
 
     // Update rotation
     customer.images[imageIndex - 1].rotate = rotate;
+
+    // Set createdBy if userId is provided
+    if (userId) {
+      customer.createdBy = new Types.ObjectId(userId);
+    }
 
     return await customer.save();
   }
@@ -639,6 +658,7 @@ export class CustomerService {
     phone: string,
     routeId: string,
     type: 'delivery' | 'money',
+    userId: string,
     name?: string,
     bankInfo?: BankCreateData,
     imagesData?: Array<{
@@ -759,6 +779,9 @@ export class CustomerService {
         customer.images = images.filter(img => img && img.url).slice(0, 5);
       }
 
+      // Set createdBy to track who updated the customer
+      customer.createdBy = new Types.ObjectId(userId);
+
       // Save and return updated customer
       const updatedCustomer = await customer.save();
 
@@ -776,6 +799,7 @@ export class CustomerService {
         phone,
         type,
         routeId,
+        userId,
       });
       throw error;
     }

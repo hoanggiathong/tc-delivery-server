@@ -9,6 +9,7 @@ erDiagram
     USERS ||--o{ DRAFT_DELIVERIES : "tạo bản nháp"
     USERS ||--o{ USER_ROUTES : "được phân công"
     USERS ||--o{ USER_ROUTES : "phân công (assignedBy)"
+    USERS ||--o{ CUSTOMERS : "cập nhật thông tin ngân hàng/ảnh (createdBy)"
     USERS }o--|| ROUTES : "có tuyến đường đã chọn"
     ROUTES ||--o{ USER_ROUTES : "chứa"
     ROUTES ||--o{ DELIVERIES : "từ tuyến"
@@ -26,6 +27,7 @@ erDiagram
     CUSTOMERS ||--o{ CUSTOMERS : "người nhận thường xuyên"
     CUSTOMERS ||--o{ CUSTOMER_ADDRESS_HISTORY : "có lịch sử địa chỉ"
     DELIVERIES ||--o| CUSTOMER_ADDRESS_HISTORY : "tự động tạo history"
+    DELIVERIES ||--o{ MONEY_DELIVERIES : "tự động tạo thu hộ/thu dùm"
 
     USERS {
         ObjectId _id PK
@@ -75,6 +77,7 @@ erDiagram
         enum type "delivery|money, mặc định delivery"
         ObjectId bankId FK "tham chiếu: CUSTOMER_BANK, tùy chọn"
         array images "tối đa 5 ảnh, mỗi ảnh có url và rotate (0,90,180,270)"
+        ObjectId createdBy FK "tham chiếu: USERS, tùy chọn, user đã cập nhật thông tin ngân hàng/ảnh"
         datetime createdAt "tự động tạo"
         datetime updatedAt "tự động cập nhật"
     }
@@ -162,6 +165,9 @@ erDiagram
         enum transferType "regular|express, bắt buộc, mặc định regular"
         boolean isFree "miễn phí, bắt buộc, mặc định false"
         number totalCost "tính toán: isFree ? 0 : sendCost"
+        enum status "waiting|done, bắt buộc, mặc định waiting"
+        enum type "normal|collect|collectForCustomer, bắt buộc, mặc định normal"
+        ObjectId deliveryId FK "tham chiếu: DELIVERIES, required khi type=collect|collectForCustomer, null khi type=normal"
         string notes "tùy chọn, trim"
         ObjectId createdByUser FK "tham chiếu: USERS, bắt buộc"
         datetime createdAt "tự động tạo"
@@ -377,6 +383,26 @@ erDiagram
 - **Chi phí tổng**:
   - `totalCost = sendCost` khi isFree = false (regular/express)
   - `totalCost = 0` khi isFree = true (miễn phí)
+- **Trạng thái (status)**:
+  - `waiting` (mặc định): Đang chờ gửi tiền
+  - `done`: Đã hoàn thành gửi tiền
+  - **One-way transition**: Chỉ có thể chuyển từ waiting → done, không thể chuyển ngược lại
+- **Loại giao dịch (type)**:
+  - `normal` (mặc định): Giao dịch chuyển tiền bình thường, deliveryId = null
+  - `collect`: Thu hộ tiền từ giao hàng, deliveryId bắt buộc
+  - `collectForCustomer`: Thu dùm tiền cho khách hàng, deliveryId bắt buộc
+  - **Immutable field**: Không thể thay đổi type sau khi tạo
+- **Tham chiếu giao hàng (deliveryId)**:
+  - Bắt buộc khi type = 'collect' hoặc 'collectForCustomer'
+  - Phải null khi type = 'normal'
+  - Tham chiếu đến DELIVERIES collection
+- **Tự động tạo khi trả hàng**: Khi delivery.isReturn = true:
+  - Tự động tạo MoneyDelivery type='collect' nếu delivery.collectCost > 0
+  - Tự động tạo MoneyDelivery type='collectForCustomer' nếu delivery.collectForCustomer > 0
+  - Sender/Receiver đảo ngược: delivery (A → B) → money delivery (B → A)
+  - Routes đảo ngược: delivery (fromRoute → toRoute) → money delivery (toRoute → fromRoute)
+  - sendCost cho thu hộ: Tính bằng shipping fee calculator
+  - sendCost cho thu dùm: Sử dụng delivery.collectForCustomerCost
 - **Index hiệu suất**: Cùng pattern tối ưu như deliveries
 
 
@@ -687,6 +713,26 @@ erDiagram
   - **Validation**: homeDelivery bắt buộc khi carryCost > 0 hoặc homeDeliveryCost > 0
   - **Auto-calculation**: homeDeliveryCostTotal tự động tính = carryCost + homeDeliveryCost
   - Cả DELIVERIES và DRAFT_DELIVERIES đều có cấu trúc fields và validation giống nhau
+- **Enhanced MONEY_DELIVERIES Table**: Thêm tracking và relationship với deliveries
+  - **status**: Trạng thái giao dịch (waiting|done, default: waiting)
+    - One-way transition: waiting → done only, không thể chuyển ngược lại
+    - Validation trong pre-save middleware
+  - **type**: Loại giao dịch (normal|collect|collectForCustomer, default: normal)
+    - normal: Giao dịch chuyển tiền bình thường
+    - collect: Thu hộ tiền từ giao hàng (tự động tạo khi trả hàng)
+    - collectForCustomer: Thu dùm tiền cho khách hàng (tự động tạo khi trả hàng)
+    - Immutable: Không thể thay đổi sau khi tạo
+  - **deliveryId**: Reference đến DELIVERIES (optional)
+    - Required khi type = collect hoặc collectForCustomer
+    - Null khi type = normal
+    - Conditional validation trong pre-save middleware
+  - **Auto-creation logic**: Tự động tạo khi delivery.isReturn = true
+    - Thu hộ (collect): Tạo nếu delivery.collectCost > 0
+    - Thu dùm (collectForCustomer): Tạo nếu delivery.collectForCustomer > 0
+    - Sender/Receiver/Routes đảo ngược (B → A)
+    - sendCost tính bằng shipping fee calculator (thu hộ) hoặc collectForCustomerCost (thu dùm)
+  - **Enums**: MoneyDeliveryStatus, MoneyDeliveryType, TransferType cho type safety
+  - **Consolidated middleware**: Single pre-save hook với tất cả validations
 
 ### Cân Nhắc Migration và Mở Rộng
 
