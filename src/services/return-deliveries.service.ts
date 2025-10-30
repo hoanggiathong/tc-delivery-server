@@ -157,8 +157,6 @@ export class ReturnDeliveriesService {
           quantityReturn: item.quantityReturn || 0,
           dateReturn: item.dateReturn,
           collectCost: item.collectCost || 0,
-          isCollectForCustomer: item.isCollectForCustomer,
-          isCollectCost: item.isCollectCost,
           createdByUser: {
             _id: item.createdByUser._id.toString(),
             username: item.createdByUser.username,
@@ -297,8 +295,6 @@ export class ReturnDeliveriesService {
           timeToSendSMS: item.timeToSendSMS,
           quantityReturn: item.quantityReturn || 0,
           dateReturn: item.dateReturn,
-          isCollectForCustomer: item.isCollectForCustomer,
-          isCollectCost: item.isCollectCost,
           createdByUser: {
             _id: item.createdByUser._id.toString(),
             username: item.createdByUser.username,
@@ -324,7 +320,6 @@ export class ReturnDeliveriesService {
     const where = {
       toRoute: selectedRouteId,
       isReturn: true,
-      isCollectForCustomer: { $ne: true },
     };
 
     try {
@@ -385,8 +380,6 @@ export class ReturnDeliveriesService {
           timeToSendSMS: item.timeToSendSMS,
           quantityReturn: item.quantityReturn || 0,
           dateReturn: item.dateReturn,
-          isCollectForCustomer: item.isCollectForCustomer,
-          isCollectCost: item.isCollectCost,
           createdByUser: {
             _id: item.createdByUser._id.toString(),
             username: item.createdByUser.username,
@@ -412,7 +405,6 @@ export class ReturnDeliveriesService {
     const where = {
       toRoute: selectedRouteId,
       isReturn: true,
-      isCollectCost: { $ne: true },
     };
 
     try {
@@ -473,8 +465,6 @@ export class ReturnDeliveriesService {
           timeToSendSMS: item.timeToSendSMS,
           quantityReturn: item.quantityReturn || 0,
           dateReturn: item.dateReturn,
-          isCollectForCustomer: item.isCollectForCustomer,
-          isCollectCost: item.isCollectCost,
           createdByUser: {
             _id: item.createdByUser._id.toString(),
             username: item.createdByUser.username,
@@ -565,8 +555,6 @@ export class ReturnDeliveriesService {
           timeToSendSMS: item.timeToSendSMS,
           quantityReturn: item.quantityReturn || 0,
           dateReturn: item.dateReturn,
-          isCollectForCustomer: item.isCollectForCustomer,
-          isCollectCost: item.isCollectCost,
           createdByUser: {
             _id: item.createdByUser._id.toString(),
             username: item.createdByUser.username,
@@ -658,8 +646,6 @@ export class ReturnDeliveriesService {
           timeToSendSMS: item.timeToSendSMS,
           quantityReturn: item.quantityReturn || 0,
           dateReturn: item.dateReturn,
-          isCollectForCustomer: item.isCollectForCustomer,
-          isCollectCost: item.isCollectCost,
           createdByUser: {
             _id: item.createdByUser._id.toString(),
             username: item.createdByUser.username,
@@ -827,14 +813,6 @@ export class ReturnDeliveriesService {
           },
           userId
         );
-
-        delivery.isCollectForCustomer = true;
-      }
-
-      // Check field collectCost > 0
-      if (delivery.collectCost > 0) {
-        // Then update status with field isCollectCost = true
-        delivery.isCollectCost = true;
       }
 
       // Then update status return delivery with field isReturn = true
@@ -917,13 +895,6 @@ export class ReturnDeliveriesService {
             },
             userId
           );
-          delivery.isCollectForCustomer = true;
-        }
-
-        // Check field collectForCustomerCost > 0
-        if (delivery.collectCost > 0) {
-          // Then update status with field isCollectForCustomerCost = true
-          delivery.isCollectCost = true;
         }
 
         // Then update status return delivery with field isReturn = true

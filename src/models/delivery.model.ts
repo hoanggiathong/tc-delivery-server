@@ -48,8 +48,6 @@ export interface IDelivery extends Document {
   createdAt: Date;
   updatedAt: Date;
   isReturn: boolean; // tra hang
-  isCollectForCustomer?: boolean; // da thu ho cho khach hang
-  isCollectCost?: boolean; // da thu ho cho khach hang
   inventory?: string; // kho
   smsType?: string;
   timeToSendSMS?: Date;
@@ -244,14 +242,6 @@ const deliverySchema = new Schema<IDelivery>(
       trim: true,
     },
     isReturn: {
-      type: Boolean,
-      default: false,
-    },
-    isCollectForCustomer: {
-      type: Boolean,
-      default: false,
-    },
-    isCollectCost: {
       type: Boolean,
       default: false,
     },
@@ -478,8 +468,6 @@ deliverySchema.index({ sender: 1, receiver: 1, toRoute: 1 });
 deliverySchema.index({ receiver: 1, toRoute: 1 });
 // Optimized index for cost report queries
 deliverySchema.index({ fromRoute: 1, createdAt: -1 }); // Cost report by route and date
-
-deliverySchema.index({ toRoute: 1, isReturn: 1, isCollectForCustomerCost: 1 });
 deliverySchema.index({ toRoute: 1, createdAt: -1, isReturn: 1 });
 
 export const Delivery = mongoose.model<IDelivery>('Delivery', deliverySchema);

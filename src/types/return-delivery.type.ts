@@ -57,8 +57,6 @@ export interface IReturnDeliveryResponse {
   timeToSendSMS?: Date;
   quantityReturn?: number;
   dateReturn?: Date;
-  isCollectForCustomer?: boolean;
-  isCollectCost?: boolean;
   createdByUser: {
     _id: string;
     username: string;
@@ -108,8 +106,6 @@ export interface IReturnDeliveryLeanPopulated {
   quantityReturn?: number;
   dateReturn?: Date;
   returnDeliveryImages?: IReturnDeliveryImage[];
-  isCollectForCustomer?: boolean;
-  isCollectCost?: boolean;
   createdByUser: {
     _id: string;
     username: string;
