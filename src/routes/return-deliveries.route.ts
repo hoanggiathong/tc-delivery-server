@@ -1,7 +1,10 @@
 import { ReturnDeliveriesController } from '@/controllers/return-deliveries.controller';
 import { authenticateToken } from '@/middlewares/auth.middleware';
 import { requireRole } from '@/middlewares/role.middleware';
-import { uploadMultipleImages } from '@/middlewares/upload.middleware';
+import {
+  uploadMultipleImages,
+  uploadReturnDeliveryImagesFields,
+} from '@/middlewares/upload.middleware';
 import { validate } from '@/middlewares/validation.middleware';
 import {
   getInformationReceiverSchema,
@@ -42,7 +45,7 @@ router.get(
 // New API 1: Update status with images (case data = 1)
 router.put(
   '/update-status-with-images',
-  uploadMultipleImages,
+  uploadReturnDeliveryImagesFields,
   validate(updateStatusWithImagesSchema),
   returnDeliveriesController.updateStatusWithImages
 );
