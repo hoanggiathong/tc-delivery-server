@@ -171,7 +171,7 @@ export const updateStatusWithImagesSchema = z.object({
     address: z.string().optional(),
     identityCardIssuedDate: z.string().optional(),
     identityCardNumber: z.string().optional(),
-    // Customer images support
+    // Customer images
     customerImages: z
       .array(
         z.object({
@@ -186,7 +186,7 @@ export const updateStatusWithImagesSchema = z.object({
       )
       .max(5, 'Maximum 5 customer images allowed')
       .optional(),
-    // Return delivery images support
+    // Return delivery images
     returnDeliveryImages: z
       .array(
         z.object({
