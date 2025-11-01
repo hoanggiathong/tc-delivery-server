@@ -1,4 +1,9 @@
-import { MoneyDelivery, IMoneyDelivery } from '@/models/money-delivery.model';
+import {
+  MoneyDelivery,
+  IMoneyDelivery,
+  MoneyDeliveryStatus,
+  MoneyDeliveryType,
+} from '@/models/money-delivery.model';
 import { Route } from '@/models/route.model';
 import { Types, PipelineStage } from 'mongoose';
 import { CustomerService } from '@/services/customer.service';
@@ -1176,6 +1181,28 @@ export class MoneyDeliveryService {
         throw error;
       }
       throw new Error('Failed to update money delivery by fullCode');
+    }
+  }
+
+  async getListMoneyDeliveryByUserIdAndType(
+    userId: string,
+    type: MoneyDeliveryType
+  ): Promise<IMoneyDelivery[]> {
+    try {
+      // Get user's selected route as fromRoute
+      const fromRouteId = await this.userService.getUserSelectedRouteId(userId);
+
+      const moneyDeliveries = await MoneyDelivery.find({
+        fromRoute: fromRouteId,
+        status: MoneyDeliveryStatus.WAITING,
+        type: type,
+      });
+      return moneyDeliveries;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to get list money delivery by list delivery id');
     }
   }
 }

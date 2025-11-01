@@ -1,7 +1,7 @@
 import { TYPE_DELIVERY_CUSTOMER } from '@/const/customer.const';
 import { SORT_BY_RETURN_DELIVERIES } from '@/const/return-deliveries.const';
 import { ICustomer } from '@/models/customer.model';
-import { Delivery, IReturnDeliveryImage } from '@/models/delivery.model';
+import { Delivery, IDelivery, IReturnDeliveryImage } from '@/models/delivery.model';
 import {
   MoneyDeliveryStatus,
   MoneyDeliveryType,
@@ -318,19 +318,24 @@ export class ReturnDeliveriesService {
     }
   }
 
-  // danh sach thu ho cua tra hang chua duoc thu ho
+  // danh sach thu dum cua tra hang chua duoc thu ho
   async getListCollectForCustomerOfReturnDeliveriesNotCollected(
     userId: string
   ): Promise<IReturnDeliveryResponse[]> {
     const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
 
-    const where = {
-      toRoute: selectedRouteId,
-      isReturn: true,
-    };
-
     try {
-      const returnDeliveries = await Delivery.find(where)
+      //get list money delivery with from route id and type collect for customer
+      const moneyDeliveries = await this.moneyDeliveryService.getListMoneyDeliveryByUserIdAndType(
+        userId,
+        MoneyDeliveryType.COLLECT_FOR_CUSTOMER
+      );
+      const returnDeliveries = await Delivery.find({
+        _id: { $in: moneyDeliveries.map(item => item.deliveryId) },
+        toRoute: selectedRouteId,
+        isReturn: true,
+        collectForCustomer: { $gt: 0 },
+      })
         .populate([
           {
             path: 'sender',
@@ -409,13 +414,19 @@ export class ReturnDeliveriesService {
   ): Promise<IReturnDeliveryResponse[]> {
     const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
 
-    const where = {
-      toRoute: selectedRouteId,
-      isReturn: true,
-    };
-
     try {
-      const returnDeliveries = await Delivery.find(where)
+      //get list money delivery with from route id and type collect
+      const moneyDeliveries = await this.moneyDeliveryService.getListMoneyDeliveryByUserIdAndType(
+        userId,
+        MoneyDeliveryType.COLLECT
+      );
+
+      const returnDeliveries = await Delivery.find({
+        _id: { $in: moneyDeliveries.map(item => item.deliveryId) },
+        toRoute: selectedRouteId,
+        isReturn: true,
+        collectCost: { $gt: 0 },
+      })
         .populate([
           {
             path: 'sender',
@@ -428,7 +439,6 @@ export class ReturnDeliveriesService {
         ])
         .sort({ createdAt: -1 })
         .lean();
-
       const populatedReturnDeliveries = await this.toPopulatedReturnDeliveryLean(returnDeliveries);
 
       const returnDeliveriesResponse: IReturnDeliveryResponse[] = populatedReturnDeliveries.map(
@@ -740,7 +750,7 @@ export class ReturnDeliveriesService {
       originalName: string;
       rotate: number;
     }>
-  ): Promise<any> {
+  ): Promise<IDelivery> {
     try {
       const { deliveryId, customerId, address, identityCardIssuedDate, identityCardNumber } =
         updateData;

@@ -1,6 +1,6 @@
-import { ICustomerImage } from '@/models/customer.model';
-import { BaseEntity, IRouteResponse } from '.';
 import { ICustomerBankResponse } from '@/models/customer-bank.model';
+import { ICustomerImage } from '@/models/customer.model';
+import { BaseEntity, IRouteResponse, IUserFullInformationResponse } from '.';
 
 // Customer response interface
 export interface ICustomerResponse extends BaseEntity {
@@ -35,6 +35,23 @@ export interface ICustomerInformationResponse {
   type: string;
   route: IRouteResponse;
   images: ICustomerImage[];
+  address: string;
+  identityCardIssuedDate: Date;
+  identityCardNumber: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Customer information response interface
+export interface ICustomerFullInformationResponse {
+  id: string;
+  name: string;
+  phone: string;
+  type: string;
+  route?: IRouteResponse;
+  images: ICustomerImage[];
+  bank: ICustomerBankResponse | null;
+  createdBy: IUserFullInformationResponse | null;
   address: string;
   identityCardIssuedDate: Date;
   identityCardNumber: string;

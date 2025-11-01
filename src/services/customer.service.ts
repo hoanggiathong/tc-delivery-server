@@ -1,7 +1,9 @@
+import { TYPE_DELIVERY_CUSTOMER } from '@/const/customer.const';
 import { Customer, ICustomer, ICustomerImage } from '@/models/customer.model';
 import { CreateCustomerRequest, UpdateCustomerRequest } from '@/schemas/customer.schema';
 import { BankCreateData, CustomerBankService } from '@/services/customer-bank.service';
 import { UserService } from '@/services/user.service';
+import { ICustomerFullInformationResponse } from '@/types/customer.type';
 import { generateVersionedUrl } from '@/utils/image-url.utils';
 import Logger from '@/utils/logger';
 import fs from 'fs';
@@ -9,7 +11,6 @@ import { Types } from 'mongoose';
 import path from 'path';
 import QRCode from 'qrcode';
 import { CustomerBankRemovedService } from './customer-bank-removed.service';
-import { TYPE_DELIVERY_CUSTOMER } from '@/const/customer.const';
 
 export class CustomerService {
   private userService: UserService;
@@ -845,6 +846,68 @@ export class CustomerService {
         customerId,
       });
       throw error;
+    }
+  }
+
+  async getListCustomer(userId: string): Promise<ICustomerFullInformationResponse[]> {
+    try {
+      const customers = await Customer.find()
+        .populate([
+          { path: 'bankId', select: '_id bankName bankAccount name' },
+          { path: 'createdBy', select: '_id username name createdAt updatedAt' },
+          { path: 'routeId', select: '_id code name address' },
+        ])
+        .lean();
+
+      const customersFullInformation: ICustomerFullInformationResponse[] = customers.map(
+        (customer: any) => ({
+          id: customer._id.toString(),
+          name: customer.name,
+          phone: customer.phone,
+          type: customer.type,
+          route: customer.routeId
+            ? {
+                id: customer.routeId._id.toString(),
+                code: customer.routeId.code,
+                name: customer.routeId.name,
+                address: customer.routeId.address,
+              }
+            : undefined,
+          bank: customer.bankId
+            ? {
+                id: customer.bankId._id.toString(),
+                name: customer.bankId.name,
+                bankName: customer.bankId.bankName,
+                bankAccount: customer.bankId.bankAccount,
+              }
+            : null,
+          createdBy: customer.createdBy
+            ? {
+                id: customer.createdBy._id.toString(),
+                username: customer.createdBy.username,
+                name: customer.createdBy.name,
+                createdAt: customer.createdBy.createdAt,
+                updatedAt: customer.createdBy.updatedAt,
+              }
+            : null,
+          images: customer.images,
+          address: customer.address,
+          identityCardIssuedDate: customer.identityCardIssuedDate,
+          identityCardNumber: customer.identityCardNumber,
+          createdAt: customer.createdAt,
+          updatedAt: customer.updatedAt,
+        })
+      );
+      return customersFullInformation;
+    } catch (error) {
+      Logger.error('Failed to delete images and bank info', {
+        error: error instanceof Error ? error.message : error,
+        userId,
+      });
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to get list customer');
     }
   }
 }

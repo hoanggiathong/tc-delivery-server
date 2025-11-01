@@ -34,6 +34,15 @@ export const connectDB = async (): Promise<void> => {
     }
 
     const conn = await mongoose.connect(mongoURI);
+    // const conn = await mongoose.connect(mongoURI, {
+    //   maxPoolSize: 10,
+    //   minPoolSize: 5,
+    //   serverSelectionTimeoutMS: 5000,
+    //   socketTimeoutMS: 45000,
+    //   heartbeatFrequencyMS: 10000,
+    //   retryWrites: true,
+    //   retryReads: true,
+    // });
 
     Logger.info(`MongoDB Connected: ${conn.connection.host}`);
 
@@ -48,6 +57,17 @@ export const connectDB = async (): Promise<void> => {
 
     mongoose.connection.on('error', err => {
       Logger.error(`MongoDB connection error: ${err}`);
+      Logger.error('Attempting to reconnect to MongoDB...');
+    });
+
+    // Handle reconnection
+    mongoose.connection.on('reconnected', () => {
+      Logger.info('MongoDB reconnected successfully');
+    });
+
+    // Handle connection close
+    mongoose.connection.on('close', () => {
+      Logger.warn('MongoDB connection closed');
     });
 
     // Debug queries in development
