@@ -1,6 +1,7 @@
 import { Route, IRoute } from '@/models/route.model';
 import { IRouteResponse, IRouteLean } from '@/types/route.type';
 import { CreateRouteRequest, UpdateRouteRequest } from '@/schemas/route.schema';
+import { omitBy, isUndefined } from 'lodash';
 
 export class RouteService {
   /**
@@ -125,16 +126,17 @@ export class RouteService {
         }
       }
 
-      // Update fields
-      if (data.code !== undefined) {
-        route.code = data.code.toUpperCase();
-      }
-      if (data.name !== undefined) {
-        route.name = data.name;
-      }
-      if (data.address !== undefined) {
-        route.address = data.address;
-      }
+      // Update fields - Use lodash omitBy to filter out undefined values
+      const fieldsToUpdate = omitBy(
+        {
+          code: data.code?.toUpperCase(),
+          name: data.name,
+          address: data.address,
+        },
+        isUndefined
+      );
+
+      Object.assign(route, fieldsToUpdate);
 
       await route.save();
       return this.transformRouteToResponse(route);

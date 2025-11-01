@@ -90,6 +90,7 @@ export interface IDeliveryUpdateRequest {
   receiverPhone?: string;
   toRouteId?: string;
   name?: string;
+  nameProductAndAdditionalInformation?: string;
   quantity?: number;
   cost?: number;
   homeDelivery?: string;
@@ -112,6 +113,7 @@ export interface IDeliveryUpdateRequest {
   };
   notes?: string;
   paymentType?: PaymentType;
+  isFree?: boolean;
 }
 
 // Interface for populated delivery (when sender, receiver, fromRoute, toRoute, createdByUser are populated)

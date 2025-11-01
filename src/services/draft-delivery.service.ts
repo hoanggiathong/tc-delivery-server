@@ -1,6 +1,7 @@
 import { DraftDelivery } from '@/models/draft-delivery.model';
 import { Route } from '@/models/route.model';
 import { User } from '@/models/user.model';
+import { omitBy, isUndefined } from 'lodash';
 import { IDraftDeliveryInput, IDraftDeliveryResponse } from '@/types/draft-delivery.type';
 import { DeliveryService } from './delivery.service';
 import { SettingsService } from './settings.service';
@@ -120,39 +121,30 @@ export class DraftDeliveryService {
 
     // Validate itemCost if updating relevant fields
 
-    // Update draft
-    const updateData: any = {};
-    const fieldsToUpdate = [
-      'senderName',
-      'senderPhone',
-      'receiverName',
-      'receiverPhone',
-      'name',
-      'cost',
-      'homeDelivery',
-      'homeDeliveryCost',
-      'itemValue',
-      'itemCost',
-      'collectCost',
-      'collectForCustomer',
-      'collectForCustomerCost',
-      'collectForCustomerNote',
-      'notes',
-      'paymentType',
-    ];
-
-    fieldsToUpdate.forEach(field => {
-      if (data[field as keyof IDraftDeliveryInput] !== undefined) {
-        updateData[field] = data[field as keyof IDraftDeliveryInput];
-      }
-    });
-
-    if (data.fromRouteId) {
-      updateData.fromRoute = data.fromRouteId;
-    }
-    if (data.toRouteId) {
-      updateData.toRoute = data.toRouteId;
-    }
+    // Update draft - Use lodash omitBy to filter out undefined values
+    const updateData: any = omitBy(
+      {
+        senderName: data.senderName,
+        senderPhone: data.senderPhone,
+        receiverName: data.receiverName,
+        receiverPhone: data.receiverPhone,
+        name: data.name,
+        cost: data.cost,
+        homeDelivery: data.homeDelivery,
+        homeDeliveryCost: data.homeDeliveryCost,
+        itemValue: data.itemValue,
+        itemCost: data.itemCost,
+        collectCost: data.collectCost,
+        collectForCustomer: data.collectForCustomer,
+        collectForCustomerCost: data.collectForCustomerCost,
+        collectForCustomerNote: data.collectForCustomerNote,
+        notes: data.notes,
+        paymentType: data.paymentType,
+        fromRoute: data.fromRouteId,
+        toRoute: data.toRouteId,
+      },
+      isUndefined
+    );
 
     const updatedDraft = await DraftDelivery.findByIdAndUpdate(draftId, updateData, {
       new: true,

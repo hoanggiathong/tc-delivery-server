@@ -31,6 +31,7 @@ describe('Auth Endpoints', () => {
     const validUserData = {
       username: 'testuser',
       password: 'TestPass123',
+      name: 'Test User',
     };
 
     it('should register a new user successfully', async () => {

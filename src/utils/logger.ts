@@ -158,6 +158,10 @@ const updateLogPaths = () => {
 };
 
 // Check for month change every hour
-setInterval(updateLogPaths, 60 * 60 * 1000);
+// Use unref() to prevent this interval from keeping the process alive in tests
+const logUpdateInterval = setInterval(updateLogPaths, 60 * 60 * 1000);
+if (process.env.NODE_ENV === 'test') {
+  logUpdateInterval.unref();
+}
 
 export default Logger;

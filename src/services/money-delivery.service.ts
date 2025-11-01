@@ -6,6 +6,7 @@ import {
 } from '@/models/money-delivery.model';
 import { Route } from '@/models/route.model';
 import { Types, PipelineStage } from 'mongoose';
+import { omitBy, isUndefined } from 'lodash';
 import { CustomerService } from '@/services/customer.service';
 import { CodeGeneratorService } from '@/services/code-generator.service';
 import { SettingsService } from '@/services/settings.service';
@@ -324,24 +325,21 @@ export class MoneyDeliveryService {
       updateData.toRoute = data.toRouteId;
     }
 
-    if (data.sendMoneyAmount !== undefined) {
-      updateData.sendMoneyAmount = data.sendMoneyAmount;
-    }
-    if (data.sendCost !== undefined) {
-      updateData.sendCost = data.sendCost;
-    }
-    if (data.notes !== undefined) {
-      updateData.notes = data.notes;
-    }
-    if (data.status !== undefined) {
-      updateData.status = data.status;
-    }
-    if (data.deliveryId !== undefined) {
-      updateData.deliveryId = data.deliveryId;
-    }
-    if (data.isFree !== undefined) {
-      updateData.isFree = data.isFree;
-    }
+    // Use lodash omitBy to filter out undefined values for optional fields
+    const optionalFieldsUpdate = omitBy(
+      {
+        sendMoneyAmount: data.sendMoneyAmount,
+        sendCost: data.sendCost,
+        notes: data.notes,
+        status: data.status,
+        deliveryId: data.deliveryId,
+        isFree: data.isFree,
+      },
+      isUndefined
+    );
+
+    // Merge optional fields into updateData
+    Object.assign(updateData, optionalFieldsUpdate);
 
     // Handle sendCost validation when transferType or sendMoneyAmount changes
     if (data.transferType !== undefined || data.sendMoneyAmount !== undefined) {

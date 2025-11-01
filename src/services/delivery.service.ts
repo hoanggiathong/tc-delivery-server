@@ -1,6 +1,7 @@
 import { Delivery } from '@/models/delivery.model';
 import { Route } from '@/models/route.model';
 import { Types, PipelineStage } from 'mongoose';
+import { omitBy, isUndefined } from 'lodash';
 import { CustomerService } from '@/services/customer.service';
 import { CodeGeneratorService } from '@/services/code-generator.service';
 import { SettingsService } from '@/services/settings.service';
@@ -155,6 +156,7 @@ export class DeliveryService {
         updatedAt: delivery.toRoute.updatedAt,
       },
       name: delivery.name,
+      nameProductAndAdditionalInformation: delivery.nameProductAndAdditionalInformation,
       quantity: delivery.quantity,
       cost: delivery.cost,
       homeDelivery: delivery.homeDelivery,
@@ -347,42 +349,33 @@ export class DeliveryService {
       }
       updateData.toRoute = data.toRouteId;
     }
-    if (data.name !== undefined) {
-      updateData.name = data.name;
-    }
-    if (data.cost !== undefined) {
-      updateData.cost = data.cost;
-    }
-    if (data.homeDelivery !== undefined) {
-      updateData.homeDelivery = data.homeDelivery;
-    }
-    if (data.homeDeliveryCost !== undefined) {
-      updateData.homeDeliveryCost = data.homeDeliveryCost;
-    }
-    if (data.itemValue !== undefined) {
-      updateData.itemValue = data.itemValue;
-    }
-    if (data.itemCost !== undefined) {
-      updateData.itemCost = data.itemCost;
-    }
-    if (data.collectCost !== undefined) {
-      updateData.collectCost = data.collectCost;
-    }
-    if (data.collectForCustomer !== undefined) {
-      updateData.collectForCustomer = data.collectForCustomer;
-    }
-    if (data.collectForCustomerCost !== undefined) {
-      updateData.collectForCustomerCost = data.collectForCustomerCost;
-    }
-    if (data.collectForCustomerNote !== undefined) {
-      updateData.collectForCustomerNote = data.collectForCustomerNote;
-    }
-    if (data.notes !== undefined) {
-      updateData.notes = data.notes;
-    }
-    if (data.paymentType !== undefined) {
-      updateData.paymentType = data.paymentType;
-    }
+    // Use lodash omitBy to filter out undefined values for optional fields
+    const optionalFieldsUpdate = omitBy(
+      {
+        name: data.name,
+        nameProductAndAdditionalInformation: data.nameProductAndAdditionalInformation,
+        quantity: data.quantity,
+        cost: data.cost,
+        homeDelivery: data.homeDelivery,
+        homeDeliveryCost: data.homeDeliveryCost,
+        carryCost: data.carryCost,
+        vehicleType: data.vehicleType,
+        itemValue: data.itemValue,
+        itemCost: data.itemCost,
+        collectCost: data.collectCost,
+        collectForCustomer: data.collectForCustomer,
+        collectForCustomerCost: data.collectForCustomerCost,
+        collectForCustomerNote: data.collectForCustomerNote,
+        details: data.details,
+        notes: data.notes,
+        paymentType: data.paymentType,
+        isFree: data.isFree,
+      },
+      isUndefined
+    );
+
+    // Merge optional fields into updateData
+    Object.assign(updateData, optionalFieldsUpdate);
 
     // Update delivery
     await Delivery.findByIdAndUpdate(id, { $set: updateData }, { runValidators: true });

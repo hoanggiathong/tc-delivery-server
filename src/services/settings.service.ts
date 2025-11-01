@@ -9,6 +9,7 @@ import {
   SettingsMetadata,
 } from '@/models/settings.model';
 import { IBankConfig, IBankConfigResponse } from '@/types/setting.type';
+import { omitBy, isUndefined } from 'lodash';
 import mongoose from 'mongoose';
 
 export class SettingsService {
@@ -148,25 +149,24 @@ export class SettingsService {
         throw new AppError(`Shipping rate with id "${rateId}" not found`, 404);
       }
 
-      // Update the rate with new values
+      // Update the rate with new values - Use lodash omitBy to filter out undefined values
+      const fieldsToUpdate = omitBy(
+        {
+          fromAmount: updates.fromAmount,
+          toAmount: updates.toAmount,
+          regularShippingFee: updates.regularShippingFee,
+          expressShippingFee: updates.expressShippingFee,
+          fromAmountUnit: updates.fromAmountUnit,
+          toAmountUnit: updates.toAmountUnit,
+          regularShippingFeeUnit: updates.regularShippingFeeUnit,
+          expressShippingFeeUnit: updates.expressShippingFeeUnit,
+        },
+        isUndefined
+      );
+
       const updatedRate = {
         ...existingRates[rateIndex],
-        ...(updates.fromAmount !== undefined && { fromAmount: updates.fromAmount }),
-        ...(updates.toAmount !== undefined && { toAmount: updates.toAmount }),
-        ...(updates.regularShippingFee !== undefined && {
-          regularShippingFee: updates.regularShippingFee,
-        }),
-        ...(updates.expressShippingFee !== undefined && {
-          expressShippingFee: updates.expressShippingFee,
-        }),
-        ...(updates.fromAmountUnit !== undefined && { fromAmountUnit: updates.fromAmountUnit }),
-        ...(updates.toAmountUnit !== undefined && { toAmountUnit: updates.toAmountUnit }),
-        ...(updates.regularShippingFeeUnit !== undefined && {
-          regularShippingFeeUnit: updates.regularShippingFeeUnit,
-        }),
-        ...(updates.expressShippingFeeUnit !== undefined && {
-          expressShippingFeeUnit: updates.expressShippingFeeUnit,
-        }),
+        ...fieldsToUpdate,
       };
 
       // Replace the rate in the array
@@ -287,11 +287,18 @@ export class SettingsService {
         throw new AppError(`Product with id "${productId}" not found`, 404);
       }
 
-      // Update the product with new values
+      // Update the product with new values - Use lodash omitBy to filter out undefined values
+      const fieldsToUpdate = omitBy(
+        {
+          name: updates.name,
+          cost: updates.cost,
+        },
+        isUndefined
+      );
+
       const updatedProduct = {
         ...existingProducts[productIndex],
-        ...(updates.name !== undefined && { name: updates.name }),
-        ...(updates.cost !== undefined && { cost: updates.cost }),
+        ...fieldsToUpdate,
       };
 
       // Replace the product in the array

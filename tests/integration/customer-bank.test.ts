@@ -8,7 +8,7 @@ import { mockCustomersForIntegration } from '../mocks';
 // Mock services at module level
 jest.mock('@/services/customer.service');
 jest.mock('@/services/user.service');
-jest.mock('@/services/customerBank.service');
+jest.mock('@/services/customer-bank.service');
 
 // Mock image URL utility
 jest.mock('@/utils/image-url.utils', () => ({
@@ -98,6 +98,7 @@ describe('Customer Bank API Integration Tests', () => {
         '+84912345678',
         '507f1f77bcf86cd799439011',
         'delivery',
+        'admin123',
         'Nguyễn Văn A',
         validBankData.bankInfo,
         undefined
@@ -135,6 +136,7 @@ describe('Customer Bank API Integration Tests', () => {
         '+84999999999',
         '507f1f77bcf86cd799439011',
         'delivery',
+        'admin123',
         'Nguyễn Văn B',
         newCustomerData.bankInfo,
         undefined
@@ -168,6 +170,7 @@ describe('Customer Bank API Integration Tests', () => {
         '+84912345678',
         '507f1f77bcf86cd799439011',
         'delivery',
+        'admin123',
         'Nguyễn Văn A',
         undefined,
         expect.arrayContaining([
@@ -216,6 +219,7 @@ describe('Customer Bank API Integration Tests', () => {
         '+84912345678',
         '507f1f77bcf86cd799439011',
         'delivery',
+        'admin123',
         'Nguyễn Văn A',
         expect.objectContaining({
           name: 'Nguyễn Văn A',

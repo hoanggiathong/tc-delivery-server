@@ -6,6 +6,7 @@ import { UserService } from '@/services/user.service';
 import { ICustomerFullInformationResponse } from '@/types/customer.type';
 import { generateVersionedUrl } from '@/utils/image-url.utils';
 import Logger from '@/utils/logger';
+import { omitBy, isUndefined } from 'lodash';
 import fs from 'fs';
 import { Types } from 'mongoose';
 import path from 'path';
@@ -388,16 +389,15 @@ export class CustomerService {
       if (customerId) {
         const existingCustomer = await Customer.findById(customerId);
         if (existingCustomer) {
-          const updateData: any = {};
-          if (name) {
-            updateData.name = name;
-          }
-          if (phone) {
-            updateData.phone = phone;
-          }
-          if (fromRouteId) {
-            updateData.routeId = new Types.ObjectId(fromRouteId);
-          }
+          // Use lodash omitBy to filter out undefined values
+          const updateData: any = omitBy(
+            {
+              name: name,
+              phone: phone,
+              routeId: fromRouteId ? new Types.ObjectId(fromRouteId) : undefined,
+            },
+            isUndefined
+          );
 
           const updatedCustomer = await Customer.findByIdAndUpdate(customerId, updateData, {
             new: true,

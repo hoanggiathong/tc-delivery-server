@@ -49,29 +49,32 @@ beforeAll(async () => {
   }
 });
 
-afterAll(async () => {
+afterEach(async () => {
   try {
-    if (mongoose.connection.readyState !== 0) {
-      await mongoose.disconnect();
-    }
-    if (mongoServer) {
-      await mongoServer.stop();
+    if (mongoose.connection.readyState === 1) {
+      const collections = mongoose.connection.collections;
+      for (const key in collections) {
+        const collection = collections[key];
+        await collection.deleteMany({});
+      }
     }
   } catch (error) {
-    console.error('Failed to cleanup test database:', error);
+    console.error('Failed to cleanup collections:', error);
   }
 });
 
-// afterEach(async () => {
-//   try {
-//     if (mongoose.connection.readyState === 1) {
-//       const collections = mongoose.connection.collections;
-//       for (const key in collections) {
-//         const collection = collections[key];
-//         await collection.deleteMany({});
-//       }
-//     }
-//   } catch (error) {
-//     console.error('Failed to cleanup collections:', error);
-//   }
-// });
+afterAll(
+  async () => {
+    try {
+      if (mongoose.connection.readyState !== 0) {
+        await mongoose.disconnect();
+      }
+      if (mongoServer) {
+        await mongoServer.stop();
+      }
+    } catch (error) {
+      console.error('Failed to cleanup test database:', error);
+    }
+  },
+  10000
+); // 10 second timeout for cleanup
