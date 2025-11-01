@@ -187,3 +187,11 @@ export interface IAdditionalInformationProductResponse {
   position: number;
   selected: boolean;
 }
+
+export interface IUserFullInformationResponse {
+  id: string;
+  username: string;
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
