@@ -64,6 +64,7 @@ export class CustomerAddressHistoryController {
    *                           vehicleType:
    *                             type: string
    *                             enum: [motorbike, small-truck, large-truck]
+   *                             nullable: true
    *                           createdAt:
    *                             type: string
    *                             format: date-time
@@ -178,7 +179,7 @@ export class CustomerAddressHistoryController {
    *               vehicleType:
    *                 type: string
    *                 enum: [motorbike, small-truck, large-truck]
-   *                 default: motorbike
+   *                 nullable: true
    *                 example: "motorbike"
    *     responses:
    *       201:
@@ -211,6 +212,7 @@ export class CustomerAddressHistoryController {
    *                       type: number
    *                     vehicleType:
    *                       type: string
+   *                       nullable: true
    *                     createdAt:
    *                       type: string
    *                       format: date-time

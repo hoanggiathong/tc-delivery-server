@@ -7,71 +7,86 @@ import {
 } from '@/utils/validation-patterns';
 import { VehicleType } from '@/models/delivery.model';
 
-export const createDeliverySchema = z.object({
-  body: z.object({
-    senderName: z
-      .string()
-      .min(1, 'Sender name is required')
-      .max(100, 'Sender name must not exceed 100 characters')
-      .trim(),
-    senderPhone: z
-      .string()
-      .min(1, 'Sender phone is required')
-      .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
-      .trim(),
-    receiverName: z
-      .string()
-      .min(1, 'Receiver name is required')
-      .max(100, 'Receiver name must not exceed 100 characters')
-      .trim(),
-    receiverPhone: z
-      .string()
-      .min(1, 'Receiver phone is required')
-      .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
-      .trim(),
-    fromRouteId: z
-      .string()
-      .min(1, 'From route ID is required')
-      .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
-      .trim(),
-    toRouteId: z
-      .string()
-      .min(1, 'To route ID is required')
-      .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
-      .trim(),
-    name: z.string().min(1, 'Item name is required').trim(),
-    nameProductAndAdditionalInformation: z.string().trim().optional(),
-    quantity: z.number().min(1, 'Quantity must be at least 1').default(1).optional(),
-    cost: z.number().min(0, 'Cost must be positive'),
-    homeDelivery: z.string().trim().optional(),
-    homeDeliveryCost: z
-      .number()
-      .min(0, 'Home delivery cost must be positive')
-      .default(0)
-      .optional(),
-    carryCost: z.number().min(0, 'Carry cost must be positive').default(0).optional(),
-    vehicleType: z.nativeEnum(VehicleType).default(VehicleType.MOTORBIKE).optional(),
-    itemValue: z.number().min(0, 'Item value must be positive'),
-    itemCost: z.number().min(0, 'Item cost must be positive'),
-    collectCost: z.number().min(0, 'Collect cost must be positive'),
-    collectForCustomer: z.number().min(0, 'Collect for customer amount must be positive'),
-    collectForCustomerCost: z.number().min(0, 'Collect for customer cost must be positive'),
-    collectForCustomerNote: z.string().trim().optional(),
-    details: z
-      .object({
-        weight: z.number().min(0, 'Weight must be positive').optional(),
-        length: z.number().min(0, 'Length must be positive').optional(),
-        width: z.number().min(0, 'Width must be positive').optional(),
-        height: z.number().min(0, 'Height must be positive').optional(),
-        isOverweight: z.boolean().default(false).optional(),
-        convertedWeight: z.number().min(0, 'Converted weight must be positive').optional(),
-      })
-      .optional(),
-    notes: z.string().trim().optional(),
-    paymentType: z.enum(['paid', 'debt']).default('paid').optional(),
-    isFree: z.boolean().default(false).optional(),
-  }),
-});
+export const createDeliverySchema = z
+  .object({
+    body: z.object({
+      senderName: z
+        .string()
+        .min(1, 'Sender name is required')
+        .max(100, 'Sender name must not exceed 100 characters')
+        .trim(),
+      senderPhone: z
+        .string()
+        .min(1, 'Sender phone is required')
+        .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
+        .trim(),
+      receiverName: z
+        .string()
+        .min(1, 'Receiver name is required')
+        .max(100, 'Receiver name must not exceed 100 characters')
+        .trim(),
+      receiverPhone: z
+        .string()
+        .min(1, 'Receiver phone is required')
+        .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
+        .trim(),
+      fromRouteId: z
+        .string()
+        .min(1, 'From route ID is required')
+        .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
+        .trim(),
+      toRouteId: z
+        .string()
+        .min(1, 'To route ID is required')
+        .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
+        .trim(),
+      name: z.string().min(1, 'Item name is required').trim(),
+      nameProductAndAdditionalInformation: z.string().trim().optional(),
+      quantity: z.number().min(1, 'Quantity must be at least 1').default(1).optional(),
+      cost: z.number().min(0, 'Cost must be positive'),
+      homeDelivery: z.string().trim().optional(),
+      homeDeliveryCost: z
+        .number()
+        .min(0, 'Home delivery cost must be positive')
+        .default(0)
+        .optional(),
+      carryCost: z.number().min(0, 'Carry cost must be positive').default(0).optional(),
+      vehicleType: z.nativeEnum(VehicleType).nullable().optional(),
+      itemValue: z.number().min(0, 'Item value must be positive'),
+      itemCost: z.number().min(0, 'Item cost must be positive'),
+      collectCost: z.number().min(0, 'Collect cost must be positive'),
+      collectForCustomer: z.number().min(0, 'Collect for customer amount must be positive'),
+      collectForCustomerCost: z.number().min(0, 'Collect for customer cost must be positive'),
+      collectForCustomerNote: z.string().trim().optional(),
+      details: z
+        .object({
+          weight: z.number().min(0, 'Weight must be positive').optional(),
+          length: z.number().min(0, 'Length must be positive').optional(),
+          width: z.number().min(0, 'Width must be positive').optional(),
+          height: z.number().min(0, 'Height must be positive').optional(),
+          isOverweight: z.boolean().default(false).optional(),
+          convertedWeight: z.number().min(0, 'Converted weight must be positive').optional(),
+        })
+        .optional(),
+      notes: z.string().trim().optional(),
+      paymentType: z.enum(['paid', 'debt']).default('paid').optional(),
+      isFree: z.boolean().default(false).optional(),
+    }),
+  })
+  .refine(
+    data => {
+      const { homeDelivery, vehicleType } = data.body;
+      // If homeDelivery has value, vehicleType must be provided
+      if (homeDelivery && homeDelivery.trim() !== '' && !vehicleType) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: 'vehicleType is required when homeDelivery is provided',
+      path: ['body', 'vehicleType'],
+    }
+  );
 
 export const updateDeliverySchema = z.object({
   body: z.object({
@@ -122,7 +137,7 @@ export const updateDeliverySchema = z.object({
       .default(0)
       .optional(),
     carryCost: z.number().min(0, 'Carry cost must be positive').default(0).optional(),
-    vehicleType: z.nativeEnum(VehicleType).default(VehicleType.MOTORBIKE).optional(),
+    vehicleType: z.nativeEnum(VehicleType).nullable().optional(),
     itemValue: z.number().min(0, 'Item value must be positive').optional(),
     itemCost: z.number().min(0, 'Item cost must be positive').optional(),
     collectCost: z.number().min(0, 'Collect cost must be positive').optional(),

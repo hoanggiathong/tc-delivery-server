@@ -24,7 +24,7 @@ export interface IDelivery extends Document {
   homeDeliveryCost: number;
   carryCost: number; // Phí bốc xếp
   homeDeliveryCostTotal?: number; // Tổng phí giao tận nhà (carryCost + homeDeliveryCost)
-  vehicleType: VehicleType; // Loại phương tiện
+  vehicleType?: VehicleType | null; // Loại phương tiện (required when homeDeliveryCost > 0)
   itemValue: number;
   itemCost: number;
   collectCost: number; // Thu hộ
@@ -142,8 +142,8 @@ const deliverySchema = new Schema<IDelivery>(
     vehicleType: {
       type: String,
       enum: Object.values(VehicleType),
-      required: [true, 'Vehicle type is required'],
-      default: VehicleType.MOTORBIKE,
+      required: false,
+      default: null,
     },
     itemValue: {
       type: Number,
@@ -335,6 +335,11 @@ deliverySchema.pre('save', function (next) {
     );
   }
 
+  // Validation: vehicleType is required when homeDelivery has value
+  if (this.homeDelivery && this.homeDelivery.trim() !== '' && !this.vehicleType) {
+    return next(new Error('vehicleType is required when homeDelivery is provided'));
+  }
+
   // Calculate homeDeliveryCostTotal
   if (this.homeDelivery && this.homeDelivery.trim() !== '') {
     this.homeDeliveryCostTotal = this.carryCost + this.homeDeliveryCost;
@@ -410,6 +415,8 @@ deliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next) {
         const carryCost = update.carryCost !== undefined ? update.carryCost : currentDoc.carryCost;
         const homeDelivery =
           update.homeDelivery !== undefined ? update.homeDelivery : currentDoc.homeDelivery;
+        const vehicleType =
+          update.vehicleType !== undefined ? update.vehicleType : currentDoc.vehicleType;
         const isFree = update.isFree !== undefined ? update.isFree : currentDoc.isFree;
 
         // Validation: homeDelivery is required when carryCost or homeDeliveryCost > 0
@@ -422,6 +429,11 @@ deliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next) {
               'homeDelivery is required when carryCost or homeDeliveryCost is greater than 0'
             )
           );
+        }
+
+        // Validation: vehicleType is required when homeDelivery has value
+        if (homeDelivery && homeDelivery.trim() !== '' && !vehicleType) {
+          return next(new Error('vehicleType is required when homeDelivery is provided'));
         }
 
         // Calculate homeDeliveryCostTotal

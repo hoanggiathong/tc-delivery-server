@@ -8,7 +8,7 @@ export interface ICustomerAddressHistory extends Document {
   homeDeliveryCost: number;
   carryCost: number;
   homeDeliveryTotalCost: number; // carryCost + homeDeliveryCost
-  vehicleType: VehicleType;
+  vehicleType?: VehicleType | null; // Loại phương tiện (required when homeDeliveryCost > 0)
   createdAt: Date;
   updatedAt: Date;
 }
@@ -47,8 +47,8 @@ const customerAddressHistorySchema = new Schema<ICustomerAddressHistory>(
     vehicleType: {
       type: String,
       enum: Object.values(VehicleType),
-      required: [true, 'Vehicle type is required'],
-      default: VehicleType.MOTORBIKE,
+      required: false,
+      default: null,
     },
   },
   {

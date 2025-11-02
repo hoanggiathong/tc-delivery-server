@@ -63,18 +63,15 @@ afterEach(async () => {
   }
 });
 
-afterAll(
-  async () => {
-    try {
-      if (mongoose.connection.readyState !== 0) {
-        await mongoose.disconnect();
-      }
-      if (mongoServer) {
-        await mongoServer.stop();
-      }
-    } catch (error) {
-      console.error('Failed to cleanup test database:', error);
+afterAll(async () => {
+  try {
+    if (mongoose.connection.readyState !== 0) {
+      await mongoose.disconnect();
     }
-  },
-  10000
-); // 10 second timeout for cleanup
+    if (mongoServer) {
+      await mongoServer.stop();
+    }
+  } catch (error) {
+    console.error('Failed to cleanup test database:', error);
+  }
+}, 10000); // 10 second timeout for cleanup

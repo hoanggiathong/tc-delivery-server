@@ -17,24 +17,39 @@ export const getAddressHistoryParamsSchema = z.object({
 });
 
 // Schema for creating address history
-export const createAddressHistorySchema = z.object({
-  params: z.object({
-    phone: z
-      .string()
-      .min(1, 'Phone is required')
-      .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER),
-  }),
-  body: z.object({
-    address: z
-      .string()
-      .min(1, 'Address is required')
-      .max(500, 'Address must not exceed 500 characters')
-      .trim(),
-    homeDeliveryCost: z.number().min(0, 'Home delivery cost must be positive').default(0),
-    carryCost: z.number().min(0, 'Carry cost must be positive').default(0),
-    vehicleType: z.nativeEnum(VehicleType).default(VehicleType.MOTORBIKE),
-  }),
-});
+export const createAddressHistorySchema = z
+  .object({
+    params: z.object({
+      phone: z
+        .string()
+        .min(1, 'Phone is required')
+        .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER),
+    }),
+    body: z.object({
+      address: z
+        .string()
+        .min(1, 'Address is required')
+        .max(500, 'Address must not exceed 500 characters')
+        .trim(),
+      homeDeliveryCost: z.number().min(0, 'Home delivery cost must be positive').default(0),
+      carryCost: z.number().min(0, 'Carry cost must be positive').default(0),
+      vehicleType: z.nativeEnum(VehicleType).nullable().optional(),
+    }),
+  })
+  .refine(
+    data => {
+      const { address, vehicleType } = data.body;
+      // If address has value, vehicleType must be provided
+      if (address && address.trim() !== '' && !vehicleType) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: 'vehicleType is required when address is provided',
+      path: ['body', 'vehicleType'],
+    }
+  );
 
 // Schema for deleting address history
 export const deleteAddressHistorySchema = z.object({

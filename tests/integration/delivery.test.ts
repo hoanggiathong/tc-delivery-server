@@ -2,6 +2,7 @@ import request from 'supertest';
 import app from '../../src/app';
 import jwt from 'jsonwebtoken';
 import { UserRole } from '../../src/types/user.type';
+import { VehicleType } from '../../src/models/delivery.model';
 import { DeliveryService } from '../../src/services/delivery.service';
 import {
   createMockDelivery,
@@ -49,6 +50,7 @@ describe('Delivery Endpoints', () => {
       cost: 50000,
       homeDelivery: '123 Main Street, District 1',
       homeDeliveryCost: 10000,
+      vehicleType: VehicleType.MOTORBIKE,
       itemValue: 1000000,
       itemCost: 30000,
       collectCost: 15000,

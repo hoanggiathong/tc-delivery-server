@@ -18,7 +18,7 @@ export interface IDraftDelivery extends Document {
   homeDeliveryCost: number;
   carryCost: number;
   homeDeliveryCostTotal?: number;
-  vehicleType: VehicleType;
+  vehicleType?: VehicleType | null; // Loại phương tiện (required when homeDeliveryCost > 0)
   itemValue: number;
   itemCost: number;
   collectCost: number;
@@ -117,8 +117,8 @@ const draftDeliverySchema = new Schema<IDraftDelivery>(
     vehicleType: {
       type: String,
       enum: Object.values(VehicleType),
-      required: [true, 'Vehicle type is required'],
-      default: VehicleType.MOTORBIKE,
+      required: false,
+      default: null,
     },
     itemValue: {
       type: Number,
@@ -234,6 +234,11 @@ draftDeliverySchema.pre('save', function (next) {
     );
   }
 
+  // Validation: vehicleType is required when homeDelivery has value
+  if (this.homeDelivery && this.homeDelivery.trim() !== '' && !this.vehicleType) {
+    return next(new Error('vehicleType is required when homeDelivery is provided'));
+  }
+
   // Calculate homeDeliveryCostTotal
   if (this.homeDelivery && this.homeDelivery.trim() !== '') {
     this.homeDeliveryCostTotal = this.carryCost + this.homeDeliveryCost;
@@ -280,6 +285,8 @@ draftDeliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next)
             : currentDoc.homeDeliveryCost;
         const homeDelivery =
           update.homeDelivery !== undefined ? update.homeDelivery : currentDoc.homeDelivery;
+        const vehicleType =
+          update.vehicleType !== undefined ? update.vehicleType : currentDoc.vehicleType;
         const isFree = update.isFree !== undefined ? update.isFree : currentDoc.isFree;
 
         // Validation: homeDelivery is required when carryCost or homeDeliveryCost > 0
@@ -292,6 +299,11 @@ draftDeliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next)
               'homeDelivery is required when carryCost or homeDeliveryCost is greater than 0'
             )
           );
+        }
+
+        // Validation: vehicleType is required when homeDelivery has value
+        if (homeDelivery && homeDelivery.trim() !== '' && !vehicleType) {
+          return next(new Error('vehicleType is required when homeDelivery is provided'));
         }
 
         // Calculate homeDeliveryCostTotal

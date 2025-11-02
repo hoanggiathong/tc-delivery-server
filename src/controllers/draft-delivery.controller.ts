@@ -124,7 +124,7 @@ export class DraftDeliveryController {
    *                 cost: 30000
    *                 homeDeliveryCost: 0
    *                 carryCost: 0
-   *                 vehicleType: "motorbike"
+   *                 vehicleType: null
    *                 itemValue: 500000
    *                 itemCost: 5000
    *                 collectForCustomer: 0

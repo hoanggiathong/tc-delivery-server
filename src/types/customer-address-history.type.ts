@@ -8,7 +8,7 @@ export interface IAddressHistoryResponse extends BaseEntity {
   homeDeliveryCost: number;
   carryCost: number;
   homeDeliveryTotalCost: number;
-  vehicleType: VehicleType;
+  vehicleType?: VehicleType | null;
 }
 
 // Address History creation request interface
@@ -16,7 +16,7 @@ export interface IAddressHistoryCreateRequest {
   address: string;
   homeDeliveryCost: number;
   carryCost: number;
-  vehicleType: VehicleType;
+  vehicleType?: VehicleType | null;
 }
 
 // Address History list response interface

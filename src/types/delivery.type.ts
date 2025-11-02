@@ -25,7 +25,7 @@ export interface IDeliveryResponse extends BaseEntity {
   homeDeliveryCost?: number;
   carryCost?: number;
   homeDeliveryCostTotal?: number;
-  vehicleType?: VehicleType;
+  vehicleType?: VehicleType | null;
   itemValue: number;
   itemCost: number;
   collectCost: number;
@@ -63,7 +63,7 @@ export interface IDeliveryCreateRequest {
   homeDelivery?: string;
   homeDeliveryCost?: number;
   carryCost?: number;
-  vehicleType?: VehicleType;
+  vehicleType?: VehicleType | null;
   itemValue: number;
   itemCost: number;
   collectCost: number;
@@ -96,7 +96,7 @@ export interface IDeliveryUpdateRequest {
   homeDelivery?: string;
   homeDeliveryCost?: number;
   carryCost?: number;
-  vehicleType?: VehicleType;
+  vehicleType?: VehicleType | null;
   itemValue?: number;
   itemCost?: number;
   collectCost?: number;
@@ -144,7 +144,7 @@ export interface IDeliveryWithPopulatedRefs {
   homeDeliveryCost?: number;
   carryCost?: number;
   homeDeliveryCostTotal?: number;
-  vehicleType?: VehicleType;
+  vehicleType?: VehicleType | null;
   itemValue: number;
   itemCost: number;
   collectCost: number;
@@ -250,7 +250,7 @@ export interface IDeliveryLeanPopulated {
   homeDeliveryCost?: number;
   carryCost?: number;
   homeDeliveryCostTotal?: number;
-  vehicleType?: VehicleType;
+  vehicleType?: VehicleType | null;
   itemValue: number;
   itemCost: number;
   collectCost: number;
@@ -351,7 +351,7 @@ export interface IDeliveryReportItem {
   homeDeliveryCost?: number;
   carryCost?: number;
   homeDeliveryCostTotal?: number;
-  vehicleType?: VehicleType;
+  vehicleType?: VehicleType | null;
   itemCost: number;
   itemValue: number;
   collectCost: number;

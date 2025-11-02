@@ -59,7 +59,7 @@ export interface IDraftDeliveryResponse {
   homeDeliveryCost: number;
   carryCost: number;
   homeDeliveryCostTotal?: number;
-  vehicleType: VehicleType;
+  vehicleType?: VehicleType | null;
   itemValue: number;
   itemCost: number;
   collectCost: number;
