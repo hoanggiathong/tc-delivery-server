@@ -14,6 +14,16 @@ export interface IReturnDeliveryListDebtOfReturnDeliveriesTodayRequest {
   endDate: string;
 }
 
+export interface IReturnDeliveryListIsReturnRequest {
+  startDate: string;
+  endDate: string;
+}
+
+export interface IReturnDeliveryListAllRequest {
+  startDate: string;
+  endDate: string;
+}
+
 export interface IReturnDeliveryResponse {
   id: string;
   code: string;
@@ -62,6 +72,7 @@ export interface IReturnDeliveryResponse {
     username: string;
     name: string;
   };
+  nameProductAndAdditionalInformation?: string;
 }
 
 export interface IReturnDeliveryLeanPopulated {
@@ -104,6 +115,7 @@ export interface IReturnDeliveryLeanPopulated {
   smsType?: string;
   timeToSendSMS?: Date;
   quantityReturn?: number;
+  nameProductAndAdditionalInformation?: string;
   dateReturn?: Date;
   returnDeliveryImages?: IReturnDeliveryImage[];
   createdByUser: {

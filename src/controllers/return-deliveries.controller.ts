@@ -3,6 +3,8 @@ import { ApiResponse, AuthRequest, AuthRequestWithFileUploads } from '@/types';
 import {
   IReturnDeliveryListRequest,
   IReturnDeliveryListDebtOfReturnDeliveriesTodayRequest,
+  IReturnDeliveryListIsReturnRequest,
+  IReturnDeliveryListAllRequest,
   IReturnDeliveryUpdateRequest,
 } from '@/types/return-delivery.type';
 import { Response } from 'express';
@@ -469,6 +471,7 @@ export class ReturnDeliveriesController {
    *           type: string
    *           format: date
    *         description: End date for filtering (ISO format)
+   *         example: "2025-10-31T23:59:59.999Z"
    *     responses:
    *       200:
    *         description: Get list all return deliveries successful
@@ -512,7 +515,11 @@ export class ReturnDeliveriesController {
         return;
       }
 
+      const query: IReturnDeliveryListAllRequest =
+        req.query as unknown as IReturnDeliveryListAllRequest;
+
       const result = await this.returnDeliveriesService.getListAllReturnDeliveries(
+        query,
         req.user?.userId
       );
 
@@ -546,6 +553,23 @@ export class ReturnDeliveriesController {
    *     tags: [Return Deliveries]
    *     security:
    *       - bearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: startDate
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Start date for filtering (ISO format). Cannot be more than 1 month in the past.
+   *         example: "2025-10-01T00:00:00.000Z"
+   *       - in: query
+   *         name: endDate
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: End date for filtering (ISO format). Cannot be in the future.
+   *         example: "2025-10-31T23:59:59.999Z"
    *     responses:
    *       200:
    *         description: Get list return deliveries is return successful
@@ -589,7 +613,11 @@ export class ReturnDeliveriesController {
         return;
       }
 
+      const query: IReturnDeliveryListIsReturnRequest =
+        req.query as unknown as IReturnDeliveryListIsReturnRequest;
+
       const result = await this.returnDeliveriesService.getListReturnDeliveriesIsReturn(
+        query,
         req.user?.userId
       );
 
@@ -1155,10 +1183,6 @@ export class ReturnDeliveriesController {
    *                 type: string
    *                 example: "123456789"
    *                 description: Identity card number (optional)
-   *               imagesIdentityCard:
-   *                 type: string
-   *                 example: "base64_image_string"
-   *                 description: Identity card image (optional)
    *               # Customer images support (up to 5 images)
    *               customerImages:
    *                 type: array
