@@ -10,6 +10,8 @@ import {
 import {
   IReturnDeliveryLeanPopulated,
   IReturnDeliveryListDebtOfReturnDeliveriesTodayRequest,
+  IReturnDeliveryListIsReturnRequest,
+  IReturnDeliveryListAllRequest,
   IReturnDeliveryListRequest,
   IReturnDeliveryResponse,
   IReturnDeliveryUpdateRequest,
@@ -169,6 +171,7 @@ export class ReturnDeliveriesService {
             username: item.createdByUser.username,
             name: item.createdByUser.name,
           },
+          nameProductAndAdditionalInformation: item.nameProductAndAdditionalInformation || '',
         })
       );
       return returnDeliveriesResponse;
@@ -498,16 +501,20 @@ export class ReturnDeliveriesService {
     }
   }
 
-  // danh sach tat ca don hang cu da tra
-  async getListAllReturnDeliveries(userId: string): Promise<IReturnDeliveryResponse[]> {
-    const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
+  // danh sach tat ca don hang cu da tra hang ve tram
+  async getListAllReturnDeliveries(
+    query: IReturnDeliveryListAllRequest,
+    userId: string
+  ): Promise<IReturnDeliveryResponse[]> {
+    const { startDate, endDate } = query;
 
-    const end = new Date();
+    const start = new Date(String(startDate));
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(String(endDate));
     end.setHours(23, 59, 59, 999);
 
-    // 45 days ago
-    const start = new Date(end.setDate(end.getDate() - 45));
-    start.setHours(0, 0, 0, 0);
+    const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
 
     const where = {
       toRoute: selectedRouteId,
@@ -556,6 +563,7 @@ export class ReturnDeliveriesService {
           homeDeliveryCost: item.homeDeliveryCost,
           collectForCustomer: item.collectForCustomer,
           collectForCustomerCost: item.collectForCustomerCost,
+          collectCost: item.collectCost,
           itemValue: item.itemValue,
           itemCost: item.itemCost,
           totalCost: item.totalCost,
@@ -589,19 +597,24 @@ export class ReturnDeliveriesService {
   }
 
   // danh sach cac don hang cu da tra hang
-  async getListReturnDeliveriesIsReturn(userId: string): Promise<IReturnDeliveryResponse[]> {
-    const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
+  async getListReturnDeliveriesIsReturn(
+    query: IReturnDeliveryListIsReturnRequest,
+    userId: string
+  ): Promise<IReturnDeliveryResponse[]> {
+    const { startDate, endDate } = query;
 
-    const end = new Date();
+    const start = new Date(String(startDate));
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(String(endDate));
     end.setHours(23, 59, 59, 999);
 
-    // 45 days ago
-    const start = new Date(end.setDate(end.getDate() - 45));
-    start.setHours(0, 0, 0, 0);
+    const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
 
     const where = {
       toRoute: selectedRouteId,
       createdAt: { $gte: start, $lte: end },
+      // dateReturn: { $gte: start, $lte: end, $exists: true },
       isReturn: true,
     };
 
