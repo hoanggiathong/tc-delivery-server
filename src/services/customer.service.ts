@@ -850,8 +850,9 @@ export class CustomerService {
   }
 
   async getListCustomer(userId: string): Promise<ICustomerFullInformationResponse[]> {
+    const userSelectedRouteId = await this.userService.getUserSelectedRouteId(userId);
     try {
-      const customers = await Customer.find()
+      const customers = await Customer.find({ routeId: userSelectedRouteId })
         .populate([
           { path: 'bankId', select: '_id bankName bankAccount name' },
           { path: 'createdBy', select: '_id username name createdAt updatedAt' },
