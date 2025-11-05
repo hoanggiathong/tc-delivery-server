@@ -1,34 +1,34 @@
 import {
-  MoneyDelivery,
   IMoneyDelivery,
+  MoneyDelivery,
   MoneyDeliveryStatus,
   MoneyDeliveryType,
 } from '@/models/money-delivery.model';
 import { Route } from '@/models/route.model';
-import { Types, PipelineStage } from 'mongoose';
-import { omitBy, isUndefined } from 'lodash';
-import { CustomerService } from '@/services/customer.service';
 import { CodeGeneratorService } from '@/services/code-generator.service';
+import { CustomerService } from '@/services/customer.service';
 import { SettingsService } from '@/services/settings.service';
 import { UserService } from '@/services/user.service';
 import Logger from '@/utils/logger';
+import { isUndefined, omitBy } from 'lodash';
+import { PipelineStage, Types } from 'mongoose';
 
+import { TYPE_DELIVERY_CUSTOMER } from '@/const/customer.const';
 import {
-  IMoneyDeliveryCreateRequest,
-  IMoneyDeliveryUpdateRequest,
-  IMoneyDeliveryResponse,
-  IMoneyDeliveryWithPopulatedRefs,
-  IMoneyDeliveryLeanPopulated,
-  INextMoneyDeliveryCodeResponse,
   IFrequentMoneyCustomer,
-  ITodayMoneyDeliveryReport,
-  ITodayMoneyDeliverySummary,
-  ITodayMoneyDeliveryItem,
   IMoneyDeliveryCostReport,
   IMoneyDeliveryCostReportSummary,
+  IMoneyDeliveryCreateRequest,
+  IMoneyDeliveryLeanPopulated,
   IMoneyDeliveryReportItem,
+  IMoneyDeliveryResponse,
+  IMoneyDeliveryUpdateRequest,
+  IMoneyDeliveryWithPopulatedRefs,
+  INextMoneyDeliveryCodeResponse,
+  ITodayMoneyDeliveryItem,
+  ITodayMoneyDeliveryReport,
+  ITodayMoneyDeliverySummary,
 } from '@/types/money-delivery.type';
-import { TYPE_DELIVERY_CUSTOMER } from '@/const/customer.const';
 
 export class MoneyDeliveryService {
   private customerService: CustomerService;
@@ -1201,6 +1201,46 @@ export class MoneyDeliveryService {
         throw error;
       }
       throw new Error('Failed to get list money delivery by list delivery id');
+    }
+  }
+
+  async getListReturnMoneyDeliveriesTypeCollectStatusDone(
+    userId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<IMoneyDeliveryResponse[]> {
+    try {
+      // Get user's selected route as fromRoute
+      const fromRouteId = await this.userService.getUserSelectedRouteId(userId);
+
+      const moneyDeliveries = await MoneyDelivery.find({
+        fromRoute: fromRouteId,
+        status: MoneyDeliveryStatus.DONE,
+        type: MoneyDeliveryType.COLLECT,
+        createdAt: { $gte: startDate, $lte: endDate },
+      })
+        .populate([
+          { path: 'sender', select: '_id name phone routeId createdAt updatedAt' },
+          { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
+          { path: 'createdByUser', select: '_id username' },
+        ])
+        .sort({ createdAt: -1 })
+        .lean();
+
+      const moneyDeliveriesResponse: IMoneyDeliveryResponse[] = moneyDeliveries.map(moneyDelivery =>
+        this.transformMoneyDeliveryToResponseOptimized(
+          this.toPopulatedMoneyDeliveryLean(moneyDelivery)
+        )
+      );
+
+      return moneyDeliveriesResponse;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to get list return money deliveries type collect status done');
     }
   }
 }
