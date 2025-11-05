@@ -1,5 +1,5 @@
 import { TYPE_DELIVERY_CUSTOMER } from '@/const/customer.const';
-import { Customer, ICustomer, ICustomerImage } from '@/models/customer.model';
+import { Customer, ICustomer, ICustomerImage, CustomerType } from '@/models/customer.model';
 import { CreateCustomerRequest, UpdateCustomerRequest } from '@/schemas/customer.schema';
 import { BankCreateData, CustomerBankService } from '@/services/customer-bank.service';
 import { UserService } from '@/services/user.service';
@@ -86,7 +86,7 @@ export class CustomerService {
     phone: string,
     name: string,
     routeId: string,
-    type: 'delivery' | 'money'
+    type: CustomerType
   ): Promise<ICustomer> {
     try {
       const customer = await Customer.findOneAndUpdate(
@@ -416,7 +416,7 @@ export class CustomerService {
         name: name || 'Unknown',
         phone: phone || '',
         routeId: fromRouteId ? new Types.ObjectId(fromRouteId) : new Types.ObjectId(),
-        type: 'money', // Default for money delivery operations
+        type: CustomerType.MONEY, // Default for money delivery operations
         relativeReceiver: [],
       });
 
@@ -451,7 +451,7 @@ export class CustomerService {
     phone: string,
     name: string,
     routeId: string,
-    type: 'delivery' | 'money',
+    type: CustomerType,
     imageIndex: number,
     imageBuffer: Buffer,
     originalName: string,
@@ -658,7 +658,7 @@ export class CustomerService {
   async updateCustomerBankInfo(
     phone: string,
     routeId: string,
-    type: 'delivery' | 'money',
+    type: CustomerType,
     userId: string,
     name?: string,
     bankInfo?: BankCreateData,

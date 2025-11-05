@@ -232,6 +232,7 @@ export interface IDeliveryLeanPopulated {
     code: string;
     name: string;
     address: string;
+    phone?: string;
     createdAt?: Date;
     updatedAt?: Date;
   };
@@ -240,6 +241,7 @@ export interface IDeliveryLeanPopulated {
     code: string;
     name: string;
     address: string;
+    phone?: string;
     createdAt?: Date;
     updatedAt?: Date;
   };

@@ -48,6 +48,7 @@ export interface IUserRouteLeanPopulated {
     code: string;
     name: string;
     address?: string;
+    phone?: string;
     createdAt: Date;
     updatedAt: Date;
   };

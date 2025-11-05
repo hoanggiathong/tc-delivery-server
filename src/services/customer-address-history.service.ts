@@ -3,7 +3,7 @@ import {
   ICustomerAddressHistory,
 } from '@/models/customer-address-history.model';
 import { IDelivery } from '@/models/delivery.model';
-import { Customer } from '@/models/customer.model';
+import { Customer, CustomerType } from '@/models/customer.model';
 import {
   IAddressHistoryResponse,
   IAddressHistoryCreateRequest,
@@ -16,7 +16,7 @@ export class CustomerAddressHistoryService {
    */
   private async getCustomerIdByPhone(phone: string): Promise<string> {
     try {
-      const customer = await Customer.findOne({ phone, type: 'delivery' });
+      const customer = await Customer.findOne({ phone, type: CustomerType.DELIVERY });
       if (!customer) {
         throw new Error('Customer not found');
       }

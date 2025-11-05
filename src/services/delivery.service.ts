@@ -22,7 +22,7 @@ import {
   ITodayDeliveryItem,
   IDeliveryPopulated,
 } from '@/types/delivery.type';
-import { ICustomer } from '@/models/customer.model';
+import { ICustomer, CustomerType } from '@/models/customer.model';
 import Logger from '@/utils/logger';
 import { PaymentType } from '@/types';
 import { TYPE_DELIVERY_CUSTOMER } from '@/const/customer.const';
@@ -144,16 +144,14 @@ export class DeliveryService {
         code: delivery.fromRoute.code,
         name: delivery.fromRoute.name,
         address: delivery.fromRoute.address,
-        createdAt: delivery.fromRoute.createdAt,
-        updatedAt: delivery.fromRoute.updatedAt,
+        phone: delivery.fromRoute.phone,
       },
       toRoute: {
         id: delivery.toRoute._id,
         code: delivery.toRoute.code,
         name: delivery.toRoute.name,
         address: delivery.toRoute.address,
-        createdAt: delivery.toRoute.createdAt,
-        updatedAt: delivery.toRoute.updatedAt,
+        phone: delivery.toRoute.phone,
       },
       name: delivery.name,
       nameProductAndAdditionalInformation: delivery.nameProductAndAdditionalInformation,
@@ -194,13 +192,13 @@ export class DeliveryService {
       data.senderPhone,
       data.senderName,
       selectedRouteId,
-      'delivery'
+      CustomerType.DELIVERY
     );
     const receiver = await this.customerService.findOrCreateCustomer(
       data.receiverPhone,
       data.receiverName,
       data.toRouteId,
-      'delivery'
+      CustomerType.DELIVERY
     );
 
     // Update sender's relativeReceiver array
@@ -278,8 +276,8 @@ export class DeliveryService {
           },
         },
         { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
-        { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
-        { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
+        { path: 'fromRoute', select: '_id code name address phone' },
+        { path: 'toRoute', select: '_id code name address phone' },
         { path: 'createdByUser', select: '_id username name' },
       ])
       .lean();
@@ -317,7 +315,7 @@ export class DeliveryService {
         senderPhone,
         senderName,
         userSelectedRouteId,
-        'delivery'
+        CustomerType.DELIVERY
       );
       updateData.sender = sender.id;
     } else {
@@ -335,7 +333,7 @@ export class DeliveryService {
         receiverPhone,
         receiverName,
         data.toRouteId || delivery.toRoute.toString(),
-        'delivery'
+        CustomerType.DELIVERY
       );
       updateData.receiver = receiver.id;
     } else {
@@ -392,8 +390,8 @@ export class DeliveryService {
           },
         },
         { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
-        { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
-        { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
+        { path: 'fromRoute', select: '_id code name address phone' },
+        { path: 'toRoute', select: '_id code name address phone' },
         { path: 'createdByUser', select: '_id username name' },
       ])
       .lean();
@@ -423,8 +421,8 @@ export class DeliveryService {
             },
           },
           { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
-          { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
-          { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address phone createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name address phone createdAt updatedAt' },
           { path: 'createdByUser', select: '_id username name' },
         ])
         .lean();
@@ -481,8 +479,8 @@ export class DeliveryService {
             },
           },
           { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
-          { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
-          { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address phone createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name address phone createdAt updatedAt' },
           { path: 'createdByUser', select: '_id username name' },
         ])
         .sort({ createdAt: -1 })
@@ -531,8 +529,8 @@ export class DeliveryService {
             },
           },
           { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
-          { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
-          { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address phone createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name address phone createdAt updatedAt' },
           { path: 'createdByUser', select: '_id username name' },
         ])
         .sort({ createdAt: -1 })
@@ -601,16 +599,12 @@ export class DeliveryService {
         code: toRoute.code,
         name: toRoute.name,
         address: toRoute.address,
-        createdAt: toRoute.createdAt,
-        updatedAt: toRoute.updatedAt,
       },
       fromRoute: {
         id: fromRoute._id,
         code: fromRoute.code,
         name: fromRoute.name,
         address: fromRoute.address,
-        createdAt: fromRoute.createdAt,
-        updatedAt: fromRoute.updatedAt,
       },
     };
   }
@@ -650,8 +644,8 @@ export class DeliveryService {
       .populate([
         { path: 'sender', select: '_id name phone routeId createdAt updatedAt' },
         { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
-        { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
-        { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
+        { path: 'fromRoute', select: '_id code name address phone' },
+        { path: 'toRoute', select: '_id code name address phone' },
         { path: 'createdByUser', select: '_id username' },
       ])
       .lean();

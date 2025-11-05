@@ -3,6 +3,11 @@ import { appConfig } from '@/config/app.config';
 import { generateFullImageUrl, extractBasePath } from '@/utils/image-url.utils';
 import { PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES } from '@/utils/validation-patterns';
 
+export enum CustomerType {
+  DELIVERY = 'delivery',
+  MONEY = 'money',
+}
+
 export interface ICustomerImage {
   url: string;
   rotate: number;
@@ -14,7 +19,7 @@ export interface ICustomer extends Document {
   phone: string;
   routeId: Types.ObjectId;
   relativeReceiver: Array<Types.ObjectId>;
-  type: 'delivery' | 'money';
+  type: CustomerType;
   bankId: Types.ObjectId;
   images: ICustomerImage[];
   address: string;
@@ -51,8 +56,8 @@ const customerSchema = new Schema<ICustomer>(
     },
     type: {
       type: String,
-      enum: ['delivery', 'money'],
-      default: 'delivery',
+      enum: Object.values(CustomerType),
+      default: CustomerType.DELIVERY,
       required: true,
     },
     bankId: {

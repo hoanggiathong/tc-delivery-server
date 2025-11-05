@@ -1,5 +1,10 @@
 import { z } from 'zod';
-import { ROUTE_CODE_PATTERN, VALIDATION_MESSAGES } from '@/utils/validation-patterns';
+import {
+  ROUTE_CODE_PATTERN,
+  PHONE_NUMBER_PATTERN,
+  VALIDATION_MESSAGES,
+} from '@/utils/validation-patterns';
+import { SurchargeUnit } from '@/types/route.type';
 
 export const createRouteSchema = z.object({
   body: z.object({
@@ -15,6 +20,14 @@ export const createRouteSchema = z.object({
       .max(100, 'Name must not exceed 100 characters')
       .trim(),
     address: z.string().max(200, 'Address must not exceed 200 characters').trim().optional(),
+    distance: z.number().min(0, 'Distance must be a positive number').optional(),
+    surcharge: z.number().min(0, 'Surcharge must be a positive number').optional(),
+    surchargeUnit: z.nativeEnum(SurchargeUnit).optional(),
+    phone: z
+      .string()
+      .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
+      .trim()
+      .optional(),
   }),
 });
 
@@ -35,10 +48,28 @@ export const updateRouteSchema = z.object({
         .trim()
         .optional(),
       address: z.string().max(200, 'Address must not exceed 200 characters').trim().optional(),
+      distance: z.number().min(0, 'Distance must be a positive number').optional(),
+      surcharge: z.number().min(0, 'Surcharge must be a positive number').optional(),
+      surchargeUnit: z.nativeEnum(SurchargeUnit).optional(),
+      phone: z
+        .string()
+        .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
+        .trim()
+        .optional(),
     })
-    .refine(data => data.code || data.name || data.address, {
-      message: 'At least one field (code, name, or address) must be provided',
-    }),
+    .refine(
+      data =>
+        data.code ||
+        data.name ||
+        data.address ||
+        data.distance !== undefined ||
+        data.surcharge !== undefined ||
+        data.surchargeUnit ||
+        data.phone,
+      {
+        message: 'At least one field must be provided for update',
+      }
+    ),
 });
 
 export const routeParamsSchema = z.object({

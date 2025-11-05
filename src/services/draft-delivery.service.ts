@@ -73,8 +73,8 @@ export class DraftDeliveryService {
     // Populate and return
     const populatedDraft = await DraftDelivery.findById(draft._id)
       .populate([
-        { path: 'fromRoute', select: '_id code name address' },
-        { path: 'toRoute', select: '_id code name address' },
+        { path: 'fromRoute', select: '_id code name address phone' },
+        { path: 'toRoute', select: '_id code name address phone' },
         { path: 'createdByUser', select: '_id username' },
       ])
       .lean();
@@ -151,8 +151,8 @@ export class DraftDeliveryService {
       runValidators: true,
     })
       .populate([
-        { path: 'fromRoute', select: '_id code name address' },
-        { path: 'toRoute', select: '_id code name address' },
+        { path: 'fromRoute', select: '_id code name address phone' },
+        { path: 'toRoute', select: '_id code name address phone' },
         { path: 'createdByUser', select: '_id username' },
       ])
       .lean();
@@ -178,8 +178,8 @@ export class DraftDeliveryService {
       createdByUser: userId,
     })
       .populate([
-        { path: 'fromRoute', select: '_id code name address' },
-        { path: 'toRoute', select: '_id code name address' },
+        { path: 'fromRoute', select: '_id code name address phone' },
+        { path: 'toRoute', select: '_id code name address phone' },
         { path: 'createdByUser', select: '_id username' },
       ])
       .sort({ createdAt: -1 })
@@ -194,8 +194,8 @@ export class DraftDeliveryService {
   async getDraftById(draftId: string, userId: string): Promise<IDraftDeliveryResponse> {
     const draft = await DraftDelivery.findById(draftId)
       .populate([
-        { path: 'fromRoute', select: '_id code name address' },
-        { path: 'toRoute', select: '_id code name address' },
+        { path: 'fromRoute', select: '_id code name address phone' },
+        { path: 'toRoute', select: '_id code name address phone' },
         { path: 'createdByUser', select: '_id username' },
       ])
       .lean();

@@ -4,6 +4,7 @@ import { CustomerService } from '@/services/customer.service';
 import { UserService } from '@/services/user.service';
 import jwt from 'jsonwebtoken';
 import { mockCustomersForIntegration } from '../mocks';
+import { CustomerType } from '@/models/customer.model';
 
 // Mock services at module level
 jest.mock('@/services/customer.service');
@@ -97,7 +98,7 @@ describe('Customer Bank API Integration Tests', () => {
       expect(MockedCustomerService.prototype.updateCustomerBankInfo).toHaveBeenCalledWith(
         '+84912345678',
         '507f1f77bcf86cd799439011',
-        'delivery',
+        CustomerType.DELIVERY,
         'admin123',
         'Nguyễn Văn A',
         validBankData.bankInfo,
@@ -135,7 +136,7 @@ describe('Customer Bank API Integration Tests', () => {
       expect(MockedCustomerService.prototype.updateCustomerBankInfo).toHaveBeenCalledWith(
         '+84999999999',
         '507f1f77bcf86cd799439011',
-        'delivery',
+        CustomerType.DELIVERY,
         'admin123',
         'Nguyễn Văn B',
         newCustomerData.bankInfo,
@@ -169,7 +170,7 @@ describe('Customer Bank API Integration Tests', () => {
       expect(MockedCustomerService.prototype.updateCustomerBankInfo).toHaveBeenCalledWith(
         '+84912345678',
         '507f1f77bcf86cd799439011',
-        'delivery',
+        CustomerType.DELIVERY,
         'admin123',
         'Nguyễn Văn A',
         undefined,
@@ -218,7 +219,7 @@ describe('Customer Bank API Integration Tests', () => {
       expect(MockedCustomerService.prototype.updateCustomerBankInfo).toHaveBeenCalledWith(
         '+84912345678',
         '507f1f77bcf86cd799439011',
-        'delivery',
+        CustomerType.DELIVERY,
         'admin123',
         'Nguyễn Văn A',
         expect.objectContaining({

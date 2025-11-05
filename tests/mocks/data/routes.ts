@@ -1,10 +1,15 @@
-import { IRouteResponse } from '@/types/route.type';
+import { IRouteResponse, SurchargeUnit } from '@/types/route.type';
 
 export const createMockRoute = (overrides: Partial<IRouteResponse> = {}): IRouteResponse => {
   return {
     id: 'route-id-1',
     code: 'T1',
     name: 'Test Route 1',
+    address: '123 Test Street',
+    distance: 10,
+    surcharge: 5000,
+    surchargeUnit: SurchargeUnit.FIXED,
+    phone: '+84901234567',
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2023-01-01'),
     ...overrides,
@@ -15,6 +20,11 @@ export const createMockRouteRequest = (overrides: any = {}) => {
   return {
     code: 'T1',
     name: 'Test Route 1',
+    address: '123 Test Street',
+    distance: 10,
+    surcharge: 5000,
+    surchargeUnit: SurchargeUnit.FIXED,
+    phone: '+84901234567',
     ...overrides,
   };
 };

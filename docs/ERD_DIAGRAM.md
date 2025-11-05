@@ -55,6 +55,7 @@ erDiagram
         number distance "khoảng cách, tùy chọn, tối thiểu 0"
         number surcharge "phụ phí, tùy chọn, tối thiểu 0"
         enum surchargeUnit "percentage|fixed, mặc định percentage"
+        string phone "tùy chọn, định dạng quốc tế, trim"
         datetime createdAt "tự động tạo"
         datetime updatedAt "tự động cập nhật"
     }
@@ -317,6 +318,7 @@ erDiagram
 - **Khoảng cách**: Trường tùy chọn, số dương (≥ 0), đơn vị theo km
 - **Phụ phí**: Trường tùy chọn, số dương (≥ 0), áp dụng theo surchargeUnit
 - **Đơn vị phụ phí**: percentage (%) hoặc fixed (số tiền cố định), mặc định percentage
+- **Số điện thoại**: Trường tùy chọn, định dạng quốc tế (`/^\+?[1-9]\d{1,14}$/`), lưu số liên lạc của tuyến đường
 
 #### Bảng USER_ROUTES
 - **Ràng buộc duy nhất**: Mỗi người dùng chỉ có thể được phân công vào một tuyến đường một lần (userId + routeId)
@@ -682,7 +684,9 @@ erDiagram
   - `distance`: Khoảng cách tuyến đường (number, optional, ≥ 0)
   - `surcharge`: Phụ phí tuyến đường (number, optional, ≥ 0)
   - `surchargeUnit`: Đơn vị phụ phí ('percentage' | 'fixed', mặc định 'percentage')
+  - `phone`: Số điện thoại liên lạc tuyến đường (string, optional, định dạng quốc tế)
   - Hỗ trợ tính phụ phí linh hoạt theo phần trăm hoặc số tiền cố định
+  - Populate phone field trong tất cả responses khi query fromRoute/toRoute
 - **Users Enhancement**: Thêm cấu hình thông tin bổ sung sản phẩm
   - **additionalInformationProductConfig**: Array configs cho thông tin bổ sung sản phẩm (mặc định [])
   - **Config Structure**: Mỗi config có `_id`, `content` (max 500 chars), `position` (1-6), `selected` (boolean)

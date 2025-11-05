@@ -13,6 +13,10 @@ export class RouteService {
       code: route.code,
       name: route.name,
       address: route.address,
+      distance: route.distance,
+      surcharge: route.surcharge,
+      surchargeUnit: route.surchargeUnit,
+      phone: route.phone,
       createdAt: route.createdAt,
       updatedAt: route.updatedAt,
     };
@@ -26,8 +30,11 @@ export class RouteService {
       id: route._id.toString(),
       code: route.code,
       name: route.name,
-      surcharge: route.surcharge,
       address: route.address,
+      distance: route.distance,
+      surcharge: route.surcharge,
+      surchargeUnit: route.surchargeUnit,
+      phone: route.phone,
       createdAt: route.createdAt,
       updatedAt: route.updatedAt,
     };

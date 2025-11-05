@@ -8,6 +8,7 @@ import {
   UpdateCustomerBankRequest,
 } from '@/schemas/customer.schema';
 import { ApiResponse, AuthRequest, AuthRequestWithFileUploads } from '@/types';
+import { CustomerType } from '@/models/customer.model';
 
 export class CustomerController {
   private customerService: CustomerService;
@@ -523,7 +524,7 @@ export class CustomerController {
         phone,
         name,
         routeId,
-        type || 'delivery',
+        type || CustomerType.DELIVERY,
         imageIndex,
         file.buffer,
         file.originalname,
@@ -701,7 +702,7 @@ export class CustomerController {
       const customer = await this.customerService.updateCustomerBankInfo(
         phone,
         routeId,
-        type || 'delivery',
+        type || CustomerType.DELIVERY,
         userId,
         name,
         bankInfo,
