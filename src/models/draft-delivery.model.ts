@@ -18,7 +18,7 @@ export interface IDraftDelivery extends Document {
   homeDeliveryCost: number;
   carryCost: number;
   homeDeliveryCostTotal?: number;
-  vehicleType?: VehicleType | null; // Loại phương tiện (required when homeDeliveryCost > 0)
+  vehicleType?: VehicleType; // Loại phương tiện (required when homeDeliveryCost > 0)
   itemValue: number;
   itemCost: number;
   collectCost: number;
@@ -118,7 +118,6 @@ const draftDeliverySchema = new Schema<IDraftDelivery>(
       type: String,
       enum: Object.values(VehicleType),
       required: false,
-      default: null,
     },
     itemValue: {
       type: Number,
