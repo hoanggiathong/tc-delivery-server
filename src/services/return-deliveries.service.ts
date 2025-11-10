@@ -504,7 +504,7 @@ export class ReturnDeliveriesService {
     }
   }
 
-  // hang thu ho tu chuyen
+  // hang thu ho tu chuyen (cho tram khac kiem tra thu ho)
   async getListCollectCostOfReturnDeliveries(
     query: IReturnDeliveryListCollectCostOfReturnDeliveriesRequest,
     userId: string
@@ -530,7 +530,7 @@ export class ReturnDeliveriesService {
 
       const returnDeliveries = await Delivery.find({
         _id: { $in: moneyDeliveries.map(item => item.deliveryId) },
-        toRoute: selectedRouteId,
+        fromRoute: selectedRouteId,
         isReturn: true,
         collectCost: { $gt: 0 },
       })
@@ -950,7 +950,7 @@ export class ReturnDeliveriesService {
               senderPhone: typedDelivery.receiver.phone,
               receiverName: typedDelivery.sender.name,
               receiverPhone: typedDelivery.sender.phone,
-              toRouteId: typedDelivery.fromRoute._id.toString(),
+              toRouteId: typedDelivery.toRoute._id.toString(),
               sendMoneyAmount: typedDelivery.collectCost,
               sendCost: await this.settingsService.calculateShippingFee(
                 typedDelivery.collectCost,
@@ -1073,7 +1073,7 @@ export class ReturnDeliveriesService {
                 senderPhone: typedDelivery.receiver.phone,
                 receiverName: typedDelivery.sender.name,
                 receiverPhone: typedDelivery.sender.phone,
-                toRouteId: typedDelivery.fromRoute._id.toString(),
+                toRouteId: typedDelivery.toRoute._id.toString(),
                 sendMoneyAmount: typedDelivery.collectCost,
                 sendCost: await this.settingsService.calculateShippingFee(
                   typedDelivery.collectCost,

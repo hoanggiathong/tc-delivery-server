@@ -37,10 +37,10 @@ export const getListReturnDeliveriesSchema = z
         .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid start date in ISO format')
         .transform(val => new Date(val))
         .refine(val => {
-          const oneMonthAgo = new Date();
-          oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-          return val >= oneMonthAgo;
-        }, 'Start date cannot be more than 1 month in the past'),
+          const fourtyFiveDaysAgo = new Date();
+          fourtyFiveDaysAgo.setDate(fourtyFiveDaysAgo.getDate() - 45);
+          return val >= fourtyFiveDaysAgo;
+        }, 'Start date cannot be more than 45 days in the past'),
       endDate: z
         .string()
         .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid end date in ISO format')
@@ -80,10 +80,10 @@ export const getListDebtOfReturnDeliveriesTodaySchema = z
         .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid start date in ISO format')
         .transform(val => new Date(val))
         .refine(val => {
-          const oneMonthAgo = new Date();
-          oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-          return val >= oneMonthAgo;
-        }, 'Start date cannot be more than 1 month in the past'),
+          const fourtyFiveDaysAgo = new Date();
+          fourtyFiveDaysAgo.setDate(fourtyFiveDaysAgo.getDate() - 45);
+          return val >= fourtyFiveDaysAgo;
+        }, 'Start date cannot be more than 45 days in the past'),
       endDate: z
         .string()
         .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid end date in ISO format')
@@ -152,10 +152,10 @@ export const getListReturnDeliveriesIsReturnSchema = z
         .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid start date in ISO format')
         .transform(val => new Date(val))
         .refine(val => {
-          const oneMonthAgo = new Date();
-          oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-          return val >= oneMonthAgo;
-        }, 'Start date cannot be more than 1 month in the past'),
+          const fourtyFiveDaysAgo = new Date();
+          fourtyFiveDaysAgo.setDate(fourtyFiveDaysAgo.getDate() - 45);
+          return val >= fourtyFiveDaysAgo;
+        }, 'Start date cannot be more than 45 days in the past'),
       endDate: z
         .string()
         .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid end date in ISO format')
