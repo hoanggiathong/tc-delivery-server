@@ -968,6 +968,7 @@ export class ReturnDeliveriesService {
               status: MoneyDeliveryStatus.WAITING,
               type: MoneyDeliveryType.COLLECT,
               deliveryId: typedDelivery._id.toString(),
+              fromRouteId: typedDelivery.fromRoute._id.toString(),
             },
             userId
           );
@@ -1091,6 +1092,7 @@ export class ReturnDeliveriesService {
                 status: MoneyDeliveryStatus.WAITING,
                 type: MoneyDeliveryType.COLLECT,
                 deliveryId: typedDelivery._id.toString(),
+                fromRouteId: typedDelivery.fromRoute._id.toString(),
               },
               userId
             );

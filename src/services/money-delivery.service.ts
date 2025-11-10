@@ -198,8 +198,11 @@ export class MoneyDeliveryService {
     data: IMoneyDeliveryCreateRequest,
     userId: string
   ): Promise<IMoneyDeliveryResponse> {
+    let fromRouteId = data.fromRouteId;
     // Get user's selected route as fromRoute
-    const fromRouteId = await this.userService.getUserSelectedRouteId(userId);
+    if (!fromRouteId) {
+      fromRouteId = await this.userService.getUserSelectedRouteId(userId);
+    }
 
     // Find or create sender and receiver with type 'money'
     const sender = await this.customerService.findOrCreateCustomer(

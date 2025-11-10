@@ -1548,6 +1548,17 @@ export class ReturnDeliveriesController {
    *     tags: [Return Deliveries]
    *     security:
    *       - bearerAuth: []
+   *     parameters:
+   *       - name: startDate
+   *         in: query
+   *         type: string
+   *         example: "2024-01-01"
+   *         description: Start date
+   *       - name: endDate
+   *         in: query
+   *         type: string
+   *         example: "2024-01-01"
+   *         description: End date
    *     responses:
    *       200:
    *         description: List collect cost of return deliveries
