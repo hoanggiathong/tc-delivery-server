@@ -48,6 +48,7 @@ export interface IMoneyDeliveryCreateRequest {
   status?: MoneyDeliveryStatus;
   type?: MoneyDeliveryType;
   deliveryId?: string;
+  fromRouteId?: string;
 }
 
 export interface IMoneyDeliveryUpdateRequest {
