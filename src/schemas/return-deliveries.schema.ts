@@ -35,12 +35,7 @@ export const getListReturnDeliveriesSchema = z
       startDate: z
         .string()
         .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid start date in ISO format')
-        .transform(val => new Date(val))
-        .refine(val => {
-          const fourtyFiveDaysAgo = new Date();
-          fourtyFiveDaysAgo.setDate(fourtyFiveDaysAgo.getDate() - 45);
-          return val >= fourtyFiveDaysAgo;
-        }, 'Start date cannot be more than 45 days in the past'),
+        .transform(val => new Date(val)),
       endDate: z
         .string()
         .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid end date in ISO format')
@@ -55,8 +50,8 @@ export const getListReturnDeliveriesSchema = z
       key: z.string().trim().max(120).optional(),
     }),
   })
-  .refine(data => data.query.startDate <= data.query.endDate, {
-    message: 'Start date must be before or equal to end date',
+  .refine(data => data.query.endDate.getDate() - data.query.startDate.getDate() <= 45, {
+    message: 'The difference between start date and end date must be less than 45 days',
     path: ['query', 'startDate'],
   });
 
@@ -78,20 +73,15 @@ export const getListDebtOfReturnDeliveriesTodaySchema = z
       startDate: z
         .string()
         .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid start date in ISO format')
-        .transform(val => new Date(val))
-        .refine(val => {
-          const fourtyFiveDaysAgo = new Date();
-          fourtyFiveDaysAgo.setDate(fourtyFiveDaysAgo.getDate() - 45);
-          return val >= fourtyFiveDaysAgo;
-        }, 'Start date cannot be more than 45 days in the past'),
+        .transform(val => new Date(val)),
       endDate: z
         .string()
         .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid end date in ISO format')
         .transform(val => new Date(val)),
     }),
   })
-  .refine(data => data.query.startDate <= data.query.endDate, {
-    message: 'Start date must be before or equal to end date',
+  .refine(data => data.query.endDate.getDate() - data.query.startDate.getDate() <= 45, {
+    message: 'The difference between start date and end date must be less than 45 days',
     path: ['query', 'startDate'],
   });
 
@@ -112,20 +102,15 @@ export const getListAllReturnDeliveriesSchema = z
       startDate: z
         .string()
         .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid start date in ISO format')
-        .transform(val => new Date(val))
-        .refine(val => {
-          const fourtyFiveDaysAgo = new Date();
-          fourtyFiveDaysAgo.setDate(fourtyFiveDaysAgo.getDate() - 45);
-          return val >= fourtyFiveDaysAgo;
-        }, 'Start date cannot be more than 45 days in the past'),
+        .transform(val => new Date(val)),
       endDate: z
         .string()
         .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid end date in ISO format')
         .transform(val => new Date(val)),
     }),
   })
-  .refine(data => data.query.startDate <= data.query.endDate, {
-    message: 'Start date must be before or equal to end date',
+  .refine(data => data.query.endDate.getDate() - data.query.startDate.getDate() <= 45, {
+    message: 'The difference between start date and end date must be less than 45 days',
     path: ['query', 'startDate'],
   });
 
