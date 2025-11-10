@@ -15,6 +15,7 @@ import {
   IReturnDeliveryListRequest,
   IReturnDeliveryResponse,
   IReturnDeliveryUpdateRequest,
+  IReturnDeliveryListCollectCostOfReturnDeliveriesRequest,
 } from '@/types/return-delivery.type';
 import { IDeliveryLeanPopulated } from '@/types/delivery.type';
 import { CustomerService } from './customer.service';
@@ -329,10 +330,11 @@ export class ReturnDeliveriesService {
 
     try {
       //get list money delivery with from route id and type collect for customer
-      const moneyDeliveries = await this.moneyDeliveryService.getListMoneyDeliveryByUserIdAndType(
-        userId,
-        MoneyDeliveryType.COLLECT_FOR_CUSTOMER
-      );
+      const moneyDeliveries =
+        await this.moneyDeliveryService.getListMoneyDeliveryByUserIdAndTypeAndWaitingStatus(
+          userId,
+          MoneyDeliveryType.COLLECT_FOR_CUSTOMER
+        );
       const returnDeliveries = await Delivery.find({
         _id: { $in: moneyDeliveries.map(item => item.deliveryId) },
         toRoute: selectedRouteId,
@@ -418,10 +420,112 @@ export class ReturnDeliveriesService {
     const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
 
     try {
+      //get list money delivery with from route id and type collect and waiting status
+      const moneyDeliveries =
+        await this.moneyDeliveryService.getListMoneyDeliveryByUserIdAndTypeAndWaitingStatus(
+          userId,
+          MoneyDeliveryType.COLLECT
+        );
+
+      const returnDeliveries = await Delivery.find({
+        _id: { $in: moneyDeliveries.map(item => item.deliveryId) },
+        toRoute: selectedRouteId,
+        isReturn: true,
+        collectCost: { $gt: 0 },
+      })
+        .populate([
+          {
+            path: 'sender',
+            select: '_id name phone routeId createdAt updatedAt',
+          },
+          { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
+          { path: 'createdByUser', select: '_id username name' },
+        ])
+        .sort({ createdAt: -1 })
+        .lean();
+      const populatedReturnDeliveries = await this.toPopulatedReturnDeliveryLean(returnDeliveries);
+
+      const returnDeliveriesResponse: IReturnDeliveryResponse[] = populatedReturnDeliveries.map(
+        (item: IReturnDeliveryLeanPopulated) => ({
+          id: item._id.toString(),
+          code: item.code,
+          name: item.name,
+          fullCode: item.fullCode,
+          subCode: item.subCode,
+          sender: {
+            name: item.sender.name,
+            phone: item.sender.phone,
+          },
+          receiver: {
+            name: item.receiver.name,
+            phone: item.receiver.phone,
+          },
+          toRoute: {
+            id: item.toRoute._id.toString(),
+            code: item.toRoute.code,
+            name: item.toRoute.name,
+          },
+          cost: item.cost,
+          homeDelivery: item.homeDelivery,
+          homeDeliveryCost: item.homeDeliveryCost,
+          collectForCustomer: item.collectForCustomer,
+          collectForCustomerCost: item.collectForCustomerCost,
+          itemValue: item.itemValue,
+          itemCost: item.itemCost,
+          totalCost: item.totalCost,
+          actualRevenue: item.actualRevenue,
+          paymentType: item.paymentType,
+          notes: item.notes,
+          isReturn: item.isReturn,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+          upItems: item.upItems || '',
+          downItems: item.downItems || '',
+          inventory: item.inventory || '',
+          smsType: item.smsType || '',
+          timeToSendSMS: item.timeToSendSMS,
+          quantityReturn: item.quantityReturn || 0,
+          dateReturn: item.dateReturn,
+          createdByUser: {
+            _id: item.createdByUser._id.toString(),
+            username: item.createdByUser.username,
+            name: item.createdByUser.name,
+          },
+        })
+      );
+      return returnDeliveriesResponse;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('get list collect for customer of return deliveries failed');
+    }
+  }
+
+  // hang thu ho tu chuyen
+  async getListCollectCostOfReturnDeliveries(
+    query: IReturnDeliveryListCollectCostOfReturnDeliveriesRequest,
+    userId: string
+  ): Promise<IReturnDeliveryResponse[]> {
+    const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
+
+    try {
+      const { startDate, endDate } = query;
+
+      const start = new Date(String(startDate));
+      start.setHours(0, 0, 0, 0);
+
+      const end = new Date(String(endDate));
+      end.setHours(23, 59, 59, 999);
+
       //get list money delivery with from route id and type collect
       const moneyDeliveries = await this.moneyDeliveryService.getListMoneyDeliveryByUserIdAndType(
         userId,
-        MoneyDeliveryType.COLLECT
+        MoneyDeliveryType.COLLECT,
+        start,
+        end
       );
 
       const returnDeliveries = await Delivery.find({
@@ -891,7 +995,7 @@ export class ReturnDeliveriesService {
       delivery.isReturn = true;
       // Update field note with string 'Đã trả hàng + now date' + old value of note
       const now = new Date();
-      const returnDateString = `Đã trả hàng ${now}`;
+      const returnDateString = `Đã trả hàng ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
       delivery.notes = `${returnDateString}, ${delivery.notes}`;
       delivery.updatedAt = now;
       delivery.dateReturn = now;
@@ -931,8 +1035,9 @@ export class ReturnDeliveriesService {
         throw new Error('Array list return delivery is empty');
       }
 
+      // format now with format dd/mm/yyyy
       const now = new Date();
-      const returnDateString = `Đã trả hàng ${now}`;
+      const returnDateString = `Đã trả hàng ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
 
       // Handle multiple return deliveries (without images)
       for (const item of arrayListReturnDelivery) {

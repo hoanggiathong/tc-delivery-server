@@ -1187,7 +1187,7 @@ export class MoneyDeliveryService {
     }
   }
 
-  async getListMoneyDeliveryByUserIdAndType(
+  async getListMoneyDeliveryByUserIdAndTypeAndWaitingStatus(
     userId: string,
     type: MoneyDeliveryType
   ): Promise<IMoneyDelivery[]> {
@@ -1199,6 +1199,30 @@ export class MoneyDeliveryService {
         fromRoute: fromRouteId,
         status: MoneyDeliveryStatus.WAITING,
         type: type,
+      });
+      return moneyDeliveries;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to get list money delivery by list delivery id');
+    }
+  }
+
+  async getListMoneyDeliveryByUserIdAndType(
+    userId: string,
+    type: MoneyDeliveryType,
+    startDate: Date,
+    endDate: Date
+  ): Promise<IMoneyDelivery[]> {
+    try {
+      // Get user's selected route as fromRoute
+      const fromRouteId = await this.userService.getUserSelectedRouteId(userId);
+
+      const moneyDeliveries = await MoneyDelivery.find({
+        fromRoute: fromRouteId,
+        type: type,
+        createdAt: { $gte: startDate, $lte: endDate },
       });
       return moneyDeliveries;
     } catch (error) {
