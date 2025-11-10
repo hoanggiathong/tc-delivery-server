@@ -19,6 +19,7 @@ import {
   updateStatusWithImagesSchema,
   updateStatusWithoutImagesSchema,
   getListCollectCostOfReturnDeliveriesNotCollectedSchema,
+  getListCollectCostOfReturnDeliveriesSchema,
 } from '@/schemas/return-deliveries.schema';
 import { UserRole } from '@/types/user.type';
 import { Router } from 'express';
@@ -73,6 +74,12 @@ router.get(
   '/get-list-collect-for-customer-not-collected',
   validate(getListCollectForCustomerNotCollectedSchema),
   returnDeliveriesController.getListCollectForCustomerOfReturnDeliveriesNotCollected
+);
+
+router.get(
+  '/get-list-collect-cost-of-return-deliveries',
+  validate(getListCollectCostOfReturnDeliveriesSchema),
+  returnDeliveriesController.getListCollectCostOfReturnDeliveries
 );
 
 router.get(

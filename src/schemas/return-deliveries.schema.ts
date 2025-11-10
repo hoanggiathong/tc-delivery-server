@@ -129,6 +129,20 @@ export const getListAllReturnDeliveriesSchema = z
     path: ['query', 'startDate'],
   });
 
+// Schema for get list collect cost of return deliveries
+export const getListCollectCostOfReturnDeliveriesSchema = z.object({
+  query: z.object({
+    startDate: z
+      .string()
+      .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid start date in ISO format')
+      .transform(val => new Date(val)),
+    endDate: z
+      .string()
+      .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid end date in ISO format')
+      .transform(val => new Date(val)),
+  }),
+});
+
 // Schema for get list return deliveries is return
 export const getListReturnDeliveriesIsReturnSchema = z
   .object({

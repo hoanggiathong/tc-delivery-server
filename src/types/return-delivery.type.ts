@@ -24,6 +24,11 @@ export interface IReturnDeliveryListAllRequest {
   endDate: string;
 }
 
+export interface IReturnDeliveryListCollectCostOfReturnDeliveriesRequest {
+  startDate: string;
+  endDate: string;
+}
+
 export interface IReturnDeliveryResponse {
   id: string;
   code: string;

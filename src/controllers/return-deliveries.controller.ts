@@ -6,6 +6,7 @@ import {
   IReturnDeliveryListIsReturnRequest,
   IReturnDeliveryListAllRequest,
   IReturnDeliveryUpdateRequest,
+  IReturnDeliveryListCollectCostOfReturnDeliveriesRequest,
 } from '@/types/return-delivery.type';
 import { Response } from 'express';
 
@@ -1531,6 +1532,85 @@ export class ReturnDeliveriesController {
       console.error('Update status without images error:', error);
       const message =
         error instanceof Error ? error.message : 'Failed to update status without images';
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+      res.status(500).json(response);
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/return-deliveries/get-list-collect-cost-of-return-deliveries:
+   *   get:
+   *     summary: Get list collect cost of return deliveries
+   *     tags: [Return Deliveries]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: List collect cost of return deliveries
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "List collect cost of return deliveries successful"
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ReturnDeliveryResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Failed to get list collect cost of return deliveries"
+   */
+  getListCollectCostOfReturnDeliveries = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const query: IReturnDeliveryListCollectCostOfReturnDeliveriesRequest =
+        req.query as unknown as IReturnDeliveryListCollectCostOfReturnDeliveriesRequest;
+
+      const result = await this.returnDeliveriesService.getListCollectCostOfReturnDeliveries(
+        query,
+        req.user?.userId
+      );
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'List collect cost of return deliveries successful',
+        data: result,
+      };
+      res.status(200).json(response);
+    } catch (error) {
+      console.error('Get list collect cost of return deliveries error:', error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Failed to get list collect cost of return deliveries';
       const response: ApiResponse = {
         success: false,
         message,
