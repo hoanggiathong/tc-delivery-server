@@ -1220,10 +1220,10 @@ export class MoneyDeliveryService {
   ): Promise<IMoneyDelivery[]> {
     try {
       // Get user's selected route as fromRoute
-      const fromRouteId = await this.userService.getUserSelectedRouteId(userId);
+      const toRouteId = await this.userService.getUserSelectedRouteId(userId);
 
       const moneyDeliveries = await MoneyDelivery.find({
-        fromRoute: fromRouteId,
+        toRoute: toRouteId,
         type: type,
         createdAt: { $gte: startDate, $lte: endDate },
       });
