@@ -25,7 +25,7 @@ export const uploadMultipleImages = multer({
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
   fileFilter: fileFilter,
-}).array('images', 5); // Allow up to 5 images
+}).fields([{ name: 'images', maxCount: 5 }]);
 
 export const uploadReturnDeliveryImagesFields = multer({
   storage: storage,
