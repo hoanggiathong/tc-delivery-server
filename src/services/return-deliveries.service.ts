@@ -431,7 +431,7 @@ export class ReturnDeliveriesService {
 
       const returnDeliveries = await Delivery.find({
         _id: { $in: moneyDeliveries.map(item => item.deliveryId) },
-        toRoute: selectedRouteId,
+        fromRoute: selectedRouteId,
         isReturn: true,
         collectCost: { $gt: 0 },
       })
@@ -533,7 +533,7 @@ export class ReturnDeliveriesService {
 
       const returnDeliveries = await Delivery.find({
         _id: { $in: moneyDeliveries.map(item => item.deliveryId) },
-        fromRoute: selectedRouteId,
+        toRoute: selectedRouteId,
         isReturn: true,
         collectCost: { $gt: 0 },
       })
