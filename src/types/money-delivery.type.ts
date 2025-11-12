@@ -468,3 +468,9 @@ export interface IMoneyDeliveryCostReportRawItem {
   type: MoneyDeliveryType;
   deliveryId?: string;
 }
+
+export interface IReturnDeliveryAndMoneyDeliveryResponse {
+  _id: string;
+  sendMoneyAmount: number;
+  sendCost: number;
+}

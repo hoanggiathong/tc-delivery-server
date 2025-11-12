@@ -358,53 +358,66 @@ export class ReturnDeliveriesService {
       const populatedReturnDeliveries = await this.toPopulatedReturnDeliveryLean(returnDeliveries);
 
       const returnDeliveriesResponse: IReturnDeliveryResponse[] = populatedReturnDeliveries.map(
-        (item: IReturnDeliveryLeanPopulated) => ({
-          id: item._id.toString(),
-          code: item.code,
-          name: item.name,
-          fullCode: item.fullCode,
-          subCode: item.subCode,
-          sender: {
-            name: item.sender.name,
-            phone: item.sender.phone,
-          },
-          receiver: {
-            name: item.receiver.name,
-            phone: item.receiver.phone,
-          },
-          toRoute: {
-            id: item.toRoute._id.toString(),
-            code: item.toRoute.code,
-            name: item.toRoute.name,
-          },
-          cost: item.cost,
-          homeDelivery: item.homeDelivery,
-          homeDeliveryCost: item.homeDeliveryCost,
-          collectForCustomer: item.collectForCustomer,
-          collectForCustomerCost: item.collectForCustomerCost,
-          collectCost: item.collectCost || 0,
-          itemValue: item.itemValue,
-          itemCost: item.itemCost,
-          totalCost: item.totalCost,
-          actualRevenue: item.actualRevenue,
-          paymentType: item.paymentType,
-          notes: item.notes,
-          isReturn: item.isReturn,
-          createdAt: item.createdAt,
-          updatedAt: item.updatedAt,
-          upItems: item.upItems || '',
-          downItems: item.downItems || '',
-          inventory: item.inventory || '',
-          smsType: item.smsType || '',
-          timeToSendSMS: item.timeToSendSMS,
-          quantityReturn: item.quantityReturn || 0,
-          dateReturn: item.dateReturn,
-          createdByUser: {
-            _id: item.createdByUser._id.toString(),
-            username: item.createdByUser.username,
-            name: item.createdByUser.name,
-          },
-        })
+        (item: IReturnDeliveryLeanPopulated) => {
+          const moneyDelivery = moneyDeliveries.find(
+            delivery => delivery.deliveryId?.toString() === item._id.toString()
+          );
+
+          return {
+            id: item._id.toString(),
+            code: item.code,
+            name: item.name,
+            fullCode: item.fullCode,
+            subCode: item.subCode,
+            sender: {
+              name: item.sender.name,
+              phone: item.sender.phone,
+            },
+            receiver: {
+              name: item.receiver.name,
+              phone: item.receiver.phone,
+            },
+            toRoute: {
+              id: item.toRoute._id.toString(),
+              code: item.toRoute.code,
+              name: item.toRoute.name,
+            },
+            cost: item.cost,
+            homeDelivery: item.homeDelivery,
+            homeDeliveryCost: item.homeDeliveryCost,
+            collectForCustomer: item.collectForCustomer,
+            collectForCustomerCost: item.collectForCustomerCost,
+            collectCost: item.collectCost || 0,
+            itemValue: item.itemValue,
+            itemCost: item.itemCost,
+            totalCost: item.totalCost,
+            actualRevenue: item.actualRevenue,
+            paymentType: item.paymentType,
+            notes: item.notes,
+            isReturn: item.isReturn,
+            createdAt: item.createdAt,
+            updatedAt: item.updatedAt,
+            upItems: item.upItems || '',
+            downItems: item.downItems || '',
+            inventory: item.inventory || '',
+            smsType: item.smsType || '',
+            timeToSendSMS: item.timeToSendSMS,
+            quantityReturn: item.quantityReturn || 0,
+            dateReturn: item.dateReturn,
+            createdByUser: {
+              _id: item.createdByUser._id.toString(),
+              username: item.createdByUser.username,
+              name: item.createdByUser.name,
+            },
+            moneyDelivery: moneyDelivery
+              ? {
+                  _id: moneyDelivery._id.toString(),
+                  sendMoneyAmount: moneyDelivery.sendMoneyAmount,
+                  sendCost: moneyDelivery.sendCost,
+                }
+              : undefined,
+          };
+        }
       );
       return returnDeliveriesResponse;
     } catch (error) {
@@ -450,54 +463,68 @@ export class ReturnDeliveriesService {
       const populatedReturnDeliveries = await this.toPopulatedReturnDeliveryLean(returnDeliveries);
 
       const returnDeliveriesResponse: IReturnDeliveryResponse[] = populatedReturnDeliveries.map(
-        (item: IReturnDeliveryLeanPopulated) => ({
-          id: item._id.toString(),
-          code: item.code,
-          name: item.name,
-          fullCode: item.fullCode,
-          subCode: item.subCode,
-          sender: {
-            name: item.sender.name,
-            phone: item.sender.phone,
-          },
-          receiver: {
-            name: item.receiver.name,
-            phone: item.receiver.phone,
-          },
-          toRoute: {
-            id: item.toRoute._id.toString(),
-            code: item.toRoute.code,
-            name: item.toRoute.name,
-          },
-          cost: item.cost,
-          homeDelivery: item.homeDelivery,
-          homeDeliveryCost: item.homeDeliveryCost,
-          collectForCustomer: item.collectForCustomer,
-          collectForCustomerCost: item.collectForCustomerCost,
-          collectCost: item.collectCost || 0,
-          itemValue: item.itemValue,
-          itemCost: item.itemCost,
-          totalCost: item.totalCost,
-          actualRevenue: item.actualRevenue,
-          paymentType: item.paymentType,
-          notes: item.notes,
-          isReturn: item.isReturn,
-          createdAt: item.createdAt,
-          updatedAt: item.updatedAt,
-          upItems: item.upItems || '',
-          downItems: item.downItems || '',
-          inventory: item.inventory || '',
-          smsType: item.smsType || '',
-          timeToSendSMS: item.timeToSendSMS,
-          quantityReturn: item.quantityReturn || 0,
-          dateReturn: item.dateReturn,
-          createdByUser: {
-            _id: item.createdByUser._id.toString(),
-            username: item.createdByUser.username,
-            name: item.createdByUser.name,
-          },
-        })
+        (item: IReturnDeliveryLeanPopulated) => {
+          const moneyDelivery = moneyDeliveries.find(
+            delivery => delivery.deliveryId?.toString() === item._id.toString()
+          );
+
+          return {
+            id: item._id.toString(),
+            code: item.code,
+            name: item.name,
+            fullCode: item.fullCode,
+            subCode: item.subCode,
+            sender: {
+              name: item.sender.name,
+              phone: item.sender.phone,
+            },
+            receiver: {
+              name: item.receiver.name,
+              phone: item.receiver.phone,
+            },
+            toRoute: {
+              id: item.toRoute._id.toString(),
+              code: item.toRoute.code,
+              name: item.toRoute.name,
+            },
+            cost: item.cost,
+            homeDelivery: item.homeDelivery,
+            homeDeliveryCost: item.homeDeliveryCost,
+            collectForCustomer: item.collectForCustomer,
+            collectForCustomerCost: item.collectForCustomerCost,
+            collectCost: item.collectCost || 0,
+            itemValue: item.itemValue,
+            itemCost: item.itemCost,
+            totalCost: item.totalCost,
+            actualRevenue: item.actualRevenue,
+            paymentType: item.paymentType,
+            notes: item.notes,
+            isReturn: item.isReturn,
+            createdAt: item.createdAt,
+            updatedAt: item.updatedAt,
+            upItems: item.upItems || '',
+            downItems: item.downItems || '',
+            inventory: item.inventory || '',
+            smsType: item.smsType || '',
+            timeToSendSMS: item.timeToSendSMS,
+            quantityReturn: item.quantityReturn || 0,
+            dateReturn: item.dateReturn,
+            createdByUser: {
+              _id: item.createdByUser._id.toString(),
+              username: item.createdByUser.username,
+              name: item.createdByUser.name,
+            },
+            moneyDelivery: moneyDelivery
+              ? {
+                  _id: moneyDelivery._id.toString(),
+                  sendMoneyAmount: moneyDelivery.sendMoneyAmount,
+                  sendCost: moneyDelivery.sendCost,
+                }
+              : undefined,
+          };
+        }
       );
+
       return returnDeliveriesResponse;
     } catch (error) {
       if (error instanceof Error) {
@@ -552,53 +579,66 @@ export class ReturnDeliveriesService {
       const populatedReturnDeliveries = await this.toPopulatedReturnDeliveryLean(returnDeliveries);
 
       const returnDeliveriesResponse: IReturnDeliveryResponse[] = populatedReturnDeliveries.map(
-        (item: IReturnDeliveryLeanPopulated) => ({
-          id: item._id.toString(),
-          code: item.code,
-          name: item.name,
-          fullCode: item.fullCode,
-          subCode: item.subCode,
-          sender: {
-            name: item.sender.name,
-            phone: item.sender.phone,
-          },
-          receiver: {
-            name: item.receiver.name,
-            phone: item.receiver.phone,
-          },
-          toRoute: {
-            id: item.toRoute._id.toString(),
-            code: item.toRoute.code,
-            name: item.toRoute.name,
-          },
-          cost: item.cost,
-          homeDelivery: item.homeDelivery,
-          homeDeliveryCost: item.homeDeliveryCost,
-          collectForCustomer: item.collectForCustomer,
-          collectForCustomerCost: item.collectForCustomerCost,
-          collectCost: item.collectCost || 0,
-          itemValue: item.itemValue,
-          itemCost: item.itemCost,
-          totalCost: item.totalCost,
-          actualRevenue: item.actualRevenue,
-          paymentType: item.paymentType,
-          notes: item.notes,
-          isReturn: item.isReturn,
-          createdAt: item.createdAt,
-          updatedAt: item.updatedAt,
-          upItems: item.upItems || '',
-          downItems: item.downItems || '',
-          inventory: item.inventory || '',
-          smsType: item.smsType || '',
-          timeToSendSMS: item.timeToSendSMS,
-          quantityReturn: item.quantityReturn || 0,
-          dateReturn: item.dateReturn,
-          createdByUser: {
-            _id: item.createdByUser._id.toString(),
-            username: item.createdByUser.username,
-            name: item.createdByUser.name,
-          },
-        })
+        (item: IReturnDeliveryLeanPopulated) => {
+          const moneyDelivery = moneyDeliveries.find(
+            delivery => delivery.deliveryId?.toString() === item._id.toString()
+          );
+
+          return {
+            id: item._id.toString(),
+            code: item.code,
+            name: item.name,
+            fullCode: item.fullCode,
+            subCode: item.subCode,
+            sender: {
+              name: item.sender.name,
+              phone: item.sender.phone,
+            },
+            receiver: {
+              name: item.receiver.name,
+              phone: item.receiver.phone,
+            },
+            toRoute: {
+              id: item.toRoute._id.toString(),
+              code: item.toRoute.code,
+              name: item.toRoute.name,
+            },
+            cost: item.cost,
+            homeDelivery: item.homeDelivery,
+            homeDeliveryCost: item.homeDeliveryCost,
+            collectForCustomer: item.collectForCustomer,
+            collectForCustomerCost: item.collectForCustomerCost,
+            collectCost: item.collectCost || 0,
+            itemValue: item.itemValue,
+            itemCost: item.itemCost,
+            totalCost: item.totalCost,
+            actualRevenue: item.actualRevenue,
+            paymentType: item.paymentType,
+            notes: item.notes,
+            isReturn: item.isReturn,
+            createdAt: item.createdAt,
+            updatedAt: item.updatedAt,
+            upItems: item.upItems || '',
+            downItems: item.downItems || '',
+            inventory: item.inventory || '',
+            smsType: item.smsType || '',
+            timeToSendSMS: item.timeToSendSMS,
+            quantityReturn: item.quantityReturn || 0,
+            dateReturn: item.dateReturn,
+            createdByUser: {
+              _id: item.createdByUser._id.toString(),
+              username: item.createdByUser.username,
+              name: item.createdByUser.name,
+            },
+            moneyDelivery: moneyDelivery
+              ? {
+                  _id: moneyDelivery._id.toString(),
+                  sendMoneyAmount: moneyDelivery.sendMoneyAmount,
+                  sendCost: moneyDelivery.sendCost,
+                }
+              : undefined,
+          };
+        }
       );
       return returnDeliveriesResponse;
     } catch (error) {
@@ -951,6 +991,11 @@ export class ReturnDeliveriesService {
 
         // Check field collectCost > 0 (thu hộ)
         if (typedDelivery.collectCost > 0) {
+          const feeMoney = await this.settingsService.calculateShippingFee(
+            typedDelivery.collectCost,
+            false,
+            false
+          );
           await this.moneyDeliveryService.createMoneyDelivery(
             {
               senderName: typedDelivery.receiver.name,
@@ -958,12 +1003,8 @@ export class ReturnDeliveriesService {
               receiverName: typedDelivery.sender.name,
               receiverPhone: typedDelivery.sender.phone,
               toRouteId: typedDelivery.toRoute._id.toString(),
-              sendMoneyAmount: typedDelivery.collectCost,
-              sendCost: await this.settingsService.calculateShippingFee(
-                typedDelivery.collectCost,
-                false,
-                false
-              ),
+              sendMoneyAmount: typedDelivery.collectCost - feeMoney,
+              sendCost: feeMoney,
               transferType: TransferType.REGULAR,
               isFree: false,
               notes: `Thu hộ từ giao hàng ${typedDelivery.fullCode}`,
@@ -986,7 +1027,7 @@ export class ReturnDeliveriesService {
               receiverPhone: typedDelivery.sender.phone,
               toRouteId: typedDelivery.fromRoute._id.toString(),
               sendMoneyAmount: typedDelivery.collectForCustomer,
-              sendCost: typedDelivery.collectForCustomerCost || 0,
+              sendCost: 0,
               transferType: TransferType.REGULAR,
               isFree: false,
               notes: `Thu dùm từ giao hàng ${typedDelivery.fullCode}`,
@@ -1075,6 +1116,12 @@ export class ReturnDeliveriesService {
 
           // Check field collectCost > 0 (thu hộ)
           if (typedDelivery.collectCost > 0) {
+            const feeMoney = await this.settingsService.calculateShippingFee(
+              typedDelivery.collectCost,
+              false,
+              false
+            );
+
             await this.moneyDeliveryService.createMoneyDelivery(
               {
                 senderName: typedDelivery.receiver.name,
@@ -1082,12 +1129,8 @@ export class ReturnDeliveriesService {
                 receiverName: typedDelivery.sender.name,
                 receiverPhone: typedDelivery.sender.phone,
                 toRouteId: typedDelivery.toRoute._id.toString(),
-                sendMoneyAmount: typedDelivery.collectCost,
-                sendCost: await this.settingsService.calculateShippingFee(
-                  typedDelivery.collectCost,
-                  false,
-                  false
-                ),
+                sendMoneyAmount: typedDelivery.collectCost - feeMoney,
+                sendCost: feeMoney,
                 transferType: TransferType.REGULAR,
                 isFree: false,
                 notes: `Thu hộ từ giao hàng ${typedDelivery.fullCode}`,
@@ -1110,7 +1153,7 @@ export class ReturnDeliveriesService {
                 receiverPhone: typedDelivery.sender.phone,
                 toRouteId: typedDelivery.fromRoute._id.toString(),
                 sendMoneyAmount: typedDelivery.collectForCustomer,
-                sendCost: typedDelivery.collectForCustomerCost || 0,
+                sendCost: 0,
                 transferType: TransferType.REGULAR,
                 isFree: false,
                 notes: `Thu dùm từ giao hàng ${typedDelivery.fullCode}`,

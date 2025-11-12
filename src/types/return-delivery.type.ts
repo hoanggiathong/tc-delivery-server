@@ -1,5 +1,6 @@
 import { IReturnDeliveryImage } from '@/models/delivery.model';
 import { PaymentType } from '.';
+import { IReturnDeliveryAndMoneyDeliveryResponse } from './money-delivery.type';
 
 export interface IReturnDeliveryListRequest {
   startDate: string;
@@ -78,6 +79,7 @@ export interface IReturnDeliveryResponse {
     name: string;
   };
   nameProductAndAdditionalInformation?: string;
+  moneyDelivery?: IReturnDeliveryAndMoneyDeliveryResponse;
 }
 
 export interface IReturnDeliveryLeanPopulated {
@@ -128,6 +130,7 @@ export interface IReturnDeliveryLeanPopulated {
     username: string;
     name: string;
   };
+  moneyDelivery?: IReturnDeliveryAndMoneyDeliveryResponse;
 }
 
 export interface IReturnDeliveryUpdateItem {
