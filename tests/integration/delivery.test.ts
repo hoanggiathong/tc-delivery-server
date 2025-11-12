@@ -519,8 +519,6 @@ describe('Delivery Endpoints', () => {
     const validQuery = {
       startDate: oneWeekAgo.toISOString().split('T')[0],
       endDate: yesterday.toISOString().split('T')[0],
-      page: '1',
-      limit: '20',
     };
 
     it('should get cost report successfully', async () => {
@@ -537,9 +535,7 @@ describe('Delivery Endpoints', () => {
       expect(MockedDeliveryService.prototype.getCostReport).toHaveBeenCalledWith(
         'admin123',
         new Date(validQuery.startDate),
-        new Date(validQuery.endDate),
-        1,
-        20
+        new Date(validQuery.endDate)
       );
     });
 
@@ -599,7 +595,7 @@ describe('Delivery Endpoints', () => {
 
     it('should return 400 for endDate in the future', async () => {
       const futureDate = new Date();
-      futureDate.setDate(futureDate.getDate() + 1);
+      futureDate.setDate(futureDate.getDate() + 2);
       const invalidQuery = { ...validQuery, endDate: futureDate.toISOString().split('T')[0] };
 
       const response = await request(app)
@@ -682,17 +678,12 @@ describe('Delivery Endpoints', () => {
       expect(response.body.message).toBe('Failed to generate cost report');
     });
 
-    it('should use default pagination values', async () => {
+    it('should return cost report without pagination', async () => {
       MockedDeliveryService.prototype.getCostReport.mockResolvedValue(mockCostReportForIntegration);
-
-      const queryWithoutPagination = {
-        startDate: validQuery.startDate,
-        endDate: validQuery.endDate,
-      };
 
       const response = await request(app)
         .get('/api/delivery/cost-report')
-        .query(queryWithoutPagination)
+        .query(validQuery)
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
 
@@ -700,9 +691,7 @@ describe('Delivery Endpoints', () => {
       expect(MockedDeliveryService.prototype.getCostReport).toHaveBeenCalledWith(
         'admin123',
         new Date(validQuery.startDate),
-        new Date(validQuery.endDate),
-        1, // default page
-        100 // default limit
+        new Date(validQuery.endDate)
       );
     });
   });

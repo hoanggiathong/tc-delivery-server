@@ -306,94 +306,7 @@ export interface IFrequentCustomersResponse {
 }
 
 // Cost Report Interfaces
-export interface IDeliveryCostReportSummary {
-  totalDeliveries: number;
-  totalCost: number;
-  totalHomeDeliveryCost: number;
-  totalItemCost: number;
-  totalItemValue: number;
-  totalCollectCost: number;
-  totalCollectForCustomer: number;
-  totalCollectForCustomerCost: number;
-  totalRevenue: number; // Tổng thu (totalCost của tất cả deliveries) - backward compatibility
-  totalActualRevenue: number; // Tổng thực thu (bao gồm cả tiền thu dùm)
-
-  // Phân loại theo paymentType
-  normalPaymentCount: number;
-  normalPaymentAmount: number;
-  debtPaymentCount: number;
-  debtPaymentAmount: number;
-  freePaymentCount: number;
-
-  // Thống kê
-  averageCostPerDelivery: number;
-  averageItemValue: number;
-}
-
-export interface IDeliveryReportItem {
-  id: string;
-  code: string;
-  date: Date;
-  sender: {
-    name: string;
-    phone: string;
-  };
-  receiver: {
-    name: string;
-    phone: string;
-  };
-  toRoute: {
-    id: string;
-    code: string;
-    name: string;
-  };
-
-  // Chi tiết chi phí
-  cost: number;
-  homeDeliveryCost?: number;
-  carryCost?: number;
-  homeDeliveryCostTotal?: number;
-  vehicleType?: VehicleType | null;
-  itemCost: number;
-  itemValue: number;
-  collectCost: number;
-  collectForCustomer: number;
-  collectForCustomerCost: number;
-  totalCost: number;
-  actualRevenue: number;
-  paymentType?: PaymentType;
-  notes?: string;
-}
-
-export interface IDeliveryCostReportPagination {
-  currentPage: number;
-  totalPages: number;
-  totalRecords: number;
-  limit: number;
-  hasNextPage: boolean;
-  hasPrevPage: boolean;
-}
-
-export interface IDeliveryCostReportFilter {
-  dateRange: {
-    from: Date;
-    to: Date;
-  };
-  fromRoute: {
-    id: string;
-    code: string;
-    name: string;
-    address: string;
-  };
-}
-
-export interface IDeliveryCostReport {
-  summary: IDeliveryCostReportSummary;
-  deliveries: IDeliveryReportItem[];
-  pagination: IDeliveryCostReportPagination;
-}
-
-// Today Report Interfaces (simplified, no pagination)
+// Today Report Interfaces (used for both today-report and cost-report)
 export interface ITodayDeliverySummary {
   totalDeliveries: number; // Total number of deliveries (count by delivery count)
   totalQuantity: number; // Total quantity (sum of all delivery quantities)
@@ -404,6 +317,22 @@ export interface ITodayDeliverySummary {
   totalCollectForCustomer: number; // Total collect for customer amount
   totalCollectForCustomerCost: number; // Total collect for customer cost (thu dùm)
   date: string; // YYYY-MM-DD format
+
+  // Optional fields for cost report (with date range)
+  totalHomeDeliveryCost?: number;
+  totalItemValue?: number;
+  totalRevenue?: number; // Backward compatibility - same as totalCost
+
+  // Payment type breakdowns (optional for cost report)
+  normalPaymentCount?: number;
+  normalPaymentAmount?: number;
+  debtPaymentCount?: number;
+  debtPaymentAmount?: number;
+  freePaymentCount?: number;
+
+  // Averages (optional for cost report)
+  averageCostPerDelivery?: number;
+  averageItemValue?: number;
 }
 
 export interface ITodayDeliveryItem {

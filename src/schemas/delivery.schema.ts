@@ -221,34 +221,36 @@ export const deliveryCostReportSchema = z
     query: z.object({
       startDate: z
         .string()
-        .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid start date in ISO format')
-        .transform(val => new Date(val))
-        .refine(val => {
-          const oneMonthAgo = new Date();
-          oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-          return val >= oneMonthAgo;
-        }, 'Start date cannot be more than 1 month in the past'),
+        .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
+        .transform(val => new Date(val)),
       endDate: z
         .string()
-        .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid end date in ISO format')
+        .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
         .transform(val => new Date(val))
-        .refine(val => val <= new Date(), 'End date cannot be in the future'),
-      page: z
-        .string()
-        .optional()
-        .transform(val => (val ? parseInt(val) : 1))
-        .refine(val => val >= 1, 'Page must be greater than 0'),
-      limit: z
-        .string()
-        .optional()
-        .transform(val => (val ? parseInt(val) : 100))
-        .refine(val => val >= 1 && val <= 100, 'Limit must be between 1 and 100'),
+        .refine(val => {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const endDate = new Date(val);
+          endDate.setHours(0, 0, 0, 0);
+          return endDate <= today;
+        }, 'End date cannot be in the future'),
     }),
   })
   .refine(data => data.query.startDate <= data.query.endDate, {
     message: 'Start date must be before or equal to end date',
     path: ['query', 'startDate'],
-  });
+  })
+  .refine(
+    data => {
+      const diffTime = Math.abs(data.query.endDate.getTime() - data.query.startDate.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays <= 30;
+    },
+    {
+      message: 'Date range cannot exceed 30 days',
+      path: ['query', 'endDate'],
+    }
+  );
 
 export type CreateDeliveryRequest = z.infer<typeof createDeliverySchema>['body'];
 export type UpdateDeliveryRequest = z.infer<typeof updateDeliverySchema>['body'];

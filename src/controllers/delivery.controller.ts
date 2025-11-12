@@ -1429,7 +1429,8 @@ export class DeliveryController {
    * @swagger
    * /api/delivery/cost-report:
    *   get:
-   *     summary: Get cost report for deliveries with date range filtering and pagination
+   *     summary: Get cost report for all deliveries within date range (max 30 days, Vietnam timezone)
+   *     description: Returns all deliveries from user's selected route within the specified date range (Vietnam time UTC+7). No pagination - all matching records are returned. Date range cannot exceed 30 days. Dates are interpreted as Vietnam timezone and automatically converted to UTC for database queries.
    *     tags: [Delivery]
    *     security:
    *       - bearerAuth: []
@@ -1440,7 +1441,7 @@ export class DeliveryController {
    *         schema:
    *           type: string
    *           format: date
-   *         description: Start date for filtering (ISO format). Cannot be more than 1 month in the past.
+   *         description: Start date in YYYY-MM-DD format (Vietnam timezone). Will query from 00:00:00 Vietnam time. Date range cannot exceed 30 days.
    *         example: "2024-01-01"
    *       - in: query
    *         name: endDate
@@ -1448,23 +1449,11 @@ export class DeliveryController {
    *         schema:
    *           type: string
    *           format: date
-   *         description: End date for filtering (ISO format). Cannot be in the future.
+   *         description: End date in YYYY-MM-DD format (Vietnam timezone). Will query until 23:59:59 Vietnam time. Cannot be in the future. Date range cannot exceed 30 days.
    *         example: "2024-01-31"
-   *       - in: query
-   *         name: page
-   *         schema:
-   *           type: integer
-   *           default: 1
-   *         description: Page number for pagination
-   *       - in: query
-   *         name: limit
-   *         schema:
-   *           type: integer
-   *           default: 20
-   *         description: Number of records per page
    *     responses:
    *       200:
-   *         description: Cost report retrieved successfully
+   *         description: Cost report retrieved successfully with all deliveries in date range
    *         content:
    *           application/json:
    *             schema:
@@ -1472,27 +1461,56 @@ export class DeliveryController {
    *               properties:
    *                 success:
    *                   type: boolean
+   *                   example: true
    *                 message:
    *                   type: string
+   *                   example: "Cost report retrieved successfully"
    *                 data:
    *                   type: object
    *                   properties:
    *                     summary:
    *                       type: object
-   *                       description: Summary statistics for the deliveries
+   *                       description: Summary statistics for all deliveries in the date range
+   *                       properties:
+   *                         totalDeliveries:
+   *                           type: number
+   *                           example: 150
+   *                         totalCost:
+   *                           type: number
+   *                           example: 5000000
+   *                         totalActualRevenue:
+   *                           type: number
+   *                           example: 5500000
+   *                         normalPaymentCount:
+   *                           type: number
+   *                           example: 140
+   *                         debtPaymentCount:
+   *                           type: number
+   *                           example: 10
    *                     deliveries:
    *                       type: array
-   *                       description: List of deliveries with cost details
-   *                     pagination:
-   *                       type: object
-   *                       description: Pagination information
-   *                     filter:
-   *                       type: object
-   *                       description: Applied filter information
+   *                       description: Complete list of all deliveries with cost details (sorted by date descending)
+   *                       items:
+   *                         type: object
+   *                     totalRecords:
+   *                       type: number
+   *                       description: Total number of records returned
+   *                       example: 150
    *       400:
-   *         description: Validation error, invalid date range, or user has no selected route
+   *         description: Validation error (date range > 30 days, invalid dates) or user has no selected route
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Date range cannot exceed 30 days"
    *       401:
-   *         description: Unauthorized
+   *         description: Unauthorized - missing or invalid authentication token
    */
   getCostReport = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
@@ -1506,16 +1524,10 @@ export class DeliveryController {
       }
 
       // Get query parameters from validated request
-      const { startDate, endDate, page, limit } = req.query as unknown as DeliveryCostReportQuery;
+      const { startDate, endDate } = req.query as unknown as DeliveryCostReportQuery;
 
-      // Call service to get cost report
-      const report = await this.deliveryService.getCostReport(
-        req.user.userId,
-        startDate,
-        endDate,
-        page,
-        limit
-      );
+      // Call service to get cost report (no pagination - returns all records)
+      const report = await this.deliveryService.getCostReport(req.user.userId, startDate, endDate);
 
       const response: ApiResponse = {
         success: true,
@@ -1535,7 +1547,7 @@ export class DeliveryController {
 
       // Determine appropriate status code
       let statusCode = 500;
-      if (message.includes('selected route')) {
+      if (message.includes('selected route') || message.includes('Date range')) {
         statusCode = 400;
       }
 

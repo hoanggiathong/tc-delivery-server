@@ -14,9 +14,6 @@ import {
   IDeliveryLeanPopulated,
   INextCodeResponse,
   IFrequentCustomer,
-  IDeliveryCostReport,
-  IDeliveryReportItem,
-  IDeliveryCostReportSummary,
   ITodayDeliveryReport,
   ITodayDeliverySummary,
   ITodayDeliveryItem,
@@ -25,6 +22,7 @@ import {
 import { ICustomer, CustomerType } from '@/models/customer.model';
 import Logger from '@/utils/logger';
 import { PaymentType } from '@/types';
+import { getStartOfDayVietnam, getEndOfDayVietnam, convertVietnamToUTC } from '@/utils/date.utils';
 import { TYPE_DELIVERY_CUSTOMER } from '@/const/customer.const';
 
 export class DeliveryService {
@@ -816,44 +814,34 @@ export class DeliveryService {
   }
 
   /**
-   * Get cost report for deliveries with filtering and pagination
+   * Get cost report for deliveries with date range filtering (max 30 days)
    */
   async getCostReport(
     userId: string,
     startDate: Date,
-    endDate: Date,
-    page: number = 1,
-    limit: number = 20
-  ): Promise<IDeliveryCostReport> {
+    endDate: Date
+  ): Promise<ITodayDeliveryReport> {
     try {
-      // Get user's selected route information
       const userRouteInfo = await this.userService.getUserSelectedRoute(userId);
       const selectedRouteId = userRouteInfo.selectedRouteId;
 
-      // Get the selected route information
       const fromRoute = await Route.findById(selectedRouteId).lean();
       if (!fromRoute) {
         throw new Error('Selected route not found');
       }
 
-      // Use provided date range
-      const dateRange = {
-        from: startDate,
-        to: endDate,
-      };
+      const startOfDay = getStartOfDayVietnam(startDate);
+      const endOfDay = getEndOfDayVietnam(endDate);
+      const startDateUTC = convertVietnamToUTC(startOfDay);
+      const endDateUTC = convertVietnamToUTC(endOfDay);
 
-      // Calculate skip for pagination
-      const skip = (page - 1) * limit;
-
-      // Build aggregation pipeline for deliveries
       const pipeline: PipelineStage[] = [
-        // Match by fromRoute and date range
         {
           $match: {
             fromRoute: new Types.ObjectId(selectedRouteId),
             createdAt: {
-              $gte: dateRange.from,
-              $lte: dateRange.to,
+              $gte: startDateUTC,
+              $lte: endDateUTC,
             },
           },
         },
@@ -891,7 +879,13 @@ export class DeliveryService {
           $project: {
             _id: 1,
             code: 1,
+            fullCode: 1,
+            subCode: 1,
+            name: 1,
+            nameProductAndAdditionalInformation: 1,
+            quantity: 1,
             createdAt: 1,
+            updatedAt: 1,
             sender: {
               name: '$senderData.name',
               phone: '$senderData.phone',
@@ -904,26 +898,31 @@ export class DeliveryService {
               id: '$toRouteData._id',
               code: '$toRouteData.code',
               name: '$toRouteData.name',
-              address: '$toRouteData.address',
             },
             cost: 1,
+            homeDelivery: 1,
             homeDeliveryCost: 1,
+            carryCost: 1,
+            homeDeliveryCostTotal: 1,
+            vehicleType: 1,
             itemCost: 1,
             itemValue: 1,
             collectCost: 1,
             collectForCustomer: 1,
             collectForCustomerCost: 1,
+            collectForCustomerNote: 1,
             totalCost: 1,
             actualRevenue: 1,
             paymentType: 1,
             notes: 1,
+            details: 1,
           },
         },
-        // Facet for pagination and data
+        // Facet for data and summary
         {
           $facet: {
-            // Get paginated data
-            data: [{ $sort: { createdAt: -1 } }, { $skip: skip }, { $limit: limit }],
+            // Get all data sorted by date descending
+            data: [{ $sort: { createdAt: -1 } }],
             // Get total count
             totalCount: [{ $count: 'count' }],
             // Get summary statistics
@@ -932,6 +931,7 @@ export class DeliveryService {
                 $group: {
                   _id: null,
                   totalDeliveries: { $sum: 1 },
+                  totalQuantity: { $sum: '$quantity' },
                   totalCost: { $sum: '$totalCost' },
                   totalActualRevenue: { $sum: '$actualRevenue' },
                   totalHomeDeliveryCost: { $sum: '$homeDeliveryCost' },
@@ -997,71 +997,57 @@ export class DeliveryService {
 
       // Extract results
       const deliveries = result[0]?.data || [];
-      const totalRecords = result[0]?.totalCount[0]?.count || 0;
       const summaryData = result[0]?.summary[0] || {};
 
-      // Calculate pagination info
-      const totalPages = Math.ceil(totalRecords / limit);
-      const hasNextPage = page < totalPages;
-      const hasPrevPage = page > 1;
+      // Transform deliveries to ITodayDeliveryItem format
+      const deliveryItems: ITodayDeliveryItem[] = deliveries.map((d: any) => ({
+        id: d._id.toString(),
+        code: d.code,
+        fullCode: d.fullCode,
+        subCode: d.subCode,
+        name: d.name,
+        nameProductAndAdditionalInformation: d.nameProductAndAdditionalInformation,
+        quantity: d.quantity,
+        sender: d.sender,
+        receiver: d.receiver,
+        toRoute: {
+          id: d.toRoute.id.toString(),
+          code: d.toRoute.code,
+          name: d.toRoute.name,
+        },
+        cost: d.cost,
+        homeDelivery: d.homeDelivery,
+        homeDeliveryCost: d.homeDeliveryCost,
+        itemCost: d.itemCost,
+        itemValue: d.itemValue,
+        collectCost: d.collectCost,
+        collectForCustomer: d.collectForCustomer,
+        collectForCustomerCost: d.collectForCustomerCost,
+        collectForCustomerNote: d.collectForCustomerNote,
+        totalCost: d.totalCost,
+        actualRevenue: d.actualRevenue,
+        paymentType: d.paymentType,
+        notes: d.notes,
+        details: d.details,
+        createdAt: d.createdAt,
+        updatedAt: d.updatedAt,
+      }));
 
-      // Transform deliveries to report items
-      const deliveryItems: IDeliveryReportItem[] = deliveries.map(
-        (d: {
-          _id: Types.ObjectId;
-          code: string;
-          createdAt: Date;
-          sender: { name: string; phone: string };
-          receiver: { name: string; phone: string };
-          toRoute: { id: Types.ObjectId; code: string; name: string; address: string };
-          cost: number;
-          homeDeliveryCost: number;
-          itemCost: number;
-          itemValue: number;
-          collectCost: number;
-          collectForCustomer: number;
-          collectForCustomerCost: number;
-          totalCost: number;
-          actualRevenue: number;
-          paymentType: 'debt' | 'free' | null;
-          notes?: string;
-        }) => ({
-          id: d._id.toString(),
-          code: d.code,
-          date: d.createdAt,
-          sender: d.sender,
-          receiver: d.receiver,
-          toRoute: {
-            id: d.toRoute.id.toString(),
-            code: d.toRoute.code,
-            name: d.toRoute.name,
-            address: d.toRoute.address,
-          },
-          cost: d.cost,
-          homeDeliveryCost: d.homeDeliveryCost,
-          itemCost: d.itemCost,
-          itemValue: d.itemValue,
-          collectCost: d.collectCost,
-          collectForCustomer: d.collectForCustomer,
-          collectForCustomerCost: d.collectForCustomerCost,
-          totalCost: d.totalCost,
-          actualRevenue: d.actualRevenue,
-          paymentType: d.paymentType,
-          notes: d.notes,
-        })
-      );
-
-      const summary: IDeliveryCostReportSummary = {
+      const summary: ITodayDeliverySummary = {
         totalDeliveries: summaryData.totalDeliveries || 0,
+        totalQuantity: summaryData.totalQuantity || 0,
         totalCost: summaryData.totalCost || 0,
-        totalHomeDeliveryCost: summaryData.totalHomeDeliveryCost || 0,
+        totalActualRevenue: summaryData.totalActualRevenue || 0,
         totalItemCost: summaryData.totalItemCost || 0,
-        totalItemValue: summaryData.totalItemValue || 0,
         totalCollectCost: summaryData.totalCollectCost || 0,
         totalCollectForCustomer: summaryData.totalCollectForCustomer || 0,
         totalCollectForCustomerCost: summaryData.totalCollectForCustomerCost || 0,
-        totalRevenue: summaryData.totalCost || 0,
-        totalActualRevenue: summaryData.totalActualRevenue || 0,
+        date: startDate.toISOString().split('T')[0], // Format: YYYY-MM-DD
+
+        // Optional fields for cost report
+        totalHomeDeliveryCost: summaryData.totalHomeDeliveryCost || 0,
+        totalItemValue: summaryData.totalItemValue || 0,
+        totalRevenue: summaryData.totalCost || 0, // Backward compatibility
 
         normalPaymentCount: summaryData.normalPaymentCount || 0,
         normalPaymentAmount: summaryData.normalPaymentAmount || 0,
@@ -1079,17 +1065,18 @@ export class DeliveryService {
             : 0,
       };
 
-      // Build final response
-      const report: IDeliveryCostReport = {
+      // Build final response with routeInfo
+      const report: ITodayDeliveryReport = {
         summary,
         deliveries: deliveryItems,
-        pagination: {
-          currentPage: page,
-          totalPages,
-          totalRecords,
-          limit,
-          hasNextPage,
-          hasPrevPage,
+        routeInfo: {
+          route: {
+            id: fromRoute._id.toString(),
+            code: fromRoute.code,
+            name: fromRoute.name,
+          },
+          routeCode: fromRoute.code,
+          routeName: fromRoute.name,
         },
       };
 
@@ -1100,8 +1087,6 @@ export class DeliveryService {
         userId,
         startDate,
         endDate,
-        page,
-        limit,
       });
       throw error;
     }
