@@ -811,17 +811,19 @@ export class ReturnDeliveriesService {
     return delivery.returnDeliveryImages || [];
   }
 
-  async updateNoteReturnDelivery(deliveryId: string, note: string): Promise<void> {
-    const delivery = await Delivery.findById(deliveryId).select('notes').lean();
+  async updateNoteReturnDelivery(deliveryId: string, note: string): Promise<string> {
+    const delivery = await Delivery.findById(deliveryId).select('notes');
 
     if (!delivery) {
-      return;
+      throw new Error('Delivery not found');
     }
 
-    const newNote = note + delivery.notes;
+    const existingNotes = typeof delivery.notes === 'string' ? delivery.notes : '';
+    const newNote = existingNotes ? `${note}, ${existingNotes}` : note;
 
-    delivery.notes = newNote;
-    await delivery.save();
+    await Delivery.updateOne({ _id: deliveryId }, { $set: { notes: newNote } });
+
+    return newNote;
   }
 
   async uploadImagesReturnDelivery(
