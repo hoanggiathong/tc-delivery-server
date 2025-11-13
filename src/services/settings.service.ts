@@ -477,7 +477,15 @@ export class SettingsService {
         throw new AppError('No shipping rate found for the given amount', 404);
       }
 
-      return isExpress ? rate.expressShippingFee : rate.regularShippingFee;
+      if (isExpress) {
+        return rate.expressShippingFeeUnit === '%'
+          ? Math.ceil(((rate.expressShippingFee / 100) * amount) / 1000) * 1000
+          : rate.expressShippingFee;
+      } else {
+        return rate.regularShippingFeeUnit === '%'
+          ? Math.ceil(((rate.regularShippingFee / 100) * amount) / 1000) * 1000
+          : rate.regularShippingFee;
+      }
     } catch (error) {
       if (error instanceof AppError) {
         throw error;

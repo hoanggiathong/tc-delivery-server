@@ -4,6 +4,7 @@ import {
   PHONE_NUMBER_PATTERN,
   OBJECTID_PATTERN,
   VALIDATION_MESSAGES,
+  DATE_YYYY_MM_DD_PATTERN,
 } from '@/utils/validation-patterns';
 import { VehicleType } from '@/models/delivery.model';
 
@@ -221,11 +222,11 @@ export const deliveryCostReportSchema = z
     query: z.object({
       startDate: z
         .string()
-        .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
+        .regex(DATE_YYYY_MM_DD_PATTERN, VALIDATION_MESSAGES.DATE_YYYY_MM_DD)
         .transform(val => new Date(val)),
       endDate: z
         .string()
-        .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
+        .regex(DATE_YYYY_MM_DD_PATTERN, VALIDATION_MESSAGES.DATE_YYYY_MM_DD)
         .transform(val => new Date(val))
         .refine(val => {
           const today = new Date();

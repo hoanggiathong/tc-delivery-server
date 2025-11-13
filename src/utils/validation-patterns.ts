@@ -18,6 +18,9 @@ export const DELIVERY_IDENTIFIER_PATTERN = /^\d{10}[A-Z]([A-Z]|\d+)[A-Z]([A-Z]|\
 // Money delivery identifier validation patterns
 export const MONEY_DELIVERY_IDENTIFIER_PATTERN = /^\d{10}[A-Z]([A-Z]|\d+)[A-Z]([A-Z]|\d+)-T$/;
 
+// Date validation pattern (YYYY-MM-DD format)
+export const DATE_YYYY_MM_DD_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
 // Parsing patterns for delivery services
 export const DELIVERY_IDENTIFIER_PARSE_PATTERN = /^(\d{10})([A-Z]([A-Z]|\d+))([A-Z]([A-Z]|\d+))$/;
 export const MONEY_DELIVERY_IDENTIFIER_PARSE_PATTERN =
@@ -33,6 +36,7 @@ export const VALIDATION_MESSAGES = {
     'Invalid delivery identifier format. Expected: codeFromRouteToRoute (e.g., 0907250001T4T1, 0907250001ABCD)',
   MONEY_DELIVERY_IDENTIFIER:
     'Invalid money delivery identifier format. Expected: codeFromRouteToRoute-T (e.g., 0907250001T4T1-T, 0907250001ABCD-T)',
+  DATE_YYYY_MM_DD: 'Date must be in YYYY-MM-DD format',
 } as const;
 
 // Pattern explanations for documentation
