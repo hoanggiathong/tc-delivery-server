@@ -473,4 +473,5 @@ export interface IReturnDeliveryAndMoneyDeliveryResponse {
   _id: string;
   sendMoneyAmount: number;
   sendCost: number;
+  type: MoneyDeliveryType;
 }
