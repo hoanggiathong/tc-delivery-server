@@ -414,6 +414,7 @@ export class ReturnDeliveriesService {
                   _id: moneyDelivery._id.toString(),
                   sendMoneyAmount: moneyDelivery.sendMoneyAmount,
                   sendCost: moneyDelivery.sendCost,
+                  type: moneyDelivery.type,
                 }
               : undefined,
           };
@@ -519,6 +520,7 @@ export class ReturnDeliveriesService {
                   _id: moneyDelivery._id.toString(),
                   sendMoneyAmount: moneyDelivery.sendMoneyAmount,
                   sendCost: moneyDelivery.sendCost,
+                  type: moneyDelivery.type,
                 }
               : undefined,
           };
@@ -635,6 +637,7 @@ export class ReturnDeliveriesService {
                   _id: moneyDelivery._id.toString(),
                   sendMoneyAmount: moneyDelivery.sendMoneyAmount,
                   sendCost: moneyDelivery.sendCost,
+                  type: moneyDelivery.type,
                 }
               : undefined,
           };
