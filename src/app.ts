@@ -12,12 +12,18 @@ import Logger from '@/utils/logger';
 const app = express();
 
 // Security middleware
-app.use(helmet());
 app.use(cors());
 
 // Debug middleware (only in development)
 if (process.env.NODE_ENV === 'development') {
   app.use(debugMiddleware);
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    })
+  );
+} else {
+  app.use(helmet());
 }
 
 // Body parsing middleware
