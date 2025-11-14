@@ -16,6 +16,7 @@ import {
   mockMoneyDeliveryNextCodeResponseForIntegration,
   mockUpdatedMoneyDeliveryForIntegration,
   mockMoneyDeliveryWithAlphaRoutes,
+  mockMoneyDeliveryCostReportForIntegration,
 } from '../mocks';
 
 // Mock MoneyDeliveryService at module level
@@ -775,6 +776,218 @@ describe('Money Delivery API Integration Tests', () => {
 
       expect(response.body.success).toBe(false);
       expect(response.body.message).toBe('To route not found');
+    });
+  });
+
+  describe('GET /api/money-deliveries/cost-report', () => {
+    const validQuery = {
+      startDate: '2024-01-15',
+      endDate: '2024-01-15',
+    };
+
+    it('should get cost report successfully', async () => {
+      MockedMoneyDeliveryService.prototype.getCostReport.mockResolvedValue(
+        mockMoneyDeliveryCostReportForIntegration
+      );
+
+      const response = await request(app)
+        .get('/api/money-deliveries/cost-report')
+        .query(validQuery)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.summary).toBeDefined();
+      expect(response.body.data.moneyDeliveries).toBeDefined();
+      expect(response.body.data.filter).toBeDefined();
+      expect(MockedMoneyDeliveryService.prototype.getCostReport).toHaveBeenCalledWith(
+        testUser._id,
+        new Date(validQuery.startDate),
+        new Date(validQuery.endDate)
+      );
+    });
+
+    it('should return empty report when no money deliveries found', async () => {
+      const emptyReport = {
+        summary: {
+          totalMoneyDeliveries: 0,
+          totalSendMoneyAmount: 0,
+          totalSendCost: 0,
+          totalCost: 0,
+          regularTransferCount: 0,
+          regularTransferAmount: 0,
+          expressTransferCount: 0,
+          expressTransferAmount: 0,
+          freeTransferCount: 0,
+          freeTransferAmount: 0,
+          averageSendAmountPerDelivery: 0,
+          averageCostPerDelivery: 0,
+        },
+        moneyDeliveries: [],
+        filter: mockMoneyDeliveryCostReportForIntegration.filter,
+      };
+
+      MockedMoneyDeliveryService.prototype.getCostReport.mockResolvedValue(emptyReport);
+
+      const response = await request(app)
+        .get('/api/money-deliveries/cost-report')
+        .query(validQuery)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.summary.totalMoneyDeliveries).toBe(0);
+      expect(response.body.data.moneyDeliveries).toEqual([]);
+    });
+
+    it('should return 400 for invalid date format', async () => {
+      const response = await request(app)
+        .get('/api/money-deliveries/cost-report')
+        .query({
+          startDate: '01-15-2024',
+          endDate: '01-15-2024',
+        })
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Validation');
+    });
+
+    it('should return 400 for missing required parameters', async () => {
+      const response = await request(app)
+        .get('/api/money-deliveries/cost-report')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Validation');
+    });
+
+    it('should return 400 when startDate is after endDate', async () => {
+      const response = await request(app)
+        .get('/api/money-deliveries/cost-report')
+        .query({
+          startDate: '2024-01-20',
+          endDate: '2024-01-15',
+        })
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Validation');
+    });
+
+    it('should return 400 when date range exceeds 30 days', async () => {
+      const response = await request(app)
+        .get('/api/money-deliveries/cost-report')
+        .query({
+          startDate: '2024-01-01',
+          endDate: '2024-02-15',
+        })
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Validation');
+    });
+
+    it('should return 400 when end date is in the future', async () => {
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 2);
+      const futureDateStr = futureDate.toISOString().split('T')[0];
+
+      const response = await request(app)
+        .get('/api/money-deliveries/cost-report')
+        .query({
+          startDate: '2024-01-15',
+          endDate: futureDateStr,
+        })
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Validation');
+    });
+
+    it('should return 401 for unauthenticated request', async () => {
+      const response = await request(app)
+        .get('/api/money-deliveries/cost-report')
+        .query(validQuery)
+        .expect(401);
+
+      expect(response.body.success).toBe(false);
+    });
+
+    it('should handle service errors', async () => {
+      MockedMoneyDeliveryService.prototype.getCostReport.mockRejectedValue(
+        new Error('Database error')
+      );
+
+      const response = await request(app)
+        .get('/api/money-deliveries/cost-report')
+        .query(validQuery)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(500);
+
+      expect(response.body.success).toBe(false);
+    });
+
+    it('should verify date is interpreted as Vietnam timezone', async () => {
+      MockedMoneyDeliveryService.prototype.getCostReport.mockResolvedValue(
+        mockMoneyDeliveryCostReportForIntegration
+      );
+
+      await request(app)
+        .get('/api/money-deliveries/cost-report')
+        .query(validQuery)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      const callArgs = MockedMoneyDeliveryService.prototype.getCostReport.mock.calls[0];
+      const startDate = callArgs[1] as Date;
+      const endDate = callArgs[2] as Date;
+
+      expect(startDate).toBeInstanceOf(Date);
+      expect(endDate).toBeInstanceOf(Date);
+      expect(startDate.getTime()).toBeLessThanOrEqual(endDate.getTime());
+    });
+
+    it('should accept today as end date', async () => {
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+
+      MockedMoneyDeliveryService.prototype.getCostReport.mockResolvedValue(
+        mockMoneyDeliveryCostReportForIntegration
+      );
+
+      const response = await request(app)
+        .get('/api/money-deliveries/cost-report')
+        .query({
+          startDate: todayStr,
+          endDate: todayStr,
+        })
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+    });
+
+    it('should return report with all transfer types', async () => {
+      MockedMoneyDeliveryService.prototype.getCostReport.mockResolvedValue(
+        mockMoneyDeliveryCostReportForIntegration
+      );
+
+      const response = await request(app)
+        .get('/api/money-deliveries/cost-report')
+        .query(validQuery)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.summary.regularTransferCount).toBeDefined();
+      expect(response.body.data.summary.expressTransferCount).toBeDefined();
+      expect(response.body.data.summary.freeTransferCount).toBeDefined();
     });
   });
 });

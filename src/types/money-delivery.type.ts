@@ -297,7 +297,7 @@ export interface ITodayMoneyDeliveryReport {
   };
 }
 
-// Cost Report Interfaces (with pagination)
+// Cost Report Interfaces
 export interface IMoneyDeliveryCostReportSummary {
   totalMoneyDeliveries: number;
   totalSendMoneyAmount: number;
@@ -345,15 +345,6 @@ export interface IMoneyDeliveryReportItem {
   deliveryId?: string;
 }
 
-export interface IMoneyDeliveryCostReportPagination {
-  currentPage: number;
-  totalPages: number;
-  totalRecords: number;
-  limit: number;
-  hasNextPage: boolean;
-  hasPrevPage: boolean;
-}
-
 export interface IMoneyDeliveryCostReportFilter {
   dateRange: {
     from: Date;
@@ -370,7 +361,6 @@ export interface IMoneyDeliveryCostReportFilter {
 export interface IMoneyDeliveryCostReport {
   summary: IMoneyDeliveryCostReportSummary;
   moneyDeliveries: IMoneyDeliveryReportItem[];
-  pagination: IMoneyDeliveryCostReportPagination;
   filter: IMoneyDeliveryCostReportFilter;
 }
 

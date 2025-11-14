@@ -4,6 +4,7 @@ import {
   PHONE_NUMBER_PATTERN,
   OBJECTID_PATTERN,
   VALIDATION_MESSAGES,
+  DATE_YYYY_MM_DD_PATTERN,
 } from '@/utils/validation-patterns';
 import {
   MoneyDeliveryStatus,
@@ -168,34 +169,36 @@ export const moneyDeliveryCostReportSchema = z
     query: z.object({
       startDate: z
         .string()
-        .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid start date in ISO format')
-        .transform(val => new Date(val))
-        .refine(val => {
-          const oneMonthAgo = new Date();
-          oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-          return val >= oneMonthAgo;
-        }, 'Start date cannot be more than 1 month in the past'),
+        .regex(DATE_YYYY_MM_DD_PATTERN, VALIDATION_MESSAGES.DATE_YYYY_MM_DD)
+        .transform(val => new Date(val)),
       endDate: z
         .string()
-        .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid end date in ISO format')
+        .regex(DATE_YYYY_MM_DD_PATTERN, VALIDATION_MESSAGES.DATE_YYYY_MM_DD)
         .transform(val => new Date(val))
-        .refine(val => val <= new Date(), 'End date cannot be in the future'),
-      page: z
-        .string()
-        .optional()
-        .transform(val => (val ? parseInt(val) : 1))
-        .refine(val => val >= 1, 'Page must be greater than 0'),
-      limit: z
-        .string()
-        .optional()
-        .transform(val => (val ? parseInt(val) : 100))
-        .refine(val => val >= 1 && val <= 100, 'Limit must be between 1 and 100'),
+        .refine(val => {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const endDate = new Date(val);
+          endDate.setHours(0, 0, 0, 0);
+          return endDate <= today;
+        }, 'End date cannot be in the future'),
     }),
   })
   .refine(data => data.query.startDate <= data.query.endDate, {
     message: 'Start date must be before or equal to end date',
     path: ['query', 'startDate'],
-  });
+  })
+  .refine(
+    data => {
+      const diffTime = Math.abs(data.query.endDate.getTime() - data.query.startDate.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays <= 30;
+    },
+    {
+      message: 'Date range cannot exceed 30 days',
+      path: ['query', 'endDate'],
+    }
+  );
 
 export type CreateMoneyDeliveryRequest = z.infer<typeof createMoneyDeliverySchema>['body'];
 export type UpdateMoneyDeliveryRequest = z.infer<typeof updateMoneyDeliverySchema>['body'];

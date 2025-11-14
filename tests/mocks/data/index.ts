@@ -59,6 +59,7 @@ export {
   mockMoneyDeliveryNextCodeResponseForIntegration,
   mockUpdatedMoneyDeliveryForIntegration,
   mockMoneyDeliveryWithAlphaRoutes,
+  mockMoneyDeliveryCostReportForIntegration,
 } from './money-deliveries';
 
 export {

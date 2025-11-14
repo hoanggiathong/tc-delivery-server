@@ -5,7 +5,7 @@ import {
   UpdateMoneyDeliveryRequest,
   UpdateMoneyDeliveryByFullCodeRequest,
 } from '@/schemas/money-delivery.schema';
-import { AuthRequest, ApiResponse } from '@/types';
+import { AuthRequest, ApiResponse, DateRangeQuery } from '@/types';
 import logger from '@/utils/logger';
 
 export class MoneyDeliveryController {
@@ -1355,7 +1355,8 @@ export class MoneyDeliveryController {
    * @swagger
    * /api/money-deliveries/cost-report:
    *   get:
-   *     summary: Get money delivery cost report with date range filtering and pagination
+   *     summary: Get money delivery cost report within date range (max 30 days, Vietnam timezone)
+   *     description: Returns all money deliveries from user's selected route within the specified date range (Vietnam time UTC+7). No pagination - all matching records are returned. Date range cannot exceed 30 days. Dates are interpreted as Vietnam timezone and automatically converted to UTC for database queries.
    *     tags: [Money Delivery]
    *     security:
    *       - bearerAuth: []
@@ -1365,36 +1366,17 @@ export class MoneyDeliveryController {
    *         required: true
    *         schema:
    *           type: string
-   *           format: date-time
-   *           example: "2024-01-01T00:00:00.000Z"
-   *         description: Start date for the report (ISO format)
+   *           format: date
+   *         description: Start date in YYYY-MM-DD format (Vietnam timezone). Will query from 00:00:00 Vietnam time. Date range cannot exceed 30 days.
+   *         example: "2024-01-01"
    *       - in: query
    *         name: endDate
    *         required: true
    *         schema:
    *           type: string
-   *           format: date-time
-   *           example: "2024-01-31T23:59:59.999Z"
-   *         description: End date for the report (ISO format)
-   *       - in: query
-   *         name: page
-   *         required: false
-   *         schema:
-   *           type: integer
-   *           minimum: 1
-   *           default: 1
-   *           example: 1
-   *         description: Page number for pagination
-   *       - in: query
-   *         name: limit
-   *         required: false
-   *         schema:
-   *           type: integer
-   *           minimum: 1
-   *           maximum: 100
-   *           default: 100
-   *           example: 50
-   *         description: Number of items per page
+   *           format: date
+   *         description: End date in YYYY-MM-DD format (Vietnam timezone). Will query until 23:59:59 Vietnam time. Cannot be in the future. Date range cannot exceed 30 days.
+   *         example: "2024-01-31"
    *     responses:
    *       200:
    *         description: Money delivery cost report retrieved successfully
@@ -1527,27 +1509,6 @@ export class MoneyDeliveryController {
    *                           notes:
    *                             type: string
    *                             example: "Ghi chú chuyển tiền"
-   *                     pagination:
-   *                       type: object
-   *                       properties:
-   *                         currentPage:
-   *                           type: integer
-   *                           example: 1
-   *                         totalPages:
-   *                           type: integer
-   *                           example: 3
-   *                         totalRecords:
-   *                           type: integer
-   *                           example: 150
-   *                         limit:
-   *                           type: integer
-   *                           example: 50
-   *                         hasNextPage:
-   *                           type: boolean
-   *                           example: true
-   *                         hasPrevPage:
-   *                           type: boolean
-   *                           example: false
    *                     filter:
    *                       type: object
    *                       properties:
@@ -1625,15 +1586,12 @@ export class MoneyDeliveryController {
         return;
       }
 
-      const { startDate, endDate, page, limit } = req.query as any;
+      const { startDate, endDate } = req.query as unknown as DateRangeQuery;
 
-      // Call service to get cost report
       const report = await this.moneyDeliveryService.getCostReport(
         req.user.userId,
         startDate,
-        endDate,
-        page,
-        limit
+        endDate
       );
 
       const response: ApiResponse = {

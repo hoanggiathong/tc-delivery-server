@@ -12,6 +12,7 @@ import { UserService } from '@/services/user.service';
 import Logger from '@/utils/logger';
 import { isUndefined, omitBy } from 'lodash';
 import { PipelineStage, Types } from 'mongoose';
+import { getStartOfDayVietnam, getEndOfDayVietnam, convertVietnamToUTC } from '@/utils/date.utils';
 
 import { TYPE_DELIVERY_CUSTOMER } from '@/const/customer.const';
 import { CustomerType } from '@/models/customer.model';
@@ -832,40 +833,34 @@ export class MoneyDeliveryService {
   }
 
   /**
-   * Get money delivery cost report with date range filtering and pagination
+   * Get money delivery cost report with date range filtering (max 30 days)
    */
   async getCostReport(
     userId: string,
     startDate: Date,
-    endDate: Date,
-    page: number = 1,
-    limit: number = 100
+    endDate: Date
   ): Promise<IMoneyDeliveryCostReport> {
     try {
-      // Get user's selected route information
       const userRouteInfo = await this.userService.getUserSelectedRoute(userId);
       const selectedRouteId = userRouteInfo.selectedRouteId;
 
-      // Get route information
       const route = await Route.findById(selectedRouteId).select('_id code name address').lean();
       if (!route) {
         throw new Error('Selected route not found');
       }
 
-      const skip = (page - 1) * limit;
+      const startOfDay = getStartOfDayVietnam(startDate);
+      const endOfDay = getEndOfDayVietnam(endDate);
+      const startDateUTC = convertVietnamToUTC(startOfDay);
+      const endDateUTC = convertVietnamToUTC(endOfDay);
 
-      // Set end date to end of day
-      const endOfDay = new Date(endDate);
-      endOfDay.setHours(23, 59, 59, 999);
-
-      // Aggregation pipeline for money deliveries cost report
       const pipeline: PipelineStage[] = [
         {
           $match: {
             fromRoute: new Types.ObjectId(selectedRouteId),
             createdAt: {
-              $gte: startDate,
-              $lte: endOfDay,
+              $gte: startDateUTC,
+              $lte: endDateUTC,
             },
           },
         },
@@ -953,7 +948,6 @@ export class MoneyDeliveryService {
                 },
               },
             ],
-            totalCount: [{ $count: 'count' }],
             data: [
               {
                 $project: {
@@ -984,8 +978,6 @@ export class MoneyDeliveryService {
                 },
               },
               { $sort: { createdAt: -1 } },
-              { $skip: skip },
-              { $limit: limit },
             ],
           },
         },
@@ -1009,7 +1001,6 @@ export class MoneyDeliveryService {
         averageSendAmountPerDelivery: 0,
         averageFeePerDelivery: 0,
       };
-      const totalCount = result[0]?.totalCount[0]?.count || 0;
       const dataItems = result[0]?.data || [];
 
       // Format summary
@@ -1046,26 +1037,13 @@ export class MoneyDeliveryService {
         notes: item.notes,
       }));
 
-      // Calculate pagination
-      const totalPages = Math.ceil(totalCount / limit);
-      const hasNextPage = page < totalPages;
-      const hasPrevPage = page > 1;
-
       return {
         summary,
         moneyDeliveries,
-        pagination: {
-          currentPage: page,
-          totalPages,
-          totalRecords: totalCount,
-          limit,
-          hasNextPage,
-          hasPrevPage,
-        },
         filter: {
           dateRange: {
             from: startDate,
-            to: endOfDay,
+            to: endDate,
           },
           fromRoute: {
             id: route._id.toString(),
@@ -1081,8 +1059,6 @@ export class MoneyDeliveryService {
         userId,
         startDate,
         endDate,
-        page,
-        limit,
       });
       throw new Error('Failed to generate cost report');
     }

@@ -345,3 +345,119 @@ export const mockFrequentCustomersForIntegration = {
     },
   },
 };
+
+/**
+ * Mock cost report for money delivery integration tests
+ */
+export const mockMoneyDeliveryCostReportForIntegration = {
+  summary: {
+    totalMoneyDeliveries: 3,
+    totalSendMoneyAmount: 6000000,
+    totalSendCost: 180000,
+    totalCost: 180000,
+    regularTransferCount: 2,
+    regularTransferAmount: 3000000,
+    expressTransferCount: 1,
+    expressTransferAmount: 3000000,
+    freeTransferCount: 0,
+    freeTransferAmount: 0,
+    averageSendAmountPerDelivery: 2000000,
+    averageCostPerDelivery: 60000,
+  },
+  moneyDeliveries: [
+    {
+      id: 'moneyDelivery1',
+      code: '2401150001',
+      date: new Date('2024-01-15'),
+      sender: {
+        name: 'Nguyen Van A',
+        phone: '+84901234567',
+      },
+      receiver: {
+        name: 'Tran Thi B',
+        phone: '+84912345678',
+      },
+      toRoute: {
+        id: 'route456',
+        code: 'T2',
+        name: 'Test Route 2',
+        address: '456 Street',
+      },
+      sendMoneyAmount: 2000000,
+      sendCost: 60000,
+      totalCost: 60000,
+      transferType: TransferType.REGULAR,
+      isFree: false,
+      status: MoneyDeliveryStatus.WAITING,
+      type: MoneyDeliveryType.NORMAL,
+      notes: 'Regular transfer test 1',
+    },
+    {
+      id: 'moneyDelivery2',
+      code: '2401150002',
+      date: new Date('2024-01-15'),
+      sender: {
+        name: 'Le Van C',
+        phone: '+84923456789',
+      },
+      receiver: {
+        name: 'Pham Thi D',
+        phone: '+84934567890',
+      },
+      toRoute: {
+        id: 'route456',
+        code: 'T2',
+        name: 'Test Route 2',
+        address: '456 Street',
+      },
+      sendMoneyAmount: 1000000,
+      sendCost: 30000,
+      totalCost: 30000,
+      transferType: TransferType.REGULAR,
+      isFree: false,
+      status: MoneyDeliveryStatus.DONE,
+      type: MoneyDeliveryType.COLLECT,
+      deliveryId: 'delivery123',
+      notes: 'Collect transfer test',
+    },
+    {
+      id: 'moneyDelivery3',
+      code: '2401150003',
+      date: new Date('2024-01-15'),
+      sender: {
+        name: 'Hoang Van E',
+        phone: '+84945678901',
+      },
+      receiver: {
+        name: 'Nguyen Thi F',
+        phone: '+84956789012',
+      },
+      toRoute: {
+        id: 'route456',
+        code: 'T2',
+        name: 'Test Route 2',
+        address: '456 Street',
+      },
+      sendMoneyAmount: 3000000,
+      sendCost: 90000,
+      totalCost: 90000,
+      transferType: TransferType.EXPRESS,
+      isFree: false,
+      status: MoneyDeliveryStatus.WAITING,
+      type: MoneyDeliveryType.NORMAL,
+      notes: 'Express transfer test',
+    },
+  ],
+  filter: {
+    dateRange: {
+      from: new Date('2024-01-15'),
+      to: new Date('2024-01-15'),
+    },
+    fromRoute: {
+      id: 'route123',
+      code: 'T1',
+      name: 'Test Route 1',
+      address: '123 Street',
+    },
+  },
+};
