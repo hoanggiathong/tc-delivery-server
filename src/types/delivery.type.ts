@@ -355,6 +355,7 @@ export interface ITodayDeliveryItem {
     id: string;
     code: string;
     name: string;
+    address?: string;
   };
   cost: number;
   homeDelivery?: string;
