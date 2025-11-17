@@ -5,6 +5,8 @@ import { SettingsService } from './settings.service';
 import { MoneyDeliveryService } from './money-delivery.service';
 import { IMoneyDeliveryResponse } from '@/types/money-delivery.type';
 import { IReturnMoneyDeliveryQuery } from '@/types/return-money-deliveries.type';
+import { ReturnDeliveriesService } from './return-deliveries.service';
+import { getStartOfDayVietnam, getEndOfDayVietnam, convertVietnamToUTC } from '@/utils/date.utils';
 
 export class ReturnMoneyDeliveriesService {
   private customerService: CustomerService;
@@ -12,12 +14,14 @@ export class ReturnMoneyDeliveriesService {
   private settingsService: SettingsService;
   private userService: UserService;
   private moneyDeliveryService: MoneyDeliveryService;
+  private returnDeliveryService: ReturnDeliveriesService;
   constructor() {
     this.customerService = new CustomerService();
     this.routeService = new RouteService();
     this.settingsService = new SettingsService();
     this.userService = new UserService();
     this.moneyDeliveryService = new MoneyDeliveryService();
+    this.returnDeliveryService = new ReturnDeliveriesService();
   }
 
   async getListReturnMoneyDeliveriesTypeCollectStatusDone(
@@ -25,18 +29,25 @@ export class ReturnMoneyDeliveriesService {
     userId: string
   ): Promise<IMoneyDeliveryResponse[]> {
     const { startDate, endDate } = query;
-    const start = new Date(String(startDate));
-    start.setHours(0, 0, 0, 0);
 
-    const end = new Date(String(endDate));
-    end.setHours(23, 59, 59, 999);
+    // Convert string dates to Date objects
+    const startDateObj = new Date(String(startDate));
+    const endDateObj = new Date(String(endDate));
+
+    // Get start of day and end of day in Vietnam timezone
+    const startOfDay = getStartOfDayVietnam(startDateObj);
+    const endOfDay = getEndOfDayVietnam(endDateObj);
+
+    // Convert Vietnam time to UTC for database queries
+    const startDateUTC = convertVietnamToUTC(startOfDay);
+    const endDateUTC = convertVietnamToUTC(endOfDay);
 
     try {
       const moneyDeliveries =
         await this.moneyDeliveryService.getListReturnMoneyDeliveriesTypeCollectStatusDone(
           userId,
-          start,
-          end
+          startDateUTC,
+          endDateUTC
         );
 
       return moneyDeliveries;

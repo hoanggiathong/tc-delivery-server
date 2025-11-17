@@ -415,6 +415,7 @@ export class ReturnDeliveriesService {
                   sendMoneyAmount: moneyDelivery.sendMoneyAmount,
                   sendCost: moneyDelivery.sendCost,
                   type: moneyDelivery.type,
+                  status: moneyDelivery.status,
                 }
               : undefined,
           };
@@ -521,6 +522,7 @@ export class ReturnDeliveriesService {
                   sendMoneyAmount: moneyDelivery.sendMoneyAmount,
                   sendCost: moneyDelivery.sendCost,
                   type: moneyDelivery.type,
+                  status: moneyDelivery.status,
                 }
               : undefined,
           };
@@ -638,6 +640,7 @@ export class ReturnDeliveriesService {
                   sendMoneyAmount: moneyDelivery.sendMoneyAmount,
                   sendCost: moneyDelivery.sendCost,
                   type: moneyDelivery.type,
+                  status: moneyDelivery.status,
                 }
               : undefined,
           };

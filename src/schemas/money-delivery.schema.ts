@@ -261,3 +261,59 @@ export const updateMoneyDeliveryByFullCodeSchema = z.object({
 export type UpdateMoneyDeliveryByFullCodeRequest = z.infer<
   typeof updateMoneyDeliveryByFullCodeSchema
 >;
+
+// Schema for upload images money delivery
+export const uploadMoneyDeliveryImagesSchema = z.object({
+  body: z.object({
+    moneyDeliveryId: z
+      .string()
+      .min(1, 'Money delivery ID is required')
+      .regex(OBJECTID_PATTERN, 'Invalid ObjectId format'),
+    // Multiple images support
+    images: z
+      .array(
+        z.object({
+          index: z.coerce.number().min(1).max(5),
+          rotate: z.coerce
+            .number()
+            .refine(val => [0, 90, 180, 270].includes(val), {
+              message: 'Rotate must be 0, 90, 180, or 270',
+            })
+            .default(0),
+        })
+      )
+      .max(5, 'Maximum 5 images allowed')
+      .optional(),
+  }),
+});
+
+// Schema for get detail images money delivery
+export const getDetailImagesMoneyDeliverySchema = z.object({
+  params: z.object({
+    moneyDeliveryId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format'),
+  }),
+});
+
+// Schema for update data images money delivery
+export const updateDataImagesMoneyDeliverySchema = z.object({
+  params: z.object({
+    moneyDeliveryId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format'),
+  }),
+  body: z.object({
+    images: z
+      .array(
+        z.object({
+          id: z.string().optional(),
+          url: z.string().min(1, 'URL is required'),
+          rotate: z.coerce
+            .number()
+            .refine(val => [0, 90, 180, 270].includes(val), {
+              message: 'Rotate must be 0, 90, 180, or 270',
+            })
+            .default(0),
+        })
+      )
+      .max(5, 'Maximum 5 images allowed')
+      .optional(),
+  }),
+});

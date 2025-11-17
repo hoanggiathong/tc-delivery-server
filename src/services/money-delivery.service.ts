@@ -1,5 +1,6 @@
 import {
   IMoneyDelivery,
+  IMoneyDeliveryImage,
   MoneyDelivery,
   MoneyDeliveryStatus,
   MoneyDeliveryType,
@@ -13,7 +14,9 @@ import Logger from '@/utils/logger';
 import { isUndefined, omitBy } from 'lodash';
 import { PipelineStage, Types } from 'mongoose';
 import { getStartOfDayVietnam, getEndOfDayVietnam, convertVietnamToUTC } from '@/utils/date.utils';
-
+import path from 'path';
+import fs from 'fs';
+import { generateVersionedUrl, extractBasePath } from '@/utils/image-url.utils';
 import { TYPE_DELIVERY_CUSTOMER } from '@/const/customer.const';
 import { CustomerType } from '@/models/customer.model';
 import {
@@ -1212,6 +1215,13 @@ export class MoneyDeliveryService {
     }
   }
 
+  /**
+   * Get list of return money deliveries with type COLLECT and status DONE
+   * @param userId - User ID to get selected route
+   * @param startDate - Start date in UTC (already converted from Vietnam timezone)
+   * @param endDate - End date in UTC (already converted from Vietnam timezone)
+   * @returns Array of money delivery responses
+   */
   async getListReturnMoneyDeliveriesTypeCollectStatusDone(
     userId: string,
     startDate: Date,
@@ -1250,5 +1260,120 @@ export class MoneyDeliveryService {
       }
       throw new Error('Failed to get list return money deliveries type collect status done');
     }
+  }
+
+  async uploadImagesMoneyDelivery(
+    moneyDeliveryId: string,
+    imagesData?: Array<{
+      index: number;
+      buffer: Buffer;
+      originalName: string;
+      rotate: number;
+    }>
+  ): Promise<IMoneyDeliveryImage[]> {
+    // Find the money delivery
+    const moneyDelivery = await MoneyDelivery.findById(moneyDeliveryId);
+    if (!moneyDelivery) {
+      throw new Error('Money delivery not found');
+    }
+
+    const uploadedImages = await this.handleUploadImagesMoneyDelivery(moneyDeliveryId, imagesData);
+
+    // Update money delivery with new images
+    moneyDelivery.images = uploadedImages;
+    await moneyDelivery.save();
+
+    return uploadedImages;
+  }
+
+  async handleUploadImagesMoneyDelivery(
+    id: string,
+    imagesData?: Array<{
+      index: number;
+      buffer: Buffer;
+      originalName: string;
+      rotate: number;
+    }>
+  ): Promise<IMoneyDeliveryImage[]> {
+    // Find the money delivery
+    const moneyDelivery = await MoneyDelivery.findById(id);
+    if (!moneyDelivery) {
+      throw new Error(`Money delivery with ID ${id} not found`);
+    }
+
+    // If no images provided, just return the money delivery
+    if (!imagesData || imagesData.length === 0) {
+      return moneyDelivery.images || [];
+    }
+
+    if (moneyDelivery.images && moneyDelivery.images.length > 0) {
+      for (const image of moneyDelivery.images) {
+        // Extract base path without query parameters for file system operations
+        const basePath = extractBasePath(image.url);
+        const imagePath = path.join('public', basePath);
+        if (fs.existsSync(imagePath)) {
+          fs.unlinkSync(imagePath);
+        }
+      }
+    }
+
+    // Handle multiple images upload
+    const uploadedImages: IMoneyDeliveryImage[] = [];
+
+    for (const imageData of imagesData) {
+      const { index, buffer, originalName, rotate } = imageData;
+
+      // Create directory if not exists
+      const uploadDir = path.join('public', 'uploads', 'money-deliveries', id);
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+
+      // Generate unique filename
+      const timestamp = Date.now();
+      const fileExtension = path.extname(originalName);
+      const fileName = `image_${index}_${timestamp}${fileExtension}`;
+      const filePath = path.join(uploadDir, fileName);
+
+      // Save file
+      fs.writeFileSync(filePath, buffer);
+
+      // Create relative path for database
+      const relativePath = path.join('uploads', 'money-deliveries', id, fileName);
+
+      uploadedImages.push({
+        url: generateVersionedUrl(relativePath),
+        rotate: rotate || 0,
+      });
+    }
+
+    return uploadedImages;
+  }
+
+  async getDetailImagesMoneyDelivery(moneyDeliveryId: string): Promise<IMoneyDeliveryImage[]> {
+    const moneyDelivery = await MoneyDelivery.findById(moneyDeliveryId).select('images').lean();
+
+    if (!moneyDelivery) {
+      return [];
+    }
+
+    return moneyDelivery.images || [];
+  }
+
+  async updateDataImagesMoneyDelivery(
+    moneyDeliveryId: string,
+    images: IMoneyDeliveryImage[]
+  ): Promise<IMoneyDeliveryImage[]> {
+    const moneyDelivery = await MoneyDelivery.findById(moneyDeliveryId);
+
+    if (!moneyDelivery) {
+      throw new Error('Money delivery not found');
+    }
+
+    // Update images data
+    moneyDelivery.images = images;
+    await moneyDelivery.save();
+
+    return moneyDelivery.images;
   }
 }
