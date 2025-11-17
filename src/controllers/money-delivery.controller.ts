@@ -5,7 +5,7 @@ import {
   UpdateMoneyDeliveryRequest,
   UpdateMoneyDeliveryByFullCodeRequest,
 } from '@/schemas/money-delivery.schema';
-import { AuthRequest, ApiResponse, DateRangeQuery } from '@/types';
+import { AuthRequest, ApiResponse, AuthRequestWithFileUploads, DateRangeQuery } from '@/types';
 import logger from '@/utils/logger';
 
 export class MoneyDeliveryController {
@@ -1842,6 +1842,460 @@ export class MoneyDeliveryController {
         statusCode = 404;
       } else if (message.includes('validation') || message.includes('invalid')) {
         statusCode = 400;
+      }
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(statusCode).json(response);
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/money-deliveries/upload-images:
+   *   put:
+   *     summary: Upload images to money delivery
+   *     tags: [Money Delivery]
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         multipart/form-data:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - moneyDeliveryId
+   *             properties:
+   *               moneyDeliveryId:
+   *                 type: string
+   *                 pattern: '^[0-9a-fA-F]{24}$'
+   *                 example: '507f1f77bcf86cd799439011'
+   *                 description: Money delivery ID
+   *               # Multiple images support (up to 5 images)
+   *               images:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *                   format: binary
+   *                 maxItems: 5
+   *                 description: Array of image files to upload (optional, max 5)
+   *               images[0][index]:
+   *                 type: integer
+   *                 minimum: 1
+   *                 maximum: 5
+   *                 example: 1
+   *                 description: Index for first image (1-5)
+   *               images[0][rotate]:
+   *                 type: integer
+   *                 enum: [0, 90, 180, 270]
+   *                 default: 0
+   *                 description: Rotation angle for first image
+   *               images[1][index]:
+   *                 type: integer
+   *                 minimum: 1
+   *                 maximum: 5
+   *                 example: 2
+   *                 description: Index for second image (1-5)
+   *               images[1][rotate]:
+   *                 type: integer
+   *                 enum: [0, 90, 180, 270]
+   *                 default: 0
+   *                 description: Rotation angle for second image
+   *     responses:
+   *       200:
+   *         description: Images uploaded successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: 'Images uploaded successfully'
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     moneyDelivery:
+   *                       type: object
+   *       400:
+   *         description: Validation error or business logic error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   examples:
+   *                     validation:
+   *                       value: 'Validation failed: Money delivery ID is required'
+   *                     not_found:
+   *                       value: 'Money delivery not found'
+   *       401:
+   *         description: Unauthorized - Invalid or missing token
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: 'Unauthorized'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: 'Internal server error'
+   */
+  uploadImagesMoneyDelivery = async (
+    req: AuthRequestWithFileUploads,
+    res: Response
+  ): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { moneyDeliveryId, images } = req.body;
+      const filesObject = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+
+      // Prepare image data for multiple images
+      let imagesData: Array<{
+        index: number;
+        buffer: Buffer;
+        originalName: string;
+        rotate: number;
+      }> = [];
+
+      // Handle multiple images
+      if (
+        filesObject &&
+        !Array.isArray(filesObject) &&
+        filesObject.images &&
+        filesObject.images.length > 0 &&
+        images
+      ) {
+        imagesData = filesObject.images.map((file, idx) => ({
+          index: images[idx]?.index || idx + 1,
+          buffer: file.buffer,
+          originalName: file.originalname,
+          rotate: images[idx]?.rotate || 0,
+        }));
+      }
+
+      const result = await this.moneyDeliveryService.uploadImagesMoneyDelivery(
+        moneyDeliveryId,
+        imagesData.length > 0 ? imagesData : undefined
+      );
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Images uploaded successfully',
+        data: result,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      console.error('Upload images error:', error);
+
+      let statusCode = 400;
+      const message = error instanceof Error ? error.message : 'Failed to upload images';
+
+      // Handle specific error cases
+      if (message === 'Money delivery not found') {
+        statusCode = 404;
+      }
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(statusCode).json(response);
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/money-deliveries/get-detail-images-money-delivery/{moneyDeliveryId}:
+   *   get:
+   *     summary: Get detail images money delivery
+   *     tags: [Money Delivery]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: moneyDeliveryId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Money delivery ID
+   *     responses:
+   *       200:
+   *         description: Get detail images money delivery successful
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "get detail images money delivery successful"
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       url:
+   *                         type: string
+   *                         example: "/uploads/money-deliveries/507f1f77bcf86cd799439011/image_1_1734567890123.jpg?v=1734567890123"
+   *                       rotate:
+   *                         type: number
+   *                         enum: [0, 90, 180, 270]
+   *                         example: 0
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "get detail images money delivery failed"
+   */
+  getDetailImagesMoneyDelivery = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { moneyDeliveryId } = req.params;
+      const result = await this.moneyDeliveryService.getDetailImagesMoneyDelivery(moneyDeliveryId);
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'get detail images money delivery successful',
+        data: result,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      console.error('get detail images money delivery error:', error);
+
+      const message =
+        error instanceof Error ? error.message : 'get detail images money delivery failed';
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(500).json(response);
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/money-deliveries/update-data-images-money-delivery/{moneyDeliveryId}:
+   *   put:
+   *     summary: Update data images money delivery (update data only, no file upload)
+   *     tags: [Money Delivery]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: moneyDeliveryId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Money delivery ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               images:
+   *                 type: array
+   *                 maxItems: 5
+   *                 items:
+   *                   type: object
+   *                   properties:
+   *                     id:
+   *                       type: string
+   *                       description: Image ID (optional)
+   *                       example: "507f1f77bcf86cd799439011"
+   *                     url:
+   *                       type: string
+   *                       description: Image URL
+   *                       example: "/uploads/money-deliveries/507f1f77bcf86cd799439011/image_1_1734567890123.jpg?v=1734567890123"
+   *                     rotate:
+   *                       type: number
+   *                       enum: [0, 90, 180, 270]
+   *                       default: 0
+   *                       description: Rotation angle
+   *                       example: 0
+   *                 description: Array of image objects (max 5)
+   *           examples:
+   *             updateImages:
+   *               summary: Update images data
+   *               value:
+   *                 images:
+   *                   - id: "507f1f77bcf86cd799439011"
+   *                     url: "/uploads/money-deliveries/507f1f77bcf86cd799439011/image_1_1734567890123.jpg?v=1734567890123"
+   *                     rotate: 90
+   *                   - id: "507f1f77bcf86cd799439012"
+   *                     url: "/uploads/money-deliveries/507f1f77bcf86cd799439011/image_2_1734567890124.jpg?v=1734567890124"
+   *                     rotate: 0
+   *     responses:
+   *       200:
+   *         description: Update data images money delivery successful
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "update data images money delivery successful"
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       url:
+   *                         type: string
+   *                       rotate:
+   *                         type: number
+   *       400:
+   *         description: Validation error or business logic error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   examples:
+   *                     validation:
+   *                       value: 'Validation failed: Money delivery ID is required'
+   *                     not_found:
+   *                       value: 'Money delivery not found'
+   *       401:
+   *         description: Unauthorized - Invalid or missing token
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: 'Unauthorized'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: 'update data images money delivery failed'
+   */
+  updateDataImagesMoneyDelivery = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { moneyDeliveryId } = req.params;
+      const { images } = req.body;
+
+      // Convert images array to IMoneyDeliveryImage[] format (remove id field if present)
+      const imagesData: Array<{ url: string; rotate: number }> =
+        images?.map((img: { id?: string; url: string; rotate: number }) => ({
+          url: img.url,
+          rotate: img.rotate || 0,
+        })) || [];
+
+      const result = await this.moneyDeliveryService.updateDataImagesMoneyDelivery(
+        moneyDeliveryId,
+        imagesData
+      );
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'update data images money delivery successful',
+        data: result,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      console.error('update data images money delivery error:', error);
+
+      let statusCode = 400;
+      const message =
+        error instanceof Error ? error.message : 'update data images money delivery failed';
+
+      // Handle specific error cases
+      if (message === 'Money delivery not found') {
+        statusCode = 404;
       }
 
       const response: ApiResponse = {

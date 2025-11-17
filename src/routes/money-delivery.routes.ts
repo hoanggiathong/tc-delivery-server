@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { MoneyDeliveryController } from '@/controllers/money-delivery.controller';
 import { validate } from '@/middlewares/validation.middleware';
 import { authenticateToken } from '@/middlewares/auth.middleware';
+import { uploadMultipleImages } from '@/middlewares/upload.middleware';
 import {
   createMoneyDeliverySchema,
   updateMoneyDeliverySchema,
@@ -11,6 +12,9 @@ import {
   frequentMoneyCustomersSchema,
   moneyDeliveryCostReportSchema,
   updateMoneyDeliveryByFullCodeSchema,
+  uploadMoneyDeliveryImagesSchema,
+  getDetailImagesMoneyDeliverySchema,
+  updateDataImagesMoneyDeliverySchema,
 } from '@/schemas/money-delivery.schema';
 
 const router = Router();
@@ -224,6 +228,28 @@ router.put(
   '/code/:fullCode',
   validate(updateMoneyDeliveryByFullCodeSchema),
   moneyDeliveryController.updateMoneyDeliveryByFullCode
+);
+
+// Upload images route (must be before /:id to avoid conflicts)
+router.put(
+  '/upload-images',
+  uploadMultipleImages,
+  validate(uploadMoneyDeliveryImagesSchema),
+  moneyDeliveryController.uploadImagesMoneyDelivery
+);
+
+// Get detail images route (must be before /:id to avoid conflicts)
+router.get(
+  '/get-detail-images-money-delivery/:moneyDeliveryId',
+  validate(getDetailImagesMoneyDeliverySchema),
+  moneyDeliveryController.getDetailImagesMoneyDelivery
+);
+
+// Update data images route (must be before /:id to avoid conflicts)
+router.put(
+  '/update-data-images-money-delivery/:moneyDeliveryId',
+  validate(updateDataImagesMoneyDeliverySchema),
+  moneyDeliveryController.updateDataImagesMoneyDelivery
 );
 
 router.get(

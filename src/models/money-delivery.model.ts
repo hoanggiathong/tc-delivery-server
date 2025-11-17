@@ -16,6 +16,11 @@ export enum TransferType {
   EXPRESS = 'express',
 }
 
+export interface IMoneyDeliveryImage {
+  url: string;
+  rotate: number;
+}
+
 export interface IMoneyDelivery extends Document {
   _id: string;
   code: string;
@@ -34,6 +39,7 @@ export interface IMoneyDelivery extends Document {
   status: MoneyDeliveryStatus;
   type: MoneyDeliveryType;
   deliveryId?: mongoose.Types.ObjectId;
+  images?: IMoneyDeliveryImage[];
   createdByUser: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -129,6 +135,28 @@ const moneyDeliverySchema = new Schema<IMoneyDelivery>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: [true, 'Created by user is required'],
+    },
+    images: {
+      type: [
+        {
+          url: {
+            type: String,
+            required: true,
+          },
+          rotate: {
+            type: Number,
+            default: 0,
+            enum: [0, 90, 180, 270],
+          },
+        },
+      ],
+      default: [],
+      validate: {
+        validator: function (images: IMoneyDeliveryImage[]) {
+          return images.length <= 5;
+        },
+        message: 'Maximum 5 images allowed',
+      },
     },
   },
   {
