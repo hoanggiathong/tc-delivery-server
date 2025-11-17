@@ -1215,6 +1215,13 @@ export class MoneyDeliveryService {
     }
   }
 
+  /**
+   * Get list of return money deliveries with type COLLECT and status DONE
+   * @param userId - User ID to get selected route
+   * @param startDate - Start date in UTC (already converted from Vietnam timezone)
+   * @param endDate - End date in UTC (already converted from Vietnam timezone)
+   * @returns Array of money delivery responses
+   */
   async getListReturnMoneyDeliveriesTypeCollectStatusDone(
     userId: string,
     startDate: Date,
