@@ -1203,6 +1203,28 @@ export class ReturnDeliveriesController {
    *                 enum: [0, 90, 180, 270]
    *                 default: 0
    *                 description: Rotation angle for first customer image
+   *               customerImages[1][index]:
+   *                 type: integer
+   *                 minimum: 1
+   *                 maximum: 5
+   *                 example: 2
+   *                 description: Index for second customer image (1-5)
+   *               customerImages[1][rotate]:
+   *                 type: integer
+   *                 enum: [0, 90, 180, 270]
+   *                 default: 0
+   *                 description: Rotation angle for second customer image
+   *               customerImages[3][index]:
+   *                 type: integer
+   *                 minimum: 1
+   *                 maximum: 5
+   *                 example: 3
+   *                 description: Index for third customer image (1-5)
+   *               customerImages[3][rotate]:
+   *                 type: integer
+   *                 enum: [0, 90, 180, 270]
+   *                 default: 0
+   *                 description: Rotation angle for third customer images
    *               # Return delivery images support (up to 5 images)
    *               returnDeliveryImages:
    *                 type: array
@@ -1222,17 +1244,6 @@ export class ReturnDeliveriesController {
    *                 enum: [0, 90, 180, 270]
    *                 default: 0
    *                 description: Rotation angle for first return delivery image
-   *               returnDeliveryImages[1][index]:
-   *                 type: integer
-   *                 minimum: 1
-   *                 maximum: 5
-   *                 example: 2
-   *                 description: Index for second return delivery image (1-5)
-   *               returnDeliveryImages[1][rotate]:
-   *                 type: integer
-   *                 enum: [0, 90, 180, 270]
-   *                 default: 0
-   *                 description: Rotation angle for second return delivery image
    *           examples:
    *             withImages:
    *               summary: Update with return delivery images

@@ -29,7 +29,7 @@ import { SettingsService } from './settings.service';
 import Logger from '@/utils/logger';
 import path from 'path';
 import fs from 'fs';
-import { generateVersionedUrl } from '@/utils/image-url.utils';
+import { generateVersionedUrl, extractBasePath } from '@/utils/image-url.utils';
 
 export class ReturnDeliveriesService {
   private customerService: CustomerService;
@@ -1051,7 +1051,8 @@ export class ReturnDeliveriesService {
       // Update field note with string 'Đã trả hàng + now date' + old value of note
       const now = new Date();
       const returnDateString = `Đã trả hàng ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
-      delivery.notes = `${returnDateString}, ${delivery.notes}`;
+      const existingNotes = typeof delivery.notes === 'string' ? delivery.notes : '';
+      delivery.notes = existingNotes ? `${returnDateString}, ${existingNotes}` : returnDateString;
       delivery.updatedAt = now;
       delivery.dateReturn = now;
       await delivery.save();
@@ -1070,7 +1071,13 @@ export class ReturnDeliveriesService {
         error: error instanceof Error ? error.message : error,
         deliveryId: updateData.deliveryId,
         customerId: updateData.customerId,
+        stack: error instanceof Error ? error.stack : undefined,
       });
+
+      // Re-throw the original error with its message for better debugging
+      if (error instanceof Error) {
+        throw error;
+      }
       throw new Error('update status return delivery with images failed');
     }
   }
@@ -1215,7 +1222,9 @@ export class ReturnDeliveriesService {
 
     if (delivery.returnDeliveryImages && delivery.returnDeliveryImages.length > 0) {
       for (const image of delivery.returnDeliveryImages) {
-        const imagePath = path.join('public', image.url);
+        // Extract base path without query parameters for file system operations
+        const basePath = extractBasePath(image.url);
+        const imagePath = path.join('public', basePath);
         if (fs.existsSync(imagePath)) {
           fs.unlinkSync(imagePath);
         }

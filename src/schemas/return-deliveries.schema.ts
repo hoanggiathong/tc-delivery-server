@@ -210,33 +210,67 @@ export const updateStatusWithImagesSchema = z.object({
     identityCardNumber: z.string().optional(),
     // Customer images
     customerImages: z
-      .array(
-        z.object({
-          index: z.coerce.number().min(1).max(5),
-          rotate: z.coerce
-            .number()
-            .refine(val => [0, 90, 180, 270].includes(val), {
-              message: 'Rotate must be 0, 90, 180, or 270',
+      .preprocess(
+        val => {
+          // Filter out undefined, null, or empty objects from array
+          if (!val || !Array.isArray(val)) {
+            return undefined;
+          }
+          return val.filter(
+            (item: unknown) =>
+              item !== null &&
+              item !== undefined &&
+              typeof item === 'object' &&
+              Object.keys(item).length > 0
+          );
+        },
+        z
+          .array(
+            z.object({
+              index: z.coerce.number().min(1).max(5),
+              rotate: z.coerce
+                .number()
+                .refine(val => [0, 90, 180, 270].includes(val), {
+                  message: 'Rotate must be 0, 90, 180, or 270',
+                })
+                .default(0),
             })
-            .default(0),
-        })
+          )
+          .max(5, 'Maximum 5 customer images allowed')
+          .optional()
       )
-      .max(5, 'Maximum 5 customer images allowed')
       .optional(),
     // Return delivery images
     returnDeliveryImages: z
-      .array(
-        z.object({
-          index: z.coerce.number().min(1).max(5),
-          rotate: z.coerce
-            .number()
-            .refine(val => [0, 90, 180, 270].includes(val), {
-              message: 'Rotate must be 0, 90, 180, or 270',
+      .preprocess(
+        val => {
+          // Filter out undefined, null, or empty objects from array
+          if (!val || !Array.isArray(val)) {
+            return undefined;
+          }
+          return val.filter(
+            (item: unknown) =>
+              item !== null &&
+              item !== undefined &&
+              typeof item === 'object' &&
+              Object.keys(item).length > 0
+          );
+        },
+        z
+          .array(
+            z.object({
+              index: z.coerce.number().min(1).max(5),
+              rotate: z.coerce
+                .number()
+                .refine(val => [0, 90, 180, 270].includes(val), {
+                  message: 'Rotate must be 0, 90, 180, or 270',
+                })
+                .default(0),
             })
-            .default(0),
-        })
+          )
+          .max(5, 'Maximum 5 return delivery images allowed')
+          .optional()
       )
-      .max(5, 'Maximum 5 return delivery images allowed')
       .optional(),
   }),
 });
