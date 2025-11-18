@@ -1204,6 +1204,7 @@ export class MoneyDeliveryService {
       const moneyDeliveries = await MoneyDelivery.find({
         toRoute: toRouteId,
         type: type,
+        status: MoneyDeliveryStatus.WAITING,
         createdAt: { $gte: startDate, $lte: endDate },
       });
       return moneyDeliveries;
@@ -1243,6 +1244,7 @@ export class MoneyDeliveryService {
           { path: 'fromRoute', select: '_id code name address phone createdAt updatedAt' },
           { path: 'toRoute', select: '_id code name address phone createdAt updatedAt' },
           { path: 'createdByUser', select: '_id username' },
+          { path: 'deliveryId', select: '_id code name createdAt updatedAt' },
         ])
         .sort({ createdAt: -1 })
         .lean();

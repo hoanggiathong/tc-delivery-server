@@ -43,6 +43,8 @@ export interface IMoneyDelivery extends Document {
   createdByUser: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
+  dateReturn?: Date;
+  contentReturn?: string;
 }
 
 const moneyDeliverySchema = new Schema<IMoneyDelivery>(
@@ -157,6 +159,14 @@ const moneyDeliverySchema = new Schema<IMoneyDelivery>(
         },
         message: 'Maximum 5 images allowed',
       },
+    },
+    dateReturn: {
+      type: Date,
+      default: null,
+    },
+    contentReturn: {
+      type: String,
+      default: null,
     },
   },
   {

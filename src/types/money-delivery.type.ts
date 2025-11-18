@@ -465,4 +465,6 @@ export interface IReturnDeliveryAndMoneyDeliveryResponse {
   sendCost: number;
   type: MoneyDeliveryType;
   status: MoneyDeliveryStatus;
+  dateReturn?: Date;
+  contentReturn?: string;
 }
