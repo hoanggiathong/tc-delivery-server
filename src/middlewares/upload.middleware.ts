@@ -35,3 +35,9 @@ export const uploadReturnDeliveryImagesFields = multer({
   { name: 'customerImages', maxCount: 5 },
   { name: 'returnDeliveryImages', maxCount: 5 },
 ]);
+
+export const uploadMoneyDeliveryImagesFields = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: fileFilter,
+}).fields([{ name: 'images', maxCount: 5 }]);

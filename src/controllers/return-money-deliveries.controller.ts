@@ -1,7 +1,8 @@
 import { ReturnMoneyDeliveriesService } from '@/services/return-money-deliveries.service';
-import { ApiResponse, AuthRequest, DateRangeQuery } from '@/types';
+import { ApiResponse, AuthRequest, AuthRequestWithFileUploads, DateRangeQuery } from '@/types';
 import { IReturnMoneyDeliveryQuery } from '@/types/return-money-deliveries.type';
 import { Response } from 'express';
+import Logger from '@/utils/logger';
 
 export class ReturnMoneyDeliveriesController {
   private returnMoneyDeliveriesService: ReturnMoneyDeliveriesService;
@@ -27,7 +28,7 @@ export class ReturnMoneyDeliveriesController {
    *           type: string
    *           format: date
    *         description: Start date in YYYY-MM-DD format (Vietnam timezone). Will query from 00:00:00 Vietnam time. Date range cannot exceed 30 days.
-   *         example: "2024-01-01"
+   *         example: "2025-10-01"
    *       - in: query
    *         name: endDate
    *         required: true
@@ -35,7 +36,7 @@ export class ReturnMoneyDeliveriesController {
    *           type: string
    *           format: date
    *         description: End date in YYYY-MM-DD format (Vietnam timezone). Will query until 23:59:59 Vietnam time. Cannot be in the future. Date range cannot exceed 30 days.
-   *         example: "2024-01-31"
+   *         example: "2025-10-31"
    *     responses:
    *       200:
    *         description: Get list return money deliveries type collect status done successful
@@ -129,7 +130,9 @@ export class ReturnMoneyDeliveriesController {
 
       res.status(200).json(response);
     } catch (error) {
-      console.error('Get list return money deliveries type collect status done error:', error);
+      Logger.error('Get list return money deliveries type collect status done error:', {
+        error: error instanceof Error ? error.message : error,
+      });
 
       const message =
         error instanceof Error
@@ -142,6 +145,188 @@ export class ReturnMoneyDeliveriesController {
       };
 
       res.status(500).json(response);
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/return-money-deliveries/update-status-with-images:
+   *   put:
+   *     summary: Update status of return money delivery with images
+   *     description: Updates the status of a money delivery to DONE and optionally uploads images. Updates notes with return date and sets dateReturn field.
+   *     tags: [Return Money Deliveries]
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         multipart/form-data:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - moneyDeliveryId
+   *             properties:
+   *               moneyDeliveryId:
+   *                 type: string
+   *                 example: "507f1f77bcf86cd799439011"
+   *                 description: Money delivery ID
+   *               contentReturn:
+   *                 type: string
+   *                 example: "Nội dung trả tiền"
+   *                 description: Content return (optional)
+   *               # Money delivery images support (up to 5 images)
+   *               images:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *                   format: binary
+   *                 maxItems: 5
+   *                 description: Array of money delivery image files (optional, max 5)
+   *               images[0][index]:
+   *                 type: integer
+   *                 minimum: 1
+   *                 maximum: 5
+   *                 example: 1
+   *                 description: Index for first image (1-5)
+   *               images[0][rotate]:
+   *                 type: integer
+   *                 enum: [0, 90, 180, 270]
+   *                 default: 0
+   *                 description: Rotation angle for first image
+   *     responses:
+   *       200:
+   *         description: Return money delivery status updated with images successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Return money delivery status updated with images successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     moneyDelivery:
+   *                       $ref: '#/components/schemas/MoneyDelivery'
+   *       400:
+   *         description: Validation error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Money delivery ID is required"
+   *       404:
+   *         description: Money delivery not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Money delivery with ID not found"
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Failed to update status with images"
+   */
+  updateStatusReturnMoneyDeliveryWithImages = async (
+    req: AuthRequestWithFileUploads,
+    res: Response
+  ): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { moneyDeliveryId, contentReturn, images } = req.body;
+      const filesObject = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+
+      // Prepare image data for money delivery images
+      let imagesData: Array<{
+        index: number;
+        buffer: Buffer;
+        originalName: string;
+        rotate: number;
+      }> = [];
+
+      // Handle money delivery images
+      if (
+        filesObject &&
+        !Array.isArray(filesObject) &&
+        filesObject.images &&
+        filesObject.images.length > 0 &&
+        images
+      ) {
+        imagesData = filesObject.images.map((file, idx) => ({
+          index: images[idx]?.index || idx + 1,
+          buffer: file.buffer,
+          originalName: file.originalname,
+          rotate: images[idx]?.rotate || 0,
+        }));
+      }
+
+      const result =
+        await this.returnMoneyDeliveriesService.updateStatusReturnMoneyDeliveryWithImages(
+          moneyDeliveryId,
+          contentReturn,
+          imagesData.length > 0 ? imagesData : undefined
+        );
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Return money delivery status updated with images successfully',
+        data: { moneyDelivery: result },
+      };
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Update status return money delivery with images error:', {
+        error: error instanceof Error ? error.message : error,
+      });
+
+      let statusCode = 400;
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Failed to update status return money delivery with images';
+
+      // Handle specific error cases
+      if (message.includes('not found')) {
+        statusCode = 404;
+      }
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+      res.status(statusCode).json(response);
     }
   };
 }

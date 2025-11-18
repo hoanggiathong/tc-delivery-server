@@ -416,6 +416,7 @@ export class ReturnDeliveriesService {
                   sendCost: moneyDelivery.sendCost,
                   type: moneyDelivery.type,
                   status: moneyDelivery.status,
+                  dateReturn: moneyDelivery.dateReturn,
                 }
               : undefined,
           };
@@ -523,6 +524,8 @@ export class ReturnDeliveriesService {
                   sendCost: moneyDelivery.sendCost,
                   type: moneyDelivery.type,
                   status: moneyDelivery.status,
+                  dateReturn: moneyDelivery.dateReturn,
+                  contentReturn: moneyDelivery.contentReturn,
                 }
               : undefined,
           };
@@ -641,6 +644,8 @@ export class ReturnDeliveriesService {
                   sendCost: moneyDelivery.sendCost,
                   type: moneyDelivery.type,
                   status: moneyDelivery.status,
+                  dateReturn: moneyDelivery.dateReturn,
+                  contentReturn: moneyDelivery.contentReturn,
                 }
               : undefined,
           };
