@@ -19,7 +19,7 @@ import {
   ITodayDeliveryItem,
   IDeliveryPopulated,
 } from '@/types/delivery.type';
-import { ICustomer, CustomerType } from '@/models/customer.model';
+import { ICustomer, CustomerType, Customer } from '@/models/customer.model';
 import Logger from '@/utils/logger';
 import { PaymentType } from '@/types';
 import { getStartOfDayVietnam, getEndOfDayVietnam, convertVietnamToUTC } from '@/utils/date.utils';
@@ -198,9 +198,6 @@ export class DeliveryService {
       data.toRouteId,
       CustomerType.DELIVERY
     );
-
-    // Update sender's relativeReceiver array
-    await this.customerService.addRelativeReceiver(sender._id.toString(), receiver._id.toString());
 
     // Validate fromRoute and toRoute exist
     const [fromRoute, toRoute] = await Promise.all([
@@ -757,58 +754,113 @@ export class DeliveryService {
     userId: string
   ): Promise<IFrequentCustomer[]> {
     try {
-      const receivers = await this.customerService.getFrequentReceivers(
-        senderIdentifier,
-        TYPE_DELIVERY_CUSTOMER.DELIVERY,
-        userId
-      );
+      // Get user's selected route
+      const userSelectedRouteId = await this.userService.getUserSelectedRouteId(userId);
 
-      if (receivers.length === 0) {
-        return [];
-      }
-
-      const sender = await this.customerService.getCustomerByPhoneAndType(
-        senderIdentifier,
-        TYPE_DELIVERY_CUSTOMER.DELIVERY
-      );
+      // Find sender by phone/name with type='delivery' and selected route
+      const sender = await Customer.findOne({
+        phone: senderIdentifier,
+        type: TYPE_DELIVERY_CUSTOMER.DELIVERY,
+        routeId: userSelectedRouteId,
+      }).lean();
 
       if (!sender) {
-        Logger.debug('Sender not found for frequent customers', { senderIdentifier });
+        Logger.debug('Sender not found for frequent customers', {
+          senderIdentifier,
+          userSelectedRouteId,
+        });
         return [];
       }
 
-      const routeIds = receivers.map(receiver => receiver.routeId);
-      const routes = await Route.find({ _id: { $in: routeIds } }).lean();
-      const routeMap = new Map(routes.map(route => [route._id.toString(), route]));
-
-      const frequentCustomers: IFrequentCustomer[] = receivers.map(receiver => {
-        const route = routeMap.get(receiver.routeId.toString());
-
-        if (!route) {
-          Logger.warn('Route not found for receiver', {
-            receiverId: receiver._id,
-            routeId: receiver.routeId,
-            senderIdentifier,
-          });
-        }
-
-        return {
-          senderName: sender.name,
-          senderPhone: sender.phone,
-          receiverName: receiver.name,
-          receiverPhone: receiver.phone,
-          toRoute: {
-            id: receiver.routeId.toString(),
-            code: route?.code || 'UNKNOWN',
-            name: route?.name || 'Unknown Route',
-            address: route?.address || 'Unknown Address',
+      // Aggregation to get 20 unique deliveries based on (senderName, receiverName, receiver phone, toRoute)
+      const pipeline: PipelineStage[] = [
+        // Match deliveries from this sender and fromRoute
+        {
+          $match: {
+            sender: sender._id,
+            fromRoute: sender.routeId,
           },
-        };
-      });
+        },
+        // Sort by most recent first
+        {
+          $sort: { createdAt: -1 },
+        },
+        // Lookup receiver to get phone
+        {
+          $lookup: {
+            from: 'customers',
+            localField: 'receiver',
+            foreignField: '_id',
+            as: 'receiverData',
+          },
+        },
+        {
+          $unwind: '$receiverData',
+        },
+        // Lookup toRoute to get route details
+        {
+          $lookup: {
+            from: 'routes',
+            localField: 'toRoute',
+            foreignField: '_id',
+            as: 'toRouteData',
+          },
+        },
+        {
+          $unwind: '$toRouteData',
+        },
+        // // Group by unique combination of (senderName, receiverName, receiver phone, toRoute)
+        {
+          $group: {
+            _id: {
+              senderName: '$senderName',
+              receiverName: '$receiverName',
+              receiverPhone: '$receiverData.phone',
+              toRoute: '$toRoute',
+            },
+            firstDeliveryDate: { $first: '$createdAt' },
+            toRouteData: { $first: '$toRouteData' },
+          },
+        },
+        // Sort by first delivery date (most recent combinations first)
+        {
+          $sort: { firstDeliveryDate: -1 },
+        },
+        // Limit to 20 unique combinations
+        {
+          $limit: 20,
+        },
+        // Project final structure
+        {
+          $project: {
+            _id: 1,
+            senderName: '$_id.senderName',
+            receiverName: '$_id.receiverName',
+            receiverPhone: '$_id.receiverPhone',
+            toRoute: {
+              id: { $toString: '$_id.toRoute' },
+              code: '$toRouteData.code',
+              name: '$toRouteData.name',
+              address: '$toRouteData.address',
+            },
+          },
+        },
+      ];
+
+      const results = await Delivery.aggregate(pipeline);
+
+      const frequentCustomers: IFrequentCustomer[] = results.map(result => ({
+        senderName: result.senderName,
+        senderPhone: sender.phone,
+        receiverName: result.receiverName,
+        receiverPhone: result.receiverPhone,
+        toRoute: result.toRoute,
+      }));
 
       Logger.debug('Frequent customers retrieved for delivery', {
         senderIdentifier,
         count: frequentCustomers.length,
+        userSelectedRouteId,
       });
 
       return frequentCustomers;

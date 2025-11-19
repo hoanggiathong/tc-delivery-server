@@ -337,6 +337,7 @@ moneyDeliverySchema.index({ createdAt: -1 }); // Recent first
 moneyDeliverySchema.index({ fromRoute: 1, toRoute: 1, createdAt: -1 }); // Route analysis
 moneyDeliverySchema.index({ sender: 1, createdAt: -1 }); // Sender history
 moneyDeliverySchema.index({ receiver: 1, createdAt: -1 }); // Receiver history
+moneyDeliverySchema.index({ sender: 1, fromRoute: 1, createdAt: -1 }); // getFrequentCustomers optimization
 
 // 7. Code-based queries optimization
 moneyDeliverySchema.index({ code: 1, fromRoute: 1, toRoute: 1 }); // For code + route lookup

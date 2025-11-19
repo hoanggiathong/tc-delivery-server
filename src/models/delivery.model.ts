@@ -88,10 +88,22 @@ const deliverySchema = new Schema<IDelivery>(
       ref: 'Customer',
       required: [true, 'Sender is required'],
     },
+    senderName: {
+      type: String,
+      required: [true, 'Sender name is required'],
+      trim: true,
+      maxlength: [100, 'Sender name must not exceed 100 characters'],
+    },
     receiver: {
       type: Schema.Types.ObjectId,
       ref: 'Customer',
       required: [true, 'Receiver is required'],
+    },
+    receiverName: {
+      type: String,
+      required: [true, 'Receiver name is required'],
+      trim: true,
+      maxlength: [100, 'Receiver name must not exceed 100 characters'],
     },
     fromRoute: {
       type: Schema.Types.ObjectId,
@@ -483,5 +495,6 @@ deliverySchema.index({ receiver: 1, toRoute: 1 });
 // Optimized index for cost report queries
 deliverySchema.index({ fromRoute: 1, createdAt: -1 }); // Cost report by route and date
 deliverySchema.index({ toRoute: 1, createdAt: -1, isReturn: 1 });
+deliverySchema.index({ sender: 1, fromRoute: 1, createdAt: -1 }); // getFrequentCustomers optimization
 
 export const Delivery = mongoose.model<IDelivery>('Delivery', deliverySchema);

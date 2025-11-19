@@ -194,12 +194,8 @@ export interface IFrequentMoneyCustomer {
     id: string;
     code: string;
     name: string;
-    address: string;
+    address?: string;
   };
-  totalSendMoneyAmount: number;
-  totalSendCost: number;
-  totalCost: number;
-  lastDeliveryDate: Date;
 }
 
 // Interface for frequent money customers response
