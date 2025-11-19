@@ -27,7 +27,9 @@ export interface IMoneyDelivery extends Document {
   fullCode: string;
   subCode: string;
   sender: mongoose.Types.ObjectId;
+  senderName: string;
   receiver: mongoose.Types.ObjectId;
+  receiverName: string;
   fromRoute: mongoose.Types.ObjectId;
   toRoute: mongoose.Types.ObjectId;
   sendMoneyAmount: number;
@@ -70,10 +72,22 @@ const moneyDeliverySchema = new Schema<IMoneyDelivery>(
       ref: 'Customer',
       required: [true, 'Sender is required'],
     },
+    senderName: {
+      type: String,
+      required: [true, 'Sender name is required'],
+      trim: true,
+      maxlength: [100, 'Sender name must not exceed 100 characters'],
+    },
     receiver: {
       type: Schema.Types.ObjectId,
       ref: 'Customer',
       required: [true, 'Receiver is required'],
+    },
+    receiverName: {
+      type: String,
+      required: [true, 'Receiver name is required'],
+      trim: true,
+      maxlength: [100, 'Receiver name must not exceed 100 characters'],
     },
     fromRoute: {
       type: Schema.Types.ObjectId,
@@ -329,6 +343,9 @@ moneyDeliverySchema.index({ code: 1, fromRoute: 1, toRoute: 1 }); // For code + 
 moneyDeliverySchema.index({ subCode: 1 });
 // Additional unique index for fullCode
 moneyDeliverySchema.index({ fullCode: 1 }, { unique: true });
+// Text search indexes for sender and receiver names
+moneyDeliverySchema.index({ senderName: 'text' });
+moneyDeliverySchema.index({ receiverName: 'text' });
 
 export const MoneyDelivery = mongoose.model<IMoneyDelivery>(
   'MoneyDelivery',

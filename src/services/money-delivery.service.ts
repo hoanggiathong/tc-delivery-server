@@ -68,8 +68,8 @@ export class MoneyDeliveryService {
   ): Promise<IMoneyDeliveryResponse> {
     // Populate sender, receiver, fromRoute, toRoute and createdByUser
     const populatedMoneyDelivery = await moneyDelivery.populate([
-      { path: 'sender', select: '_id name phone routeId createdAt updatedAt' },
-      { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
+      { path: 'sender', select: '_id phone routeId createdAt updatedAt' },
+      { path: 'receiver', select: '_id phone routeId createdAt updatedAt' },
       { path: 'fromRoute', select: '_id code name address phone createdAt updatedAt' },
       { path: 'toRoute', select: '_id code name address phone createdAt updatedAt' },
       { path: 'createdByUser', select: '_id username' },
@@ -146,7 +146,7 @@ export class MoneyDeliveryService {
       subCode: moneyDelivery.subCode,
       sender: {
         id: moneyDelivery.sender._id,
-        name: moneyDelivery.sender.name,
+        name: moneyDelivery.senderName,
         phone: moneyDelivery.sender.phone,
         fromRouteId: moneyDelivery.sender.routeId.toString(),
         toRouteId: moneyDelivery.receiver.routeId.toString(),
@@ -155,7 +155,7 @@ export class MoneyDeliveryService {
       },
       receiver: {
         id: moneyDelivery.receiver._id,
-        name: moneyDelivery.receiver.name,
+        name: moneyDelivery.receiverName,
         phone: moneyDelivery.receiver.phone,
         fromRouteId: moneyDelivery.sender.routeId.toString(),
         toRouteId: moneyDelivery.receiver.routeId.toString(),
@@ -262,7 +262,9 @@ export class MoneyDeliveryService {
       fullCode: codeData.fullCode,
       subCode: codeData.subCode,
       sender: sender._id,
+      senderName: data.senderName,
       receiver: receiver._id,
+      receiverName: data.receiverName,
       fromRoute: fromRouteId,
       toRoute: data.toRouteId,
       sendMoneyAmount: data.sendMoneyAmount,
@@ -307,6 +309,9 @@ export class MoneyDeliveryService {
         CustomerType.MONEY
       );
       updateData.sender = sender.id;
+      if (data.senderName) {
+        updateData.senderName = data.senderName;
+      }
     } else {
       updateData.sender = moneyDelivery.sender;
     }
@@ -325,6 +330,9 @@ export class MoneyDeliveryService {
         CustomerType.MONEY
       );
       updateData.receiver = receiver.id;
+      if (data.receiverName) {
+        updateData.receiverName = data.receiverName;
+      }
     } else {
       updateData.receiver = moneyDelivery.receiver;
     }
@@ -391,8 +399,8 @@ export class MoneyDeliveryService {
     try {
       const moneyDelivery = await MoneyDelivery.findById(id)
         .populate([
-          { path: 'sender', select: '_id name phone createdAt updatedAt' },
-          { path: 'receiver', select: '_id name phone createdAt updatedAt' },
+          { path: 'sender', select: '_id phone createdAt updatedAt' },
+          { path: 'receiver', select: '_id phone createdAt updatedAt' },
           { path: 'fromRoute', select: '_id code name address phone createdAt updatedAt' },
           { path: 'toRoute', select: '_id code name address phone createdAt updatedAt' },
           { path: 'createdByUser', select: '_id username' },
@@ -418,8 +426,8 @@ export class MoneyDeliveryService {
     try {
       const moneyDeliveries = await MoneyDelivery.find({})
         .populate([
-          { path: 'sender', select: '_id name phone createdAt updatedAt' },
-          { path: 'receiver', select: '_id name phone createdAt updatedAt' },
+          { path: 'sender', select: '_id phone createdAt updatedAt' },
+          { path: 'receiver', select: '_id phone createdAt updatedAt' },
           { path: 'fromRoute', select: '_id code name address phone createdAt updatedAt' },
           { path: 'toRoute', select: '_id code name address phone createdAt updatedAt' },
           { path: 'createdByUser', select: '_id username' },
@@ -526,8 +534,8 @@ export class MoneyDeliveryService {
         toRoute: toRoute._id,
       })
         .populate([
-          { path: 'sender', select: '_id name phone createdAt updatedAt' },
-          { path: 'receiver', select: '_id name phone createdAt updatedAt' },
+          { path: 'sender', select: '_id phone createdAt updatedAt' },
+          { path: 'receiver', select: '_id phone createdAt updatedAt' },
           { path: 'fromRoute', select: '_id code name address phone createdAt updatedAt' },
           { path: 'toRoute', select: '_id code name address phone createdAt updatedAt' },
           { path: 'createdByUser', select: '_id username' },

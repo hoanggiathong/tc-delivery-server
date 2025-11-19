@@ -133,11 +133,11 @@ export class ReturnDeliveriesService {
           fullCode: item.fullCode,
           subCode: item.subCode,
           sender: {
-            name: item.sender.name,
+            name: item.senderName,
             phone: item.sender.phone,
           },
           receiver: {
-            name: item.receiver.name,
+            name: item.receiverName,
             phone: item.receiver.phone,
           },
           toRoute: {
@@ -273,11 +273,11 @@ export class ReturnDeliveriesService {
           fullCode: item.fullCode,
           subCode: item.subCode,
           sender: {
-            name: item.sender.name,
+            name: item.senderName,
             phone: item.sender.phone,
           },
           receiver: {
-            name: item.receiver.name,
+            name: item.receiverName,
             phone: item.receiver.phone,
           },
           toRoute: {
@@ -705,11 +705,11 @@ export class ReturnDeliveriesService {
           fullCode: item.fullCode,
           subCode: item.subCode,
           sender: {
-            name: item.sender.name,
+            name: item.senderName,
             phone: item.sender.phone,
           },
           receiver: {
-            name: item.receiver.name,
+            name: item.receiverName,
             phone: item.receiver.phone,
           },
           toRoute: {
@@ -802,11 +802,11 @@ export class ReturnDeliveriesService {
           fullCode: item.fullCode,
           subCode: item.subCode,
           sender: {
-            name: item.sender.name,
+            name: item.senderName,
             phone: item.sender.phone,
           },
           receiver: {
-            name: item.receiver.name,
+            name: item.receiverName,
             phone: item.receiver.phone,
           },
           toRoute: {
@@ -1009,9 +1009,9 @@ export class ReturnDeliveriesService {
           );
           await this.moneyDeliveryService.createMoneyDelivery(
             {
-              senderName: typedDelivery.receiver.name,
+              senderName: typedDelivery.receiverName,
               senderPhone: typedDelivery.receiver.phone,
-              receiverName: typedDelivery.sender.name,
+              receiverName: typedDelivery.senderName,
               receiverPhone: typedDelivery.sender.phone,
               toRouteId: typedDelivery.toRoute._id.toString(),
               sendMoneyAmount: typedDelivery.collectCost - feeMoney,
@@ -1032,9 +1032,9 @@ export class ReturnDeliveriesService {
         if (typedDelivery.collectForCustomer > 0) {
           await this.moneyDeliveryService.createMoneyDelivery(
             {
-              senderName: typedDelivery.receiver.name,
+              senderName: typedDelivery.receiverName,
               senderPhone: typedDelivery.receiver.phone,
-              receiverName: typedDelivery.sender.name,
+              receiverName: typedDelivery.senderName,
               receiverPhone: typedDelivery.sender.phone,
               toRouteId: typedDelivery.fromRoute._id.toString(),
               sendMoneyAmount: typedDelivery.collectForCustomer,
@@ -1142,9 +1142,9 @@ export class ReturnDeliveriesService {
 
             await this.moneyDeliveryService.createMoneyDelivery(
               {
-                senderName: typedDelivery.receiver.name,
+                senderName: typedDelivery.receiverName,
                 senderPhone: typedDelivery.receiver.phone,
-                receiverName: typedDelivery.sender.name,
+                receiverName: typedDelivery.senderName,
                 receiverPhone: typedDelivery.sender.phone,
                 toRouteId: typedDelivery.toRoute._id.toString(),
                 sendMoneyAmount: typedDelivery.collectCost - feeMoney,
@@ -1165,9 +1165,9 @@ export class ReturnDeliveriesService {
           if (typedDelivery.collectForCustomer > 0) {
             await this.moneyDeliveryService.createMoneyDelivery(
               {
-                senderName: typedDelivery.receiver.name,
+                senderName: typedDelivery.receiverName,
                 senderPhone: typedDelivery.receiver.phone,
-                receiverName: typedDelivery.sender.name,
+                receiverName: typedDelivery.senderName,
                 receiverPhone: typedDelivery.sender.phone,
                 toRouteId: typedDelivery.fromRoute._id.toString(),
                 sendMoneyAmount: typedDelivery.collectForCustomer,

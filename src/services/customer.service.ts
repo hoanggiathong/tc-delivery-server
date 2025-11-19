@@ -81,6 +81,7 @@ export class CustomerService {
 
   /**
    * Find or create a customer with specific type
+   * IMPORTANT: Only updates name for NEW customers, NOT for existing ones
    */
   async findOrCreateCustomer(
     phone: string,
@@ -89,26 +90,39 @@ export class CustomerService {
     type: CustomerType
   ): Promise<ICustomer> {
     try {
-      const customer = await Customer.findOneAndUpdate(
-        { phone, type },
-        {
-          name,
+      // Try to find existing customer first
+      let customer = await Customer.findOne({ phone, type });
+
+      if (customer) {
+        // Customer exists - DON'T update name, only update routeId if needed
+        if (customer.routeId.toString() !== routeId) {
+          customer.routeId = new Types.ObjectId(routeId);
+          await customer.save();
+        }
+        Logger.debug('Existing customer found, name NOT updated', {
+          phone,
+          type,
+          existingName: customer.name,
+          requestedName: name,
+          customerId: customer._id,
+        });
+      } else {
+        // Customer doesn't exist - create new with provided name
+        customer = new Customer({
+          phone,
+          name, // Use provided name for new customer
           routeId: new Types.ObjectId(routeId),
           type,
-        },
-        {
-          upsert: true,
-          new: true,
-          setDefaultsOnInsert: true,
-        }
-      );
-
-      Logger.debug('Customer found or created', {
-        phone,
-        type,
-        customerId: customer._id,
-        isNew: !customer.createdAt || customer.createdAt === customer.updatedAt,
-      });
+          relativeReceiver: [],
+        });
+        await customer.save();
+        Logger.debug('New customer created', {
+          phone,
+          name,
+          type,
+          customerId: customer._id,
+        });
+      }
 
       return customer;
     } catch (error) {

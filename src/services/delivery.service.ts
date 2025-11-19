@@ -113,7 +113,7 @@ export class DeliveryService {
       subCode: delivery.subCode,
       sender: {
         id: delivery.sender._id,
-        name: delivery.sender.name,
+        name: delivery.senderName,
         phone: delivery.sender.phone,
         fromRouteId: delivery.sender.routeId?.toString(),
         bank: delivery.sender.bankId
@@ -131,7 +131,7 @@ export class DeliveryService {
       },
       receiver: {
         id: delivery.receiver._id,
-        name: delivery.receiver.name,
+        name: delivery.receiverName,
         phone: delivery.receiver.phone,
         toRouteId: delivery.receiver.routeId?.toString(),
         createdAt: delivery.receiver.createdAt,
@@ -224,7 +224,9 @@ export class DeliveryService {
       fullCode: codeData.fullCode,
       subCode: codeData.subCode,
       sender: sender._id,
+      senderName: data.senderName,
       receiver: receiver._id,
+      receiverName: data.receiverName,
       fromRoute: selectedRouteId,
       toRoute: data.toRouteId,
       name: data.name,
@@ -267,13 +269,13 @@ export class DeliveryService {
       .populate([
         {
           path: 'sender',
-          select: '_id name phone routeId createdAt updatedAt',
+          select: '_id phone routeId createdAt updatedAt',
           populate: {
             path: 'bankId',
             select: '_id name bankName bankAccount bankBranch bankAddress',
           },
         },
-        { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
+        { path: 'receiver', select: '_id phone routeId createdAt updatedAt' },
         { path: 'fromRoute', select: '_id code name address phone' },
         { path: 'toRoute', select: '_id code name address phone' },
         { path: 'createdByUser', select: '_id username name' },
@@ -316,6 +318,9 @@ export class DeliveryService {
         CustomerType.DELIVERY
       );
       updateData.sender = sender.id;
+      if (data.senderName) {
+        updateData.senderName = data.senderName;
+      }
     } else {
       updateData.sender = delivery.sender;
     }
@@ -334,6 +339,9 @@ export class DeliveryService {
         CustomerType.DELIVERY
       );
       updateData.receiver = receiver.id;
+      if (data.receiverName) {
+        updateData.receiverName = data.receiverName;
+      }
     } else {
       updateData.receiver = delivery.receiver;
     }
@@ -381,13 +389,13 @@ export class DeliveryService {
       .populate([
         {
           path: 'sender',
-          select: '_id name phone routeId createdAt updatedAt',
+          select: '_id phone routeId createdAt updatedAt',
           populate: {
             path: 'bankId',
             select: '_id name bankName bankAccount bankBranch bankAddress',
           },
         },
-        { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
+        { path: 'receiver', select: '_id phone routeId createdAt updatedAt' },
         { path: 'fromRoute', select: '_id code name address phone' },
         { path: 'toRoute', select: '_id code name address phone' },
         { path: 'createdByUser', select: '_id username name' },
@@ -412,13 +420,13 @@ export class DeliveryService {
         .populate([
           {
             path: 'sender',
-            select: '_id name phone routeId createdAt updatedAt',
+            select: '_id phone routeId createdAt updatedAt',
             populate: {
               path: 'bankId',
               select: '_id name bankName bankAccount bankBranch bankAddress',
             },
           },
-          { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
+          { path: 'receiver', select: '_id phone routeId createdAt updatedAt' },
           { path: 'fromRoute', select: '_id code name address phone createdAt updatedAt' },
           { path: 'toRoute', select: '_id code name address phone createdAt updatedAt' },
           { path: 'createdByUser', select: '_id username name' },

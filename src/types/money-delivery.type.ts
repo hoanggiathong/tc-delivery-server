@@ -133,9 +133,10 @@ export interface IMoneyDeliveryLeanPopulated {
   code: string;
   fullCode: string;
   subCode: string;
+  senderName: string;
+  receiverName: string;
   sender: {
     _id: string;
-    name: string;
     phone: string;
     routeId: Types.ObjectId;
     createdAt: Date;
@@ -143,7 +144,6 @@ export interface IMoneyDeliveryLeanPopulated {
   };
   receiver: {
     _id: string;
-    name: string;
     phone: string;
     routeId: Types.ObjectId;
     createdAt: Date;

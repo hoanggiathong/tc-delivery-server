@@ -88,6 +88,8 @@ export interface IReturnDeliveryLeanPopulated {
   fullCode: string;
   subCode: string;
   name: string;
+  senderName: string;
+  receiverName: string;
   sender: {
     name: string;
     phone: string;

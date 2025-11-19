@@ -13,7 +13,9 @@ export interface IDelivery extends Document {
   fullCode: string;
   subCode: string;
   sender: mongoose.Types.ObjectId;
+  senderName: string;
   receiver: mongoose.Types.ObjectId;
+  receiverName: string;
   fromRoute: mongoose.Types.ObjectId;
   toRoute: mongoose.Types.ObjectId;
   name: string;
