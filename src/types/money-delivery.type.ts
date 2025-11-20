@@ -133,9 +133,10 @@ export interface IMoneyDeliveryLeanPopulated {
   code: string;
   fullCode: string;
   subCode: string;
+  senderName: string;
+  receiverName: string;
   sender: {
     _id: string;
-    name: string;
     phone: string;
     routeId: Types.ObjectId;
     createdAt: Date;
@@ -143,7 +144,6 @@ export interface IMoneyDeliveryLeanPopulated {
   };
   receiver: {
     _id: string;
-    name: string;
     phone: string;
     routeId: Types.ObjectId;
     createdAt: Date;
@@ -194,12 +194,8 @@ export interface IFrequentMoneyCustomer {
     id: string;
     code: string;
     name: string;
-    address: string;
+    address?: string;
   };
-  totalSendMoneyAmount: number;
-  totalSendCost: number;
-  totalCost: number;
-  lastDeliveryDate: Date;
 }
 
 // Interface for frequent money customers response

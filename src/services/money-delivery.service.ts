@@ -18,7 +18,7 @@ import path from 'path';
 import fs from 'fs';
 import { generateVersionedUrl, extractBasePath } from '@/utils/image-url.utils';
 import { TYPE_DELIVERY_CUSTOMER } from '@/const/customer.const';
-import { CustomerType } from '@/models/customer.model';
+import { CustomerType, Customer } from '@/models/customer.model';
 import {
   IFrequentMoneyCustomer,
   IMoneyDeliveryCostReport,
@@ -68,8 +68,8 @@ export class MoneyDeliveryService {
   ): Promise<IMoneyDeliveryResponse> {
     // Populate sender, receiver, fromRoute, toRoute and createdByUser
     const populatedMoneyDelivery = await moneyDelivery.populate([
-      { path: 'sender', select: '_id name phone routeId createdAt updatedAt' },
-      { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
+      { path: 'sender', select: '_id phone routeId createdAt updatedAt' },
+      { path: 'receiver', select: '_id phone routeId createdAt updatedAt' },
       { path: 'fromRoute', select: '_id code name address phone createdAt updatedAt' },
       { path: 'toRoute', select: '_id code name address phone createdAt updatedAt' },
       { path: 'createdByUser', select: '_id username' },
@@ -146,7 +146,7 @@ export class MoneyDeliveryService {
       subCode: moneyDelivery.subCode,
       sender: {
         id: moneyDelivery.sender._id,
-        name: moneyDelivery.sender.name,
+        name: moneyDelivery.senderName,
         phone: moneyDelivery.sender.phone,
         fromRouteId: moneyDelivery.sender.routeId.toString(),
         toRouteId: moneyDelivery.receiver.routeId.toString(),
@@ -155,7 +155,7 @@ export class MoneyDeliveryService {
       },
       receiver: {
         id: moneyDelivery.receiver._id,
-        name: moneyDelivery.receiver.name,
+        name: moneyDelivery.receiverName,
         phone: moneyDelivery.receiver.phone,
         fromRouteId: moneyDelivery.sender.routeId.toString(),
         toRouteId: moneyDelivery.receiver.routeId.toString(),
@@ -222,9 +222,6 @@ export class MoneyDeliveryService {
       CustomerType.MONEY
     );
 
-    // Update sender's relativeReceiver array
-    await this.customerService.addRelativeReceiver(sender._id.toString(), receiver._id.toString());
-
     // Validate fromRoute and toRoute exist
     const [fromRoute, toRoute] = await Promise.all([
       Route.findById(fromRouteId),
@@ -262,7 +259,9 @@ export class MoneyDeliveryService {
       fullCode: codeData.fullCode,
       subCode: codeData.subCode,
       sender: sender._id,
+      senderName: data.senderName,
       receiver: receiver._id,
+      receiverName: data.receiverName,
       fromRoute: fromRouteId,
       toRoute: data.toRouteId,
       sendMoneyAmount: data.sendMoneyAmount,
@@ -307,6 +306,9 @@ export class MoneyDeliveryService {
         CustomerType.MONEY
       );
       updateData.sender = sender.id;
+      if (data.senderName) {
+        updateData.senderName = data.senderName;
+      }
     } else {
       updateData.sender = moneyDelivery.sender;
     }
@@ -325,6 +327,9 @@ export class MoneyDeliveryService {
         CustomerType.MONEY
       );
       updateData.receiver = receiver.id;
+      if (data.receiverName) {
+        updateData.receiverName = data.receiverName;
+      }
     } else {
       updateData.receiver = moneyDelivery.receiver;
     }
@@ -391,8 +396,8 @@ export class MoneyDeliveryService {
     try {
       const moneyDelivery = await MoneyDelivery.findById(id)
         .populate([
-          { path: 'sender', select: '_id name phone createdAt updatedAt' },
-          { path: 'receiver', select: '_id name phone createdAt updatedAt' },
+          { path: 'sender', select: '_id phone createdAt updatedAt' },
+          { path: 'receiver', select: '_id phone createdAt updatedAt' },
           { path: 'fromRoute', select: '_id code name address phone createdAt updatedAt' },
           { path: 'toRoute', select: '_id code name address phone createdAt updatedAt' },
           { path: 'createdByUser', select: '_id username' },
@@ -418,8 +423,8 @@ export class MoneyDeliveryService {
     try {
       const moneyDeliveries = await MoneyDelivery.find({})
         .populate([
-          { path: 'sender', select: '_id name phone createdAt updatedAt' },
-          { path: 'receiver', select: '_id name phone createdAt updatedAt' },
+          { path: 'sender', select: '_id phone createdAt updatedAt' },
+          { path: 'receiver', select: '_id phone createdAt updatedAt' },
           { path: 'fromRoute', select: '_id code name address phone createdAt updatedAt' },
           { path: 'toRoute', select: '_id code name address phone createdAt updatedAt' },
           { path: 'createdByUser', select: '_id username' },
@@ -526,8 +531,8 @@ export class MoneyDeliveryService {
         toRoute: toRoute._id,
       })
         .populate([
-          { path: 'sender', select: '_id name phone createdAt updatedAt' },
-          { path: 'receiver', select: '_id name phone createdAt updatedAt' },
+          { path: 'sender', select: '_id phone createdAt updatedAt' },
+          { path: 'receiver', select: '_id phone createdAt updatedAt' },
           { path: 'fromRoute', select: '_id code name address phone createdAt updatedAt' },
           { path: 'toRoute', select: '_id code name address phone createdAt updatedAt' },
           { path: 'createdByUser', select: '_id username' },
@@ -571,95 +576,113 @@ export class MoneyDeliveryService {
     userId: string
   ): Promise<IFrequentMoneyCustomer[]> {
     try {
-      const receivers = await this.customerService.getFrequentReceivers(
-        senderIdentifier,
-        TYPE_DELIVERY_CUSTOMER.MONEY,
-        userId
-      );
+      // Get user's selected route
+      const userSelectedRouteId = await this.userService.getUserSelectedRouteId(userId);
 
-      if (receivers.length === 0) {
-        return [];
-      }
-
-      const sender = await this.customerService.getCustomerByPhoneAndType(
-        senderIdentifier,
-        TYPE_DELIVERY_CUSTOMER.MONEY
-      );
+      // Find sender by phone with type='money' and selected route
+      const sender = await Customer.findOne({
+        phone: senderIdentifier,
+        type: TYPE_DELIVERY_CUSTOMER.MONEY,
+        routeId: userSelectedRouteId,
+      }).lean();
 
       if (!sender) {
-        Logger.debug('Sender not found for frequent money customers', { senderIdentifier });
+        Logger.debug('Sender not found for frequent money customers', {
+          senderIdentifier,
+          userSelectedRouteId,
+        });
         return [];
       }
 
-      const routeIds = receivers.map(receiver => receiver.routeId);
-      const routes = await Route.find({ _id: { $in: routeIds } }).lean();
-      const routeMap = new Map(routes.map(route => [route._id.toString(), route]));
-
-      const receiverIds = receivers.map(receiver => receiver._id);
-
-      const moneyDeliveryStats = await MoneyDelivery.aggregate([
+      // Aggregation to get 20 unique deliveries based on (senderName, receiverName, receiver phone, toRoute)
+      const pipeline: PipelineStage[] = [
+        // Match deliveries from this sender and fromRoute
         {
           $match: {
             sender: sender._id,
-            receiver: { $in: receiverIds },
+            fromRoute: userSelectedRouteId,
+          },
+        },
+        // Sort by most recent first
+        {
+          $sort: { createdAt: -1 },
+        },
+        // Lookup receiver to get phone
+        {
+          $lookup: {
+            from: 'customers',
+            localField: 'receiver',
+            foreignField: '_id',
+            as: 'receiverData',
           },
         },
         {
-          $group: {
-            _id: '$receiver',
-            totalSendMoneyAmount: { $sum: '$sendMoneyAmount' },
-            totalSendCost: { $sum: '$sendCost' },
-            totalCost: { $sum: '$totalCost' },
-            lastDeliveryDate: { $max: '$createdAt' },
+          $unwind: '$receiverData',
+        },
+        // Lookup toRoute to get route details
+        {
+          $lookup: {
+            from: 'routes',
+            localField: 'toRoute',
+            foreignField: '_id',
+            as: 'toRouteData',
           },
         },
-      ]);
-
-      const statsMap = new Map(moneyDeliveryStats.map(item => [item._id.toString(), item]));
-
-      const frequentCustomers: IFrequentMoneyCustomer[] = receivers
-        .map(receiver => {
-          const route = routeMap.get(receiver.routeId.toString());
-          const stats = statsMap.get(receiver._id.toString());
-
-          if (!stats) {
-            return null;
-          }
-
-          if (!route) {
-            Logger.warn('Route not found for money receiver', {
-              receiverId: receiver._id,
-              routeId: receiver.routeId,
-              senderIdentifier,
-            });
-          }
-
-          return {
-            senderName: sender.name,
-            senderPhone: sender.phone,
-            receiverName: receiver.name,
-            receiverPhone: receiver.phone,
-            toRoute: {
-              id: receiver.routeId.toString(),
-              code: route?.code || 'UNKNOWN',
-              name: route?.name || 'Unknown Route',
+        {
+          $unwind: '$toRouteData',
+        },
+        // Group by unique combination of (senderName, receiverName, receiver phone, toRoute)
+        {
+          $group: {
+            _id: {
+              senderName: '$senderName',
+              receiverName: '$receiverName',
+              receiverPhone: '$receiverData.phone',
+              toRoute: '$toRoute',
             },
-            totalSendMoneyAmount: stats.totalSendMoneyAmount,
-            totalSendCost: stats.totalSendCost,
-            totalCost: stats.totalCost,
-            lastDeliveryDate: stats.lastDeliveryDate,
-          };
-        })
-        .filter((customer): customer is IFrequentMoneyCustomer => customer !== null)
-        .sort(
-          (a, b) => new Date(b.lastDeliveryDate).getTime() - new Date(a.lastDeliveryDate).getTime()
-        );
+            firstDeliveryDate: { $first: '$createdAt' },
+            toRouteData: { $first: '$toRouteData' },
+          },
+        },
+        // Sort by first delivery date (most recent combinations first)
+        {
+          $sort: { firstDeliveryDate: -1 },
+        },
+        // Limit to 20 unique combinations
+        {
+          $limit: 20,
+        },
+        // Project final structure
+        {
+          $project: {
+            _id: 0,
+            senderName: '$_id.senderName',
+            receiverName: '$_id.receiverName',
+            receiverPhone: '$_id.receiverPhone',
+            toRoute: {
+              id: { $toString: '$_id.toRoute' },
+              code: '$toRouteData.code',
+              name: '$toRouteData.name',
+              address: '$toRouteData.address',
+            },
+          },
+        },
+      ];
 
-      Logger.debug('Frequent money customers retrieved (optimized)', {
+      const results = await MoneyDelivery.aggregate(pipeline);
+
+      const frequentCustomers: IFrequentMoneyCustomer[] = results.map(result => ({
+        senderName: result.senderName,
+        senderPhone: sender.phone,
+        receiverName: result.receiverName,
+        receiverPhone: result.receiverPhone,
+        toRoute: result.toRoute,
+      }));
+
+      Logger.debug('Frequent money customers retrieved', {
         senderIdentifier,
         count: frequentCustomers.length,
-        totalReceivers: receivers.length,
-        totalRoutes: routes.length,
+        userSelectedRouteId,
       });
 
       return frequentCustomers;

@@ -18,7 +18,6 @@ export interface ICustomer extends Document {
   name: string;
   phone: string;
   routeId: Types.ObjectId;
-  relativeReceiver: Array<Types.ObjectId>;
   type: CustomerType;
   bankId: Types.ObjectId;
   images: ICustomerImage[];
@@ -48,11 +47,6 @@ const customerSchema = new Schema<ICustomer>(
       type: Schema.Types.ObjectId,
       ref: 'Route',
       required: [true, 'From route is required'],
-    },
-    relativeReceiver: {
-      type: [Schema.Types.ObjectId],
-      ref: 'Customer',
-      default: [],
     },
     type: {
       type: String,

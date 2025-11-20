@@ -201,6 +201,8 @@ export interface IDeliveryLeanPopulated {
   code: string;
   fullCode: string;
   subCode: string;
+  senderName: string;
+  receiverName: string;
   quantity: number;
   details?: {
     weight?: number;
@@ -212,7 +214,6 @@ export interface IDeliveryLeanPopulated {
   };
   sender: {
     _id: string;
-    name: string;
     phone: string;
     routeId: Types.ObjectId;
     bankId?: ICustomerBankLean;
@@ -221,7 +222,6 @@ export interface IDeliveryLeanPopulated {
   };
   receiver: {
     _id: string;
-    name: string;
     phone: string;
     routeId: Types.ObjectId;
     createdAt?: Date;

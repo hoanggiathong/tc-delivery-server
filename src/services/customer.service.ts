@@ -81,6 +81,7 @@ export class CustomerService {
 
   /**
    * Find or create a customer with specific type
+   * IMPORTANT: Only updates name for NEW customers, NOT for existing ones
    */
   async findOrCreateCustomer(
     phone: string,
@@ -89,26 +90,39 @@ export class CustomerService {
     type: CustomerType
   ): Promise<ICustomer> {
     try {
-      const customer = await Customer.findOneAndUpdate(
-        { phone, type },
-        {
-          name,
+      // Try to find existing customer first
+      let customer = await Customer.findOne({ phone, type });
+
+      if (customer) {
+        // Customer exists - DON'T update name, only update routeId if needed
+        if (customer.routeId.toString() !== routeId) {
+          customer.routeId = new Types.ObjectId(routeId);
+          await customer.save();
+        }
+        Logger.debug('Existing customer found, name NOT updated', {
+          phone,
+          type,
+          existingName: customer.name,
+          requestedName: name,
+          customerId: customer._id,
+        });
+      } else {
+        // Customer doesn't exist - create new with provided name
+        customer = new Customer({
+          phone,
+          name, // Use provided name for new customer
           routeId: new Types.ObjectId(routeId),
           type,
-        },
-        {
-          upsert: true,
-          new: true,
-          setDefaultsOnInsert: true,
-        }
-      );
-
-      Logger.debug('Customer found or created', {
-        phone,
-        type,
-        customerId: customer._id,
-        isNew: !customer.createdAt || customer.createdAt === customer.updatedAt,
-      });
+          relativeReceiver: [],
+        });
+        await customer.save();
+        Logger.debug('New customer created', {
+          phone,
+          name,
+          type,
+          customerId: customer._id,
+        });
+      }
 
       return customer;
     } catch (error) {
@@ -119,77 +133,6 @@ export class CustomerService {
       });
       throw new Error(
         `Failed to find or create customer: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    }
-  }
-
-  /**
-   * Add a receiver to sender's relativeReceiver array if not exists
-   */
-  async addRelativeReceiver(senderId: string, receiverId: string): Promise<void> {
-    try {
-      await Customer.findByIdAndUpdate(senderId, {
-        $addToSet: { relativeReceiver: new Types.ObjectId(receiverId) },
-      });
-
-      Logger.debug('Relative receiver added', {
-        senderId,
-        receiverId,
-      });
-    } catch (error) {
-      Logger.error('Failed to add relative receiver', {
-        error: error instanceof Error ? error.message : error,
-        senderId,
-        receiverId,
-      });
-      throw new Error(
-        `Failed to add relative receiver: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    }
-  }
-
-  /**
-   * Get frequent receivers for a sender by phone and type, filtered by user's selected route
-   */
-  async getFrequentReceivers(
-    senderPhone: string,
-    type: TYPE_DELIVERY_CUSTOMER,
-    userId: string
-  ): Promise<ICustomer[]> {
-    try {
-      const userSelectedRouteId = await this.userService.getUserSelectedRouteId(userId);
-
-      const sender = await Customer.findOne({
-        phone: senderPhone,
-        type,
-        routeId: userSelectedRouteId,
-      }).populate('relativeReceiver');
-
-      if (!sender) {
-        Logger.debug('Sender not found', { senderPhone, type, userSelectedRouteId });
-        return [];
-      }
-
-      const frequentReceivers = sender.relativeReceiver as unknown as ICustomer[];
-
-      Logger.debug('Frequent receivers retrieved', {
-        senderPhone,
-        type,
-        userId,
-        receiversCount: frequentReceivers.length,
-        userSelectedRouteId,
-      });
-
-      return frequentReceivers;
-    } catch (error) {
-      Logger.error('Failed to get frequent receivers', {
-        error: error instanceof Error ? error.message : error,
-        senderPhone,
-        type,
-        userId,
-      });
-      throw new Error(
-        `Failed to get frequent receivers: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
   }
