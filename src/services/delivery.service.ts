@@ -947,11 +947,11 @@ export class DeliveryService {
             createdAt: 1,
             updatedAt: 1,
             sender: {
-              name: '$senderData.name',
+              name: '$senderName',
               phone: '$senderData.phone',
             },
             receiver: {
-              name: '$receiverData.name',
+              name: '$receiverName',
               phone: '$receiverData.phone',
             },
             toRoute: {
@@ -1243,11 +1243,11 @@ export class DeliveryService {
             createdAt: 1,
             updatedAt: 1,
             sender: {
-              name: '$senderData.name',
+              name: '$senderName',
               phone: '$senderData.phone',
             },
             receiver: {
-              name: '$receiverData.name',
+              name: '$receiverName',
               phone: '$receiverData.phone',
             },
             toRoute: {
