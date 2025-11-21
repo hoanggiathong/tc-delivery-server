@@ -214,10 +214,6 @@ describe('Money Delivery API Integration Tests', () => {
         },
         senderName: 'Nguyen Van A',
         senderPhone: '+84123456789',
-        totalSendMoneyAmount: 5000000,
-        totalSendCost: 250000,
-        totalCost: 250000,
-        lastDeliveryDate: new Date('2024-01-25'),
       },
     ]);
   });

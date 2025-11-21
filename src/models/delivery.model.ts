@@ -377,96 +377,103 @@ deliverySchema.pre('save', function (next) {
 
 // Pre-update middleware to calculate totalCost
 deliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next) {
-  const update = this.getUpdate() as any;
-  if (update) {
-    // Business logic validation for updates
-    if (
-      update.sender &&
-      update.receiver &&
-      update.sender.toString() === update.receiver.toString()
-    ) {
-      return next(new Error('Sender and receiver cannot be the same'));
-    }
-    if (
-      update.fromRoute &&
-      update.toRoute &&
-      update.fromRoute.toString() === update.toRoute.toString()
-    ) {
-      return next(new Error('From route and to route cannot be the same'));
-    }
+  const rawUpdate = this.getUpdate() as any;
+  if (!rawUpdate) {
+    return next();
+  }
 
-    // Only calculate if at least one cost field or isFree is being updated
-    if (
-      update.cost !== undefined ||
-      update.itemCost !== undefined ||
-      update.collectCost !== undefined ||
-      update.collectForCustomerCost !== undefined ||
-      update.collectForCustomer !== undefined ||
-      update.homeDeliveryCost !== undefined ||
-      update.carryCost !== undefined ||
-      update.homeDelivery !== undefined ||
-      update.isFree !== undefined
-    ) {
-      // Get current document to merge with updates
-      const currentDoc = await this.model.findOne(this.getQuery());
-      if (currentDoc) {
-        const cost = update.cost !== undefined ? update.cost : currentDoc.cost;
-        const itemCost = update.itemCost !== undefined ? update.itemCost : currentDoc.itemCost;
-        const collectCost =
-          update.collectCost !== undefined ? update.collectCost : currentDoc.collectCost;
-        const collectForCustomerCost =
-          update.collectForCustomerCost !== undefined
-            ? update.collectForCustomerCost
-            : currentDoc.collectForCustomerCost;
-        const collectForCustomer =
-          update.collectForCustomer !== undefined
-            ? update.collectForCustomer
-            : currentDoc.collectForCustomer;
-        const homeDeliveryCost =
-          update.homeDeliveryCost !== undefined
-            ? update.homeDeliveryCost
-            : currentDoc.homeDeliveryCost;
-        const carryCost = update.carryCost !== undefined ? update.carryCost : currentDoc.carryCost;
-        const homeDelivery =
-          update.homeDelivery !== undefined ? update.homeDelivery : currentDoc.homeDelivery;
-        const vehicleType =
-          update.vehicleType !== undefined ? update.vehicleType : currentDoc.vehicleType;
-        const isFree = update.isFree !== undefined ? update.isFree : currentDoc.isFree;
+  // Normalize update object - extract fields from $set if present, otherwise use direct fields
+  const updateFields = rawUpdate.$set || rawUpdate;
 
-        // Validation: homeDelivery is required when carryCost or homeDeliveryCost > 0
-        if (
-          (carryCost > 0 || homeDeliveryCost > 0) &&
-          (!homeDelivery || homeDelivery.trim() === '')
-        ) {
-          return next(
-            new Error(
-              'homeDelivery is required when carryCost or homeDeliveryCost is greater than 0'
-            )
-          );
-        }
+  // Business logic validation for updates
+  if (
+    updateFields.sender &&
+    updateFields.receiver &&
+    updateFields.sender.toString() === updateFields.receiver.toString()
+  ) {
+    return next(new Error('Sender and receiver cannot be the same'));
+  }
+  if (
+    updateFields.fromRoute &&
+    updateFields.toRoute &&
+    updateFields.fromRoute.toString() === updateFields.toRoute.toString()
+  ) {
+    return next(new Error('From route and to route cannot be the same'));
+  }
 
-        // Validation: vehicleType is required when homeDelivery has value
-        if (homeDelivery && homeDelivery.trim() !== '' && !vehicleType) {
-          return next(new Error('vehicleType is required when homeDelivery is provided'));
-        }
+  // Only calculate if at least one cost field or isFree is being updated
+  if (
+    updateFields.cost !== undefined ||
+    updateFields.itemCost !== undefined ||
+    updateFields.collectCost !== undefined ||
+    updateFields.collectForCustomerCost !== undefined ||
+    updateFields.collectForCustomer !== undefined ||
+    updateFields.homeDeliveryCost !== undefined ||
+    updateFields.carryCost !== undefined ||
+    updateFields.homeDelivery !== undefined ||
+    updateFields.isFree !== undefined
+  ) {
+    // Get current document to merge with updates
+    const currentDoc = await this.model.findOne(this.getQuery());
+    if (currentDoc) {
+      const cost = updateFields.cost !== undefined ? updateFields.cost : currentDoc.cost;
+      const itemCost =
+        updateFields.itemCost !== undefined ? updateFields.itemCost : currentDoc.itemCost;
+      const collectCost =
+        updateFields.collectCost !== undefined ? updateFields.collectCost : currentDoc.collectCost;
+      const collectForCustomerCost =
+        updateFields.collectForCustomerCost !== undefined
+          ? updateFields.collectForCustomerCost
+          : currentDoc.collectForCustomerCost;
+      const collectForCustomer =
+        updateFields.collectForCustomer !== undefined
+          ? updateFields.collectForCustomer
+          : currentDoc.collectForCustomer;
+      const homeDeliveryCost =
+        updateFields.homeDeliveryCost !== undefined
+          ? updateFields.homeDeliveryCost
+          : currentDoc.homeDeliveryCost;
+      const carryCost =
+        updateFields.carryCost !== undefined ? updateFields.carryCost : currentDoc.carryCost;
+      const homeDelivery =
+        updateFields.homeDelivery !== undefined
+          ? updateFields.homeDelivery
+          : currentDoc.homeDelivery;
+      const vehicleType =
+        updateFields.vehicleType !== undefined ? updateFields.vehicleType : currentDoc.vehicleType;
+      const isFree = updateFields.isFree !== undefined ? updateFields.isFree : currentDoc.isFree;
 
-        // Calculate homeDeliveryCostTotal
-        if (homeDelivery && homeDelivery.trim() !== '') {
-          update.homeDeliveryCostTotal = carryCost + homeDeliveryCost;
-        } else {
-          update.homeDeliveryCostTotal = undefined;
-        }
-
-        // Calculate totalCost (service fees only: cost + itemCost + collectForCustomerCost + homeDeliveryCost)
-        if (isFree) {
-          update.totalCost = 0;
-        } else {
-          update.totalCost = cost + itemCost + collectForCustomerCost + homeDeliveryCost;
-        }
-
-        // Calculate actualRevenue (totalCost + collectCost + collectForCustomer)
-        update.actualRevenue = update.totalCost + collectCost + collectForCustomer;
+      // Validation: homeDelivery is required when carryCost or homeDeliveryCost > 0
+      if (
+        (carryCost > 0 || homeDeliveryCost > 0) &&
+        (!homeDelivery || homeDelivery.trim() === '')
+      ) {
+        return next(
+          new Error('homeDelivery is required when carryCost or homeDeliveryCost is greater than 0')
+        );
       }
+
+      // Validation: vehicleType is required when homeDelivery has value
+      if (homeDelivery && homeDelivery.trim() !== '' && !vehicleType) {
+        return next(new Error('vehicleType is required when homeDelivery is provided'));
+      }
+
+      // Calculate homeDeliveryCostTotal
+      if (homeDelivery && homeDelivery.trim() !== '') {
+        updateFields.homeDeliveryCostTotal = carryCost + homeDeliveryCost;
+      } else {
+        updateFields.homeDeliveryCostTotal = undefined;
+      }
+
+      // Calculate totalCost (service fees only: cost + itemCost + collectForCustomerCost + homeDeliveryCost)
+      if (isFree) {
+        updateFields.totalCost = 0;
+      } else {
+        updateFields.totalCost = cost + itemCost + collectForCustomerCost + homeDeliveryCost;
+      }
+
+      // Calculate actualRevenue (totalCost + collectCost + collectForCustomer)
+      updateFields.actualRevenue = updateFields.totalCost + collectCost + collectForCustomer;
     }
   }
   next();

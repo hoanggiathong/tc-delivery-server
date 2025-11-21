@@ -224,7 +224,7 @@ describe('Customer Address History API Integration Tests', () => {
         .post(`/api/customer-address-history/${validPhone}`)
         .send({
           address: 'Test Address',
-          // homeDeliveryCost, carryCost, vehicleType should use defaults
+          vehicleType: 'motorbike',
         })
         .set('Authorization', `Bearer ${authToken}`)
         .expect(201);
