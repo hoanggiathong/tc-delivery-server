@@ -1240,11 +1240,7 @@ export class MoneyDeliveryService {
   }
 
   /**
-   * Get list of return money deliveries with type COLLECT and status DONE
-   * @param userId - User ID to get selected route
-   * @param startDate - Start date in UTC (already converted from Vietnam timezone)
-   * @param endDate - End date in UTC (already converted from Vietnam timezone)
-   * @returns Array of money delivery responses
+   * danh sách tiền hàng thu hộ đã chuyển
    */
   async getListReturnMoneyDeliveriesTypeCollectStatusDone(
     userId: string,
@@ -1253,10 +1249,10 @@ export class MoneyDeliveryService {
   ): Promise<IMoneyDeliveryResponse[]> {
     try {
       // Get user's selected route as fromRoute
-      const fromRouteId = await this.userService.getUserSelectedRouteId(userId);
+      const toRouteId = await this.userService.getUserSelectedRouteId(userId);
 
       const moneyDeliveries = await MoneyDelivery.find({
-        fromRoute: fromRouteId,
+        toRoute: toRouteId,
         status: MoneyDeliveryStatus.DONE,
         type: MoneyDeliveryType.COLLECT,
         createdAt: { $gte: startDate, $lte: endDate },
@@ -1284,6 +1280,181 @@ export class MoneyDeliveryService {
         throw error;
       }
       throw new Error('Failed to get list return money deliveries type collect status done');
+    }
+  }
+
+  /**
+   * danh sách tiền về cũ nhưng không lấy type thu hộ
+   */
+  async getListOldMoneyDeliveryNotTypeCollectCost(
+    userId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<IMoneyDeliveryResponse[]> {
+    try {
+      // Get user's selected route as toRoute
+      const toRouteId = await this.userService.getUserSelectedRouteId(userId);
+
+      const moneyDeliveries = await MoneyDelivery.find({
+        toRoute: toRouteId,
+        type: { $ne: MoneyDeliveryType.COLLECT },
+        createdAt: { $gte: startDate, $lte: endDate },
+      })
+        .populate([
+          { path: 'sender', select: '_id name phone routeId createdAt updatedAt' },
+          { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address phone createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name address phone createdAt updatedAt' },
+          { path: 'createdByUser', select: '_id username' },
+          { path: 'deliveryId', select: '_id code name createdAt updatedAt' },
+        ])
+        .sort({ createdAt: -1 })
+        .lean();
+
+      const moneyDeliveriesResponse: IMoneyDeliveryResponse[] = moneyDeliveries.map(moneyDelivery =>
+        this.transformMoneyDeliveryToResponseOptimized(
+          this.toPopulatedMoneyDeliveryLean(moneyDelivery)
+        )
+      );
+
+      return moneyDeliveriesResponse;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to get list old money delivery not type collect cost');
+    }
+  }
+
+  /**
+   * danh sách tiền về không lấy type thu hộ và status DONE
+   */
+  async getListMoneyDeliveryNotTypeCollectCostWithStatusDone(
+    userId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<IMoneyDeliveryResponse[]> {
+    try {
+      // Get user's selected route as toRoute
+      const toRouteId = await this.userService.getUserSelectedRouteId(userId);
+
+      const moneyDeliveries = await MoneyDelivery.find({
+        toRoute: toRouteId,
+        status: MoneyDeliveryStatus.DONE,
+        type: { $ne: MoneyDeliveryType.COLLECT },
+        createdAt: { $gte: startDate, $lte: endDate },
+      })
+        .populate([
+          { path: 'sender', select: '_id name phone routeId createdAt updatedAt' },
+          { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address phone createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name address phone createdAt updatedAt' },
+          { path: 'createdByUser', select: '_id username' },
+          { path: 'deliveryId', select: '_id code name createdAt updatedAt' },
+        ])
+        .sort({ createdAt: -1 })
+        .lean();
+
+      const moneyDeliveriesResponse: IMoneyDeliveryResponse[] = moneyDeliveries.map(moneyDelivery =>
+        this.transformMoneyDeliveryToResponseOptimized(
+          this.toPopulatedMoneyDeliveryLean(moneyDelivery)
+        )
+      );
+
+      return moneyDeliveriesResponse;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to get list money delivery not type collect cost with status done');
+    }
+  }
+
+  /**
+   * danh sách tiền về type NORMAL và status WAITING
+   */
+  async getListMoneyDeliveryTypeNormalWithStatusWaiting(
+    userId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<IMoneyDeliveryResponse[]> {
+    try {
+      // Get user's selected route as toRoute
+      const toRouteId = await this.userService.getUserSelectedRouteId(userId);
+
+      const moneyDeliveries = await MoneyDelivery.find({
+        toRoute: toRouteId,
+        status: MoneyDeliveryStatus.WAITING,
+        type: MoneyDeliveryType.NORMAL,
+        createdAt: { $gte: startDate, $lte: endDate },
+      })
+        .populate([
+          { path: 'sender', select: '_id name phone routeId createdAt updatedAt' },
+          { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address phone createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name address phone createdAt updatedAt' },
+          { path: 'createdByUser', select: '_id username' },
+          { path: 'deliveryId', select: '_id code name createdAt updatedAt' },
+        ])
+        .sort({ createdAt: -1 })
+        .lean();
+
+      const moneyDeliveriesResponse: IMoneyDeliveryResponse[] = moneyDeliveries.map(moneyDelivery =>
+        this.transformMoneyDeliveryToResponseOptimized(
+          this.toPopulatedMoneyDeliveryLean(moneyDelivery)
+        )
+      );
+
+      return moneyDeliveriesResponse;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to get list money delivery type normal with status waiting');
+    }
+  }
+
+  /**
+   * danh sách tiền về type COLLECT và status DONE
+   */
+  async getListMoneyDeliveryTypeCollectCostWithStatusDone(
+    userId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<IMoneyDeliveryResponse[]> {
+    try {
+      // Get user's selected route as toRoute
+      const toRouteId = await this.userService.getUserSelectedRouteId(userId);
+
+      const moneyDeliveries = await MoneyDelivery.find({
+        toRoute: toRouteId,
+        status: MoneyDeliveryStatus.DONE,
+        type: MoneyDeliveryType.COLLECT,
+        createdAt: { $gte: startDate, $lte: endDate },
+      })
+        .populate([
+          { path: 'sender', select: '_id name phone routeId createdAt updatedAt' },
+          { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address phone createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name address phone createdAt updatedAt' },
+          { path: 'createdByUser', select: '_id username' },
+          { path: 'deliveryId', select: '_id code name createdAt updatedAt' },
+        ])
+        .sort({ createdAt: -1 })
+        .lean();
+
+      const moneyDeliveriesResponse: IMoneyDeliveryResponse[] = moneyDeliveries.map(moneyDelivery =>
+        this.transformMoneyDeliveryToResponseOptimized(
+          this.toPopulatedMoneyDeliveryLean(moneyDelivery)
+        )
+      );
+
+      return moneyDeliveriesResponse;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to get list money delivery type collect cost with status done');
     }
   }
 

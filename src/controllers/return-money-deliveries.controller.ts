@@ -150,6 +150,554 @@ export class ReturnMoneyDeliveriesController {
 
   /**
    * @swagger
+   * /api/return-money-deliveries/get-list-old-money-delivery-not-type-collect-cost:
+   *   get:
+   *     summary: Get list money delivery not type collect cost (max 30 days, Vietnam timezone)
+   *     description: Returns all money deliveries with type NOT COLLECT (NORMAL or COLLECT_FOR_CUSTOMER) from user's selected route within the specified date range (Vietnam time UTC+7). Date range cannot exceed 30 days. Dates are interpreted as Vietnam timezone and automatically converted to UTC for database queries.
+   *     tags: [Return Money Deliveries]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: startDate
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Start date in YYYY-MM-DD format (Vietnam timezone). Will query from 00:00:00 Vietnam time. Date range cannot exceed 30 days.
+   *         example: "2025-10-01"
+   *       - in: query
+   *         name: endDate
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: End date in YYYY-MM-DD format (Vietnam timezone). Will query until 23:59:59 Vietnam time. Cannot be in the future. Date range cannot exceed 30 days.
+   *         example: "2025-10-31"
+   *     responses:
+   *       200:
+   *         description: Get list old money delivery not type collect cost successful
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Get list old money delivery not type collect cost successful"
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/MoneyDelivery'
+   *       400:
+   *         description: Validation error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Validation failed: Date range cannot exceed 30 days"
+   *       401:
+   *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Unauthorized"
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "get list old money delivery not type collect cost failed"
+   */
+  getListOldMoneyDeliveryNotTypeCollectCost = async (
+    req: AuthRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { startDate, endDate } = req.query as unknown as DateRangeQuery;
+
+      const query: IReturnMoneyDeliveryQuery = {
+        startDate: String(startDate),
+        endDate: String(endDate),
+      };
+
+      const result =
+        await this.returnMoneyDeliveriesService.getListOldMoneyDeliveryNotTypeCollectCost(
+          query,
+          req.user.userId
+        );
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Get list old money delivery not type collect cost successful',
+        data: result,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Get list old money delivery not type collect cost error:', {
+        error: error instanceof Error ? error.message : error,
+      });
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'get list old money delivery not type collect cost failed';
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(500).json(response);
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/return-money-deliveries/get-list-money-delivery-not-type-collect-cost-with-status-done:
+   *   get:
+   *     summary: Get list money delivery not type collect cost with status done (max 30 days, Vietnam timezone)
+   *     description: Returns all money deliveries with type NOT COLLECT (NORMAL or COLLECT_FOR_CUSTOMER) and status DONE from user's selected route within the specified date range (Vietnam time UTC+7). Date range cannot exceed 30 days. Dates are interpreted as Vietnam timezone and automatically converted to UTC for database queries.
+   *     tags: [Return Money Deliveries]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: startDate
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Start date in YYYY-MM-DD format (Vietnam timezone). Will query from 00:00:00 Vietnam time. Date range cannot exceed 30 days.
+   *         example: "2025-10-01"
+   *       - in: query
+   *         name: endDate
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: End date in YYYY-MM-DD format (Vietnam timezone). Will query until 23:59:59 Vietnam time. Cannot be in the future. Date range cannot exceed 30 days.
+   *         example: "2025-10-31"
+   *     responses:
+   *       200:
+   *         description: Get list money delivery not type collect cost with status done successful
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Get list money delivery not type collect cost with status done successful"
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/MoneyDelivery'
+   *       400:
+   *         description: Validation error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Validation failed: Date range cannot exceed 30 days"
+   *       401:
+   *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Unauthorized"
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "get list money delivery not type collect cost with status done failed"
+   */
+  getListMoneyDeliveryNotTypeCollectCostWithStatusDone = async (
+    req: AuthRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { startDate, endDate } = req.query as unknown as DateRangeQuery;
+
+      const query: IReturnMoneyDeliveryQuery = {
+        startDate: String(startDate),
+        endDate: String(endDate),
+      };
+
+      const result =
+        await this.returnMoneyDeliveriesService.getListMoneyDeliveryNotTypeCollectCostWithStatusDone(
+          query,
+          req.user.userId
+        );
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Get list money delivery not type collect cost with status done successful',
+        data: result,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Get list money delivery not type collect cost with status done error:', {
+        error: error instanceof Error ? error.message : error,
+      });
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'get list money delivery not type collect cost with status done failed';
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(500).json(response);
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/return-money-deliveries/get-list-money-delivery-type-normal-with-status-waiting:
+   *   get:
+   *     summary: Get list money delivery type normal with status waiting (max 30 days, Vietnam timezone)
+   *     description: Returns all money deliveries with type NORMAL and status WAITING from user's selected route within the specified date range (Vietnam time UTC+7). Date range cannot exceed 30 days. Dates are interpreted as Vietnam timezone and automatically converted to UTC for database queries.
+   *     tags: [Return Money Deliveries]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: startDate
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Start date in YYYY-MM-DD format (Vietnam timezone). Will query from 00:00:00 Vietnam time. Date range cannot exceed 30 days.
+   *         example: "2025-10-01"
+   *       - in: query
+   *         name: endDate
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: End date in YYYY-MM-DD format (Vietnam timezone). Will query until 23:59:59 Vietnam time. Cannot be in the future. Date range cannot exceed 30 days.
+   *         example: "2025-10-31"
+   *     responses:
+   *       200:
+   *         description: Get list money delivery type normal with status waiting successful
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Get list money delivery type normal with status waiting successful"
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/MoneyDelivery'
+   *       400:
+   *         description: Validation error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Validation failed: Date range cannot exceed 30 days"
+   *       401:
+   *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Unauthorized"
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "get list money delivery type normal with status waiting failed"
+   */
+  getListMoneyDeliveryTypeNormalWithStatusWaiting = async (
+    req: AuthRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { startDate, endDate } = req.query as unknown as DateRangeQuery;
+
+      const query: IReturnMoneyDeliveryQuery = {
+        startDate: String(startDate),
+        endDate: String(endDate),
+      };
+
+      const result =
+        await this.returnMoneyDeliveriesService.getListMoneyDeliveryTypeNormalWithStatusWaiting(
+          query,
+          req.user.userId
+        );
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Get list money delivery type normal with status waiting successful',
+        data: result,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Get list money delivery type normal with status waiting error:', {
+        error: error instanceof Error ? error.message : error,
+      });
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'get list money delivery type normal with status waiting failed';
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(500).json(response);
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/return-money-deliveries/get-list-money-delivery-type-collect-cost-with-status-done:
+   *   get:
+   *     summary: Get list money delivery type collect cost with status done (max 30 days, Vietnam timezone)
+   *     description: Returns all money deliveries with type COLLECT and status DONE from user's selected route within the specified date range (Vietnam time UTC+7). Date range cannot exceed 30 days. Dates are interpreted as Vietnam timezone and automatically converted to UTC for database queries.
+   *     tags: [Return Money Deliveries]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: startDate
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Start date in YYYY-MM-DD format (Vietnam timezone). Will query from 00:00:00 Vietnam time. Date range cannot exceed 30 days.
+   *         example: "2025-10-01"
+   *       - in: query
+   *         name: endDate
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: End date in YYYY-MM-DD format (Vietnam timezone). Will query until 23:59:59 Vietnam time. Cannot be in the future. Date range cannot exceed 30 days.
+   *         example: "2025-10-31"
+   *     responses:
+   *       200:
+   *         description: Get list money delivery type collect cost with status done successful
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Get list money delivery type collect cost with status done successful"
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/MoneyDelivery'
+   *       400:
+   *         description: Validation error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Validation failed: Date range cannot exceed 30 days"
+   *       401:
+   *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Unauthorized"
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "get list money delivery type collect cost with status done failed"
+   */
+  getListMoneyDeliveryTypeCollectCostWithStatusDone = async (
+    req: AuthRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { startDate, endDate } = req.query as unknown as DateRangeQuery;
+
+      const query: IReturnMoneyDeliveryQuery = {
+        startDate: String(startDate),
+        endDate: String(endDate),
+      };
+
+      const result =
+        await this.returnMoneyDeliveriesService.getListMoneyDeliveryTypeCollectCostWithStatusDone(
+          query,
+          req.user.userId
+        );
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Get list money delivery type collect cost with status done successful',
+        data: result,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Get list money delivery type collect cost with status done error:', {
+        error: error instanceof Error ? error.message : error,
+      });
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'get list money delivery type collect cost with status done failed';
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(500).json(response);
+    }
+  };
+
+  /**
+   * @swagger
    * /api/return-money-deliveries/update-status-with-images:
    *   put:
    *     summary: Update status of return money delivery with images

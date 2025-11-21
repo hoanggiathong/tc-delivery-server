@@ -33,15 +33,12 @@ export class ReturnMoneyDeliveriesService {
   ): Promise<IMoneyDeliveryResponse[]> {
     const { startDate, endDate } = query;
 
-    // Convert string dates to Date objects
     const startDateObj = new Date(String(startDate));
     const endDateObj = new Date(String(endDate));
 
-    // Get start of day and end of day in Vietnam timezone
     const startOfDay = getStartOfDayVietnam(startDateObj);
     const endOfDay = getEndOfDayVietnam(endDateObj);
 
-    // Convert Vietnam time to UTC for database queries
     const startDateUTC = convertVietnamToUTC(startOfDay);
     const endDateUTC = convertVietnamToUTC(endOfDay);
 
@@ -59,6 +56,146 @@ export class ReturnMoneyDeliveriesService {
         throw error;
       }
       throw new Error('get list return money deliveries type collect status done failed');
+    }
+  }
+
+  /**
+   * danh sách tiền về cũ nhưng không lấy type thu hộ
+   */
+  async getListOldMoneyDeliveryNotTypeCollectCost(
+    query: IReturnMoneyDeliveryQuery,
+    userId: string
+  ): Promise<IMoneyDeliveryResponse[]> {
+    const { startDate, endDate } = query;
+
+    const startDateObj = new Date(String(startDate));
+    const endDateObj = new Date(String(endDate));
+
+    const startOfDay = getStartOfDayVietnam(startDateObj);
+    const endOfDay = getEndOfDayVietnam(endDateObj);
+
+    const startDateUTC = convertVietnamToUTC(startOfDay);
+    const endDateUTC = convertVietnamToUTC(endOfDay);
+
+    try {
+      const moneyDeliveries =
+        await this.moneyDeliveryService.getListOldMoneyDeliveryNotTypeCollectCost(
+          userId,
+          startDateUTC,
+          endDateUTC
+        );
+
+      return moneyDeliveries;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('get list old money delivery not type collect cost failed');
+    }
+  }
+
+  /**
+   * danh sách tiền về không lấy type thu hộ và status DONE
+   */
+  async getListMoneyDeliveryNotTypeCollectCostWithStatusDone(
+    query: IReturnMoneyDeliveryQuery,
+    userId: string
+  ): Promise<IMoneyDeliveryResponse[]> {
+    const { startDate, endDate } = query;
+
+    const startDateObj = new Date(String(startDate));
+    const endDateObj = new Date(String(endDate));
+
+    const startOfDay = getStartOfDayVietnam(startDateObj);
+    const endOfDay = getEndOfDayVietnam(endDateObj);
+
+    const startDateUTC = convertVietnamToUTC(startOfDay);
+    const endDateUTC = convertVietnamToUTC(endOfDay);
+
+    try {
+      const moneyDeliveries =
+        await this.moneyDeliveryService.getListMoneyDeliveryNotTypeCollectCostWithStatusDone(
+          userId,
+          startDateUTC,
+          endDateUTC
+        );
+
+      return moneyDeliveries;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('get list money delivery not type collect cost with status done failed');
+    }
+  }
+
+  /**
+   * danh sách tiền về type NORMAL và status WAITING
+   */
+  async getListMoneyDeliveryTypeNormalWithStatusWaiting(
+    query: IReturnMoneyDeliveryQuery,
+    userId: string
+  ): Promise<IMoneyDeliveryResponse[]> {
+    const { startDate, endDate } = query;
+
+    const startDateObj = new Date(String(startDate));
+    const endDateObj = new Date(String(endDate));
+
+    const startOfDay = getStartOfDayVietnam(startDateObj);
+    const endOfDay = getEndOfDayVietnam(endDateObj);
+
+    const startDateUTC = convertVietnamToUTC(startOfDay);
+    const endDateUTC = convertVietnamToUTC(endOfDay);
+
+    try {
+      const moneyDeliveries =
+        await this.moneyDeliveryService.getListMoneyDeliveryTypeNormalWithStatusWaiting(
+          userId,
+          startDateUTC,
+          endDateUTC
+        );
+
+      return moneyDeliveries;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('get list money delivery type normal with status waiting failed');
+    }
+  }
+
+  /**
+   * danh sách tiền về type COLLECT và status DONE
+   */
+  async getListMoneyDeliveryTypeCollectCostWithStatusDone(
+    query: IReturnMoneyDeliveryQuery,
+    userId: string
+  ): Promise<IMoneyDeliveryResponse[]> {
+    const { startDate, endDate } = query;
+
+    const startDateObj = new Date(String(startDate));
+    const endDateObj = new Date(String(endDate));
+
+    const startOfDay = getStartOfDayVietnam(startDateObj);
+    const endOfDay = getEndOfDayVietnam(endDateObj);
+
+    const startDateUTC = convertVietnamToUTC(startOfDay);
+    const endDateUTC = convertVietnamToUTC(endOfDay);
+
+    try {
+      const moneyDeliveries =
+        await this.moneyDeliveryService.getListMoneyDeliveryTypeCollectCostWithStatusDone(
+          userId,
+          startDateUTC,
+          endDateUTC
+        );
+
+      return moneyDeliveries;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('get list money delivery type collect cost with status done failed');
     }
   }
 
