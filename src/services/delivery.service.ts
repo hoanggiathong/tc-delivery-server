@@ -15,7 +15,6 @@ import {
   INextCodeResponse,
   IFrequentCustomer,
   ITodayDeliveryReport,
-  ITodayDeliverySummary,
   ITodayDeliveryItem,
   IDeliveryPopulated,
 } from '@/types/delivery.type';
@@ -975,93 +974,23 @@ export class DeliveryService {
             totalCost: 1,
             actualRevenue: 1,
             paymentType: 1,
+            upItems: 1,
+            downItems: 1,
             notes: 1,
             details: 1,
           },
         },
-        // Facet for data and summary
+        // Sort by creation date descending
         {
-          $facet: {
-            // Get all data sorted by date descending
-            data: [{ $sort: { createdAt: -1 } }],
-            // Get total count
-            totalCount: [{ $count: 'count' }],
-            // Get summary statistics
-            summary: [
-              {
-                $group: {
-                  _id: null,
-                  totalDeliveries: { $sum: 1 },
-                  totalQuantity: { $sum: '$quantity' },
-                  totalCost: { $sum: '$totalCost' },
-                  totalActualRevenue: { $sum: '$actualRevenue' },
-                  totalHomeDeliveryCost: { $sum: '$homeDeliveryCost' },
-                  totalItemCost: { $sum: '$itemCost' },
-                  totalItemValue: { $sum: '$itemValue' },
-                  totalCollectCost: { $sum: '$collectCost' },
-                  totalCollectForCustomer: { $sum: '$collectForCustomer' },
-                  totalCollectForCustomerCost: { $sum: '$collectForCustomerCost' },
-
-                  // Payment type counts
-                  normalPaymentCount: {
-                    $sum: {
-                      $cond: [
-                        {
-                          $or: [
-                            { $eq: ['$paymentType', null] },
-                            { $eq: [{ $type: '$paymentType' }, 'missing'] },
-                          ],
-                        },
-                        1,
-                        0,
-                      ],
-                    },
-                  },
-                  normalPaymentAmount: {
-                    $sum: {
-                      $cond: [
-                        {
-                          $or: [
-                            { $eq: ['$paymentType', null] },
-                            { $eq: [{ $type: '$paymentType' }, 'missing'] },
-                          ],
-                        },
-                        '$totalCost',
-                        0,
-                      ],
-                    },
-                  },
-                  debtPaymentCount: {
-                    $sum: {
-                      $cond: [{ $eq: ['$paymentType', 'debt'] }, 1, 0],
-                    },
-                  },
-                  debtPaymentAmount: {
-                    $sum: {
-                      $cond: [{ $eq: ['$paymentType', 'debt'] }, '$totalCost', 0],
-                    },
-                  },
-                  freePaymentCount: {
-                    $sum: {
-                      $cond: [{ $eq: ['$paymentType', 'free'] }, 1, 0],
-                    },
-                  },
-                },
-              },
-            ],
-          },
+          $sort: { createdAt: -1 },
         },
       ];
 
       // Execute aggregation
       const result = await Delivery.aggregate(pipeline);
 
-      // Extract results
-      const deliveries = result[0]?.data || [];
-      const summaryData = result[0]?.summary[0] || {};
-
       // Transform deliveries to ITodayDeliveryItem format
-      const deliveryItems: ITodayDeliveryItem[] = deliveries.map((d: any) => ({
+      const deliveryItems: ITodayDeliveryItem[] = result.map((d: any) => ({
         id: d._id.toString(),
         code: d.code,
         fullCode: d.fullCode,
@@ -1089,47 +1018,16 @@ export class DeliveryService {
         totalCost: d.totalCost,
         actualRevenue: d.actualRevenue,
         paymentType: d.paymentType,
+        upItems: d.upItems || undefined,
+        downItems: d.downItems || undefined,
         notes: d.notes,
         details: d.details,
         createdAt: d.createdAt,
         updatedAt: d.updatedAt,
       }));
 
-      const summary: ITodayDeliverySummary = {
-        totalDeliveries: summaryData.totalDeliveries || 0,
-        totalQuantity: summaryData.totalQuantity || 0,
-        totalCost: summaryData.totalCost || 0,
-        totalActualRevenue: summaryData.totalActualRevenue || 0,
-        totalItemCost: summaryData.totalItemCost || 0,
-        totalCollectCost: summaryData.totalCollectCost || 0,
-        totalCollectForCustomer: summaryData.totalCollectForCustomer || 0,
-        totalCollectForCustomerCost: summaryData.totalCollectForCustomerCost || 0,
-        date: startDate.toISOString().split('T')[0], // Format: YYYY-MM-DD
-
-        // Optional fields for cost report
-        totalHomeDeliveryCost: summaryData.totalHomeDeliveryCost || 0,
-        totalItemValue: summaryData.totalItemValue || 0,
-        totalRevenue: summaryData.totalCost || 0, // Backward compatibility
-
-        normalPaymentCount: summaryData.normalPaymentCount || 0,
-        normalPaymentAmount: summaryData.normalPaymentAmount || 0,
-        debtPaymentCount: summaryData.debtPaymentCount || 0,
-        debtPaymentAmount: summaryData.debtPaymentAmount || 0,
-        freePaymentCount: summaryData.freePaymentCount || 0,
-
-        averageCostPerDelivery:
-          summaryData.totalDeliveries > 0
-            ? (summaryData.totalCost || 0) / summaryData.totalDeliveries
-            : 0,
-        averageItemValue:
-          summaryData.totalDeliveries > 0
-            ? (summaryData.totalItemValue || 0) / summaryData.totalDeliveries
-            : 0,
-      };
-
       // Build final response with routeInfo
       const report: ITodayDeliveryReport = {
-        summary,
         deliveries: deliveryItems,
         routeInfo: {
           route: {
@@ -1268,45 +1166,24 @@ export class DeliveryService {
             totalCost: 1,
             actualRevenue: 1,
             paymentType: 1,
+            upItems: 1,
+            downItems: 1,
             notes: 1,
             details: 1,
             nameProductAndAdditionalInformation: 1,
           },
         },
-        // Facet for data and summary (no pagination needed)
+        // Sort by creation time (newest first)
         {
-          $facet: {
-            // Get all data sorted by creation time (newest first)
-            data: [{ $sort: { createdAt: -1 } }],
-            // Get summary statistics
-            summary: [
-              {
-                $group: {
-                  _id: null,
-                  totalDeliveries: { $sum: 1 },
-                  totalQuantity: { $sum: '$quantity' },
-                  totalCost: { $sum: '$totalCost' },
-                  totalActualRevenue: { $sum: '$actualRevenue' },
-                  totalItemCost: { $sum: '$itemCost' },
-                  totalCollectCost: { $sum: '$collectCost' },
-                  totalCollectForCustomer: { $sum: '$collectForCustomer' },
-                  totalCollectForCustomerCost: { $sum: '$collectForCustomerCost' },
-                },
-              },
-            ],
-          },
+          $sort: { createdAt: -1 },
         },
       ];
 
       // Execute aggregation
       const result = await Delivery.aggregate(pipeline);
 
-      // Extract results
-      const deliveries = result[0]?.data || [];
-      const summaryData = result[0]?.summary[0] || {};
-
       // Transform deliveries to simplified items
-      const deliveryItems: ITodayDeliveryItem[] = deliveries.map(
+      const deliveryItems: ITodayDeliveryItem[] = result.map(
         (d: {
           _id: Types.ObjectId;
           code: string;
@@ -1332,6 +1209,8 @@ export class DeliveryService {
           totalCost: number;
           actualRevenue: number;
           paymentType: PaymentType;
+          upItems?: string;
+          downItems?: string;
           notes?: string;
           details?: {
             weight?: number;
@@ -1369,24 +1248,14 @@ export class DeliveryService {
           totalCost: d.totalCost,
           actualRevenue: d.actualRevenue,
           paymentType: d.paymentType,
+          upItems: d.upItems || undefined,
+          downItems: d.downItems || undefined,
           notes: d.notes,
           details: d.details,
           createdAt: d.createdAt,
           updatedAt: d.updatedAt,
         })
       );
-
-      const summary: ITodayDeliverySummary = {
-        totalDeliveries: summaryData.totalDeliveries || 0,
-        totalQuantity: summaryData.totalQuantity || 0,
-        totalCost: summaryData.totalCost || 0,
-        totalActualRevenue: summaryData.totalActualRevenue || 0,
-        totalItemCost: summaryData.totalItemCost || 0,
-        totalCollectCost: summaryData.totalCollectCost || 0,
-        totalCollectForCustomer: summaryData.totalCollectForCustomer || 0,
-        totalCollectForCustomerCost: summaryData.totalCollectForCustomerCost || 0,
-        date: today.toISOString().split('T')[0],
-      };
 
       // Build route info
       const routeInfo = {
@@ -1401,7 +1270,6 @@ export class DeliveryService {
 
       // Build final response
       const report: ITodayDeliveryReport = {
-        summary,
         deliveries: deliveryItems,
         routeInfo,
       };

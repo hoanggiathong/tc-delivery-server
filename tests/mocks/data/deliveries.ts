@@ -176,28 +176,6 @@ export const mockNextCodeResponseForIntegration = {
  * Mock cost report response for delivery integration tests
  */
 export const mockCostReportForIntegration = {
-  summary: {
-    totalDeliveries: 5,
-    totalQuantity: 10,
-    totalCost: 250000,
-    totalActualRevenue: 540000,
-    totalItemCost: 25000,
-    totalCollectCost: 10000,
-    totalCollectForCustomer: 250000,
-    totalCollectForCustomerCost: 15000,
-    date: '2024-01-15',
-    // Optional cost report fields
-    totalHomeDeliveryCost: 20000,
-    totalItemValue: 500000,
-    totalRevenue: 250000,
-    normalPaymentCount: 2,
-    normalPaymentAmount: 140000,
-    debtPaymentCount: 2,
-    debtPaymentAmount: 150000,
-    freePaymentCount: 1,
-    averageCostPerDelivery: 50000,
-    averageItemValue: 100000,
-  },
   deliveries: [
     {
       id: 'delivery-1',
@@ -233,6 +211,8 @@ export const mockCostReportForIntegration = {
       totalCost: 70000,
       actualRevenue: 120000,
       paymentType: 'debt' as const,
+      upItems: 'Hàng lên tại HCM',
+      downItems: 'Hàng xuống tại Hà Nội',
       notes: 'Test delivery 1',
       details: {
         weight: 5,
@@ -278,6 +258,8 @@ export const mockCostReportForIntegration = {
       totalCost: 82500,
       actualRevenue: 142500,
       paymentType: undefined,
+      upItems: 'Hàng lên tại Đà Nẵng',
+      downItems: undefined,
       notes: 'Test delivery 2',
       details: {
         weight: 8,

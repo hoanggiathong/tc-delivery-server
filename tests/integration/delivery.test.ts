@@ -532,6 +532,11 @@ describe('Delivery Endpoints', () => {
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.data).toEqualWithDateStrings(mockCostReportForIntegration);
+      expect(response.body.data).not.toHaveProperty('summary');
+      expect(response.body.data).toHaveProperty('deliveries');
+      expect(response.body.data).toHaveProperty('routeInfo');
+      expect(response.body.data.deliveries[0]).toHaveProperty('upItems');
+      expect(response.body.data.deliveries[0]).toHaveProperty('downItems');
       expect(MockedDeliveryService.prototype.getCostReport).toHaveBeenCalledWith(
         'admin123',
         new Date(validQuery.startDate),

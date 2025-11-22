@@ -1468,34 +1468,57 @@ export class DeliveryController {
    *                 data:
    *                   type: object
    *                   properties:
-   *                     summary:
-   *                       type: object
-   *                       description: Summary statistics for all deliveries in the date range
-   *                       properties:
-   *                         totalDeliveries:
-   *                           type: number
-   *                           example: 150
-   *                         totalCost:
-   *                           type: number
-   *                           example: 5000000
-   *                         totalActualRevenue:
-   *                           type: number
-   *                           example: 5500000
-   *                         normalPaymentCount:
-   *                           type: number
-   *                           example: 140
-   *                         debtPaymentCount:
-   *                           type: number
-   *                           example: 10
    *                     deliveries:
    *                       type: array
    *                       description: Complete list of all deliveries with cost details (sorted by date descending)
    *                       items:
    *                         type: object
-   *                     totalRecords:
-   *                       type: number
-   *                       description: Total number of records returned
-   *                       example: 150
+   *                         properties:
+   *                           id:
+   *                             type: string
+   *                           code:
+   *                             type: string
+   *                           sender:
+   *                             type: object
+   *                             properties:
+   *                               name:
+   *                                 type: string
+   *                               phone:
+   *                                 type: string
+   *                           receiver:
+   *                             type: object
+   *                             properties:
+   *                               name:
+   *                                 type: string
+   *                               phone:
+   *                                 type: string
+   *                           totalCost:
+   *                             type: number
+   *                           actualRevenue:
+   *                             type: number
+   *                           upItems:
+   *                             type: string
+   *                             nullable: true
+   *                             description: Items loaded at origin (lên hàng)
+   *                             example: "Hàng lên tại HCM"
+   *                           downItems:
+   *                             type: string
+   *                             nullable: true
+   *                             description: Items unloaded at destination (xuống hàng)
+   *                             example: "Hàng xuống tại Hà Nội"
+   *                     routeInfo:
+   *                       type: object
+   *                       description: Route information
+   *                       properties:
+   *                         route:
+   *                           type: object
+   *                           properties:
+   *                             id:
+   *                               type: string
+   *                             code:
+   *                               type: string
+   *                             name:
+   *                               type: string
    *       400:
    *         description: Validation error (date range > 30 days, invalid dates) or user has no selected route
    *         content:

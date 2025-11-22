@@ -369,6 +369,8 @@ export interface ITodayDeliveryItem {
   totalCost: number;
   actualRevenue: number;
   paymentType?: PaymentType;
+  upItems?: string;
+  downItems?: string;
   notes?: string;
   details?: {
     weight?: number;
@@ -383,7 +385,6 @@ export interface ITodayDeliveryItem {
 }
 
 export interface ITodayDeliveryReport {
-  summary: ITodayDeliverySummary;
   deliveries: ITodayDeliveryItem[];
   routeInfo: {
     route: {
