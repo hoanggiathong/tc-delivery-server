@@ -9,6 +9,7 @@ import {
   getListMoneyDeliveryNotTypeCollectCostWithStatusDoneSchema,
   getListMoneyDeliveryTypeNormalWithStatusWaitingSchema,
   getListMoneyDeliveryTypeCollectCostWithStatusDoneSchema,
+  getListReturnMoneyTypeCollectCostWithStatusWaitingSchema,
   updateStatusReturnMoneyDeliveryWithImagesSchema,
 } from '@/schemas/return-money-deliveries.schema';
 import { UserRole } from '@/types/user.type';
@@ -49,6 +50,12 @@ router.get(
   '/get-list-money-delivery-type-collect-cost-with-status-done',
   validate(getListMoneyDeliveryTypeCollectCostWithStatusDoneSchema),
   returnMoneyDeliveriesController.getListMoneyDeliveryTypeCollectCostWithStatusDone
+);
+
+router.get(
+  '/get-list-return-money-type-collect-cost-with-status-waiting',
+  validate(getListReturnMoneyTypeCollectCostWithStatusWaitingSchema),
+  returnMoneyDeliveriesController.getListReturnMoneyTypeCollectCostWithStatusWaiting
 );
 
 router.put(
