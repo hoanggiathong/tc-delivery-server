@@ -265,3 +265,13 @@ export const getListReturnMoneyTypeCollectCostWithStatusWaitingSchema = z
       path: ['query', 'endDate'],
     }
   );
+
+// Schema for get list report return money delivery type collect with status done
+export const getListReportReturnMoneyDeliveryTypeCollectWithStatusDoneSchema = z.object({
+  query: z.object({}),
+});
+
+// Schema for get list report return money delivery not type collect with status done
+export const getListReportReturnMoneyDeliveryNotTypeCollectWithStatusDoneSchema = z.object({
+  query: z.object({}),
+});
