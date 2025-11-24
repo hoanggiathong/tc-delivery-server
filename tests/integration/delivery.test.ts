@@ -285,6 +285,146 @@ describe('Delivery Endpoints', () => {
       expect(response.body.success).toBe(false);
       expect(response.body.message).toBe('Access token is required');
     });
+
+    describe('toRoute update with fullCode regeneration', () => {
+      it('should regenerate fullCode when toRoute changes (no conflict)', async () => {
+        const originalDelivery = createMockDelivery({
+          id: deliveryId,
+          code: '1407250001',
+          fullCode: '1407250001T4T1',
+          subCode: '17324560001',
+          fromRoute: {
+            id: '507f1f77bcf86cd799439013',
+            code: 'T4',
+            name: 'Can Tho',
+            createdAt: new Date('2025-06-27T07:51:17.342Z'),
+            updatedAt: new Date('2025-06-27T07:51:17.342Z'),
+          },
+          toRoute: {
+            id: '507f1f77bcf86cd799439011',
+            code: 'T1',
+            name: 'Ho Chi Minh',
+            createdAt: new Date('2025-06-27T07:51:17.342Z'),
+            updatedAt: new Date('2025-06-27T07:51:17.342Z'),
+          },
+        });
+
+        // Mock updated delivery with new toRoute but same code (no conflict)
+        const updatedDelivery = createMockDelivery({
+          id: deliveryId,
+          code: '1407250001', // Code preserved
+          fullCode: '1407250001T4T2', // fullCode updated with new toRoute
+          subCode: originalDelivery.subCode,
+          fromRoute: originalDelivery.fromRoute,
+          toRoute: {
+            id: '507f1f77bcf86cd799439014',
+            code: 'T2',
+            name: 'Da Nang',
+            createdAt: new Date('2025-06-27T07:51:17.342Z'),
+            updatedAt: new Date('2025-06-27T07:51:17.342Z'),
+          },
+        });
+
+        MockedDeliveryService.prototype.updateDelivery.mockResolvedValue(updatedDelivery);
+
+        const response = await request(app)
+          .put(`/api/delivery/${deliveryId}`)
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send({ toRouteId: '507f1f77bcf86cd799439014' })
+          .expect(200);
+
+        expect(response.body.success).toBe(true);
+        expect(response.body.data.delivery.code).toBe('1407250001'); // Code preserved
+        expect(response.body.data.delivery.fullCode).toBe('1407250001T4T2'); // fullCode updated
+        expect(response.body.data.delivery.toRoute.code).toBe('T2');
+      });
+
+      it('should generate new code when toRoute change causes fullCode conflict', async () => {
+        const originalDelivery = createMockDelivery({
+          id: deliveryId,
+          code: '1407250001',
+          fullCode: '1407250001T4T1',
+          subCode: '17324560001',
+          fromRoute: {
+            id: '507f1f77bcf86cd799439013',
+            code: 'T4',
+            name: 'Can Tho',
+            createdAt: new Date('2025-06-27T07:51:17.342Z'),
+            updatedAt: new Date('2025-06-27T07:51:17.342Z'),
+          },
+          toRoute: {
+            id: '507f1f77bcf86cd799439011',
+            code: 'T1',
+            name: 'Ho Chi Minh',
+            createdAt: new Date('2025-06-27T07:51:17.342Z'),
+            updatedAt: new Date('2025-06-27T07:51:17.342Z'),
+          },
+        });
+
+        // Mock updated delivery with new code due to conflict
+        const updatedDelivery = createMockDelivery({
+          id: deliveryId,
+          code: '1407250201', // New code generated
+          fullCode: '1407250201T4T2', // New fullCode with new code
+          subCode: '17324560201',
+          fromRoute: originalDelivery.fromRoute,
+          toRoute: {
+            id: '507f1f77bcf86cd799439014',
+            code: 'T2',
+            name: 'Da Nang',
+            createdAt: new Date('2025-06-27T07:51:17.342Z'),
+            updatedAt: new Date('2025-06-27T07:51:17.342Z'),
+          },
+        });
+
+        MockedDeliveryService.prototype.updateDelivery.mockResolvedValue(updatedDelivery);
+
+        const response = await request(app)
+          .put(`/api/delivery/${deliveryId}`)
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send({ toRouteId: '507f1f77bcf86cd799439014' })
+          .expect(200);
+
+        expect(response.body.success).toBe(true);
+        expect(response.body.data.delivery.code).toBe('1407250201'); // New code
+        expect(response.body.data.delivery.fullCode).toBe('1407250201T4T2'); // New fullCode
+        expect(response.body.data.delivery.toRoute.code).toBe('T2');
+      });
+
+      it('should not regenerate fullCode when toRoute stays the same', async () => {
+        const originalDelivery = createMockDelivery({
+          id: deliveryId,
+          code: '1407250001',
+          fullCode: '1407250001T4T1',
+          subCode: '17324560001',
+          toRoute: {
+            id: '507f1f77bcf86cd799439011',
+            code: 'T1',
+            name: 'Ho Chi Minh',
+            createdAt: new Date('2025-06-27T07:51:17.342Z'),
+            updatedAt: new Date('2025-06-27T07:51:17.342Z'),
+          },
+        });
+
+        // Mock updated delivery - only cost changed, fullCode stays the same
+        const updatedDelivery = createMockDelivery({
+          ...originalDelivery,
+          cost: 100000, // Only cost changed
+        });
+
+        MockedDeliveryService.prototype.updateDelivery.mockResolvedValue(updatedDelivery);
+
+        const response = await request(app)
+          .put(`/api/delivery/${deliveryId}`)
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send({ cost: 100000 })
+          .expect(200);
+
+        expect(response.body.success).toBe(true);
+        expect(response.body.data.delivery.code).toBe('1407250001'); // Code unchanged
+        expect(response.body.data.delivery.fullCode).toBe('1407250001T4T1'); // fullCode unchanged
+      });
+    });
   });
 
   describe('GET /api/delivery/:id', () => {

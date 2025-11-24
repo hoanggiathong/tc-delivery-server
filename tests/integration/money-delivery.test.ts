@@ -618,6 +618,93 @@ describe('Money Delivery API Integration Tests', () => {
       expect(response.body.success).toBe(false);
       expect(response.body.message).toContain('Validation');
     });
+
+    describe('toRoute update with fullCode regeneration', () => {
+      it('should regenerate fullCode when toRoute changes (no conflict)', async () => {
+        // Mock updated money delivery with new toRoute but same code (no conflict)
+        const updatedMoneyDelivery = {
+          ...mockMoneyDeliveryForIntegration,
+          code: '1407250001', // Code preserved
+          fullCode: '1407250001T4T2-T', // fullCode updated with new toRoute + -T suffix
+          toRoute: {
+            id: '507f1f77bcf86cd799439014',
+            code: 'T2',
+            name: 'Da Nang',
+            createdAt: new Date('2025-06-27T07:51:17.342Z'),
+            updatedAt: new Date('2025-06-27T07:51:17.342Z'),
+          },
+        };
+
+        MockedMoneyDeliveryService.prototype.updateMoneyDelivery.mockResolvedValue(
+          updatedMoneyDelivery
+        );
+
+        const response = await request(app)
+          .put('/api/money-deliveries/moneyDelivery123')
+          .set('Authorization', `Bearer ${authToken}`)
+          .send({ toRouteId: '507f1f77bcf86cd799439014' })
+          .expect(200);
+
+        expect(response.body.success).toBe(true);
+        expect(response.body.data.code).toBe('1407250001'); // Code preserved
+        expect(response.body.data.fullCode).toBe('1407250001T4T2-T'); // fullCode updated with -T suffix
+        expect(response.body.data.toRoute.code).toBe('T2');
+      });
+
+      it('should generate new code when toRoute change causes fullCode conflict', async () => {
+        // Mock updated money delivery with new code due to conflict
+        const updatedMoneyDelivery = {
+          ...mockMoneyDeliveryForIntegration,
+          code: '1407250201', // New code generated
+          fullCode: '1407250201T4T2-T', // New fullCode with new code + -T suffix
+          subCode: '17324560201',
+          toRoute: {
+            id: '507f1f77bcf86cd799439014',
+            code: 'T2',
+            name: 'Da Nang',
+            createdAt: new Date('2025-06-27T07:51:17.342Z'),
+            updatedAt: new Date('2025-06-27T07:51:17.342Z'),
+          },
+        };
+
+        MockedMoneyDeliveryService.prototype.updateMoneyDelivery.mockResolvedValue(
+          updatedMoneyDelivery
+        );
+
+        const response = await request(app)
+          .put('/api/money-deliveries/moneyDelivery123')
+          .set('Authorization', `Bearer ${authToken}`)
+          .send({ toRouteId: '507f1f77bcf86cd799439014' })
+          .expect(200);
+
+        expect(response.body.success).toBe(true);
+        expect(response.body.data.code).toBe('1407250201'); // New code
+        expect(response.body.data.fullCode).toBe('1407250201T4T2-T'); // New fullCode with -T suffix
+        expect(response.body.data.toRoute.code).toBe('T2');
+      });
+
+      it('should not regenerate fullCode when toRoute stays the same', async () => {
+        // Mock updated money delivery - only sendCost changed, fullCode stays the same
+        const updatedMoneyDelivery = {
+          ...mockMoneyDeliveryForIntegration,
+          sendCost: 100000, // Only sendCost changed
+        };
+
+        MockedMoneyDeliveryService.prototype.updateMoneyDelivery.mockResolvedValue(
+          updatedMoneyDelivery
+        );
+
+        const response = await request(app)
+          .put('/api/money-deliveries/moneyDelivery123')
+          .set('Authorization', `Bearer ${authToken}`)
+          .send({ sendCost: 100000 })
+          .expect(200);
+
+        expect(response.body.success).toBe(true);
+        expect(response.body.data.code).toBe(mockMoneyDeliveryForIntegration.code);
+        expect(response.body.data.fullCode).toBe(mockMoneyDeliveryForIntegration.fullCode); // fullCode unchanged with -T suffix
+      });
+    });
   });
 
   describe('PUT /api/money-deliveries/code/:fullCode', () => {

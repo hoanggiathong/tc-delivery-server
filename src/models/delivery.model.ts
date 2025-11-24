@@ -1,5 +1,6 @@
 import { PaymentType } from '@/types';
 import mongoose, { Document, Schema } from 'mongoose';
+import logger from '@/utils/logger';
 
 export enum VehicleType {
   MOTORBIKE = 'motorbike',
@@ -371,6 +372,64 @@ deliverySchema.pre('save', function (next) {
 
   // Calculate actualRevenue (totalCost + collectCost + collectForCustomer)
   this.actualRevenue = this.totalCost + this.collectCost + this.collectForCustomer;
+
+  next();
+});
+
+// Pre-update middleware to regenerate fullCode when toRoute changes
+deliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next) {
+  const rawUpdate = this.getUpdate() as any;
+  if (!rawUpdate) {
+    return next();
+  }
+
+  // Normalize update object - extract fields from $set if present, otherwise use direct fields
+  const updateFields = rawUpdate.$set || rawUpdate;
+
+  // Check if toRoute is being updated
+  if (updateFields.toRoute !== undefined) {
+    try {
+      // Get current document to access current fullCode and fromRoute
+      const currentDoc = await this.model.findOne(this.getQuery());
+      if (!currentDoc) {
+        return next(new Error('Delivery not found'));
+      }
+
+      const currentToRouteId = currentDoc.toRoute.toString();
+      const newToRouteId = updateFields.toRoute.toString();
+
+      // Only regenerate if toRoute actually changed
+      if (currentToRouteId !== newToRouteId) {
+        const { CodeGeneratorService } = await import('@/services/code-generator.service');
+
+        // Regenerate fullCode with original code (or new code if conflict)
+        const regeneratedCode = await CodeGeneratorService.regenerateFullCodeForRouteChange(
+          currentDoc.fullCode,
+          currentDoc.fromRoute.toString(),
+          newToRouteId,
+          currentDoc._id.toString()
+        );
+
+        // Update code fields
+        updateFields.code = regeneratedCode.code;
+        updateFields.fullCode = regeneratedCode.fullCode;
+        updateFields.subCode = regeneratedCode.subCode;
+
+        // Log the code change
+        if (regeneratedCode.codeChanged) {
+          logger.info(
+            `[Delivery ${currentDoc._id}] Code regenerated due to fullCode conflict: ${currentDoc.fullCode} -> ${regeneratedCode.fullCode}`
+          );
+        } else {
+          logger.info(
+            `[Delivery ${currentDoc._id}] fullCode updated: ${currentDoc.fullCode} -> ${regeneratedCode.fullCode}`
+          );
+        }
+      }
+    } catch (error) {
+      return next(error as Error);
+    }
+  }
 
   next();
 });

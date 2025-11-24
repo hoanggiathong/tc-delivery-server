@@ -291,4 +291,144 @@ export class CodeGeneratorService {
       throw error;
     }
   }
+
+  /**
+   * Extract base code from fullCode (removes route codes and -T suffix)
+   * Example: "1407250001T4T1" -> "1407250001"
+   * Example: "1407250001T4T1-T" -> "1407250001"
+   * @param fullCode - Full code to parse
+   * @returns Base code (DDMMYYXXXX format) or null if invalid
+   */
+  static extractCodeFromFullCode(fullCode: string): string | null {
+    try {
+      // Remove -T suffix if present (money delivery)
+      const baseFullCode = fullCode.replace(/-T$/, '');
+
+      // Extract first 10 digits (DDMMYYXXXX)
+      const codeMatch = baseFullCode.match(/^(\d{10})/);
+      if (!codeMatch) {
+        return null;
+      }
+
+      const code = codeMatch[1];
+
+      // Validate the extracted code format
+      if (!this.validateCodeFormat(code)) {
+        return null;
+      }
+
+      return code;
+    } catch (error) {
+      logger.error('Error extracting code from fullCode:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Build fullCode from components
+   * @param code - Base code (DDMMYYXXXX)
+   * @param fromRouteCode - From route code (e.g., "T4")
+   * @param toRouteCode - To route code (e.g., "T1")
+   * @param isMoneyDelivery - Whether this is a money delivery (adds -T suffix)
+   * @returns Full code string
+   */
+  static buildFullCode(
+    code: string,
+    fromRouteCode: string,
+    toRouteCode: string,
+    isMoneyDelivery = false
+  ): string {
+    const baseFullCode = `${code}${fromRouteCode}${toRouteCode}`;
+    return isMoneyDelivery ? `${baseFullCode}-T` : baseFullCode;
+  }
+
+  /**
+   * Regenerate fullCode when toRoute changes
+   * Tries to keep original code, generates new one if conflict detected
+   * @param currentFullCode - Current fullCode
+   * @param fromRouteId - Source route ID
+   * @param newToRouteId - New target route ID
+   * @param currentDeliveryId - Current delivery ID (to exclude from duplicate check)
+   * @param isMoneyDelivery - Whether this is a money delivery (adds -T suffix)
+   * @returns Promise<{code: string, fullCode: string, subCode: string, codeChanged: boolean}>
+   */
+  static async regenerateFullCodeForRouteChange(
+    currentFullCode: string,
+    fromRouteId: string,
+    newToRouteId: string,
+    currentDeliveryId: string,
+    isMoneyDelivery = false
+  ): Promise<{ code: string; fullCode: string; subCode: string; codeChanged: boolean }> {
+    try {
+      // Extract original code from current fullCode
+      const originalCode = this.extractCodeFromFullCode(currentFullCode);
+      if (!originalCode) {
+        throw new Error('Invalid fullCode format');
+      }
+
+      // Get route codes
+      const [fromRoute, newToRoute] = await Promise.all([
+        Route.findById(fromRouteId).select('code').lean(),
+        Route.findById(newToRouteId).select('code').lean(),
+      ]);
+
+      if (!fromRoute || !newToRoute) {
+        throw new Error('Route not found');
+      }
+
+      // Build new fullCode with original code
+      const newFullCode = this.buildFullCode(
+        originalCode,
+        fromRoute.code,
+        newToRoute.code,
+        isMoneyDelivery
+      );
+
+      // Check if new fullCode already exists (excluding current delivery)
+      const [deliveryExists, moneyDeliveryExists] = await Promise.all([
+        Delivery.exists({ fullCode: newFullCode, _id: { $ne: currentDeliveryId } }).lean(),
+        MoneyDelivery.exists({ fullCode: newFullCode, _id: { $ne: currentDeliveryId } }).lean(),
+      ]);
+
+      const conflictExists = Boolean(deliveryExists || moneyDeliveryExists);
+
+      if (!conflictExists) {
+        // No conflict - keep original code with new toRoute
+        const timestamp = Math.floor(Date.now() / 1000);
+        const codeSequence = originalCode.substring(6, 10);
+        const subCode = `${timestamp}${codeSequence}`;
+
+        const deliveryType = isMoneyDelivery ? 'money delivery' : 'delivery';
+        logger.info(
+          `Regenerated fullCode: ${currentFullCode} -> ${newFullCode} (code preserved) for ${deliveryType} ${currentDeliveryId}`
+        );
+
+        return {
+          code: originalCode,
+          fullCode: newFullCode,
+          subCode,
+          codeChanged: false,
+        };
+      }
+
+      // Conflict detected - generate completely new code using existing generateCode method
+      logger.info(
+        `fullCode conflict detected for ${newFullCode}, generating new code for ${isMoneyDelivery ? 'money delivery' : 'delivery'} ${currentDeliveryId}`
+      );
+
+      const newCodeData = await this.generateCode(
+        newToRouteId,
+        fromRouteId,
+        isMoneyDelivery ? 'money-delivery' : 'delivery'
+      );
+
+      return {
+        ...newCodeData,
+        codeChanged: true,
+      };
+    } catch (error) {
+      logger.error('Error regenerating fullCode for route change:', error);
+      throw error;
+    }
+  }
 }
