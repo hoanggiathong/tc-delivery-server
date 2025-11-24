@@ -835,6 +835,226 @@ export class ReturnMoneyDeliveriesController {
 
   /**
    * @swagger
+   * /api/return-money-deliveries/get-list-report-return-money-delivery-type-collect-with-status-done:
+   *   get:
+   *     summary: Get report for return money delivery type collect with status done
+   *     description: Returns statistical report of collection returns with status DONE. Includes count of today's returns and old returns (from 7 days ago until today with dateReturn = today). No date parameters needed as it calculates based on today's date.
+   *     tags: [Return Money Deliveries]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Get report successful
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Get report return money delivery type collect with status done successful"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     quantityReturnIsToday:
+   *                       type: number
+   *                       description: Number of returns created today
+   *                       example: 5
+   *                     quantityReturnIsOld:
+   *                       type: number
+   *                       description: Number of returns created from 7 days ago with dateReturn = today
+   *                       example: 3
+   *                     quantityReturnTotalToday:
+   *                       type: number
+   *                       description: Total of today's and old returns
+   *                       example: 8
+   *       401:
+   *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Unauthorized"
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "get list report return money delivery type collect with status done failed"
+   */
+  getListReportReturnMoneyDeliveryTypeCollectWithStatusDone = async (
+    req: AuthRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const result =
+        await this.returnMoneyDeliveriesService.getListReportReturnMoneyDeliveryTypeCollectWithStatusDone(
+          req.user.userId
+        );
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Get report return money delivery type collect with status done successful',
+        data: result,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Get report return money delivery type collect with status done error:', {
+        error: error instanceof Error ? error.message : error,
+      });
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'get list report return money delivery type collect with status done failed';
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(500).json(response);
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/return-money-deliveries/get-list-report-return-money-delivery-not-type-collect-with-status-done:
+   *   get:
+   *     summary: Get report for return money delivery not type collect with status done
+   *     description: Returns statistical report of non-collection returns with status DONE. Includes count of today's returns and old returns (from 7 days ago until today with dateReturn = today). No date parameters needed as it calculates based on today's date.
+   *     tags: [Return Money Deliveries]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Get report successful
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Get report return money delivery not type collect with status done successful"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     quantityReturnIsToday:
+   *                       type: number
+   *                       description: Number of returns created today (not type COLLECT)
+   *                       example: 5
+   *                     quantityReturnIsOld:
+   *                       type: number
+   *                       description: Number of returns created from 7 days ago with dateReturn = today (not type COLLECT)
+   *                       example: 3
+   *                     quantityReturnTotalToday:
+   *                       type: number
+   *                       description: Total of today's and old returns
+   *                       example: 8
+   *       401:
+   *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Unauthorized"
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "get list report return money delivery not type collect with status done failed"
+   */
+  getListReportReturnMoneyDeliveryNotTypeCollectWithStatusDone = async (
+    req: AuthRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const result =
+        await this.returnMoneyDeliveriesService.getListReportReturnMoneyDeliveryNotTypeCollectWithStatusDone(
+          req.user.userId
+        );
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Get report return money delivery not type collect with status done successful',
+        data: result,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Get report return money delivery not type collect with status done error:', {
+        error: error instanceof Error ? error.message : error,
+      });
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'get list report return money delivery not type collect with status done failed';
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(500).json(response);
+    }
+  };
+
+  /**
+   * @swagger
    * /api/return-money-deliveries/update-status-with-images:
    *   put:
    *     summary: Update status of return money delivery with images

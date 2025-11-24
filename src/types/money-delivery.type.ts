@@ -481,3 +481,9 @@ export interface IReturnDeliveryAndMoneyDeliveryResponse {
   dateReturn?: Date;
   contentReturn?: string;
 }
+
+export interface IGetListReportReturnMoneyDeliveryResponse {
+  quantityReturnIsToday: number;
+  quantityReturnIsOld: number;
+  quantityReturnTotalToday: number;
+}

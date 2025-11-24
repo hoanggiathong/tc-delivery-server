@@ -235,6 +235,46 @@ export class ReturnMoneyDeliveriesService {
   }
 
   /**
+   * Get report for return money delivery type COLLECT with status DONE
+   * Returns count of today's returns and old returns (7 days ago until today)
+   */
+  async getListReportReturnMoneyDeliveryTypeCollectWithStatusDone(userId: string) {
+    try {
+      const report =
+        await this.moneyDeliveryService.getListReportReturnMoneyDeliveryTypeCollectWithStatusDone(
+          userId
+        );
+      return report;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('get list report return money delivery type collect with status done failed');
+    }
+  }
+
+  /**
+   * Get report for return money delivery NOT type COLLECT with status DONE
+   * Returns count of today's returns and old returns (7 days ago until today)
+   */
+  async getListReportReturnMoneyDeliveryNotTypeCollectWithStatusDone(userId: string) {
+    try {
+      const report =
+        await this.moneyDeliveryService.getListReportReturnMoneyDeliveryNotTypeCollectWithStatusDone(
+          userId
+        );
+      return report;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(
+        'get list report return money delivery not type collect with status done failed'
+      );
+    }
+  }
+
+  /**
    * Update status return money delivery with images
    */
   async updateStatusReturnMoneyDeliveryWithImages(

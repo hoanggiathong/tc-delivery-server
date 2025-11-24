@@ -21,6 +21,7 @@ import { TYPE_DELIVERY_CUSTOMER } from '@/const/customer.const';
 import { CustomerType, Customer } from '@/models/customer.model';
 import {
   IFrequentMoneyCustomer,
+  IGetListReportReturnMoneyDeliveryResponse,
   IMoneyDeliveryCostReport,
   IMoneyDeliveryCostReportSummary,
   IMoneyDeliveryCreateRequest,
@@ -1756,5 +1757,113 @@ export class MoneyDeliveryService {
     await moneyDelivery.save();
 
     return moneyDelivery.images;
+  }
+
+  async getListReportReturnMoneyDeliveryTypeCollectWithStatusDone(
+    userId: string
+  ): Promise<IGetListReportReturnMoneyDeliveryResponse> {
+    try {
+      const toRouteId = await this.userService.getUserSelectedRouteId(userId);
+
+      const todayStart = new Date(new Date().setHours(0, 0, 0, 0));
+      const todayEnd = new Date(new Date().setHours(23, 59, 59, 999));
+      const sevenDaysAgo = new Date(todayStart);
+      sevenDaysAgo.setDate(todayStart.getDate() - 7);
+
+      // get quantity of Return created today
+      const quantityReturnIsToday = await MoneyDelivery.countDocuments({
+        toRoute: toRouteId,
+        status: MoneyDeliveryStatus.DONE,
+        type: MoneyDeliveryType.COLLECT,
+        createdAt: {
+          $gte: todayStart,
+          $lte: todayEnd,
+        },
+      });
+
+      // get quantity of Return created from 7 days ago until start of today
+      const quantityReturnIsOld = await MoneyDelivery.countDocuments({
+        toRoute: toRouteId,
+        status: MoneyDeliveryStatus.DONE,
+        type: MoneyDeliveryType.COLLECT,
+        createdAt: {
+          $gte: sevenDaysAgo,
+          $lt: todayEnd,
+        },
+        dateReturn: {
+          $gte: todayStart,
+          $lte: todayEnd,
+        },
+      });
+
+      const quantityReturnTotalToday = quantityReturnIsToday + quantityReturnIsOld;
+
+      return {
+        quantityReturnIsToday: quantityReturnIsToday,
+        quantityReturnIsOld: quantityReturnIsOld,
+        quantityReturnTotalToday: quantityReturnTotalToday,
+      };
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to get list money delivery type collect cost with status done');
+    }
+  }
+
+  async getListReportReturnMoneyDeliveryNotTypeCollectWithStatusDone(
+    userId: string
+  ): Promise<IGetListReportReturnMoneyDeliveryResponse> {
+    try {
+      const toRouteId = await this.userService.getUserSelectedRouteId(userId);
+
+      const todayStart = new Date(new Date().setHours(0, 0, 0, 0));
+      const todayEnd = new Date(new Date().setHours(23, 59, 59, 999));
+      const sevenDaysAgo = new Date(todayStart);
+      sevenDaysAgo.setDate(todayStart.getDate() - 7);
+
+      // get quantity of Return created today
+      const quantityReturnIsToday = await MoneyDelivery.countDocuments({
+        toRoute: toRouteId,
+        status: MoneyDeliveryStatus.DONE,
+        type: {
+          $ne: MoneyDeliveryType.COLLECT,
+        },
+        createdAt: {
+          $gte: todayStart,
+          $lte: todayEnd,
+        },
+      });
+
+      // get quantity of Return created from 7 days ago until start of today
+      const quantityReturnIsOld = await MoneyDelivery.countDocuments({
+        toRoute: toRouteId,
+        status: MoneyDeliveryStatus.DONE,
+        type: {
+          $ne: MoneyDeliveryType.COLLECT,
+        },
+        createdAt: {
+          $gte: sevenDaysAgo,
+          $lt: todayEnd,
+        },
+        dateReturn: {
+          $gte: todayStart,
+          $lte: todayEnd,
+        },
+      });
+
+      const quantityReturnTotalToday = quantityReturnIsToday + quantityReturnIsOld;
+
+      return {
+        quantityReturnIsToday: quantityReturnIsToday,
+        quantityReturnIsOld: quantityReturnIsOld,
+        quantityReturnTotalToday: quantityReturnTotalToday,
+      };
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to get list money delivery type collect cost with status done');
+    }
   }
 }
