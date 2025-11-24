@@ -200,6 +200,41 @@ export class ReturnMoneyDeliveriesService {
   }
 
   /**
+   * danh sách tiền về type COLLECT và status WAITING
+   */
+  async getListReturnMoneyTypeCollectCostWithStatusWaiting(
+    query: IReturnMoneyDeliveryQuery,
+    userId: string
+  ): Promise<IMoneyDeliveryResponse[]> {
+    const { startDate, endDate } = query;
+
+    const startDateObj = new Date(String(startDate));
+    const endDateObj = new Date(String(endDate));
+
+    const startOfDay = getStartOfDayVietnam(startDateObj);
+    const endOfDay = getEndOfDayVietnam(endDateObj);
+
+    const startDateUTC = convertVietnamToUTC(startOfDay);
+    const endDateUTC = convertVietnamToUTC(endOfDay);
+
+    try {
+      const moneyDeliveries =
+        await this.moneyDeliveryService.getListReturnMoneyDeliveryTypeCollectCostWithStatusWaiting(
+          userId,
+          startDateUTC,
+          endDateUTC
+        );
+
+      return moneyDeliveries;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('get list return money type collect cost with status waiting failed');
+    }
+  }
+
+  /**
    * Update status return money delivery with images
    */
   async updateStatusReturnMoneyDeliveryWithImages(

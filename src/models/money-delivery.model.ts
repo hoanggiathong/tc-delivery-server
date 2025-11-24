@@ -7,7 +7,7 @@ export enum MoneyDeliveryStatus {
 
 export enum MoneyDeliveryType {
   NORMAL = 'normal', // giao hàng thường
-  COLLECT = 'collect', // thu ho
+  COLLECT = 'collect', // collect cost => thu ho
   COLLECT_FOR_CUSTOMER = 'collectForCustomer', // thu dùm
 }
 

@@ -73,6 +73,7 @@ export class MoneyDeliveryService {
       { path: 'fromRoute', select: '_id code name address phone createdAt updatedAt' },
       { path: 'toRoute', select: '_id code name address phone createdAt updatedAt' },
       { path: 'createdByUser', select: '_id username' },
+      // { path: 'deliveryId', select: '_id code name note createdAt updatedAt' },
     ]);
 
     const populated = this.toPopulatedMoneyDelivery(populatedMoneyDelivery);
@@ -130,6 +131,16 @@ export class MoneyDeliveryService {
       createdByUser: populated.createdByUser.username,
       createdAt: populated.createdAt,
       updatedAt: populated.updatedAt,
+      dateReturn: populated.dateReturn,
+      contentReturn: populated.contentReturn,
+      // delivery: {
+      //   _id: populated.deliveryId?._id,
+      //   code: populated.deliveryId?.code,
+      //   name: populated.deliveryId?.name,
+      //   note: populated.deliveryId?.note,
+      //   createdAt: populated.deliveryId?.createdAt,
+      //   updatedAt: populated.deliveryId?.updatedAt,
+      // }
     };
   }
 
@@ -192,6 +203,8 @@ export class MoneyDeliveryService {
       createdByUser: moneyDelivery.createdByUser.username,
       createdAt: moneyDelivery.createdAt,
       updatedAt: moneyDelivery.updatedAt,
+      dateReturn: moneyDelivery.dateReturn,
+      contentReturn: moneyDelivery.contentReturn,
     };
   }
 
@@ -1268,10 +1281,73 @@ export class MoneyDeliveryService {
         .sort({ createdAt: -1 })
         .lean();
 
-      const moneyDeliveriesResponse: IMoneyDeliveryResponse[] = moneyDeliveries.map(moneyDelivery =>
-        this.transformMoneyDeliveryToResponseOptimized(
-          this.toPopulatedMoneyDeliveryLean(moneyDelivery)
-        )
+      const moneyDeliveriesResponse: IMoneyDeliveryResponse[] = moneyDeliveries.map(
+        (moneyDelivery: any) => {
+          const response: IMoneyDeliveryResponse = {
+            id: moneyDelivery._id.toString(),
+            code: moneyDelivery.code,
+            fullCode: moneyDelivery.fullCode,
+            subCode: moneyDelivery.subCode,
+            sender: {
+              id: moneyDelivery.sender._id.toString(),
+              name: moneyDelivery.senderName,
+              phone: moneyDelivery.sender.phone,
+              createdAt: moneyDelivery.sender.createdAt,
+              updatedAt: moneyDelivery.sender.updatedAt,
+            },
+            receiver: {
+              id: moneyDelivery.receiver._id.toString(),
+              name: moneyDelivery.receiverName,
+              phone: moneyDelivery.receiver.phone,
+              createdAt: moneyDelivery.receiver.createdAt,
+              updatedAt: moneyDelivery.receiver.updatedAt,
+            },
+            fromRoute: {
+              id: moneyDelivery.fromRoute._id.toString(),
+              code: moneyDelivery.fromRoute.code,
+              name: moneyDelivery.fromRoute.name,
+              address: moneyDelivery.fromRoute.address || '',
+              phone: moneyDelivery.fromRoute.phone || '',
+              createdAt: moneyDelivery.fromRoute.createdAt,
+              updatedAt: moneyDelivery.fromRoute.updatedAt,
+            },
+            toRoute: {
+              id: moneyDelivery.toRoute._id.toString(),
+              code: moneyDelivery.toRoute.code,
+              name: moneyDelivery.toRoute.name,
+              address: moneyDelivery.toRoute.address || '',
+              phone: moneyDelivery.toRoute.phone || '',
+              createdAt: moneyDelivery.toRoute.createdAt,
+              updatedAt: moneyDelivery.toRoute.updatedAt,
+            },
+            sendMoneyAmount: moneyDelivery.sendMoneyAmount,
+            sendCost: moneyDelivery.sendCost,
+            transferType: moneyDelivery.transferType,
+            isFree: moneyDelivery.isFree,
+            totalCost: moneyDelivery.totalCost,
+            notes: moneyDelivery.notes,
+            status: moneyDelivery.status,
+            type: moneyDelivery.type,
+            deliveryId: moneyDelivery.deliveryId?._id?.toString(),
+            createdByUser: moneyDelivery.createdByUser.username,
+            createdAt: moneyDelivery.createdAt,
+            updatedAt: moneyDelivery.updatedAt,
+          };
+
+          // Add delivery object if deliveryId is populated
+          if (moneyDelivery.deliveryId) {
+            response.delivery = {
+              _id: moneyDelivery.deliveryId._id,
+              code: moneyDelivery.deliveryId.code,
+              name: moneyDelivery.deliveryId.name,
+              note: moneyDelivery.deliveryId.note,
+              createdAt: moneyDelivery.deliveryId.createdAt,
+              updatedAt: moneyDelivery.deliveryId.updatedAt,
+            };
+          }
+
+          return response;
+        }
       );
 
       return moneyDeliveriesResponse;
@@ -1455,6 +1531,115 @@ export class MoneyDeliveryService {
         throw error;
       }
       throw new Error('Failed to get list money delivery type collect cost with status done');
+    }
+  }
+
+  /**
+   * danh sách tiền về type COLLECT và status WAITING
+   */
+  async getListReturnMoneyDeliveryTypeCollectCostWithStatusWaiting(
+    userId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<IMoneyDeliveryResponse[]> {
+    try {
+      // Get user's selected route as toRoute
+      const toRouteId = await this.userService.getUserSelectedRouteId(userId);
+
+      const moneyDeliveries = await MoneyDelivery.find({
+        toRoute: toRouteId,
+        status: MoneyDeliveryStatus.WAITING,
+        type: MoneyDeliveryType.COLLECT,
+        createdAt: { $gte: startDate, $lte: endDate },
+      })
+        .populate([
+          { path: 'sender', select: '_id name phone routeId createdAt updatedAt' },
+          { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address phone createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name address phone createdAt updatedAt' },
+          { path: 'createdByUser', select: '_id username' },
+          { path: 'deliveryId', select: '_id code name note createdAt updatedAt' },
+        ])
+        .sort({ createdAt: -1 })
+        .lean();
+
+      const moneyDeliveriesResponse: IMoneyDeliveryResponse[] = moneyDeliveries.map(
+        (moneyDelivery: any) => {
+          const response: IMoneyDeliveryResponse = {
+            id: moneyDelivery._id.toString(),
+            code: moneyDelivery.code,
+            fullCode: moneyDelivery.fullCode,
+            subCode: moneyDelivery.subCode,
+            sender: {
+              id: moneyDelivery.sender._id.toString(),
+              name: moneyDelivery.senderName,
+              phone: moneyDelivery.sender.phone,
+              createdAt: moneyDelivery.sender.createdAt,
+              updatedAt: moneyDelivery.sender.updatedAt,
+            },
+            receiver: {
+              id: moneyDelivery.receiver._id.toString(),
+              name: moneyDelivery.receiverName,
+              phone: moneyDelivery.receiver.phone,
+              createdAt: moneyDelivery.receiver.createdAt,
+              updatedAt: moneyDelivery.receiver.updatedAt,
+            },
+            fromRoute: {
+              id: moneyDelivery.fromRoute._id.toString(),
+              code: moneyDelivery.fromRoute.code,
+              name: moneyDelivery.fromRoute.name,
+              address: moneyDelivery.fromRoute.address || '',
+              phone: moneyDelivery.fromRoute.phone || '',
+              createdAt: moneyDelivery.fromRoute.createdAt,
+              updatedAt: moneyDelivery.fromRoute.updatedAt,
+            },
+            toRoute: {
+              id: moneyDelivery.toRoute._id.toString(),
+              code: moneyDelivery.toRoute.code,
+              name: moneyDelivery.toRoute.name,
+              address: moneyDelivery.toRoute.address || '',
+              phone: moneyDelivery.toRoute.phone || '',
+              createdAt: moneyDelivery.toRoute.createdAt,
+              updatedAt: moneyDelivery.toRoute.updatedAt,
+            },
+            sendMoneyAmount: moneyDelivery.sendMoneyAmount,
+            sendCost: moneyDelivery.sendCost,
+            transferType: moneyDelivery.transferType,
+            isFree: moneyDelivery.isFree,
+            totalCost: moneyDelivery.totalCost,
+            notes: moneyDelivery.notes,
+            status: moneyDelivery.status,
+            type: moneyDelivery.type,
+            deliveryId: moneyDelivery.deliveryId?._id?.toString(),
+            createdByUser: moneyDelivery.createdByUser.username,
+            createdAt: moneyDelivery.createdAt,
+            updatedAt: moneyDelivery.updatedAt,
+            dateReturn: moneyDelivery.dateReturn,
+            contentReturn: moneyDelivery.contentReturn,
+          };
+
+          // Add delivery object if deliveryId is populated
+          if (moneyDelivery.deliveryId) {
+            response.delivery = {
+              _id: moneyDelivery.deliveryId._id,
+              code: moneyDelivery.deliveryId.code,
+              name: moneyDelivery.deliveryId.name,
+              note: moneyDelivery.deliveryId.note,
+              createdAt: moneyDelivery.deliveryId.createdAt,
+              updatedAt: moneyDelivery.deliveryId.updatedAt,
+            };
+          }
+
+          return response;
+        }
+      );
+
+      return moneyDeliveriesResponse;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to get list money delivery type collect cost with status waiting');
     }
   }
 

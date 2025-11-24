@@ -5,6 +5,7 @@ import { IRouteResponse } from './route.type';
 import { ICustomer } from '@/models/customer.model';
 import {
   IMoneyDelivery,
+  IMoneyDeliveryImage,
   MoneyDeliveryStatus,
   MoneyDeliveryType,
   TransferType,
@@ -31,6 +32,17 @@ export interface IMoneyDeliveryResponse extends BaseEntity {
   type: MoneyDeliveryType;
   deliveryId?: string;
   createdByUser: string;
+  delivery?: {
+    _id: Types.ObjectId;
+    code: string;
+    name: string;
+    note: string;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+  dateReturn?: Date;
+  contentReturn?: string;
+  images?: IMoneyDeliveryImage[];
 }
 
 // MoneyDelivery creation request interface
@@ -101,6 +113,8 @@ export interface IMoneyDeliveryWithPopulatedRefs {
   };
   createdAt: Date;
   updatedAt: Date;
+  dateReturn?: Date;
+  contentReturn?: string;
 }
 
 // Interface for getting next money delivery code
@@ -182,6 +196,9 @@ export interface IMoneyDeliveryLeanPopulated {
   };
   createdAt: Date;
   updatedAt: Date;
+  dateReturn?: Date;
+  contentReturn?: string;
+  images?: IMoneyDeliveryImage[];
 }
 
 // Interface for frequent money customers
