@@ -1462,7 +1462,9 @@ export class MoneyDeliveryService {
       const moneyDeliveries = await MoneyDelivery.find({
         toRoute: toRouteId,
         status: MoneyDeliveryStatus.WAITING,
-        type: MoneyDeliveryType.NORMAL,
+        type: {
+          $in: [MoneyDeliveryType.NORMAL, MoneyDeliveryType.COLLECT_FOR_CUSTOMER],
+        },
         createdAt: { $gte: startDate, $lte: endDate },
       })
         .populate([
