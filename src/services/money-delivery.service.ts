@@ -1779,6 +1779,10 @@ export class MoneyDeliveryService {
           $gte: todayStart,
           $lte: todayEnd,
         },
+        dateReturn: {
+          $gte: todayStart,
+          $lte: todayEnd,
+        },
       });
 
       // get quantity of Return created from 7 days ago until start of today
@@ -1830,6 +1834,10 @@ export class MoneyDeliveryService {
           $ne: MoneyDeliveryType.COLLECT,
         },
         createdAt: {
+          $gte: todayStart,
+          $lte: todayEnd,
+        },
+        dateReturn: {
           $gte: todayStart,
           $lte: todayEnd,
         },

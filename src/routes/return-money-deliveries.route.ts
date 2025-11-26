@@ -2,7 +2,10 @@ import { ReturnMoneyDeliveriesController } from '@/controllers/return-money-deli
 import { authenticateToken } from '@/middlewares/auth.middleware';
 import { requireRole } from '@/middlewares/role.middleware';
 import { validate } from '@/middlewares/validation.middleware';
-import { uploadMoneyDeliveryImagesFields } from '@/middlewares/upload.middleware';
+import {
+  uploadMoneyDeliveryImagesFields,
+  uploadMoneyDeliveryDualImagesFields,
+} from '@/middlewares/upload.middleware';
 import {
   getListReturnMoneyDeliveriesTypeCollectStatusDoneSchema,
   getListOldMoneyDeliveryNotTypeCollectCostSchema,
@@ -13,6 +16,7 @@ import {
   getListReportReturnMoneyDeliveryTypeCollectWithStatusDoneSchema,
   getListReportReturnMoneyDeliveryNotTypeCollectWithStatusDoneSchema,
   updateStatusReturnMoneyDeliveryWithImagesSchema,
+  updateStatusWithCustomerImagesAndMoneyImagesSchema,
 } from '@/schemas/return-money-deliveries.schema';
 import { UserRole } from '@/types/user.type';
 import { Router } from 'express';
@@ -77,6 +81,13 @@ router.put(
   uploadMoneyDeliveryImagesFields,
   validate(updateStatusReturnMoneyDeliveryWithImagesSchema),
   returnMoneyDeliveriesController.updateStatusReturnMoneyDeliveryWithImages
+);
+
+router.put(
+  '/update-status-with-customer-images-and-money-images',
+  uploadMoneyDeliveryDualImagesFields,
+  validate(updateStatusWithCustomerImagesAndMoneyImagesSchema),
+  returnMoneyDeliveriesController.updateStatusWithCustomerImagesAndMoneyImages
 );
 
 export default router;

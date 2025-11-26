@@ -296,7 +296,7 @@ export class CustomerService {
    */
   async getCustomerById(id: string): Promise<ICustomer | null> {
     try {
-      const customer = await Customer.findById(id).populate('relativeReceiver');
+      const customer = await Customer.findById(id);
 
       Logger.debug('Customer retrieved by ID', {
         id,
