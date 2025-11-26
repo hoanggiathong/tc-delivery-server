@@ -288,41 +288,49 @@ export class ReturnMoneyDeliveriesService {
     }>
   ): Promise<IMoneyDelivery> {
     try {
-      // Get money delivery by ID
+      // Get money delivery by ID to verify it exists
       const moneyDeliveryDoc = await MoneyDelivery.findById(moneyDeliveryId);
       if (!moneyDeliveryDoc) {
         throw new Error(`Money delivery with ID ${moneyDeliveryId} not found`);
       }
 
-      // Handle images upload if provided
+      // Handle images upload if provided (this will save the document with images)
       if (imagesData && imagesData.length > 0) {
         await this.moneyDeliveryService.uploadImagesMoneyDelivery(moneyDeliveryId, imagesData);
-        // Reload to get updated images
-        const updatedDoc = await MoneyDelivery.findById(moneyDeliveryId);
-        if (updatedDoc) {
-          moneyDeliveryDoc.images = updatedDoc.images;
-        }
       }
 
-      // Update status to DONE
-      moneyDeliveryDoc.status = MoneyDeliveryStatus.DONE;
-
-      // Update field contentReturn if provided
-      if (contentReturn !== undefined) {
-        moneyDeliveryDoc.contentReturn = contentReturn;
-      }
-
+      // Prepare update data
       const now = new Date();
       const returnDateString = `Đã trả tiền ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
       const existingNotes =
         typeof moneyDeliveryDoc.notes === 'string' ? moneyDeliveryDoc.notes : '';
-      moneyDeliveryDoc.notes = existingNotes
+      const updatedNotes = existingNotes
         ? `${returnDateString}, ${existingNotes}`
         : returnDateString;
-      moneyDeliveryDoc.updatedAt = now;
-      moneyDeliveryDoc.dateReturn = now;
 
-      await moneyDeliveryDoc.save();
+      // Build update object
+      const updateData: Record<string, unknown> = {
+        status: MoneyDeliveryStatus.DONE,
+        notes: updatedNotes,
+        updatedAt: now,
+        dateReturn: now,
+      };
+
+      // Add contentReturn if provided
+      if (contentReturn !== undefined) {
+        updateData.contentReturn = contentReturn;
+      }
+
+      // Update the document using findByIdAndUpdate to avoid version conflict
+      const updatedMoneyDelivery = await MoneyDelivery.findByIdAndUpdate(
+        moneyDeliveryId,
+        updateData,
+        { new: true, runValidators: true }
+      );
+
+      if (!updatedMoneyDelivery) {
+        throw new Error(`Failed to update money delivery with ID ${moneyDeliveryId}`);
+      }
 
       Logger.info('Return money delivery status updated with images successfully', {
         moneyDeliveryId,
@@ -330,7 +338,7 @@ export class ReturnMoneyDeliveriesService {
         timestamp: now,
       });
 
-      return moneyDeliveryDoc;
+      return updatedMoneyDelivery;
     } catch (error) {
       Logger.error('Failed to update return money delivery status with images', {
         error: error instanceof Error ? error.message : error,
@@ -342,6 +350,136 @@ export class ReturnMoneyDeliveriesService {
         throw error;
       }
       throw new Error('update status return money delivery with images failed');
+    }
+  }
+
+  /**
+   * Update status with customer images and money images
+   * Both customerImages and moneyImages are optional
+   */
+  async updateStatusWithCustomerImagesAndMoneyImages(
+    updateData: {
+      moneyDeliveryId: string;
+      customerId: string;
+      address?: string;
+      identityCardIssuedDate?: string;
+      identityCardNumber?: string;
+    },
+    contentReturn?: string,
+    imagesData?: Array<{
+      index: number;
+      buffer: Buffer;
+      originalName: string;
+      rotate: number;
+    }>,
+    moneyImagesData?: Array<{
+      index: number;
+      buffer: Buffer;
+      originalName: string;
+      rotate: number;
+    }>
+  ): Promise<IMoneyDelivery> {
+    try {
+      const { moneyDeliveryId, customerId, address, identityCardIssuedDate, identityCardNumber } =
+        updateData;
+
+      const moneyDeliveryDoc = await MoneyDelivery.findById(moneyDeliveryId);
+      if (!moneyDeliveryDoc) {
+        throw new Error(`Money delivery with ID ${moneyDeliveryId} not found`);
+      }
+
+      const customer = await this.customerService.getCustomerById(customerId);
+      if (!customer) {
+        throw new Error(`Customer with ID ${customerId} not found`);
+      }
+
+      // Handle customer images upload if provided
+      if (imagesData && imagesData.length > 0) {
+        for (const imageData of imagesData) {
+          const { index, buffer, originalName, rotate } = imageData;
+          await this.customerService.uploadImageById(
+            customerId,
+            index,
+            buffer,
+            originalName,
+            rotate
+          );
+        }
+      }
+
+      // Update customer information if provided
+      if (address || identityCardIssuedDate || identityCardNumber) {
+        const updateCustomerData: Record<string, unknown> = {};
+
+        if (address) {
+          updateCustomerData.address = address;
+        }
+        if (identityCardIssuedDate) {
+          updateCustomerData.identityCardIssuedDate = identityCardIssuedDate;
+        }
+        if (identityCardNumber) {
+          updateCustomerData.identityCardNumber = identityCardNumber;
+        }
+
+        await this.customerService.updateCustomer(customerId, updateCustomerData);
+      }
+
+      // Handle money images upload if provided (this will save the document with images)
+      if (moneyImagesData && moneyImagesData.length > 0) {
+        await this.moneyDeliveryService.uploadImagesMoneyDelivery(moneyDeliveryId, moneyImagesData);
+      }
+
+      // Prepare update data
+      const now = new Date();
+      const returnDateString = `Đã trả tiền ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+      const existingNotes =
+        typeof moneyDeliveryDoc.notes === 'string' ? moneyDeliveryDoc.notes : '';
+      const updatedNotes = existingNotes
+        ? `${returnDateString}, ${existingNotes}`
+        : returnDateString;
+
+      const updateMoneyDeliveryData: Record<string, unknown> = {
+        status: MoneyDeliveryStatus.DONE,
+        notes: updatedNotes,
+        updatedAt: now,
+        dateReturn: now,
+      };
+
+      // Add contentReturn if provided
+      if (contentReturn !== undefined) {
+        updateMoneyDeliveryData.contentReturn = contentReturn;
+      }
+
+      // Update the document using findByIdAndUpdate to avoid version conflict
+      const updatedMoneyDelivery = await MoneyDelivery.findByIdAndUpdate(
+        moneyDeliveryId,
+        updateMoneyDeliveryData,
+        { new: true, runValidators: true }
+      );
+
+      if (!updatedMoneyDelivery) {
+        throw new Error(`Failed to update money delivery with ID ${moneyDeliveryId}`);
+      }
+
+      Logger.info('Return money delivery status updated with dual images successfully', {
+        moneyDeliveryId: updateData.moneyDeliveryId,
+        hasCustomerImages: imagesData && imagesData.length > 0,
+        hasMoneyImages: moneyImagesData && moneyImagesData.length > 0,
+        timestamp: now,
+      });
+
+      return updatedMoneyDelivery;
+    } catch (error) {
+      Logger.error('Failed to update return money delivery status with dual images', {
+        error: error instanceof Error ? error.message : error,
+        moneyDeliveryId: updateData?.moneyDeliveryId || 'unknown',
+      });
+
+      // Re-throw the original error with its message for better debugging
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('update status with customer images and money images failed');
     }
   }
 }

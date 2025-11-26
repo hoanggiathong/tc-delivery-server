@@ -41,3 +41,12 @@ export const uploadMoneyDeliveryImagesFields = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
   fileFilter: fileFilter,
 }).fields([{ name: 'images', maxCount: 5 }]);
+
+export const uploadMoneyDeliveryDualImagesFields = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: fileFilter,
+}).fields([
+  { name: 'customerImages', maxCount: 5 },
+  { name: 'moneyImages', maxCount: 5 },
+]);
