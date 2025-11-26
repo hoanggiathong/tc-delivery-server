@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import { VehicleType, IReturnDeliveryImage } from './delivery.model';
 
 export interface IRemovedDelivery extends Document {
   _id: string;
@@ -8,14 +9,20 @@ export interface IRemovedDelivery extends Document {
   fullCode: string;
   subCode: string;
   sender: mongoose.Types.ObjectId;
+  senderName: string;
   receiver: mongoose.Types.ObjectId;
+  receiverName: string;
   fromRoute: mongoose.Types.ObjectId;
   toRoute: mongoose.Types.ObjectId;
   name: string;
+  nameProductAndAdditionalInformation?: string;
   quantity: number;
   cost: number;
   homeDelivery?: string;
   homeDeliveryCost: number;
+  carryCost: number;
+  homeDeliveryCostTotal?: number;
+  vehicleType?: VehicleType | null;
   itemValue: number;
   itemCost: number;
   collectCost: number;
@@ -32,11 +39,21 @@ export interface IRemovedDelivery extends Document {
   };
   notes?: string;
   totalCost: number;
+  actualRevenue: number;
   paymentType: 'paid' | 'debt';
   isFree: boolean;
   createdByUser: mongoose.Types.ObjectId;
   originalCreatedAt: Date;
   originalUpdatedAt: Date;
+  isReturn: boolean;
+  inventory?: string;
+  smsType?: string;
+  timeToSendSMS?: Date;
+  upItems?: string;
+  downItems?: string;
+  quantityReturn: number;
+  returnDeliveryImages?: IReturnDeliveryImage[];
+  dateReturn?: Date;
 
   // Removal metadata
   deletedBy: mongoose.Types.ObjectId;
@@ -73,10 +90,22 @@ const removedDeliverySchema = new Schema<IRemovedDelivery>(
       ref: 'Customer',
       required: [true, 'Sender is required'],
     },
+    senderName: {
+      type: String,
+      required: [true, 'Sender name is required'],
+      trim: true,
+      maxlength: [100, 'Sender name must not exceed 100 characters'],
+    },
     receiver: {
       type: Schema.Types.ObjectId,
       ref: 'Customer',
       required: [true, 'Receiver is required'],
+    },
+    receiverName: {
+      type: String,
+      required: [true, 'Receiver name is required'],
+      trim: true,
+      maxlength: [100, 'Receiver name must not exceed 100 characters'],
     },
     fromRoute: {
       type: Schema.Types.ObjectId,
@@ -91,6 +120,11 @@ const removedDeliverySchema = new Schema<IRemovedDelivery>(
     name: {
       type: String,
       required: [true, 'Item name is required'],
+      trim: true,
+    },
+    nameProductAndAdditionalInformation: {
+      type: String,
+      required: false,
       trim: true,
     },
     quantity: {
@@ -114,6 +148,23 @@ const removedDeliverySchema = new Schema<IRemovedDelivery>(
       required: [true, 'Home delivery cost is required'],
       min: [0, 'Home delivery cost must be positive'],
       default: 0,
+    },
+    carryCost: {
+      type: Number,
+      required: false,
+      min: [0, 'Carry cost must be positive'],
+      default: 0,
+    },
+    homeDeliveryCostTotal: {
+      type: Number,
+      required: false,
+      min: [0, 'Home delivery cost total must be positive'],
+    },
+    vehicleType: {
+      type: String,
+      enum: Object.values(VehicleType),
+      required: false,
+      default: null,
     },
     itemValue: {
       type: Number,
@@ -145,6 +196,12 @@ const removedDeliverySchema = new Schema<IRemovedDelivery>(
       type: Number,
       required: true,
       min: [0, 'Total cost must be positive'],
+    },
+    actualRevenue: {
+      type: Number,
+      required: false,
+      min: [0, 'Actual revenue must be positive'],
+      default: 0,
     },
     collectForCustomerNote: {
       type: String,
@@ -204,6 +261,54 @@ const removedDeliverySchema = new Schema<IRemovedDelivery>(
     originalUpdatedAt: {
       type: Date,
       required: [true, 'Original updated date is required'],
+    },
+    isReturn: {
+      type: Boolean,
+      default: false,
+    },
+    inventory: {
+      type: String,
+      default: null,
+    },
+    smsType: {
+      type: String,
+      default: null,
+    },
+    timeToSendSMS: {
+      type: Date,
+    },
+    upItems: {
+      type: String,
+      default: null,
+    },
+    downItems: {
+      type: String,
+      default: null,
+    },
+    quantityReturn: {
+      type: Number,
+      default: 0,
+    },
+    returnDeliveryImages: {
+      type: [
+        {
+          url: {
+            type: String,
+            required: true,
+            trim: true,
+          },
+          rotate: {
+            type: Number,
+            default: 0,
+            enum: [0, 90, 180, 270],
+          },
+        },
+      ],
+      default: [],
+    },
+    dateReturn: {
+      type: Date,
+      default: null,
     },
 
     // Removal metadata

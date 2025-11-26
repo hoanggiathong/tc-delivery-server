@@ -215,24 +215,6 @@ export interface IFrequentMoneyCustomer {
   };
 }
 
-// Interface for frequent money customers response
-export interface IFrequentMoneyCustomersResponse {
-  senderIdentifier: string;
-  senderInfo: {
-    name: string;
-    phone: string;
-  } | null;
-  frequentCustomers: IFrequentMoneyCustomer[];
-  pagination: {
-    currentPage: number;
-    totalPages: number;
-    totalRecords: number;
-    limit: number;
-    hasNextPage: boolean;
-    hasPrevPage: boolean;
-  };
-}
-
 export interface CreateMoneyDeliveryRequest {
   senderName: string;
   senderPhone: string;

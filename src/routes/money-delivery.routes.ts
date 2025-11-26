@@ -15,6 +15,7 @@ import {
   uploadMoneyDeliveryImagesSchema,
   getDetailImagesMoneyDeliverySchema,
   updateDataImagesMoneyDeliverySchema,
+  deleteMoneyDeliveryByFullCodeSchema,
 } from '@/schemas/money-delivery.schema';
 
 const router = Router();
@@ -264,9 +265,9 @@ router.put(
   moneyDeliveryController.updateMoneyDelivery
 );
 router.delete(
-  '/:id',
-  validate(moneyDeliveryParamsSchema),
-  moneyDeliveryController.deleteMoneyDelivery
+  '/:fullCode',
+  validate(deleteMoneyDeliveryByFullCodeSchema),
+  moneyDeliveryController.deleteMoneyDeliveryByFullCode
 );
 
 export default router;

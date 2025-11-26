@@ -28,6 +28,8 @@ erDiagram
     CUSTOMERS ||--o{ CUSTOMER_ADDRESS_HISTORY : "có lịch sử địa chỉ"
     DELIVERIES ||--o| CUSTOMER_ADDRESS_HISTORY : "tự động tạo history"
     DELIVERIES ||--o{ MONEY_DELIVERIES : "tự động tạo thu hộ/thu dùm"
+    USERS ||--o{ REMOVED_DELIVERIES : "xóa (deletedBy)"
+    USERS ||--o{ REMOVED_MONEY_DELIVERIES : "xóa (deletedBy)"
 
     USERS {
         ObjectId _id PK
@@ -175,6 +177,90 @@ erDiagram
         datetime updatedAt "tự động cập nhật"
     }
 
+    REMOVED_DELIVERIES {
+        ObjectId _id PK
+        ObjectId originalDeliveryId FK "tham chiếu: DELIVERIES, ID gốc của delivery"
+        string code "10 chữ số: DDMMYY+random sequence(0001-9999)"
+        string fullCode "định dạng: code+fromRouteCode+toRouteCode"
+        string subCode "timestamp/1000+sequence"
+        ObjectId sender FK "tham chiếu: CUSTOMERS, bắt buộc"
+        string senderName "tên người gửi, bắt buộc, trim"
+        ObjectId receiver FK "tham chiếu: CUSTOMERS, bắt buộc"
+        string receiverName "tên người nhận, bắt buộc, trim"
+        ObjectId fromRoute FK "tham chiếu: ROUTES, bắt buộc"
+        ObjectId toRoute FK "tham chiếu: ROUTES, bắt buộc"
+        string name "tên hàng hóa, bắt buộc, trim"
+        string nameProductAndAdditionalInformation "thông tin bổ sung, tùy chọn, trim"
+        number quantity "số lượng, bắt buộc, tối thiểu 1"
+        number cost "phí vận chuyển, bắt buộc, tối thiểu 0"
+        string homeDelivery "địa chỉ giao hàng, tùy chọn, trim"
+        number homeDeliveryCost "tùy chọn, tối thiểu 0, mặc định 0"
+        number carryCost "phí bốc xếp, tùy chọn, tối thiểu 0, mặc định 0"
+        number homeDeliveryCostTotal "tổng phí giao tận nhà, tùy chọn"
+        enum vehicleType "motorbike|small-truck|large-truck, tùy chọn (nullable)"
+        number itemValue "giá trị hàng hóa, bắt buộc, tối thiểu 0"
+        number itemCost "phí trị giá, bắt buộc, tối thiểu 0"
+        number collectCost "thu hộ, bắt buộc, tối thiểu 0"
+        number collectForCustomer "thu dùm khách hàng, bắt buộc, tối thiểu 0"
+        number collectForCustomerCost "phí phụ thu, bắt buộc, tối thiểu 0"
+        string collectForCustomerNote "tùy chọn, trim"
+        object details "thông tin chi tiết hàng hóa, tùy chọn"
+        string notes "tùy chọn, trim"
+        number totalCost "phí dịch vụ"
+        number actualRevenue "tổng thực thu"
+        enum paymentType "paid|debt, bắt buộc"
+        boolean isFree "miễn phí, bắt buộc"
+        ObjectId createdByUser FK "tham chiếu: USERS, bắt buộc"
+        datetime originalCreatedAt "thời điểm tạo delivery gốc"
+        datetime originalUpdatedAt "thời điểm cập nhật delivery gốc"
+        boolean isReturn "đã trả hàng, mặc định false"
+        string inventory "tùy chọn"
+        string smsType "tùy chọn"
+        datetime timeToSendSMS "tùy chọn"
+        string upItems "hàng lên, tùy chọn"
+        string downItems "hàng xuống, tùy chọn"
+        number quantityReturn "số lượng trả, mặc định 0"
+        array returnDeliveryImages "ảnh trả hàng, tùy chọn"
+        datetime dateReturn "ngày trả hàng, tùy chọn"
+        ObjectId deletedBy FK "tham chiếu: USERS, bắt buộc, user đã xóa"
+        string reason "lý do xóa, bắt buộc, tối đa 500 ký tự"
+        datetime deletedAt "thời điểm xóa, bắt buộc, mặc định hiện tại"
+        datetime expiredAt "thời điểm hết hạn, bắt buộc, TTL index (tự động xóa sau 90 ngày)"
+    }
+
+    REMOVED_MONEY_DELIVERIES {
+        ObjectId _id PK
+        ObjectId originalMoneyDeliveryId FK "tham chiếu: MONEY_DELIVERIES, ID gốc"
+        string code "10 chữ số: DDMMYY+random sequence(0001-9999)"
+        string fullCode "định dạng: code+fromRouteCode+toRouteCode-T"
+        string subCode "timestamp/1000+sequence"
+        ObjectId sender FK "tham chiếu: CUSTOMERS, bắt buộc"
+        string senderName "tên người gửi, bắt buộc, trim"
+        ObjectId receiver FK "tham chiếu: CUSTOMERS, bắt buộc"
+        string receiverName "tên người nhận, bắt buộc, trim"
+        ObjectId fromRoute FK "tham chiếu: ROUTES, bắt buộc"
+        ObjectId toRoute FK "tham chiếu: ROUTES, bắt buộc"
+        number sendMoneyAmount "số tiền gửi, bắt buộc, tối thiểu 0"
+        number sendCost "phí dịch vụ, bắt buộc, tối thiểu 0"
+        enum transferType "regular|express, bắt buộc"
+        boolean isFree "miễn phí, bắt buộc"
+        number totalCost "tổng phí dịch vụ"
+        string notes "tùy chọn, trim"
+        enum status "waiting|done, bắt buộc"
+        enum type "normal|collect|collectForCustomer, bắt buộc"
+        ObjectId deliveryId FK "tham chiếu: DELIVERIES, tùy chọn"
+        array images "ảnh, tùy chọn"
+        ObjectId createdByUser FK "tham chiếu: USERS, bắt buộc"
+        datetime originalCreatedAt "thời điểm tạo money delivery gốc"
+        datetime originalUpdatedAt "thời điểm cập nhật money delivery gốc"
+        datetime dateReturn "ngày trả, tùy chọn"
+        string contentReturn "nội dung trả, tùy chọn"
+        ObjectId deletedBy FK "tham chiếu: USERS, bắt buộc, user đã xóa"
+        string reason "lý do xóa, bắt buộc, tối đa 500 ký tự"
+        datetime deletedAt "thời điểm xóa, bắt buộc, mặc định hiện tại"
+        datetime expiredAt "thời điểm hết hạn, bắt buộc, TTL index (tự động xóa sau 90 ngày)"
+    }
+
     CUSTOMER_ADDRESS_HISTORY {
         ObjectId _id PK
         ObjectId customerId FK "tham chiếu: CUSTOMERS, bắt buộc"
@@ -266,6 +352,8 @@ erDiagram
 - `userRoutes` - Mối quan hệ nhiều-nhiều giữa người dùng và tuyến đường
 - `deliveries` - Giao dịch vận chuyển thông thường
 - `moneyDeliveries` - Giao dịch chuyển tiền
+- `removedDeliveries` - Giao dịch vận chuyển đã xóa (soft delete, lưu 90 ngày)
+- `removedMoneyDeliveries` - Giao dịch chuyển tiền đã xóa (soft delete, lưu 90 ngày)
 - `draftdeliveries` - Bản nháp delivery (lưu tạm thông tin chưa hoàn tất)
 - `settings` - Cấu hình hệ thống linh hoạt (shipping rates, product list, custom configs)
 
@@ -407,6 +495,53 @@ erDiagram
   - sendCost cho thu dùm: Sử dụng delivery.collectForCustomerCost
 - **Index hiệu suất**: Cùng pattern tối ưu như deliveries
 
+#### Bảng REMOVED_DELIVERIES (Soft Delete)
+
+- **Mục đích**: Lưu trữ các delivery đã bị xóa trong 90 ngày trước khi xóa vĩnh viễn
+- **Quy trình xóa (Soft Delete)**:
+  - Yêu cầu xác thực mật khẩu người dùng trước khi xóa
+  - Yêu cầu lý do xóa (bắt buộc, tối đa 500 ký tự)
+  - Sử dụng transaction để đảm bảo tính toàn vẹn dữ liệu
+  - Copy toàn bộ dữ liệu delivery gốc sang removed collection
+  - Xóa delivery gốc sau khi copy thành công
+- **Dữ liệu lưu trữ**:
+  - Tất cả fields từ delivery gốc (code, fullCode, sender, receiver, costs, etc.)
+  - `originalDeliveryId`: ID của delivery gốc
+  - `originalCreatedAt`, `originalUpdatedAt`: Timestamps gốc
+  - `deletedBy`: User đã thực hiện xóa
+  - `reason`: Lý do xóa
+  - `deletedAt`: Thời điểm xóa
+  - `expiredAt`: Thời điểm tự động xóa vĩnh viễn (90 ngày sau deletedAt)
+- **TTL Index**: Tự động xóa document sau khi `expiredAt` đến hạn
+- **Index hiệu suất**:
+  - `{deletedBy: 1, deletedAt: -1}` - Lịch sử xóa của user
+  - `{fullCode: 1}` - Tìm kiếm theo fullCode
+  - `{originalDeliveryId: 1}` - Tham chiếu đến delivery gốc
+  - `{fromRoute: 1, toRoute: 1}` - Phân tích theo tuyến đường
+  - `{deletedAt: -1}` - Các record xóa gần đây
+
+#### Bảng REMOVED_MONEY_DELIVERIES (Soft Delete)
+
+- **Mục đích**: Lưu trữ các money delivery đã bị xóa trong 90 ngày trước khi xóa vĩnh viễn
+- **Quy trình xóa (Soft Delete)**: Giống như REMOVED_DELIVERIES
+  - Xác thực mật khẩu + lý do xóa
+  - Transaction-based operation
+  - Copy + delete pattern
+- **Dữ liệu lưu trữ**:
+  - Tất cả fields từ money delivery gốc (code, fullCode, sender, receiver, amounts, etc.)
+  - `originalMoneyDeliveryId`: ID của money delivery gốc
+  - `originalCreatedAt`, `originalUpdatedAt`: Timestamps gốc
+  - `deletedBy`: User đã thực hiện xóa
+  - `reason`: Lý do xóa
+  - `deletedAt`: Thời điểm xóa
+  - `expiredAt`: Thời điểm tự động xóa vĩnh viễn (90 ngày sau deletedAt)
+- **TTL Index**: Tự động xóa document sau khi `expiredAt` đến hạn
+- **Index hiệu suất**: Giống REMOVED_DELIVERIES
+  - `{deletedBy: 1, deletedAt: -1}`
+  - `{fullCode: 1}`
+  - `{originalMoneyDeliveryId: 1}`
+  - `{fromRoute: 1, toRoute: 1}`
+  - `{deletedAt: -1}`
 
 #### Bảng DRAFT_DELIVERIES
 

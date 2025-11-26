@@ -317,3 +317,27 @@ export const updateDataImagesMoneyDeliverySchema = z.object({
       .optional(),
   }),
 });
+
+// Schema for deleting money delivery by fullCode
+export const deleteMoneyDeliveryByFullCodeSchema = z.object({
+  params: z.object({
+    fullCode: z
+      .string()
+      .min(14, 'Money delivery fullCode must be at least 14 characters')
+      .max(22, 'Money delivery fullCode must not exceed 22 characters')
+      .regex(MONEY_DELIVERY_IDENTIFIER_PATTERN, VALIDATION_MESSAGES.MONEY_DELIVERY_IDENTIFIER)
+      .trim(),
+  }),
+  body: z.object({
+    password: z.string().min(1, 'Password is required'),
+    reason: z
+      .string()
+      .min(1, 'Reason is required')
+      .max(500, 'Reason must not exceed 500 characters')
+      .trim(),
+  }),
+});
+
+export type DeleteMoneyDeliveryByFullCodeRequest = z.infer<
+  typeof deleteMoneyDeliveryByFullCodeSchema
+>;

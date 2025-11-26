@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import { MoneyDeliveryService } from '@/services/money-delivery.service';
+import { RemovedMoneyDeliveryService } from '@/services/money-delivery-removed.service';
 import {
   CreateMoneyDeliveryRequest,
   UpdateMoneyDeliveryRequest,
@@ -10,9 +11,11 @@ import logger from '@/utils/logger';
 
 export class MoneyDeliveryController {
   private moneyDeliveryService: MoneyDeliveryService;
+  private removedMoneyDeliveryService: RemovedMoneyDeliveryService;
 
   constructor() {
     this.moneyDeliveryService = new MoneyDeliveryService();
+    this.removedMoneyDeliveryService = new RemovedMoneyDeliveryService();
   }
 
   /**
@@ -770,31 +773,79 @@ export class MoneyDeliveryController {
   };
 
   /**
-   * Delete money delivery by ID
-   * DELETE /api/money-deliveries/:id
+   * Delete money delivery by fullCode (soft delete with password verification)
+   * DELETE /api/money-deliveries/:fullCode
    * @swagger
-   * /api/money-deliveries/{id}:
+   * /api/money-deliveries/{fullCode}:
    *   delete:
-   *     summary: Delete money delivery by ID
+   *     summary: Delete money delivery by fullCode (soft delete)
+   *     description: Moves the money delivery to removed collection with password verification. The removed record will be automatically deleted after 90 days.
    *     tags: [Money Delivery]
    *     security:
    *       - bearerAuth: []
    *     parameters:
    *       - in: path
-   *         name: id
+   *         name: fullCode
    *         required: true
    *         schema:
    *           type: string
-   *         description: Money delivery ID
+   *         description: Money delivery full code (e.g., 2712250001T4T1-T)
+   *         example: "2712250001T4T1-T"
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - password
+   *               - reason
+   *             properties:
+   *               password:
+   *                 type: string
+   *                 description: User's password for verification
+   *                 example: "password123"
+   *               reason:
+   *                 type: string
+   *                 description: Reason for deletion (max 500 characters)
+   *                 example: "Duplicate entry - created by mistake"
    *     responses:
    *       200:
    *         description: Money delivery deleted successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Money delivery deleted successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     deletedMoneyDelivery:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                         fullCode:
+   *                           type: string
+   *                         deletedAt:
+   *                           type: string
+   *                           format: date-time
+   *                         reason:
+   *                           type: string
+   *       400:
+   *         description: Invalid password
    *       404:
    *         description: Money delivery not found
    *       401:
    *         description: Unauthorized
    */
-  deleteMoneyDelivery = async (req: AuthRequest, res: Response): Promise<void> => {
+  deleteMoneyDeliveryByFullCode = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       if (!req.user) {
         const response: ApiResponse = {
@@ -805,23 +856,32 @@ export class MoneyDeliveryController {
         return;
       }
 
-      const { id } = req.params;
+      const { fullCode } = req.params;
+      const { password, reason } = req.body;
 
-      await this.moneyDeliveryService.deleteMoneyDelivery(id);
+      const result = await this.removedMoneyDeliveryService.moveMoneyDeliveryToRemoved(
+        fullCode,
+        req.user.userId,
+        password,
+        reason
+      );
 
-      logger.info(`Money delivery deleted: ${id}`);
+      logger.info(`Money delivery soft deleted: ${fullCode}`, {
+        deletedBy: req.user.userId,
+        reason,
+      });
 
-      const response: ApiResponse = {
-        success: true,
-        message: 'Money delivery deleted successfully',
-      };
-
-      res.status(200).json(response);
+      res.status(200).json(result);
     } catch (error) {
       logger.error('Error deleting money delivery:', error);
 
       const message = error instanceof Error ? error.message : 'Failed to delete money delivery';
-      const statusCode = message.includes('not found') ? 404 : 500;
+      let statusCode = 500;
+      if (message.includes('not found')) {
+        statusCode = 404;
+      } else if (message.includes('Invalid password')) {
+        statusCode = 400;
+      }
 
       const response: ApiResponse = {
         success: false,

@@ -457,18 +457,6 @@ export class MoneyDeliveryService {
   }
 
   /**
-   * Delete money delivery by ID
-   */
-  async deleteMoneyDelivery(id: string): Promise<void> {
-    const moneyDelivery = await MoneyDelivery.findById(id);
-    if (!moneyDelivery) {
-      throw new Error('Money delivery not found');
-    }
-
-    await MoneyDelivery.findByIdAndDelete(id);
-  }
-
-  /**
    * Get next money delivery code for a specific route
    * fromRouteId is taken from user's selectedRouteId
    */
@@ -785,12 +773,13 @@ export class MoneyDeliveryService {
                 $project: {
                   _id: 1,
                   code: 1,
+                  subCode: 1,
                   sender: {
-                    name: '$sender.name',
+                    name: '$senderName',
                     phone: '$sender.phone',
                   },
                   receiver: {
-                    name: '$receiver.name',
+                    name: '$receiverName',
                     phone: '$receiver.phone',
                   },
                   toRoute: {
