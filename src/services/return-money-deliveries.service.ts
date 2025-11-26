@@ -1,14 +1,13 @@
-import { CustomerService } from './customer.service';
-import { UserService } from './user.service';
-import { RouteService } from './route.service';
-import { SettingsService } from './settings.service';
-import { MoneyDeliveryService } from './money-delivery.service';
+import { IMoneyDelivery, MoneyDelivery, MoneyDeliveryStatus } from '@/models/money-delivery.model';
 import { IMoneyDeliveryResponse } from '@/types/money-delivery.type';
 import { IReturnMoneyDeliveryQuery } from '@/types/return-money-deliveries.type';
-import { ReturnDeliveriesService } from './return-deliveries.service';
-import { getStartOfDayVietnam, getEndOfDayVietnam, convertVietnamToUTC } from '@/utils/date.utils';
-import { IMoneyDelivery, MoneyDelivery, MoneyDeliveryStatus } from '@/models/money-delivery.model';
 import Logger from '@/utils/logger';
+import { CustomerService } from './customer.service';
+import { MoneyDeliveryService } from './money-delivery.service';
+import { ReturnDeliveriesService } from './return-deliveries.service';
+import { RouteService } from './route.service';
+import { SettingsService } from './settings.service';
+import { UserService } from './user.service';
 
 export class ReturnMoneyDeliveriesService {
   private customerService: CustomerService;
@@ -33,21 +32,18 @@ export class ReturnMoneyDeliveriesService {
   ): Promise<IMoneyDeliveryResponse[]> {
     const { startDate, endDate } = query;
 
-    const startDateObj = new Date(String(startDate));
-    const endDateObj = new Date(String(endDate));
+    const start = new Date(String(startDate));
+    start.setHours(0, 0, 0, 0);
 
-    const startOfDay = getStartOfDayVietnam(startDateObj);
-    const endOfDay = getEndOfDayVietnam(endDateObj);
-
-    const startDateUTC = convertVietnamToUTC(startOfDay);
-    const endDateUTC = convertVietnamToUTC(endOfDay);
+    const end = new Date(String(endDate));
+    end.setHours(23, 59, 59, 999);
 
     try {
       const moneyDeliveries =
         await this.moneyDeliveryService.getListReturnMoneyDeliveriesTypeCollectStatusDone(
           userId,
-          startDateUTC,
-          endDateUTC
+          start,
+          end
         );
 
       return moneyDeliveries;
@@ -68,21 +64,18 @@ export class ReturnMoneyDeliveriesService {
   ): Promise<IMoneyDeliveryResponse[]> {
     const { startDate, endDate } = query;
 
-    const startDateObj = new Date(String(startDate));
-    const endDateObj = new Date(String(endDate));
+    const start = new Date(String(startDate));
+    start.setHours(0, 0, 0, 0);
 
-    const startOfDay = getStartOfDayVietnam(startDateObj);
-    const endOfDay = getEndOfDayVietnam(endDateObj);
-
-    const startDateUTC = convertVietnamToUTC(startOfDay);
-    const endDateUTC = convertVietnamToUTC(endOfDay);
+    const end = new Date(String(endDate));
+    end.setHours(23, 59, 59, 999);
 
     try {
       const moneyDeliveries =
         await this.moneyDeliveryService.getListOldMoneyDeliveryNotTypeCollectCost(
           userId,
-          startDateUTC,
-          endDateUTC
+          start,
+          end
         );
 
       return moneyDeliveries;
@@ -103,21 +96,18 @@ export class ReturnMoneyDeliveriesService {
   ): Promise<IMoneyDeliveryResponse[]> {
     const { startDate, endDate } = query;
 
-    const startDateObj = new Date(String(startDate));
-    const endDateObj = new Date(String(endDate));
+    const start = new Date(String(startDate));
+    start.setHours(0, 0, 0, 0);
 
-    const startOfDay = getStartOfDayVietnam(startDateObj);
-    const endOfDay = getEndOfDayVietnam(endDateObj);
-
-    const startDateUTC = convertVietnamToUTC(startOfDay);
-    const endDateUTC = convertVietnamToUTC(endOfDay);
+    const end = new Date(String(endDate));
+    end.setHours(23, 59, 59, 999);
 
     try {
       const moneyDeliveries =
         await this.moneyDeliveryService.getListMoneyDeliveryNotTypeCollectCostWithStatusDone(
           userId,
-          startDateUTC,
-          endDateUTC
+          start,
+          end
         );
 
       return moneyDeliveries;
@@ -138,21 +128,18 @@ export class ReturnMoneyDeliveriesService {
   ): Promise<IMoneyDeliveryResponse[]> {
     const { startDate, endDate } = query;
 
-    const startDateObj = new Date(String(startDate));
-    const endDateObj = new Date(String(endDate));
+    const start = new Date(String(startDate));
+    start.setHours(0, 0, 0, 0);
 
-    const startOfDay = getStartOfDayVietnam(startDateObj);
-    const endOfDay = getEndOfDayVietnam(endDateObj);
-
-    const startDateUTC = convertVietnamToUTC(startOfDay);
-    const endDateUTC = convertVietnamToUTC(endOfDay);
+    const end = new Date(String(endDate));
+    end.setHours(23, 59, 59, 999);
 
     try {
       const moneyDeliveries =
         await this.moneyDeliveryService.getListMoneyDeliveryTypeNormalWithStatusWaiting(
           userId,
-          startDateUTC,
-          endDateUTC
+          start,
+          end
         );
 
       return moneyDeliveries;
@@ -173,21 +160,18 @@ export class ReturnMoneyDeliveriesService {
   ): Promise<IMoneyDeliveryResponse[]> {
     const { startDate, endDate } = query;
 
-    const startDateObj = new Date(String(startDate));
-    const endDateObj = new Date(String(endDate));
+    const start = new Date(String(startDate));
+    start.setHours(0, 0, 0, 0);
 
-    const startOfDay = getStartOfDayVietnam(startDateObj);
-    const endOfDay = getEndOfDayVietnam(endDateObj);
-
-    const startDateUTC = convertVietnamToUTC(startOfDay);
-    const endDateUTC = convertVietnamToUTC(endOfDay);
+    const end = new Date(String(endDate));
+    end.setHours(23, 59, 59, 999);
 
     try {
       const moneyDeliveries =
         await this.moneyDeliveryService.getListMoneyDeliveryTypeCollectCostWithStatusDone(
           userId,
-          startDateUTC,
-          endDateUTC
+          start,
+          end
         );
 
       return moneyDeliveries;
@@ -208,21 +192,18 @@ export class ReturnMoneyDeliveriesService {
   ): Promise<IMoneyDeliveryResponse[]> {
     const { startDate, endDate } = query;
 
-    const startDateObj = new Date(String(startDate));
-    const endDateObj = new Date(String(endDate));
+    const start = new Date(String(startDate));
+    start.setHours(0, 0, 0, 0);
 
-    const startOfDay = getStartOfDayVietnam(startDateObj);
-    const endOfDay = getEndOfDayVietnam(endDateObj);
-
-    const startDateUTC = convertVietnamToUTC(startOfDay);
-    const endDateUTC = convertVietnamToUTC(endOfDay);
+    const end = new Date(String(endDate));
+    end.setHours(23, 59, 59, 999);
 
     try {
       const moneyDeliveries =
         await this.moneyDeliveryService.getListReturnMoneyDeliveryTypeCollectCostWithStatusWaiting(
           userId,
-          startDateUTC,
-          endDateUTC
+          start,
+          end
         );
 
       return moneyDeliveries;
