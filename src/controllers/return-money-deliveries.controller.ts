@@ -1234,4 +1234,262 @@ export class ReturnMoneyDeliveriesController {
       res.status(statusCode).json(response);
     }
   };
+
+  /**
+   * @swagger
+   * /api/return-money-deliveries/update-status-with-customer-images-and-money-images:
+   *   put:
+   *     summary: Update status of return money delivery with customer and money images
+   *     description: Updates the status of a money delivery to DONE with optional customer images and money images. Both image fields are optional. Updates notes with return date and sets dateReturn field.
+   *     tags: [Return Money Deliveries]
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         multipart/form-data:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - moneyDeliveryId
+   *               - customerId
+   *             properties:
+   *               moneyDeliveryId:
+   *                 type: string
+   *                 example: "507f1f77bcf86cd799439011"
+   *                 description: Money delivery ID
+   *               customerId:
+   *                 type: string
+   *                 example: "507f1f77bcf86cd799439012"
+   *                 description: Customer ID
+   *               address:
+   *                 type: string
+   *                 example: "123 Đường ABC, Quận 1, TP.HCM"
+   *                 description: Customer address (optional)
+   *               identityCardIssuedDate:
+   *                 type: string
+   *                 example: "2020-01-01"
+   *                 description: Identity card issued date (optional)
+   *               identityCardNumber:
+   *                 type: string
+   *                 example: "123456789"
+   *                 description: Identity card number (optional)
+   *               contentReturn:
+   *                 type: string
+   *                 example: "Nội dung trả tiền"
+   *                 description: Content return (optional)
+   *               # Customer images support (up to 5 images, optional)
+   *               customerImages:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *                   format: binary
+   *                 maxItems: 5
+   *                 description: Array of customer image files (optional, max 5)
+   *               customerImages[0][index]:
+   *                 type: integer
+   *                 minimum: 1
+   *                 maximum: 5
+   *                 example: 1
+   *                 description: Index for first customer image (1-5)
+   *               customerImages[0][rotate]:
+   *                 type: integer
+   *                 enum: [0, 90, 180, 270]
+   *                 default: 0
+   *                 description: Rotation angle for first customer image
+   *               # Money images support (up to 5 images, optional)
+   *               moneyImages:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *                   format: binary
+   *                 maxItems: 5
+   *                 description: Array of money image files (optional, max 5)
+   *               moneyImages[0][index]:
+   *                 type: integer
+   *                 minimum: 1
+   *                 maximum: 5
+   *                 example: 1
+   *                 description: Index for first money image (1-5)
+   *               moneyImages[0][rotate]:
+   *                 type: integer
+   *                 enum: [0, 90, 180, 270]
+   *                 default: 0
+   *                 description: Rotation angle for first money image
+   *     responses:
+   *       200:
+   *         description: Return money delivery status updated with dual images successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Return money delivery status updated with dual images successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     moneyDelivery:
+   *                       $ref: '#/components/schemas/MoneyDelivery'
+   *       400:
+   *         description: Validation error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Money delivery ID is required"
+   *       404:
+   *         description: Money delivery not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Money delivery with ID not found"
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Failed to update status with dual images"
+   */
+  updateStatusWithCustomerImagesAndMoneyImages = async (
+    req: AuthRequestWithFileUploads,
+    res: Response
+  ): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const {
+        moneyDeliveryId,
+        customerId,
+        address,
+        identityCardIssuedDate,
+        identityCardNumber,
+        contentReturn,
+        customerImages,
+        moneyImages,
+      } = req.body;
+      const filesObject = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+
+      // Prepare customer images data
+      let customerImagesData: Array<{
+        index: number;
+        buffer: Buffer;
+        originalName: string;
+        rotate: number;
+      }> = [];
+
+      // Prepare money images data
+      let moneyImagesData: Array<{
+        index: number;
+        buffer: Buffer;
+        originalName: string;
+        rotate: number;
+      }> = [];
+
+      // Handle customer images
+      if (
+        filesObject &&
+        !Array.isArray(filesObject) &&
+        filesObject.customerImages &&
+        filesObject.customerImages.length > 0 &&
+        customerImages
+      ) {
+        customerImagesData = filesObject.customerImages.map((file, idx) => ({
+          index: customerImages[idx]?.index || idx + 1,
+          buffer: file.buffer,
+          originalName: file.originalname,
+          rotate: customerImages[idx]?.rotate || 0,
+        }));
+      }
+
+      // Handle money images
+      if (
+        filesObject &&
+        !Array.isArray(filesObject) &&
+        filesObject.moneyImages &&
+        filesObject.moneyImages.length > 0 &&
+        moneyImages
+      ) {
+        moneyImagesData = filesObject.moneyImages.map((file, idx) => ({
+          index: moneyImages[idx]?.index || idx + 1,
+          buffer: file.buffer,
+          originalName: file.originalname,
+          rotate: moneyImages[idx]?.rotate || 0,
+        }));
+      }
+
+      const result =
+        await this.returnMoneyDeliveriesService.updateStatusWithCustomerImagesAndMoneyImages(
+          {
+            moneyDeliveryId,
+            customerId,
+            address,
+            identityCardIssuedDate,
+            identityCardNumber,
+          },
+          contentReturn,
+          customerImagesData.length > 0 ? customerImagesData : undefined,
+          moneyImagesData.length > 0 ? moneyImagesData : undefined
+        );
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Return money delivery status updated with dual images successfully',
+        data: { moneyDelivery: result },
+      };
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Update status with customer images and money images error:', {
+        error: error instanceof Error ? error.message : error,
+      });
+
+      let statusCode = 400;
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Failed to update status with customer images and money images';
+
+      // Handle specific error cases
+      if (message.includes('not found')) {
+        statusCode = 404;
+      }
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+      res.status(statusCode).json(response);
+    }
+  };
 }

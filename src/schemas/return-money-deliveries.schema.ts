@@ -12,14 +12,7 @@ export const getListReturnMoneyDeliveriesTypeCollectStatusDoneSchema = z
       endDate: z
         .string()
         .regex(DATE_YYYY_MM_DD_PATTERN, VALIDATION_MESSAGES.DATE_YYYY_MM_DD)
-        .transform(val => new Date(val))
-        .refine(val => {
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          const endDate = new Date(val);
-          endDate.setHours(0, 0, 0, 0);
-          return endDate <= today;
-        }, 'End date cannot be in the future'),
+        .transform(val => new Date(val)),
     }),
   })
   .refine(data => data.query.startDate <= data.query.endDate, {
@@ -92,14 +85,7 @@ export const getListOldMoneyDeliveryNotTypeCollectCostSchema = z
       endDate: z
         .string()
         .regex(DATE_YYYY_MM_DD_PATTERN, VALIDATION_MESSAGES.DATE_YYYY_MM_DD)
-        .transform(val => new Date(val))
-        .refine(val => {
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          const endDate = new Date(val);
-          endDate.setHours(0, 0, 0, 0);
-          return endDate <= today;
-        }, 'End date cannot be in the future'),
+        .transform(val => new Date(val)),
     }),
   })
   .refine(data => data.query.startDate <= data.query.endDate, {
@@ -129,14 +115,7 @@ export const getListMoneyDeliveryNotTypeCollectCostWithStatusDoneSchema = z
       endDate: z
         .string()
         .regex(DATE_YYYY_MM_DD_PATTERN, VALIDATION_MESSAGES.DATE_YYYY_MM_DD)
-        .transform(val => new Date(val))
-        .refine(val => {
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          const endDate = new Date(val);
-          endDate.setHours(0, 0, 0, 0);
-          return endDate <= today;
-        }, 'End date cannot be in the future'),
+        .transform(val => new Date(val)),
     }),
   })
   .refine(data => data.query.startDate <= data.query.endDate, {
@@ -166,14 +145,7 @@ export const getListMoneyDeliveryTypeNormalWithStatusWaitingSchema = z
       endDate: z
         .string()
         .regex(DATE_YYYY_MM_DD_PATTERN, VALIDATION_MESSAGES.DATE_YYYY_MM_DD)
-        .transform(val => new Date(val))
-        .refine(val => {
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          const endDate = new Date(val);
-          endDate.setHours(0, 0, 0, 0);
-          return endDate <= today;
-        }, 'End date cannot be in the future'),
+        .transform(val => new Date(val)),
     }),
   })
   .refine(data => data.query.startDate <= data.query.endDate, {
@@ -203,14 +175,14 @@ export const getListMoneyDeliveryTypeCollectCostWithStatusDoneSchema = z
       endDate: z
         .string()
         .regex(DATE_YYYY_MM_DD_PATTERN, VALIDATION_MESSAGES.DATE_YYYY_MM_DD)
-        .transform(val => new Date(val))
-        .refine(val => {
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          const endDate = new Date(val);
-          endDate.setHours(0, 0, 0, 0);
-          return endDate <= today;
-        }, 'End date cannot be in the future'),
+        .transform(val => new Date(val)),
+      // .refine(val => {
+      //   const today = new Date();
+      //   today.setHours(0, 0, 0, 0);
+      //   const endDate = new Date(val);
+      //   endDate.setHours(0, 0, 0, 0);
+      //   return endDate <= today;
+      // }, 'End date cannot be in the future'),
     }),
   })
   .refine(data => data.query.startDate <= data.query.endDate, {
@@ -274,4 +246,84 @@ export const getListReportReturnMoneyDeliveryTypeCollectWithStatusDoneSchema = z
 // Schema for get list report return money delivery not type collect with status done
 export const getListReportReturnMoneyDeliveryNotTypeCollectWithStatusDoneSchema = z.object({
   query: z.object({}),
+});
+
+// Schema for update status with customer images and money images
+export const updateStatusWithCustomerImagesAndMoneyImagesSchema = z.object({
+  body: z.object({
+    moneyDeliveryId: z
+      .string()
+      .min(1, 'Money delivery ID is required')
+      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format'),
+    customerId: z
+      .string()
+      .min(1, 'Customer ID is required')
+      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format'),
+    address: z.string().optional(),
+    identityCardIssuedDate: z.string().optional(),
+    identityCardNumber: z.string().optional(),
+    contentReturn: z.string().optional(),
+    // Customer images (optional)
+    customerImages: z
+      .preprocess(
+        val => {
+          if (!val || !Array.isArray(val)) {
+            return undefined;
+          }
+          return val.filter(
+            (item: unknown) =>
+              item !== null &&
+              item !== undefined &&
+              typeof item === 'object' &&
+              Object.keys(item).length > 0
+          );
+        },
+        z
+          .array(
+            z.object({
+              index: z.coerce.number().min(1).max(5),
+              rotate: z.coerce
+                .number()
+                .refine(val => [0, 90, 180, 270].includes(val), {
+                  message: 'Rotate must be 0, 90, 180, or 270',
+                })
+                .default(0),
+            })
+          )
+          .max(5, 'Maximum 5 customer images allowed')
+          .optional()
+      )
+      .optional(),
+    // Money images (optional)
+    moneyImages: z
+      .preprocess(
+        val => {
+          if (!val || !Array.isArray(val)) {
+            return undefined;
+          }
+          return val.filter(
+            (item: unknown) =>
+              item !== null &&
+              item !== undefined &&
+              typeof item === 'object' &&
+              Object.keys(item).length > 0
+          );
+        },
+        z
+          .array(
+            z.object({
+              index: z.coerce.number().min(1).max(5),
+              rotate: z.coerce
+                .number()
+                .refine(val => [0, 90, 180, 270].includes(val), {
+                  message: 'Rotate must be 0, 90, 180, or 270',
+                })
+                .default(0),
+            })
+          )
+          .max(5, 'Maximum 5 money images allowed')
+          .optional()
+      )
+      .optional(),
+  }),
 });

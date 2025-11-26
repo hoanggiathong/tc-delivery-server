@@ -1462,7 +1462,9 @@ export class MoneyDeliveryService {
       const moneyDeliveries = await MoneyDelivery.find({
         toRoute: toRouteId,
         status: MoneyDeliveryStatus.WAITING,
-        type: MoneyDeliveryType.NORMAL,
+        type: {
+          $in: [MoneyDeliveryType.NORMAL, MoneyDeliveryType.COLLECT_FOR_CUSTOMER],
+        },
         createdAt: { $gte: startDate, $lte: endDate },
       })
         .populate([
@@ -1779,6 +1781,10 @@ export class MoneyDeliveryService {
           $gte: todayStart,
           $lte: todayEnd,
         },
+        dateReturn: {
+          $gte: todayStart,
+          $lte: todayEnd,
+        },
       });
 
       // get quantity of Return created from 7 days ago until start of today
@@ -1830,6 +1836,10 @@ export class MoneyDeliveryService {
           $ne: MoneyDeliveryType.COLLECT,
         },
         createdAt: {
+          $gte: todayStart,
+          $lte: todayEnd,
+        },
+        dateReturn: {
           $gte: todayStart,
           $lte: todayEnd,
         },
