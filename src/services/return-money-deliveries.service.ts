@@ -1,5 +1,9 @@
+import { TYPE_DELIVERY_CUSTOMER } from '@/const/customer.const';
+import { ICustomer } from '@/models/customer.model';
 import { IMoneyDelivery, MoneyDelivery, MoneyDeliveryStatus } from '@/models/money-delivery.model';
+import { ICustomerInformationResponse } from '@/types/customer.type';
 import { IMoneyDeliveryResponse } from '@/types/money-delivery.type';
+import { IRouteResponse } from '@/types/route.type';
 import { IReturnMoneyDeliveryQuery } from '@/types/return-money-deliveries.type';
 import Logger from '@/utils/logger';
 import { CustomerService } from './customer.service';
@@ -331,6 +335,41 @@ export class ReturnMoneyDeliveriesService {
         throw error;
       }
       throw new Error('update status return money delivery with images failed');
+    }
+  }
+
+  async getInformationReceiver(phoneReceiver: string): Promise<ICustomerInformationResponse | []> {
+    try {
+      const receiver: ICustomer | null =
+        await this.customerService.getCustomerByPhone(phoneReceiver);
+
+      if (!receiver) {
+        return [];
+      }
+
+      const route: IRouteResponse | null = await this.routeService.getRouteById(
+        receiver.routeId.toString()
+      );
+
+      return {
+        id: receiver._id.toString(),
+        name: receiver.name,
+        phone: receiver.phone,
+        route: {
+          id: receiver.routeId.toString(),
+          code: route?.code,
+          name: route?.name,
+        },
+        type: receiver.type,
+        address: receiver.address,
+        identityCardIssuedDate: receiver.identityCardIssuedDate,
+        identityCardNumber: receiver.identityCardNumber,
+        images: receiver.images,
+        createdAt: receiver.createdAt,
+        updatedAt: receiver.updatedAt,
+      } as ICustomerInformationResponse;
+    } catch (error) {
+      throw new Error('get information receiver failed');
     }
   }
 

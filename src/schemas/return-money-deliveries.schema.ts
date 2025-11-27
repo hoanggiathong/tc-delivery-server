@@ -1,6 +1,17 @@
 import z from 'zod';
 import { DATE_YYYY_MM_DD_PATTERN, VALIDATION_MESSAGES } from '@/utils/validation-patterns';
 
+// Schema for get information receiver
+export const getInformationReceiverSchema = z.object({
+  params: z.object({
+    phoneReceiver: z
+      .string()
+      .min(1, 'Phone receiver is required')
+      .max(100, 'Phone receiver must not exceed 100 characters')
+      .trim(),
+  }),
+});
+
 // Schema for get list return money deliveries type collect status done
 export const getListReturnMoneyDeliveriesTypeCollectStatusDoneSchema = z
   .object({

@@ -396,3 +396,9 @@ export interface ITodayDeliveryReport {
     routeName: string;
   };
 }
+
+export interface IGetListReportReturnDeliveryResponse {
+  quantityReturnIsToday: number;
+  quantityReturnIsOld: number;
+  quantityReturnTotalToday: number;
+}
