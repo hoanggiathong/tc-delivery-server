@@ -138,31 +138,26 @@ export class CustomerService {
   }
 
   /**
-   * Get customer by phone and type
+   * Get customer by phone
    */
-  async getCustomerByPhoneAndType(
-    phone: string,
-    type: TYPE_DELIVERY_CUSTOMER
-  ): Promise<ICustomer | null> {
+  async getCustomerByPhone(phone: string): Promise<ICustomer | null> {
     try {
-      const customer = await Customer.findOne({ phone, type });
+      const customer = await Customer.findOne({ phone });
 
-      Logger.debug('Customer retrieved by phone and type', {
+      Logger.debug('Customer retrieved by phone', {
         phone,
-        type,
         found: !!customer,
         customerId: customer?._id,
       });
 
       return customer;
     } catch (error) {
-      Logger.error('Failed to get customer by phone and type', {
+      Logger.error('Failed to get customer by phone', {
         error: error instanceof Error ? error.message : error,
         phone,
-        type,
       });
       throw new Error(
-        `Failed to get customer by phone and type: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Failed to get customer by phone: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
   }

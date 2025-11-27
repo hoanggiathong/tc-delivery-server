@@ -17,7 +17,10 @@ import {
   IReturnDeliveryUpdateRequest,
   IReturnDeliveryListCollectCostOfReturnDeliveriesRequest,
 } from '@/types/return-delivery.type';
-import { IDeliveryLeanPopulated } from '@/types/delivery.type';
+import {
+  IDeliveryLeanPopulated,
+  IGetListReportReturnDeliveryResponse,
+} from '@/types/delivery.type';
 import { CustomerService } from './customer.service';
 import { DeliveryService } from './delivery.service';
 import { UserService } from './user.service';
@@ -70,10 +73,7 @@ export class ReturnDeliveriesService {
     // Handle phone receiver filter by finding customer first
     if (phoneReceiver) {
       try {
-        const receiverCustomer = await this.customerService.getCustomerByPhoneAndType(
-          phoneReceiver,
-          TYPE_DELIVERY_CUSTOMER.DELIVERY
-        );
+        const receiverCustomer = await this.customerService.getCustomerByPhone(phoneReceiver);
 
         if (receiverCustomer) {
           (where as Record<string, unknown>).receiver = receiverCustomer._id;
@@ -193,10 +193,8 @@ export class ReturnDeliveriesService {
 
   async getInformationReceiver(phoneReceiver: string): Promise<ICustomerInformationResponse | []> {
     try {
-      const receiver: ICustomer | null = await this.customerService.getCustomerByPhoneAndType(
-        phoneReceiver,
-        TYPE_DELIVERY_CUSTOMER.DELIVERY
-      );
+      const receiver: ICustomer | null =
+        await this.customerService.getCustomerByPhone(phoneReceiver);
 
       if (!receiver) {
         return [];
@@ -1267,5 +1265,23 @@ export class ReturnDeliveriesService {
     }
 
     return uploadedImages;
+  }
+
+  /**
+   * Get report for return delivery with status done
+   * Returns count of today's returns and old returns (7 days ago until today)
+   */
+  async getListReportReturnDeliveryWithStatusDone(
+    userId: string
+  ): Promise<IGetListReportReturnDeliveryResponse> {
+    try {
+      const report = await this.deliveryService.getListReportReturnDeliveryWithStatusDone(userId);
+      return report;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('get list report return delivery with status done failed');
+    }
   }
 }

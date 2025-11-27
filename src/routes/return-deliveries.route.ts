@@ -20,6 +20,7 @@ import {
   updateStatusWithoutImagesSchema,
   getListCollectCostOfReturnDeliveriesNotCollectedSchema,
   getListCollectCostOfReturnDeliveriesSchema,
+  getListReportReturnDeliveryWithStatusDoneSchema,
 } from '@/schemas/return-deliveries.schema';
 import { UserRole } from '@/types/user.type';
 import { Router } from 'express';
@@ -111,6 +112,12 @@ router.put(
   uploadMultipleImages,
   validate(uploadReturnDeliveryImagesSchema),
   returnDeliveriesController.uploadImagesReturnDelivery
+);
+
+router.get(
+  '/get-list-report-return-delivery-with-status-done',
+  validate(getListReportReturnDeliveryWithStatusDoneSchema),
+  returnDeliveriesController.getListReportReturnDeliveryWithStatusDone
 );
 
 export default router;

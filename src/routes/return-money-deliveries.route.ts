@@ -7,6 +7,7 @@ import {
   uploadMoneyDeliveryDualImagesFields,
 } from '@/middlewares/upload.middleware';
 import {
+  getInformationReceiverSchema,
   getListReturnMoneyDeliveriesTypeCollectStatusDoneSchema,
   getListOldMoneyDeliveryNotTypeCollectCostSchema,
   getListMoneyDeliveryNotTypeCollectCostWithStatusDoneSchema,
@@ -27,6 +28,12 @@ const returnMoneyDeliveriesController = new ReturnMoneyDeliveriesController();
 // All routes require authentication and specific roles
 router.use(authenticateToken);
 router.use(requireRole([UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]));
+
+router.get(
+  '/information-receiver/:phoneReceiver',
+  validate(getInformationReceiverSchema),
+  returnMoneyDeliveriesController.getInformationReceiver
+);
 
 router.get(
   '/get-list-return-money-deliveries-type-collect-status-done',

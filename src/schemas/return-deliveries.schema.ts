@@ -297,3 +297,8 @@ export const updateStatusWithoutImagesSchema = z.object({
       .min(1, 'At least one return delivery item is required'),
   }),
 });
+
+// Schema for get list report return delivery with status done
+export const getListReportReturnDeliveryWithStatusDoneSchema = z.object({
+  query: z.object({}),
+});

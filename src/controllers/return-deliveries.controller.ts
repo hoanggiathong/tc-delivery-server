@@ -1640,4 +1640,111 @@ export class ReturnDeliveriesController {
       res.status(500).json(response);
     }
   };
+
+  /**
+   * @swagger
+   * /api/return-deliveries/get-list-report-return-delivery-with-status-done:
+   *   get:
+   *     summary: Get report for return delivery with status done
+   *     description: Returns statistical report of return deliveries with status DONE. Includes count of today's returns and old returns (from 7 days ago until today with dateReturn = today). No date parameters needed as it calculates based on today's date.
+   *     tags: [Return Deliveries]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Get report successful
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Get report return delivery with status done successful"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     quantityReturnIsToday:
+   *                       type: number
+   *                       description: Number of returns created today
+   *                       example: 5
+   *                     quantityReturnIsOld:
+   *                       type: number
+   *                       description: Number of returns created from 7 days ago with dateReturn = today
+   *                       example: 3
+   *                     quantityReturnTotalToday:
+   *                       type: number
+   *                       description: Total of today's and old returns
+   *                       example: 8
+   *       401:
+   *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Unauthorized"
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "get list report return delivery with status done failed"
+   */
+  getListReportReturnDeliveryWithStatusDone = async (
+    req: AuthRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const result = await this.returnDeliveriesService.getListReportReturnDeliveryWithStatusDone(
+        req.user.userId
+      );
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Get report return delivery with status done successful',
+        data: result,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      console.error('Get report return delivery with status done error:', error);
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'get list report return delivery with status done failed';
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(500).json(response);
+    }
+  };
 }
