@@ -1,4 +1,3 @@
-import { TYPE_DELIVERY_CUSTOMER } from '@/const/customer.const';
 import { ICustomer } from '@/models/customer.model';
 import { IMoneyDelivery, MoneyDelivery, MoneyDeliveryStatus } from '@/models/money-delivery.model';
 import { ICustomerInformationResponse } from '@/types/customer.type';

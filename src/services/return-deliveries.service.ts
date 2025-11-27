@@ -1,4 +1,3 @@
-import { TYPE_DELIVERY_CUSTOMER } from '@/const/customer.const';
 import { SORT_BY_RETURN_DELIVERIES } from '@/const/return-deliveries.const';
 import { ICustomer } from '@/models/customer.model';
 import { Delivery, IDelivery, IReturnDeliveryImage } from '@/models/delivery.model';

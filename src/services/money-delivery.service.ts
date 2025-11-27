@@ -33,7 +33,6 @@ import {
   INextMoneyDeliveryCodeResponse,
   ITodayMoneyDeliveryItem,
   ITodayMoneyDeliveryReport,
-  ITodayMoneyDeliverySummary,
 } from '@/types/money-delivery.type';
 
 export class MoneyDeliveryService {
@@ -757,73 +756,47 @@ export class MoneyDeliveryService {
         { $unwind: '$receiver' },
         { $unwind: '$toRoute' },
         {
-          $facet: {
-            summary: [
-              {
-                $group: {
-                  _id: null,
-                  totalMoneyDeliveries: { $sum: 1 },
-                  totalSendMoneyAmount: { $sum: '$sendMoneyAmount' },
-                  totalSendCost: { $sum: '$sendCost' },
-                },
-              },
-            ],
-            deliveries: [
-              {
-                $project: {
-                  _id: 1,
-                  code: 1,
-                  subCode: 1,
-                  sender: {
-                    name: '$senderName',
-                    phone: '$sender.phone',
-                  },
-                  receiver: {
-                    name: '$receiverName',
-                    phone: '$receiver.phone',
-                  },
-                  toRoute: {
-                    id: { $toString: '$toRoute._id' },
-                    code: '$toRoute.code',
-                    name: '$toRoute.name',
-                    address: '$toRoute.address',
-                  },
-                  sendMoneyAmount: 1,
-                  sendCost: 1,
-                  totalCost: 1,
-                  transferType: 1,
-                  notes: 1,
-                  fullCode: 1,
-                  createdAt: 1,
-                },
-              },
-              { $sort: { createdAt: -1 } },
-            ],
+          $project: {
+            _id: 1,
+            code: 1,
+            subCode: 1,
+            sender: {
+              name: '$senderName',
+              phone: '$sender.phone',
+            },
+            receiver: {
+              name: '$receiverName',
+              phone: '$receiver.phone',
+            },
+            toRoute: {
+              id: { $toString: '$toRoute._id' },
+              code: '$toRoute.code',
+              name: '$toRoute.name',
+              address: '$toRoute.address',
+            },
+            sendMoneyAmount: 1,
+            sendCost: 1,
+            totalCost: 1,
+            transferType: 1,
+            isFree: 1,
+            status: 1,
+            type: 1,
+            deliveryId: 1,
+            notes: 1,
+            fullCode: 1,
+            createdAt: 1,
           },
         },
+        { $sort: { createdAt: -1 } },
       ];
 
-      const result = await MoneyDelivery.aggregate(pipeline);
-      const summaryData = result[0]?.summary[0] || {
-        totalMoneyDeliveries: 0,
-        totalSendMoneyAmount: 0,
-        totalSendCost: 0,
-        totalSendFee: 0,
-      };
-      const deliveriesData = result[0]?.deliveries || [];
-
-      // Format summary
-      const summary: ITodayMoneyDeliverySummary = {
-        totalMoneyDeliveries: summaryData.totalMoneyDeliveries,
-        totalSendMoneyAmount: summaryData.totalSendMoneyAmount,
-        totalSendCost: summaryData.totalSendCost,
-        date: today.toISOString().split('T')[0], // YYYY-MM-DD format
-      };
+      const deliveriesData = await MoneyDelivery.aggregate(pipeline);
 
       // Format money deliveries
       const moneyDeliveries: ITodayMoneyDeliveryItem[] = deliveriesData.map((item: any) => ({
         id: item._id.toString(),
         code: item.code,
+        subCode: item.subCode,
         sender: item.sender,
         receiver: item.receiver,
         toRoute: item.toRoute,
@@ -831,8 +804,12 @@ export class MoneyDeliveryService {
         sendCost: item.sendCost,
         totalCost: item.totalCost,
         transferType: item.transferType,
+        isFree: item.isFree,
         notes: item.notes,
         fullCode: item.fullCode,
+        status: item.status,
+        type: item.type,
+        deliveryId: item.deliveryId?.toString(),
         createdAt: item.createdAt,
       }));
 
@@ -848,7 +825,6 @@ export class MoneyDeliveryService {
       };
 
       return {
-        summary,
         moneyDeliveries,
         routeInfo,
       };
@@ -1002,6 +978,10 @@ export class MoneyDeliveryService {
                   sendCost: 1,
                   totalCost: 1,
                   transferType: 1,
+                  isFree: 1,
+                  status: 1,
+                  type: 1,
+                  deliveryId: 1,
                   notes: 1,
                   createdAt: 1,
                 },
@@ -1061,9 +1041,11 @@ export class MoneyDeliveryService {
         sendCost: item.sendCost,
         totalCost: item.totalCost,
         transferType: item.transferType,
-        fullCode: item.fullCode,
-        subCode: item.subCode,
+        isFree: item.isFree,
         notes: item.notes,
+        status: item.status,
+        type: item.type,
+        deliveryId: item.deliveryId?.toString(),
       }));
 
       return {

@@ -1,4 +1,3 @@
-import { TYPE_DELIVERY_CUSTOMER } from '@/const/customer.const';
 import { Customer, ICustomer, ICustomerImage, CustomerType } from '@/models/customer.model';
 import { CreateCustomerRequest, UpdateCustomerRequest } from '@/schemas/customer.schema';
 import { BankCreateData, CustomerBankService } from '@/services/customer-bank.service';

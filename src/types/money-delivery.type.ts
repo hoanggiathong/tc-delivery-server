@@ -242,16 +242,10 @@ export interface UpdateMoneyDeliveryRequest {
 }
 
 // Today Report Interfaces (simplified, no pagination)
-export interface ITodayMoneyDeliverySummary {
-  totalMoneyDeliveries: number;
-  totalSendMoneyAmount: number;
-  totalSendCost: number;
-  date: string; // YYYY-MM-DD format
-}
-
 export interface ITodayMoneyDeliveryItem {
   id: string;
   code: string;
+  subCode: string;
   sender: {
     name: string;
     phone: string;
@@ -279,7 +273,6 @@ export interface ITodayMoneyDeliveryItem {
 }
 
 export interface ITodayMoneyDeliveryReport {
-  summary: ITodayMoneyDeliverySummary;
   moneyDeliveries: ITodayMoneyDeliveryItem[];
   routeInfo: {
     route: {
