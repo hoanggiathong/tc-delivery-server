@@ -58,11 +58,6 @@ router.get(
  *                 maxLength: 100
  *                 example: 'Nguyễn Văn A'
  *                 description: Customer name (required when creating new customer)
- *               type:
- *                 type: string
- *                 enum: [delivery, money]
- *                 default: delivery
- *                 description: Customer type
  *               bankInfo:
  *                 type: object
  *                 properties:
@@ -91,7 +86,6 @@ router.get(
  *             type: object
  *             required:
  *               - phone
- *               - type
  *             properties:
  *               phone:
  *                 type: string
@@ -101,10 +95,6 @@ router.get(
  *                 type: string
  *                 maxLength: 100
  *                 example: 'Nguyễn Văn A'
- *               type:
- *                 type: string
- *                 enum: [delivery, money]
- *                 default: delivery
  *               bankInfo[name]:
  *                 type: string
  *                 example: 'Nguyễn Văn A'
@@ -320,10 +310,6 @@ router.put(
  *                           phone:
  *                             type: string
  *                             example: "+84912345678"
- *                           type:
- *                             type: string
- *                             enum: [delivery, money]
- *                             example: "delivery"
  *                           route:
  *                             type: object
  *                             properties:

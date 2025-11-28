@@ -1,6 +1,5 @@
 import { Types } from 'mongoose';
 import { BaseEntity } from '.';
-import { ICustomerResponse } from './customer.type';
 import { IRouteResponse } from './route.type';
 import { ICustomer } from '@/models/customer.model';
 import {
@@ -13,13 +12,20 @@ import {
 import { IUser } from '@/models/user.model';
 import { IRoute } from '@/models/route.model';
 
+// Simplified customer info for money delivery response
+export interface IMoneyDeliveryCustomerInfo {
+  id: string;
+  name: string;
+  phone: string;
+}
+
 // MoneyDelivery response interface
 export interface IMoneyDeliveryResponse extends BaseEntity {
   code: string;
   fullCode: string;
   subCode: string;
-  sender: ICustomerResponse;
-  receiver: ICustomerResponse;
+  sender: IMoneyDeliveryCustomerInfo;
+  receiver: IMoneyDeliveryCustomerInfo;
   fromRoute: IRouteResponse;
   toRoute: IRouteResponse;
   sendMoneyAmount: number;
@@ -94,6 +100,8 @@ export interface IMoneyDeliveryWithPopulatedRefs {
   code: string;
   fullCode: string;
   subCode: string;
+  senderName: string;
+  receiverName: string;
   sender: ICustomer;
   receiver: ICustomer;
   fromRoute: IRoute;

@@ -32,7 +32,6 @@ export interface ICustomerInformationResponse {
   id: string;
   name: string;
   phone: string;
-  type: string;
   route: IRouteResponse;
   images: ICustomerImage[];
   address: string;
@@ -47,7 +46,6 @@ export interface ICustomerFullInformationResponse {
   id: string;
   name: string;
   phone: string;
-  type: string;
   route?: IRouteResponse;
   images: ICustomerImage[];
   bank: ICustomerBankResponse | null;

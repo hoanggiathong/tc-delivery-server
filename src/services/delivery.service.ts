@@ -19,11 +19,10 @@ import {
   IDeliveryPopulated,
   IGetListReportReturnDeliveryResponse,
 } from '@/types/delivery.type';
-import { ICustomer, CustomerType, Customer } from '@/models/customer.model';
+import { ICustomer, Customer } from '@/models/customer.model';
 import Logger from '@/utils/logger';
 import { PaymentType } from '@/types';
 import { getStartOfDayVietnam, getEndOfDayVietnam, convertVietnamToUTC } from '@/utils/date.utils';
-import { TYPE_DELIVERY_CUSTOMER } from '@/const/customer.const';
 
 export class DeliveryService {
   private customerService: CustomerService;
@@ -185,18 +184,16 @@ export class DeliveryService {
     // Get user's selected route as fromRoute
     const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
 
-    // Find or create sender and receiver with type 'delivery'
+    // Find or create sender and receiver
     const sender = await this.customerService.findOrCreateCustomer(
       data.senderPhone,
       data.senderName,
-      selectedRouteId,
-      CustomerType.DELIVERY
+      selectedRouteId
     );
     const receiver = await this.customerService.findOrCreateCustomer(
       data.receiverPhone,
       data.receiverName,
-      data.toRouteId,
-      CustomerType.DELIVERY
+      data.toRouteId
     );
 
     // Validate fromRoute and toRoute exist
@@ -311,8 +308,7 @@ export class DeliveryService {
       const sender = await this.customerService.findOrCreateCustomer(
         senderPhone,
         senderName,
-        userSelectedRouteId,
-        CustomerType.DELIVERY
+        userSelectedRouteId
       );
       updateData.sender = sender.id;
       if (data.senderName) {
@@ -332,8 +328,7 @@ export class DeliveryService {
       const receiver = await this.customerService.findOrCreateCustomer(
         receiverPhone,
         receiverName,
-        data.toRouteId || delivery.toRoute.toString(),
-        CustomerType.DELIVERY
+        data.toRouteId || delivery.toRoute.toString()
       );
       updateData.receiver = receiver.id;
       if (data.receiverName) {
@@ -757,10 +752,9 @@ export class DeliveryService {
       // Get user's selected route
       const userSelectedRouteId = await this.userService.getUserSelectedRouteId(userId);
 
-      // Find sender by phone/name with type='delivery' and selected route
+      // Find sender by phone and selected route
       const sender = await Customer.findOne({
         phone: senderIdentifier,
-        type: TYPE_DELIVERY_CUSTOMER.DELIVERY,
         routeId: userSelectedRouteId,
       }).lean();
 

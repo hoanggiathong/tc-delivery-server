@@ -3,7 +3,7 @@ import {
   ICustomerAddressHistory,
 } from '@/models/customer-address-history.model';
 import { IDelivery } from '@/models/delivery.model';
-import { Customer, CustomerType } from '@/models/customer.model';
+import { Customer } from '@/models/customer.model';
 import {
   IAddressHistoryResponse,
   IAddressHistoryCreateRequest,
@@ -12,11 +12,11 @@ import Logger from '@/utils/logger';
 
 export class CustomerAddressHistoryService {
   /**
-   * Get customerId from phone number (type='delivery')
+   * Get customerId from phone number
    */
   private async getCustomerIdByPhone(phone: string): Promise<string> {
     try {
-      const customer = await Customer.findOne({ phone, type: CustomerType.DELIVERY });
+      const customer = await Customer.findOne({ phone });
       if (!customer) {
         throw new Error('Customer not found');
       }
@@ -37,7 +37,7 @@ export class CustomerAddressHistoryService {
     try {
       Logger.debug('Getting address history', { phone });
 
-      // Find customer by phone (type='delivery')
+      // Find customer by phone
       const customerId = await this.getCustomerIdByPhone(phone);
 
       const addressHistory: ICustomerAddressHistory[] = await CustomerAddressHistory.find({
@@ -82,7 +82,7 @@ export class CustomerAddressHistoryService {
     try {
       Logger.debug('Creating address history', { phone, data });
 
-      // Find customer by phone (type='delivery')
+      // Find customer by phone
       const customerId = await this.getCustomerIdByPhone(phone);
 
       // Enforce 20-record limit before creating new one
@@ -134,7 +134,7 @@ export class CustomerAddressHistoryService {
     try {
       Logger.debug('Deleting address history', { phone, addressHistoryId });
 
-      // Find customer by phone (type='delivery')
+      // Find customer by phone
       const customerId = await this.getCustomerIdByPhone(phone);
 
       // Find address history

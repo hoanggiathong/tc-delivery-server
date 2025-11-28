@@ -4,7 +4,6 @@ import { CustomerService } from '@/services/customer.service';
 import { UserService } from '@/services/user.service';
 import jwt from 'jsonwebtoken';
 import { mockCustomersForIntegration } from '../mocks';
-import { CustomerType } from '@/models/customer.model';
 
 // Mock services at module level
 jest.mock('@/services/customer.service');
@@ -62,7 +61,6 @@ describe('Customer Bank API Integration Tests', () => {
     const validBankData = {
       phone: '+84912345678',
       name: 'Nguyễn Văn A',
-      type: 'delivery',
       bankInfo: {
         name: 'Nguyễn Văn A',
         bankName: 'Vietcombank',
@@ -98,7 +96,6 @@ describe('Customer Bank API Integration Tests', () => {
       expect(MockedCustomerService.prototype.updateCustomerBankInfo).toHaveBeenCalledWith(
         '+84912345678',
         '507f1f77bcf86cd799439011',
-        CustomerType.DELIVERY,
         'admin123',
         'Nguyễn Văn A',
         validBankData.bankInfo,
@@ -117,7 +114,6 @@ describe('Customer Bank API Integration Tests', () => {
       const newCustomerData = {
         phone: '+84999999999',
         name: 'Nguyễn Văn B',
-        type: 'delivery',
         bankInfo: {
           name: 'Nguyễn Văn B',
           bankName: 'ACB',
@@ -136,7 +132,6 @@ describe('Customer Bank API Integration Tests', () => {
       expect(MockedCustomerService.prototype.updateCustomerBankInfo).toHaveBeenCalledWith(
         '+84999999999',
         '507f1f77bcf86cd799439011',
-        CustomerType.DELIVERY,
         'admin123',
         'Nguyễn Văn B',
         newCustomerData.bankInfo,
@@ -157,7 +152,6 @@ describe('Customer Bank API Integration Tests', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .field('phone', '+84912345678')
         .field('name', 'Nguyễn Văn A')
-        .field('type', 'delivery')
         .field('images[0][index]', '1')
         .field('images[0][rotate]', '90')
         .field('images[1][index]', '3')
@@ -170,7 +164,6 @@ describe('Customer Bank API Integration Tests', () => {
       expect(MockedCustomerService.prototype.updateCustomerBankInfo).toHaveBeenCalledWith(
         '+84912345678',
         '507f1f77bcf86cd799439011',
-        CustomerType.DELIVERY,
         'admin123',
         'Nguyễn Văn A',
         undefined,
@@ -200,7 +193,6 @@ describe('Customer Bank API Integration Tests', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .field('phone', '+84912345678')
         .field('name', 'Nguyễn Văn A')
-        .field('type', 'delivery')
         .field('bankInfo[name]', 'Nguyễn Văn A')
         .field('bankInfo[bankName]', 'Vietcombank')
         .field('bankInfo[bankAccount]', '0071000123456')
@@ -219,7 +211,6 @@ describe('Customer Bank API Integration Tests', () => {
       expect(MockedCustomerService.prototype.updateCustomerBankInfo).toHaveBeenCalledWith(
         '+84912345678',
         '507f1f77bcf86cd799439011',
-        CustomerType.DELIVERY,
         'admin123',
         'Nguyễn Văn A',
         expect.objectContaining({
@@ -248,7 +239,6 @@ describe('Customer Bank API Integration Tests', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           phone: '+84888888888',
-          type: 'delivery',
         })
         .expect(400);
 
@@ -262,7 +252,6 @@ describe('Customer Bank API Integration Tests', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           name: 'Nguyễn Văn A',
-          type: 'delivery',
         })
         .expect(400);
 
@@ -277,7 +266,6 @@ describe('Customer Bank API Integration Tests', () => {
         .send({
           phone: 'invalid-phone',
           name: 'Nguyễn Văn A',
-          type: 'delivery',
         })
         .expect(400);
 

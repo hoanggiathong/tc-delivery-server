@@ -1,4 +1,4 @@
-import { ICustomer, CustomerType } from '@/models/customer.model';
+import { ICustomer } from '@/models/customer.model';
 import { ICustomerBank } from '@/models/customer-bank.model';
 import { ICustomerResponse } from '@/types/customer.type';
 import { Types } from 'mongoose';
@@ -10,7 +10,6 @@ export const createMockCustomer = (overrides: Partial<ICustomer> = {}): ICustome
     phone: '1234567890',
     routeId: new Types.ObjectId('507f1f77bcf86cd799439011'),
     relativeReceiver: [],
-    type: CustomerType.DELIVERY,
     createdBy: new Types.ObjectId('507f1f77bcf86cd799439099'),
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2023-01-01'),

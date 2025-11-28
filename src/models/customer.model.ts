@@ -3,11 +3,6 @@ import { appConfig } from '@/config/app.config';
 import { generateFullImageUrl, extractBasePath } from '@/utils/image-url.utils';
 import { PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES } from '@/utils/validation-patterns';
 
-export enum CustomerType {
-  DELIVERY = 'delivery',
-  MONEY = 'money',
-}
-
 export interface ICustomerImage {
   url: string;
   rotate: number;
@@ -18,7 +13,6 @@ export interface ICustomer extends Document {
   name: string;
   phone: string;
   routeId: Types.ObjectId;
-  type: CustomerType;
   bankId: Types.ObjectId;
   images: ICustomerImage[];
   address: string;
@@ -47,12 +41,6 @@ const customerSchema = new Schema<ICustomer>(
       type: Schema.Types.ObjectId,
       ref: 'Route',
       required: [true, 'From route is required'],
-    },
-    type: {
-      type: String,
-      enum: Object.values(CustomerType),
-      default: CustomerType.DELIVERY,
-      required: true,
     },
     bankId: {
       type: Schema.Types.ObjectId,
@@ -128,11 +116,10 @@ const customerSchema = new Schema<ICustomer>(
   }
 );
 
-// Create compound index for phone and type (both together must be unique)
-customerSchema.index({ phone: 1, type: 1 }, { unique: true });
+// Unique index for phone - one customer per phone number
+customerSchema.index({ phone: 1 }, { unique: true });
 
 // Performance indexes for frequent customer search
 customerSchema.index({ name: 'text' }); // Text index for name search
-customerSchema.index({ phone: 1 }); // Single field index for exact phone match
 
 export const Customer = mongoose.model<ICustomer>('Customer', customerSchema);

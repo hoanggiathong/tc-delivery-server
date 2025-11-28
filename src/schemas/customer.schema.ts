@@ -4,7 +4,6 @@ import {
   OBJECTID_PATTERN,
   VALIDATION_MESSAGES,
 } from '@/utils/validation-patterns';
-import { CustomerType } from '@/models/customer.model';
 
 export const createCustomerSchema = z.object({
   body: z.object({
@@ -22,7 +21,6 @@ export const createCustomerSchema = z.object({
       .string()
       .min(1, 'Route ID is required')
       .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID),
-    type: z.nativeEnum(CustomerType).default(CustomerType.DELIVERY),
     relativeReceiver: z
       .array(z.string().regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID))
       .optional()
@@ -50,12 +48,11 @@ export const updateCustomerSchema = z.object({
         .min(1, 'Route ID is required')
         .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
         .optional(),
-      type: z.nativeEnum(CustomerType).optional(),
       relativeReceiver: z
         .array(z.string().regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID))
         .optional(),
     })
-    .refine(data => data.name || data.phone || data.routeId || data.type || data.relativeReceiver, {
+    .refine(data => data.name || data.phone || data.routeId || data.relativeReceiver, {
       message: 'At least one field must be provided',
     }),
 });
@@ -82,7 +79,6 @@ export const uploadImageSchema = z.object({
       .string()
       .min(1, 'Route ID is required')
       .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID),
-    type: z.nativeEnum(CustomerType).default(CustomerType.DELIVERY),
     imageIndex: z.coerce.number().min(1).max(5),
     rotate: z.coerce
       .number()
@@ -135,7 +131,6 @@ export const updateCustomerBankSchema = z.object({
       .max(100, 'Name must not exceed 100 characters')
       .trim()
       .optional(),
-    type: z.nativeEnum(CustomerType).default(CustomerType.DELIVERY),
     bankInfo: z
       .object({
         name: z.string().min(1, 'Bank holder name is required').trim(),

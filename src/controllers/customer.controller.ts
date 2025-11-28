@@ -8,7 +8,6 @@ import {
   UpdateCustomerBankRequest,
 } from '@/schemas/customer.schema';
 import { ApiResponse, AuthRequest, AuthRequestWithFileUploads } from '@/types';
-import { CustomerType } from '@/models/customer.model';
 
 export class CustomerController {
   private customerService: CustomerService;
@@ -346,9 +345,6 @@ export class CustomerController {
    *                           type: string
    *                         phone:
    *                           type: string
-   *                         type:
-   *                           type: string
-   *                           enum: [delivery, money]
    *                         bankId:
    *                           type: object
    *                           properties:
@@ -390,7 +386,6 @@ export class CustomerController {
    *                       id: "507f1f77bcf86cd799439030"
    *                       name: "Nguyễn Văn A"
    *                       phone: "+84912345678"
-   *                       type: "money"
    *                       bankId:
    *                         id: "507f1f77bcf86cd799439031"
    *                         name: "Nguyễn Văn A"
@@ -412,7 +407,6 @@ export class CustomerController {
    *                       id: "507f1f77bcf86cd799439030"
    *                       name: "Phạm Văn Đức"
    *                       phone: "+84912345678"
-   *                       type: "delivery"
    *                       bankId: null
    *                       images: []
    *                       createdAt: "2024-12-17T10:00:00.000Z"
@@ -508,7 +502,7 @@ export class CustomerController {
    */
   uploadImage = async (req: AuthRequestWithFileUploads, res: Response): Promise<void> => {
     try {
-      const { name, phone, routeId, type, imageIndex, rotate } = req.body as UploadImageRequest;
+      const { name, phone, routeId, imageIndex, rotate } = req.body as UploadImageRequest;
       const file = req.file;
       const userId = req.user?.userId;
 
@@ -524,7 +518,6 @@ export class CustomerController {
         phone,
         name,
         routeId,
-        type || CustomerType.DELIVERY,
         imageIndex,
         file.buffer,
         file.originalname,
@@ -652,7 +645,7 @@ export class CustomerController {
    */
   updateBankInfo = async (req: AuthRequestWithFileUploads, res: Response): Promise<void> => {
     try {
-      const { phone, name, type, bankInfo, images } = req.body as UpdateCustomerBankRequest;
+      const { phone, name, bankInfo, images } = req.body as UpdateCustomerBankRequest;
       const filesObject = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
       const userId = req.user?.userId;
 
@@ -702,7 +695,6 @@ export class CustomerController {
       const customer = await this.customerService.updateCustomerBankInfo(
         phone,
         routeId,
-        type || CustomerType.DELIVERY,
         userId,
         name,
         bankInfo,

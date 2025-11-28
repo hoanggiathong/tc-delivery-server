@@ -17,8 +17,7 @@ import { getStartOfDayVietnam, getEndOfDayVietnam, convertVietnamToUTC } from '@
 import path from 'path';
 import fs from 'fs';
 import { generateVersionedUrl, extractBasePath } from '@/utils/image-url.utils';
-import { TYPE_DELIVERY_CUSTOMER } from '@/const/customer.const';
-import { CustomerType, Customer } from '@/models/customer.model';
+import { Customer } from '@/models/customer.model';
 import {
   IFrequentMoneyCustomer,
   IGetListReportReturnMoneyDeliveryResponse,
@@ -85,21 +84,13 @@ export class MoneyDeliveryService {
       subCode: populated.subCode,
       sender: {
         id: populated.sender._id,
-        name: populated.sender.name,
+        name: populated.senderName,
         phone: populated.sender.phone,
-        fromRouteId: populated.sender.routeId.toString(),
-        toRouteId: populated.receiver.routeId.toString(),
-        createdAt: populated.sender.createdAt,
-        updatedAt: populated.sender.updatedAt,
       },
       receiver: {
         id: populated.receiver._id,
-        name: populated.receiver.name,
+        name: populated.receiverName,
         phone: populated.receiver.phone,
-        fromRouteId: populated.sender.routeId.toString(),
-        toRouteId: populated.receiver.routeId.toString(),
-        createdAt: populated.receiver.createdAt,
-        updatedAt: populated.receiver.updatedAt,
       },
       fromRoute: {
         id: populated.fromRoute._id,
@@ -159,19 +150,11 @@ export class MoneyDeliveryService {
         id: moneyDelivery.sender._id,
         name: moneyDelivery.senderName,
         phone: moneyDelivery.sender.phone,
-        fromRouteId: moneyDelivery.sender.routeId.toString(),
-        toRouteId: moneyDelivery.receiver.routeId.toString(),
-        createdAt: moneyDelivery.sender.createdAt,
-        updatedAt: moneyDelivery.sender.updatedAt,
       },
       receiver: {
         id: moneyDelivery.receiver._id,
         name: moneyDelivery.receiverName,
         phone: moneyDelivery.receiver.phone,
-        fromRouteId: moneyDelivery.sender.routeId.toString(),
-        toRouteId: moneyDelivery.receiver.routeId.toString(),
-        createdAt: moneyDelivery.receiver.createdAt,
-        updatedAt: moneyDelivery.receiver.updatedAt,
       },
       fromRoute: {
         id: moneyDelivery.fromRoute._id,
@@ -221,18 +204,16 @@ export class MoneyDeliveryService {
       fromRouteId = await this.userService.getUserSelectedRouteId(userId);
     }
 
-    // Find or create sender and receiver with type 'money'
+    // Find or create sender and receiver
     const sender = await this.customerService.findOrCreateCustomer(
       data.senderPhone,
       data.senderName,
-      fromRouteId,
-      CustomerType.MONEY
+      fromRouteId
     );
     const receiver = await this.customerService.findOrCreateCustomer(
       data.receiverPhone,
       data.receiverName,
-      data.toRouteId,
-      CustomerType.MONEY
+      data.toRouteId
     );
 
     // Validate fromRoute and toRoute exist
@@ -315,8 +296,7 @@ export class MoneyDeliveryService {
       const sender = await this.customerService.findOrCreateCustomer(
         senderPhone,
         senderName,
-        userSelectedRouteId,
-        CustomerType.MONEY
+        userSelectedRouteId
       );
       updateData.sender = sender.id;
       if (data.senderName) {
@@ -336,8 +316,7 @@ export class MoneyDeliveryService {
       const receiver = await this.customerService.findOrCreateCustomer(
         receiverPhone,
         receiverName,
-        data.toRouteId || moneyDelivery.toRoute.toString(),
-        CustomerType.MONEY
+        data.toRouteId || moneyDelivery.toRoute.toString()
       );
       updateData.receiver = receiver.id;
       if (data.receiverName) {
@@ -580,10 +559,9 @@ export class MoneyDeliveryService {
       // Get user's selected route
       const userSelectedRouteId = await this.userService.getUserSelectedRouteId(userId);
 
-      // Find sender by phone with type='money' and selected route
+      // Find sender by phone and selected route
       const sender = await Customer.findOne({
         phone: senderIdentifier,
-        type: TYPE_DELIVERY_CUSTOMER.MONEY,
         routeId: userSelectedRouteId,
       }).lean();
 
@@ -1264,15 +1242,11 @@ export class MoneyDeliveryService {
               id: moneyDelivery.sender._id.toString(),
               name: moneyDelivery.senderName,
               phone: moneyDelivery.sender.phone,
-              createdAt: moneyDelivery.sender.createdAt,
-              updatedAt: moneyDelivery.sender.updatedAt,
             },
             receiver: {
               id: moneyDelivery.receiver._id.toString(),
               name: moneyDelivery.receiverName,
               phone: moneyDelivery.receiver.phone,
-              createdAt: moneyDelivery.receiver.createdAt,
-              updatedAt: moneyDelivery.receiver.updatedAt,
             },
             fromRoute: {
               id: moneyDelivery.fromRoute._id.toString(),
@@ -1548,15 +1522,11 @@ export class MoneyDeliveryService {
               id: moneyDelivery.sender._id.toString(),
               name: moneyDelivery.senderName,
               phone: moneyDelivery.sender.phone,
-              createdAt: moneyDelivery.sender.createdAt,
-              updatedAt: moneyDelivery.sender.updatedAt,
             },
             receiver: {
               id: moneyDelivery.receiver._id.toString(),
               name: moneyDelivery.receiverName,
               phone: moneyDelivery.receiver.phone,
-              createdAt: moneyDelivery.receiver.createdAt,
-              updatedAt: moneyDelivery.receiver.updatedAt,
             },
             fromRoute: {
               id: moneyDelivery.fromRoute._id.toString(),

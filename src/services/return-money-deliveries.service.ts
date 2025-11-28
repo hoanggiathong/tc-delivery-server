@@ -359,7 +359,6 @@ export class ReturnMoneyDeliveriesService {
           code: route?.code,
           name: route?.name,
         },
-        type: receiver.type,
         address: receiver.address,
         identityCardIssuedDate: receiver.identityCardIssuedDate,
         identityCardNumber: receiver.identityCardNumber,
