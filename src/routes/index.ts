@@ -14,6 +14,7 @@ import userRouteRoutes from './user-route.routes';
 import userRoutes from './user.route';
 import returnDeliveriesRoutes from './return-deliveries.route';
 import returnMoneyDeliveriesRoutes from './return-money-deliveries.route';
+import reportRoutes from './report.routes';
 
 const router = Router();
 
@@ -32,5 +33,6 @@ router.use('/debt-management', debtManagementRoutes);
 router.use('/debt', debtRoutes);
 router.use('/return-deliveries', returnDeliveriesRoutes);
 router.use('/return-money-deliveries', returnMoneyDeliveriesRoutes);
+router.use('/report', reportRoutes);
 
 export default router;

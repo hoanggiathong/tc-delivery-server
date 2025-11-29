@@ -1817,4 +1817,88 @@ export class MoneyDeliveryService {
       throw new Error('Failed to get list money delivery type collect cost with status done');
     }
   }
+
+  async getListMoneyDeliveryByTypeNormalAndStatusDone(
+    startDate: Date,
+    endDate: Date,
+    routeId?: string
+  ): Promise<IMoneyDeliveryResponse[]> {
+    try {
+      const where: Record<string, unknown> = {
+        status: MoneyDeliveryStatus.DONE,
+        type: MoneyDeliveryType.NORMAL,
+        dateReturn: {
+          $gte: startDate,
+          $lte: endDate,
+        },
+      };
+
+      if (routeId) {
+        where.fromRoute = routeId;
+      }
+
+      const moneyDeliveries = await MoneyDelivery.find(where)
+        .populate([
+          { path: 'sender', select: '_id phone routeId createdAt updatedAt' },
+          { path: 'receiver', select: '_id phone routeId createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address phone createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name address phone createdAt updatedAt' },
+          { path: 'createdByUser', select: '_id username' },
+        ])
+        .lean();
+
+      return moneyDeliveries.map(moneyDelivery =>
+        this.transformMoneyDeliveryToResponseOptimized(
+          this.toPopulatedMoneyDeliveryLean(moneyDelivery)
+        )
+      );
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to get list money delivery type normal with status done');
+    }
+  }
+
+  async getListMoneyDeliveryByTypeCollectAndStatusDone(
+    startDate: Date,
+    endDate: Date,
+    routeId?: string
+  ): Promise<IMoneyDeliveryResponse[]> {
+    try {
+      const where: Record<string, unknown> = {
+        status: MoneyDeliveryStatus.DONE,
+        type: MoneyDeliveryType.COLLECT,
+        dateReturn: {
+          $gte: startDate,
+          $lte: endDate,
+        },
+      };
+
+      if (routeId) {
+        where.toRoute = routeId;
+      }
+
+      const moneyDeliveries = await MoneyDelivery.find(where)
+        .populate([
+          { path: 'sender', select: '_id phone routeId createdAt updatedAt' },
+          { path: 'receiver', select: '_id phone routeId createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address phone createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name address phone createdAt updatedAt' },
+          { path: 'createdByUser', select: '_id username' },
+        ])
+        .lean();
+
+      return moneyDeliveries.map(moneyDelivery =>
+        this.transformMoneyDeliveryToResponseOptimized(
+          this.toPopulatedMoneyDeliveryLean(moneyDelivery)
+        )
+      );
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to get list money delivery type collect with status done');
+    }
+  }
 }
