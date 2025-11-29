@@ -2,30 +2,21 @@ import { ICustomer } from '@/models/customer.model';
 import { IMoneyDelivery, MoneyDelivery, MoneyDeliveryStatus } from '@/models/money-delivery.model';
 import { ICustomerInformationResponse } from '@/types/customer.type';
 import { IMoneyDeliveryResponse } from '@/types/money-delivery.type';
-import { IRouteResponse } from '@/types/route.type';
 import { IReturnMoneyDeliveryQuery } from '@/types/return-money-deliveries.type';
+import { IRouteResponse } from '@/types/route.type';
 import Logger from '@/utils/logger';
 import { CustomerService } from './customer.service';
 import { MoneyDeliveryService } from './money-delivery.service';
-import { ReturnDeliveriesService } from './return-deliveries.service';
 import { RouteService } from './route.service';
-import { SettingsService } from './settings.service';
-import { UserService } from './user.service';
 
 export class ReturnMoneyDeliveriesService {
   private customerService: CustomerService;
   private routeService: RouteService;
-  private settingsService: SettingsService;
-  private userService: UserService;
   private moneyDeliveryService: MoneyDeliveryService;
-  private returnDeliveryService: ReturnDeliveriesService;
   constructor() {
     this.customerService = new CustomerService();
     this.routeService = new RouteService();
-    this.settingsService = new SettingsService();
-    this.userService = new UserService();
     this.moneyDeliveryService = new MoneyDeliveryService();
-    this.returnDeliveryService = new ReturnDeliveriesService();
   }
 
   // HÀNG THU HỘ ĐÃ CHUYỂN TRONG NGÀY

@@ -1332,4 +1332,45 @@ export class DeliveryService {
       throw new Error('Failed to get list money delivery type collect cost with status done');
     }
   }
+
+  async getListReturnDeliveriesByToRouteId(
+    startDate: Date,
+    endDate: Date,
+    toRouteId?: string
+  ): Promise<IDeliveryResponse[]> {
+    try {
+      const where: Record<string, unknown> = {
+        isReturn: true,
+        dateReturn: {
+          $gte: startDate,
+          $lte: endDate,
+        },
+      };
+      if (toRouteId) {
+        where.toRoute = toRouteId;
+      }
+      const returnDeliveries = await Delivery.find(where)
+        .populate([
+          {
+            path: 'sender',
+            select: '_id phone routeId createdAt updatedAt',
+            populate: {
+              path: 'bankId',
+              select: '_id name bankName bankAccount bankBranch bankAddress',
+            },
+          },
+          { path: 'receiver', select: '_id phone routeId createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address phone' },
+          { path: 'toRoute', select: '_id code name address phone' },
+          { path: 'createdByUser', select: '_id username name' },
+        ])
+        .lean();
+
+      return returnDeliveries.map(delivery =>
+        this.transformDeliveryToResponseOptimized(this.toPopulatedDeliveryLean(delivery))
+      );
+    } catch (error) {
+      throw new Error('Failed to get list return deliveries by to route id');
+    }
+  }
 }
