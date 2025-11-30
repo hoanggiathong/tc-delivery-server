@@ -1278,6 +1278,8 @@ export class MoneyDeliveryService {
             createdByUser: moneyDelivery.createdByUser.username,
             createdAt: moneyDelivery.createdAt,
             updatedAt: moneyDelivery.updatedAt,
+            contentReturn: moneyDelivery.contentReturn,
+            dateReturn: moneyDelivery.dateReturn,
           };
 
           // Add delivery object if deliveryId is populated
