@@ -1366,7 +1366,7 @@ export class MoneyDeliveryService {
         toRoute: toRouteId,
         status: MoneyDeliveryStatus.DONE,
         type: { $ne: MoneyDeliveryType.COLLECT },
-        createdAt: { $gte: startDate, $lte: endDate },
+        dateReturn: { $gte: startDate, $lte: endDate },
       })
         .populate([
           { path: 'sender', select: '_id name phone routeId createdAt updatedAt' },
@@ -1376,7 +1376,7 @@ export class MoneyDeliveryService {
           { path: 'createdByUser', select: '_id username' },
           { path: 'deliveryId', select: '_id code name createdAt updatedAt' },
         ])
-        .sort({ createdAt: -1 })
+        .sort({ dateReturn: -1 })
         .lean();
 
       const moneyDeliveriesResponse: IMoneyDeliveryResponse[] = moneyDeliveries.map(moneyDelivery =>
