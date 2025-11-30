@@ -276,7 +276,9 @@ export class ReturnMoneyDeliveriesService {
 
       // Prepare update data
       const now = new Date();
-      const returnDateString = `Đã trả tiền ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const returnDateString = `Đã trả tiền ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} ${hours}:${minutes}`;
       const existingNotes =
         typeof moneyDeliveryDoc.notes === 'string' ? moneyDeliveryDoc.notes : '';
       const updatedNotes = existingNotes
@@ -440,7 +442,9 @@ export class ReturnMoneyDeliveriesService {
 
       // Prepare update data
       const now = new Date();
-      const returnDateString = `Đã trả tiền ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const returnDateString = `Đã trả tiền ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} ${hours}:${minutes}`;
       const existingNotes =
         typeof moneyDeliveryDoc.notes === 'string' ? moneyDeliveryDoc.notes : '';
       const updatedNotes = existingNotes
