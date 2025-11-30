@@ -789,4 +789,199 @@ export class CustomerController {
       });
     }
   };
+
+  /**
+   * @swagger
+   * /api/customer/update-data-images-customer/{customerId}:
+   *   put:
+   *     summary: Update customer images data
+   *     tags: [Customer]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: customerId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Customer ID
+   *         example: "507f1f77bcf86cd799439011"
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               images:
+   *                 type: array
+   *                 maxItems: 5
+   *                 items:
+   *                   type: object
+   *                   properties:
+   *                     id:
+   *                       type: string
+   *                       description: Image ID (optional)
+   *                       example: "507f1f77bcf86cd799439011"
+   *                     url:
+   *                       type: string
+   *                       description: Image URL
+   *                       example: "/uploads/customers/507f1f77bcf86cd799439011/customer_1_1734567890123.jpg?v=1734567890123"
+   *                     rotate:
+   *                       type: number
+   *                       enum: [0, 90, 180, 270]
+   *                       default: 0
+   *                       description: Rotation angle
+   *                       example: 0
+   *                 description: Array of image objects (max 5)
+   *           examples:
+   *             updateImages:
+   *               summary: Update images data
+   *               value:
+   *                 images:
+   *                   - id: "507f1f77bcf86cd799439011"
+   *                     url: "/uploads/customers/507f1f77bcf86cd799439011/customer_1_1734567890123.jpg?v=1734567890123"
+   *                     rotate: 90
+   *                   - id: "507f1f77bcf86cd799439012"
+   *                     url: "/uploads/customers/507f1f77bcf86cd799439011/customer_2_1734567890124.jpg?v=1734567890124"
+   *                     rotate: 0
+   *     responses:
+   *       200:
+   *         description: Update data images customer successful
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "update data images customer successful"
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       url:
+   *                         type: string
+   *                         example: "/uploads/customers/507f1f77bcf86cd799439011/customer_1_1734567890123.jpg?v=1734567890123"
+   *                       rotate:
+   *                         type: number
+   *                         example: 0
+   *             examples:
+   *               success:
+   *                 summary: Update images successful
+   *                 value:
+   *                   success: true
+   *                   message: "update data images customer successful"
+   *                   data:
+   *                     - url: "/uploads/customers/507f1f77bcf86cd799439011/customer_1_1734567890123.jpg?v=1734567890123"
+   *                       rotate: 90
+   *                     - url: "/uploads/customers/507f1f77bcf86cd799439011/customer_2_1734567890124.jpg?v=1734567890124"
+   *                       rotate: 0
+   *       400:
+   *         description: Validation error or business logic error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   examples:
+   *                     validation:
+   *                       value: 'Validation failed: Customer ID is required'
+   *                     not_found:
+   *                       value: 'Customer not found'
+   *       401:
+   *         description: Unauthorized - Invalid or missing token
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: 'Unauthorized'
+   *       404:
+   *         description: Customer not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: 'Customer not found'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: 'Failed to update data images customer'
+   */
+  updateDataImageCustomer = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { customerId } = req.params;
+      const { images } = req.body;
+
+      // Convert images array to ICustomerImage[] format (remove id field if present)
+      const imagesData: Array<{ url: string; rotate: number }> =
+        images?.map((img: { id?: string; url: string; rotate: number }) => ({
+          url: img.url,
+          rotate: img.rotate || 0,
+        })) || [];
+
+      const result = await this.customerService.updateDataImageCustomer(customerId, imagesData);
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'update data images customer successful',
+        data: result,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      console.error('Update data images customer error:', error);
+
+      const message =
+        error instanceof Error ? error.message : 'Failed to update data images customer';
+      const statusCode =
+        error instanceof Error && error.message === 'Customer not found' ? 404 : 400;
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(statusCode).json(response);
+    }
+  };
 }

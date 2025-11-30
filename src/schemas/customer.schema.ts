@@ -158,6 +158,29 @@ export const updateCustomerBankSchema = z.object({
   }),
 });
 
+export const updateDataImageCustomerSchema = z.object({
+  params: z.object({
+    customerId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format'),
+  }),
+  body: z.object({
+    images: z
+      .array(
+        z.object({
+          id: z.string().optional(),
+          url: z.string().min(1, 'URL is required'),
+          rotate: z.coerce
+            .number()
+            .refine(val => [0, 90, 180, 270].includes(val), {
+              message: 'Rotate must be 0, 90, 180, or 270',
+            })
+            .default(0),
+        })
+      )
+      .max(5, 'Maximum 5 images allowed')
+      .optional(),
+  }),
+});
+
 export type CreateCustomerRequest = z.infer<typeof createCustomerSchema>['body'];
 export type UpdateCustomerRequest = z.infer<typeof updateCustomerSchema>['body'];
 export type UploadImageRequest = z.infer<typeof uploadImageSchema>['body'];

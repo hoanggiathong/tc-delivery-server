@@ -13,6 +13,7 @@ import {
   deleteImageSchema,
   getCustomerByPhoneSchema,
   updateCustomerBankSchema,
+  updateDataImageCustomerSchema,
 } from '@/schemas/customer.schema';
 import { uploadMiddleware } from '@/middlewares/upload.middleware';
 
@@ -524,6 +525,15 @@ router.delete(
   requireRole([UserRole.USER, UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]),
   validate(customerParamsSchema),
   customerController.deleteImagesAndBankInfo
+);
+
+// Update customer images data
+router.put(
+  '/update-data-images-customer/:customerId',
+  authenticateToken,
+  requireRole([UserRole.USER, UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]),
+  validate(updateDataImageCustomerSchema),
+  customerController.updateDataImageCustomer
 );
 
 export default router;

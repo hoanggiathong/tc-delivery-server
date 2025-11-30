@@ -833,4 +833,24 @@ export class CustomerService {
       throw new Error('Failed to get list customer');
     }
   }
+
+  /**
+   * Update customer images data
+   */
+  async updateDataImageCustomer(
+    customerId: string,
+    images: ICustomerImage[]
+  ): Promise<ICustomerImage[]> {
+    const customer = await Customer.findById(customerId);
+
+    if (!customer) {
+      throw new Error('Customer not found');
+    }
+
+    // Update images data
+    customer.images = images;
+    await customer.save();
+
+    return customer.images;
+  }
 }
