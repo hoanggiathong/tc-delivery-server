@@ -1604,7 +1604,8 @@ export class MoneyDeliveryService {
       throw new Error('Money delivery not found');
     }
 
-    const uploadedImages = await this.handleUploadImagesMoneyDelivery(moneyDeliveryId, imagesData);
+    const uploadedImages = await this.handleUploadImagesMoneyDelivery(moneyDelivery, imagesData);
+    // const uploadedImages = await this.handleUploadImagesMoneyDelivery(moneyDeliveryId, imagesData);
 
     // Update money delivery with new images
     moneyDelivery.images = uploadedImages;
@@ -1614,7 +1615,7 @@ export class MoneyDeliveryService {
   }
 
   async handleUploadImagesMoneyDelivery(
-    id: string,
+    moneyDelivery: IMoneyDelivery,
     imagesData?: Array<{
       index: number;
       buffer: Buffer;
@@ -1622,31 +1623,22 @@ export class MoneyDeliveryService {
       rotate: number;
     }>
   ): Promise<IMoneyDeliveryImage[]> {
-    // Find the money delivery
-    const moneyDelivery = await MoneyDelivery.findById(id);
-    if (!moneyDelivery) {
-      throw new Error(`Money delivery with ID ${id} not found`);
-    }
+    const oldImages: IMoneyDeliveryImage[] = moneyDelivery.images || [];
+    const quantityNewImages = imagesData?.length || 0;
+    const quantityOldImages = oldImages.length || 0;
+    const totalImages = quantityNewImages + quantityOldImages;
 
-    // If no images provided, just return the money delivery
+    const id = moneyDelivery._id.toString();
+
+    // If no images provided, just return the existing images
     if (!imagesData || imagesData.length === 0) {
       return moneyDelivery.images || [];
     }
 
-    if (moneyDelivery.images && moneyDelivery.images.length > 0) {
-      for (const image of moneyDelivery.images) {
-        // Extract base path without query parameters for file system operations
-        const basePath = extractBasePath(image.url);
-        const imagePath = path.join('public', basePath);
-        if (fs.existsSync(imagePath)) {
-          fs.unlinkSync(imagePath);
-        }
-      }
-    }
-
     // Handle multiple images upload
-    const uploadedImages: IMoneyDeliveryImage[] = [];
+    let uploadedImages: IMoneyDeliveryImage[] = [];
 
+    // Upload new images first
     for (const imageData of imagesData) {
       const { index, buffer, originalName, rotate } = imageData;
 
@@ -1656,7 +1648,7 @@ export class MoneyDeliveryService {
         fs.mkdirSync(uploadDir, { recursive: true });
       }
 
-      // Generate unique filename
+      // Generate unique filename with timestamp to avoid conflicts
       const timestamp = Date.now();
       const fileExtension = path.extname(originalName);
       const fileName = `image_${index}_${timestamp}${fileExtension}`;
@@ -1672,6 +1664,39 @@ export class MoneyDeliveryService {
         url: generateVersionedUrl(relativePath),
         rotate: rotate || 0,
       });
+    }
+
+    // If total images will exceed 5, delete oldest images from oldImages
+    if (totalImages > 5) {
+      const deleteQuantityImages = totalImages - 5;
+
+      // Get the oldest images to delete (first deleteQuantityImages from oldImages)
+      const imagesToDelete = oldImages.slice(0, deleteQuantityImages);
+
+      // Delete physical files for images that will be removed
+      for (const image of imagesToDelete) {
+        try {
+          const basePath = extractBasePath(image.url);
+          const imagePath = path.join('public', basePath);
+          if (fs.existsSync(imagePath)) {
+            fs.unlinkSync(imagePath);
+          }
+        } catch (error) {
+          Logger.error('Error deleting old image file', {
+            error: error instanceof Error ? error.message : error,
+            imageUrl: image.url,
+          });
+        }
+      }
+
+      // Keep only the remaining old images (after deleting the oldest ones)
+      const remainingOldImages = oldImages.slice(deleteQuantityImages);
+
+      // Combine: new images first, then remaining old images
+      uploadedImages = remainingOldImages.concat(uploadedImages);
+    } else {
+      // Total images <= 5, just combine new images with all old images
+      uploadedImages = oldImages.concat(uploadedImages);
     }
 
     return uploadedImages;
