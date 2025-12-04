@@ -9,6 +9,7 @@ import {
   IReturnDeliveryListCollectCostOfReturnDeliveriesRequest,
 } from '@/types/return-delivery.type';
 import { Response } from 'express';
+import logger from '@/utils/logger';
 
 export class ReturnDeliveriesController {
   private returnDeliveriesService: ReturnDeliveriesService;
@@ -1090,6 +1091,16 @@ export class ReturnDeliveriesController {
       const { deliveryId, images } = req.body;
       const filesObject = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
 
+      // Validate deliveryId
+      if (!deliveryId) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Delivery ID is required',
+        };
+        res.status(400).json(response);
+        return;
+      }
+
       // Prepare image data for multiple images
       let imagesData: Array<{
         index: number;
@@ -1098,19 +1109,21 @@ export class ReturnDeliveriesController {
         rotate: number;
       }> = [];
 
-      // Handle multiple images
+      // Handle multiple images upload
       if (
         filesObject &&
         !Array.isArray(filesObject) &&
         filesObject.images &&
-        filesObject.images.length > 0 &&
-        images
+        filesObject.images.length > 0
       ) {
+        // Parse images metadata from body if provided, otherwise use defaults
+        const imagesMetadata = Array.isArray(images) ? images : [];
+
         imagesData = filesObject.images.map((file, idx) => ({
-          index: images[idx]?.index || idx + 1,
+          index: imagesMetadata[idx]?.index || idx + 1,
           buffer: file.buffer,
           originalName: file.originalname,
-          rotate: images[idx]?.rotate || 0,
+          rotate: imagesMetadata[idx]?.rotate || 0,
         }));
       }
 
@@ -1122,19 +1135,23 @@ export class ReturnDeliveriesController {
       const response: ApiResponse = {
         success: true,
         message: 'Images uploaded successfully',
-        data: { returnDelivery: result },
+        data: result,
       };
 
       res.status(200).json(response);
     } catch (error) {
-      console.error('Upload images error:', error);
+      logger.error('Upload images error:', error);
 
       let statusCode = 400;
       const message = error instanceof Error ? error.message : 'Failed to upload images';
 
       // Handle specific error cases
-      if (message === 'Return delivery not found') {
+      if (message.includes('not found')) {
         statusCode = 404;
+      } else if (message.includes('validation') || message.includes('Invalid')) {
+        statusCode = 400;
+      } else {
+        statusCode = 500;
       }
 
       const response: ApiResponse = {
