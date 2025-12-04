@@ -888,7 +888,7 @@ export class ReturnDeliveriesService {
       throw new Error('Return delivery not found');
     }
 
-    const uploadedImages = await this.handleUploadImagesReturnDelivery(deliveryId, imagesData);
+    const uploadedImages = await this.handleUploadImagesReturnDelivery(delivery, imagesData);
 
     // Update delivery with new images
     delivery.returnDeliveryImages = uploadedImages;
@@ -960,7 +960,7 @@ export class ReturnDeliveriesService {
       // Handle return delivery images upload if provided
       if (returnDeliveryImagesData && returnDeliveryImagesData.length > 0) {
         const uploadedImages = await this.handleUploadImagesReturnDelivery(
-          deliveryId,
+          delivery,
           returnDeliveryImagesData
         );
         delivery.returnDeliveryImages = uploadedImages;
@@ -1202,7 +1202,7 @@ export class ReturnDeliveriesService {
   }
 
   async handleUploadImagesReturnDelivery(
-    id: string,
+    delivery: IDelivery,
     imagesData?: Array<{
       index: number;
       buffer: Buffer;
@@ -1210,31 +1210,22 @@ export class ReturnDeliveriesService {
       rotate: number;
     }>
   ): Promise<IReturnDeliveryImage[]> {
-    // Find the delivery
-    const delivery = await Delivery.findById(id);
-    if (!delivery) {
-      throw new Error(`Return delivery with ID ${id} not found`);
-    }
+    const oldImages: IReturnDeliveryImage[] = delivery.returnDeliveryImages || [];
+    const quantityNewImages = imagesData?.length || 0;
+    const quantityOldImages = oldImages.length || 0;
+    const totalImages = quantityNewImages + quantityOldImages;
 
-    // If no images provided, just return the delivery
+    const id = delivery._id.toString();
+
+    // If no images provided, just return the existing images
     if (!imagesData || imagesData.length === 0) {
       return delivery.returnDeliveryImages || [];
     }
 
-    if (delivery.returnDeliveryImages && delivery.returnDeliveryImages.length > 0) {
-      for (const image of delivery.returnDeliveryImages) {
-        // Extract base path without query parameters for file system operations
-        const basePath = extractBasePath(image.url);
-        const imagePath = path.join('public', basePath);
-        if (fs.existsSync(imagePath)) {
-          fs.unlinkSync(imagePath);
-        }
-      }
-    }
-
     // Handle multiple images upload
-    const uploadedImages: IReturnDeliveryImage[] = [];
+    let uploadedImages: IReturnDeliveryImage[] = [];
 
+    // Upload new images first
     for (const imageData of imagesData) {
       const { index, buffer, originalName, rotate } = imageData;
 
@@ -1244,7 +1235,7 @@ export class ReturnDeliveriesService {
         fs.mkdirSync(uploadDir, { recursive: true });
       }
 
-      // Generate unique filename
+      // Generate unique filename with timestamp to avoid conflicts
       const timestamp = Date.now();
       const fileExtension = path.extname(originalName);
       const fileName = `image_${index}_${timestamp}${fileExtension}`;
@@ -1260,6 +1251,39 @@ export class ReturnDeliveriesService {
         url: generateVersionedUrl(relativePath),
         rotate: rotate || 0,
       });
+    }
+
+    // If total images will exceed 5, delete oldest images from oldImages
+    if (totalImages > 5) {
+      const deleteQuantityImages = totalImages - 5;
+
+      // Get the oldest images to delete (first deleteQuantityImages from oldImages)
+      const imagesToDelete = oldImages.slice(0, deleteQuantityImages);
+
+      // Delete physical files for images that will be removed
+      for (const image of imagesToDelete) {
+        try {
+          const basePath = extractBasePath(image.url);
+          const imagePath = path.join('public', basePath);
+          if (fs.existsSync(imagePath)) {
+            fs.unlinkSync(imagePath);
+          }
+        } catch (error) {
+          Logger.error('Error deleting old image file', {
+            error: error instanceof Error ? error.message : error,
+            imageUrl: image.url,
+          });
+        }
+      }
+
+      // Keep only the remaining old images (after deleting the oldest ones)
+      const remainingOldImages = oldImages.slice(deleteQuantityImages);
+
+      // Combine: new images first, then remaining old images
+      uploadedImages = remainingOldImages.concat(uploadedImages);
+    } else {
+      // Total images <= 5, just combine new images with all old images
+      uploadedImages = oldImages.concat(uploadedImages);
     }
 
     return uploadedImages;
