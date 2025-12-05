@@ -88,21 +88,3 @@ jobs:
             # Show logs (last 20 lines)
             pm2 logs tc-delivery-server-prod --lines 20 --nostream
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ steps.version.outputs.version }}
-          name: Release ${{ steps.version.outputs.version }}
-          body: |
-            ## Production Release ${{ steps.version.outputs.version }}
-
-            **Deployed at:** ${{ github.event.head_commit.timestamp }}
-            **Commit:** ${{ github.sha }}
-            **Author:** ${{ github.actor }}
-
-            ### Changes
-            ${{ github.event.head_commit.message }}
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
