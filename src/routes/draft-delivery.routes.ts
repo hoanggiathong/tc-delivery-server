@@ -78,11 +78,11 @@ router.use(authenticateToken);
  *           enum: [debt, free, null]
  */
 
-// Create a new draft
-router.post('/', validate(createDraftDeliverySchema), draftDeliveryController.createDraft);
-
 // Get all drafts for current user's selected route
 router.get('/', draftDeliveryController.getUserDrafts);
+
+// Create a new draft
+router.post('/', validate(createDraftDeliverySchema), draftDeliveryController.createDraft);
 
 // Delete all drafts for current user
 router.delete('/all', draftDeliveryController.deleteAllUserDrafts);
@@ -102,5 +102,4 @@ router.post(
   validate(convertDraftToDeliverySchema),
   draftDeliveryController.convertToDelivery
 );
-
 export default router;

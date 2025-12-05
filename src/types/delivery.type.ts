@@ -3,7 +3,7 @@ import { BaseEntity, PaymentType } from '.';
 import { ICustomerResponse } from './customer.type';
 import { IRouteResponse } from './route.type';
 import { ICustomer } from '@/models/customer.model';
-import { IDelivery } from '@/models/delivery.model';
+import { IDelivery, VehicleType } from '@/models/delivery.model';
 import { IUser } from '@/models/user.model';
 import { IRoute } from '@/models/route.model';
 import { ICustomerBankLean } from '@/models/customer-bank.model';
@@ -22,7 +22,10 @@ export interface IDeliveryResponse extends BaseEntity {
   quantity: number;
   cost: number;
   homeDelivery?: string;
-  homeDeliveryCost: number;
+  homeDeliveryCost?: number;
+  carryCost?: number;
+  homeDeliveryCostTotal?: number;
+  vehicleType?: VehicleType | null;
   itemValue: number;
   itemCost: number;
   collectCost: number;
@@ -39,6 +42,7 @@ export interface IDeliveryResponse extends BaseEntity {
   };
   notes?: string;
   totalCost: number;
+  actualRevenue: number;
   paymentType?: PaymentType;
   isFree?: boolean;
   createdByUser: string;
@@ -57,7 +61,9 @@ export interface IDeliveryCreateRequest {
   quantity?: number;
   cost: number;
   homeDelivery?: string;
-  homeDeliveryCost: number;
+  homeDeliveryCost?: number;
+  carryCost?: number;
+  vehicleType?: VehicleType | null;
   itemValue: number;
   itemCost: number;
   collectCost: number;
@@ -84,10 +90,13 @@ export interface IDeliveryUpdateRequest {
   receiverPhone?: string;
   toRouteId?: string;
   name?: string;
+  nameProductAndAdditionalInformation?: string;
   quantity?: number;
   cost?: number;
   homeDelivery?: string;
   homeDeliveryCost?: number;
+  carryCost?: number;
+  vehicleType?: VehicleType | null;
   itemValue?: number;
   itemCost?: number;
   collectCost?: number;
@@ -104,6 +113,7 @@ export interface IDeliveryUpdateRequest {
   };
   notes?: string;
   paymentType?: PaymentType;
+  isFree?: boolean;
 }
 
 // Interface for populated delivery (when sender, receiver, fromRoute, toRoute, createdByUser are populated)
@@ -131,7 +141,10 @@ export interface IDeliveryWithPopulatedRefs {
   quantity: number;
   cost: number;
   homeDelivery?: string;
-  homeDeliveryCost: number;
+  homeDeliveryCost?: number;
+  carryCost?: number;
+  homeDeliveryCostTotal?: number;
+  vehicleType?: VehicleType | null;
   itemValue: number;
   itemCost: number;
   collectCost: number;
@@ -148,6 +161,7 @@ export interface IDeliveryWithPopulatedRefs {
   };
   notes?: string;
   totalCost: number;
+  actualRevenue: number;
   paymentType?: PaymentType;
   createdByUser: {
     _id: string;
@@ -187,6 +201,8 @@ export interface IDeliveryLeanPopulated {
   code: string;
   fullCode: string;
   subCode: string;
+  senderName: string;
+  receiverName: string;
   quantity: number;
   details?: {
     weight?: number;
@@ -198,7 +214,6 @@ export interface IDeliveryLeanPopulated {
   };
   sender: {
     _id: string;
-    name: string;
     phone: string;
     routeId: Types.ObjectId;
     bankId?: ICustomerBankLean;
@@ -207,7 +222,6 @@ export interface IDeliveryLeanPopulated {
   };
   receiver: {
     _id: string;
-    name: string;
     phone: string;
     routeId: Types.ObjectId;
     createdAt?: Date;
@@ -218,6 +232,7 @@ export interface IDeliveryLeanPopulated {
     code: string;
     name: string;
     address: string;
+    phone?: string;
     createdAt?: Date;
     updatedAt?: Date;
   };
@@ -226,6 +241,7 @@ export interface IDeliveryLeanPopulated {
     code: string;
     name: string;
     address: string;
+    phone?: string;
     createdAt?: Date;
     updatedAt?: Date;
   };
@@ -233,7 +249,10 @@ export interface IDeliveryLeanPopulated {
   nameProductAndAdditionalInformation?: string;
   cost: number;
   homeDelivery?: string;
-  homeDeliveryCost: number;
+  homeDeliveryCost?: number;
+  carryCost?: number;
+  homeDeliveryCostTotal?: number;
+  vehicleType?: VehicleType | null;
   itemValue: number;
   itemCost: number;
   collectCost: number;
@@ -242,6 +261,7 @@ export interface IDeliveryLeanPopulated {
   collectForCustomerNote?: string;
   notes?: string;
   totalCost: number;
+  actualRevenue: number;
   paymentType?: PaymentType;
   createdByUser: {
     _id: string;
@@ -286,98 +306,33 @@ export interface IFrequentCustomersResponse {
 }
 
 // Cost Report Interfaces
-export interface IDeliveryCostReportSummary {
-  totalDeliveries: number;
-  totalCost: number;
-  totalHomeDeliveryCost: number;
-  totalItemCost: number;
-  totalItemValue: number;
-  totalCollectCost: number;
-  totalCollectForCustomer: number;
-  totalCollectForCustomerCost: number;
-  totalRevenue: number; // Tổng thu (totalCost của tất cả deliveries)
-
-  // Phân loại theo paymentType
-  normalPaymentCount: number;
-  normalPaymentAmount: number;
-  debtPaymentCount: number;
-  debtPaymentAmount: number;
-  freePaymentCount: number;
-
-  // Thống kê
-  averageCostPerDelivery: number;
-  averageItemValue: number;
-}
-
-export interface IDeliveryReportItem {
-  id: string;
-  code: string;
-  date: Date;
-  sender: {
-    name: string;
-    phone: string;
-  };
-  receiver: {
-    name: string;
-    phone: string;
-  };
-  toRoute: {
-    id: string;
-    code: string;
-    name: string;
-  };
-
-  // Chi tiết chi phí
-  cost: number;
-  homeDeliveryCost: number;
-  itemCost: number;
-  itemValue: number;
-  collectCost: number;
-  collectForCustomer: number;
-  collectForCustomerCost: number;
-  totalCost: number;
-  paymentType?: PaymentType;
-  notes?: string;
-}
-
-export interface IDeliveryCostReportPagination {
-  currentPage: number;
-  totalPages: number;
-  totalRecords: number;
-  limit: number;
-  hasNextPage: boolean;
-  hasPrevPage: boolean;
-}
-
-export interface IDeliveryCostReportFilter {
-  dateRange: {
-    from: Date;
-    to: Date;
-  };
-  fromRoute: {
-    id: string;
-    code: string;
-    name: string;
-    address: string;
-  };
-}
-
-export interface IDeliveryCostReport {
-  summary: IDeliveryCostReportSummary;
-  deliveries: IDeliveryReportItem[];
-  pagination: IDeliveryCostReportPagination;
-}
-
-// Today Report Interfaces (simplified, no pagination)
+// Today Report Interfaces (used for both today-report and cost-report)
 export interface ITodayDeliverySummary {
   totalDeliveries: number; // Total number of deliveries (count by delivery count)
   totalQuantity: number; // Total quantity (sum of all delivery quantities)
   totalCost: number; // Total shipping cost (sum of all totalCost)
+  totalActualRevenue: number; // Total actual revenue (sum of all actualRevenue)
   totalItemCost: number;
   totalCollectCost: number; // Total collect cost
   totalCollectForCustomer: number; // Total collect for customer amount
   totalCollectForCustomerCost: number; // Total collect for customer cost (thu dùm)
   date: string; // YYYY-MM-DD format
+
+  // Optional fields for cost report (with date range)
+  totalHomeDeliveryCost?: number;
+  totalItemValue?: number;
+  totalRevenue?: number; // Backward compatibility - same as totalCost
+
+  // Payment type breakdowns (optional for cost report)
+  normalPaymentCount?: number;
+  normalPaymentAmount?: number;
+  debtPaymentCount?: number;
+  debtPaymentAmount?: number;
+  freePaymentCount?: number;
+
+  // Averages (optional for cost report)
+  averageCostPerDelivery?: number;
+  averageItemValue?: number;
 }
 
 export interface ITodayDeliveryItem {
@@ -400,6 +355,7 @@ export interface ITodayDeliveryItem {
     id: string;
     code: string;
     name: string;
+    address?: string;
   };
   cost: number;
   homeDelivery?: string;
@@ -411,7 +367,10 @@ export interface ITodayDeliveryItem {
   collectForCustomerCost?: number;
   collectForCustomerNote?: string;
   totalCost: number;
+  actualRevenue: number;
   paymentType?: PaymentType;
+  upItems?: string;
+  downItems?: string;
   notes?: string;
   details?: {
     weight?: number;
@@ -426,7 +385,6 @@ export interface ITodayDeliveryItem {
 }
 
 export interface ITodayDeliveryReport {
-  summary: ITodayDeliverySummary;
   deliveries: ITodayDeliveryItem[];
   routeInfo: {
     route: {
@@ -437,4 +395,10 @@ export interface ITodayDeliveryReport {
     routeCode: string;
     routeName: string;
   };
+}
+
+export interface IGetListReportReturnDeliveryResponse {
+  quantityReturnIsToday: number;
+  quantityReturnIsOld: number;
+  quantityReturnTotalToday: number;
 }

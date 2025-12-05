@@ -1,4 +1,7 @@
 import mongoose, { Document, Schema, Types } from 'mongoose';
+import { appConfig } from '@/config/app.config';
+import { generateFullImageUrl, extractBasePath } from '@/utils/image-url.utils';
+import { PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES } from '@/utils/validation-patterns';
 
 export interface ICustomerImage {
   url: string;
@@ -10,10 +13,12 @@ export interface ICustomer extends Document {
   name: string;
   phone: string;
   routeId: Types.ObjectId;
-  relativeReceiver: Array<Types.ObjectId>;
-  type: 'delivery' | 'money';
   bankId: Types.ObjectId;
   images: ICustomerImage[];
+  address: string;
+  identityCardIssuedDate: Date;
+  identityCardNumber: string;
+  createdBy: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -30,23 +35,12 @@ const customerSchema = new Schema<ICustomer>(
       type: String,
       required: [true, 'Phone is required'],
       trim: true,
-      match: [/^\+?[1-9]\d{1,14}$/, 'Please enter a valid phone number'],
+      match: [PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER],
     },
     routeId: {
       type: Schema.Types.ObjectId,
       ref: 'Route',
       required: [true, 'From route is required'],
-    },
-    relativeReceiver: {
-      type: [Schema.Types.ObjectId],
-      ref: 'Customer',
-      default: [],
-    },
-    type: {
-      type: String,
-      enum: ['delivery', 'money'],
-      default: 'delivery',
-      required: true,
     },
     bankId: {
       type: Schema.Types.ObjectId,
@@ -81,23 +75,51 @@ const customerSchema = new Schema<ICustomer>(
         message: 'Maximum 5 images allowed',
       },
     },
+    address: {
+      type: String,
+      default: null,
+    },
+    identityCardIssuedDate: {
+      type: Date,
+      default: null,
+    },
+    identityCardNumber: {
+      type: String,
+      default: null,
+    },
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
   },
   {
     timestamps: true,
     toJSON: {
       transform: function (_doc, ret) {
         const { _id, __v, ...rest } = ret;
+
+        // Transform image URLs to include domain
+        if (rest.images && Array.isArray(rest.images)) {
+          rest.images = rest.images.map((img: ICustomerImage) => {
+            const basePath = extractBasePath(img.url);
+            return {
+              ...img,
+              url: generateFullImageUrl(basePath, appConfig.baseUrl),
+            };
+          });
+        }
+
         return { id: _id, ...rest };
       },
     },
   }
 );
 
-// Create compound index for phone and type (both together must be unique)
-customerSchema.index({ phone: 1, type: 1 }, { unique: true });
+// Unique index for phone - one customer per phone number
+customerSchema.index({ phone: 1 }, { unique: true });
 
 // Performance indexes for frequent customer search
 customerSchema.index({ name: 'text' }); // Text index for name search
-customerSchema.index({ phone: 1 }); // Single field index for exact phone match
 
 export const Customer = mongoose.model<ICustomer>('Customer', customerSchema);

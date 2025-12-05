@@ -9,6 +9,7 @@ erDiagram
     USERS ||--o{ DRAFT_DELIVERIES : "tạo bản nháp"
     USERS ||--o{ USER_ROUTES : "được phân công"
     USERS ||--o{ USER_ROUTES : "phân công (assignedBy)"
+    USERS ||--o{ CUSTOMERS : "cập nhật thông tin ngân hàng/ảnh (createdBy)"
     USERS }o--|| ROUTES : "có tuyến đường đã chọn"
     ROUTES ||--o{ USER_ROUTES : "chứa"
     ROUTES ||--o{ DELIVERIES : "từ tuyến"
@@ -24,6 +25,11 @@ erDiagram
     CUSTOMERS }o--|| ROUTES : "thuộc tuyến đường"
     CUSTOMERS }o--o| CUSTOMER_BANK : "có thông tin ngân hàng"
     CUSTOMERS ||--o{ CUSTOMERS : "người nhận thường xuyên"
+    CUSTOMERS ||--o{ CUSTOMER_ADDRESS_HISTORY : "có lịch sử địa chỉ"
+    DELIVERIES ||--o| CUSTOMER_ADDRESS_HISTORY : "tự động tạo history"
+    DELIVERIES ||--o{ MONEY_DELIVERIES : "tự động tạo thu hộ/thu dùm"
+    USERS ||--o{ REMOVED_DELIVERIES : "xóa (deletedBy)"
+    USERS ||--o{ REMOVED_MONEY_DELIVERIES : "xóa (deletedBy)"
 
     USERS {
         ObjectId _id PK
@@ -31,8 +37,16 @@ erDiagram
         string password "mã hóa bcrypt, tối thiểu 6 ký tự, select:false"
         enum role "superadmin|admin|manager|user, mặc định:user"
         ObjectId selectedRouteId FK "tham chiếu: ROUTES, tùy chọn, mặc định:null"
+        array additionalInformationProductConfig "cấu hình thông tin bổ sung sản phẩm, mặc định []"
         datetime createdAt "tự động tạo"
         datetime updatedAt "tự động cập nhật"
+    }
+
+    ADDITIONAL_INFORMATION_PRODUCT_CONFIG {
+        ObjectId _id "unique identifier cho mỗi config"
+        string content "nội dung thông tin, bắt buộc, tối đa 500 ký tự, trim"
+        number position "vị trí sắp xếp, bắt buộc, tối thiểu 1"
+        boolean selected "đánh dấu config được chọn, mặc định false"
     }
 
     ROUTES {
@@ -43,6 +57,7 @@ erDiagram
         number distance "khoảng cách, tùy chọn, tối thiểu 0"
         number surcharge "phụ phí, tùy chọn, tối thiểu 0"
         enum surchargeUnit "percentage|fixed, mặc định percentage"
+        string phone "tùy chọn, định dạng quốc tế, trim"
         datetime createdAt "tự động tạo"
         datetime updatedAt "tự động cập nhật"
     }
@@ -65,6 +80,7 @@ erDiagram
         enum type "delivery|money, mặc định delivery"
         ObjectId bankId FK "tham chiếu: CUSTOMER_BANK, tùy chọn"
         array images "tối đa 5 ảnh, mỗi ảnh có url và rotate (0,90,180,270)"
+        ObjectId createdBy FK "tham chiếu: USERS, tùy chọn, user đã cập nhật thông tin ngân hàng/ảnh"
         datetime createdAt "tự động tạo"
         datetime updatedAt "tự động cập nhật"
     }
@@ -111,13 +127,17 @@ erDiagram
         number quantity "số lượng hàng hóa, bắt buộc, tối thiểu 1, mặc định 1"
         number cost "phí vận chuyển, bắt buộc, tối thiểu 0"
         string homeDelivery "địa chỉ giao hàng, tùy chọn, trim"
-        number homeDeliveryCost "bắt buộc, tối thiểu 0, mặc định 0"
+        number homeDeliveryCost "tùy chọn, tối thiểu 0, mặc định 0"
+        number carryCost "phí bốc xếp, tùy chọn, tối thiểu 0, mặc định 0"
+        number homeDeliveryCostTotal "tổng phí giao tận nhà (carryCost+homeDeliveryCost), tùy chọn"
+        enum vehicleType "motorbike|small-truck|large-truck, tùy chọn (nullable), bắt buộc khi homeDelivery có giá trị"
         number itemValue "giá trị hàng hóa, bắt buộc, tối thiểu 0"
         number itemCost "phí trị giá, bắt buộc, tối thiểu 0"
         number collectCost "thu hộ, bắt buộc, tối thiểu 0"
         number collectForCustomer "thu dùm khách hàng, bắt buộc, tối thiểu 0, mặc định 0"
         number collectForCustomerCost "phí phụ thu, bắt buộc, tối thiểu 0"
-        number totalCost "tính toán: isFree ? 0 : (cost+itemCost+collectForCustomerCost)"
+        number totalCost "phí dịch vụ, tính toán: isFree ? 0 : (cost+itemCost+collectForCustomerCost+homeDeliveryCost)"
+        number actualRevenue "tổng thực thu, tính toán: isFree ? (collectCost+collectForCustomer) : (totalCost+collectCost+collectForCustomer)"
         string collectForCustomerNote "tùy chọn, trim"
         object details "thông tin chi tiết hàng hóa, tùy chọn"
         number details_weight "khối lượng (kg), tùy chọn, tối thiểu 0"
@@ -148,12 +168,110 @@ erDiagram
         enum transferType "regular|express, bắt buộc, mặc định regular"
         boolean isFree "miễn phí, bắt buộc, mặc định false"
         number totalCost "tính toán: isFree ? 0 : sendCost"
+        enum status "waiting|done, bắt buộc, mặc định waiting"
+        enum type "normal|collect|collectForCustomer, bắt buộc, mặc định normal"
+        ObjectId deliveryId FK "tham chiếu: DELIVERIES, required khi type=collect|collectForCustomer, null khi type=normal"
         string notes "tùy chọn, trim"
         ObjectId createdByUser FK "tham chiếu: USERS, bắt buộc"
         datetime createdAt "tự động tạo"
         datetime updatedAt "tự động cập nhật"
     }
 
+    REMOVED_DELIVERIES {
+        ObjectId _id PK
+        ObjectId originalDeliveryId FK "tham chiếu: DELIVERIES, ID gốc của delivery"
+        string code "10 chữ số: DDMMYY+random sequence(0001-9999)"
+        string fullCode "định dạng: code+fromRouteCode+toRouteCode"
+        string subCode "timestamp/1000+sequence"
+        ObjectId sender FK "tham chiếu: CUSTOMERS, bắt buộc"
+        string senderName "tên người gửi, bắt buộc, trim"
+        ObjectId receiver FK "tham chiếu: CUSTOMERS, bắt buộc"
+        string receiverName "tên người nhận, bắt buộc, trim"
+        ObjectId fromRoute FK "tham chiếu: ROUTES, bắt buộc"
+        ObjectId toRoute FK "tham chiếu: ROUTES, bắt buộc"
+        string name "tên hàng hóa, bắt buộc, trim"
+        string nameProductAndAdditionalInformation "thông tin bổ sung, tùy chọn, trim"
+        number quantity "số lượng, bắt buộc, tối thiểu 1"
+        number cost "phí vận chuyển, bắt buộc, tối thiểu 0"
+        string homeDelivery "địa chỉ giao hàng, tùy chọn, trim"
+        number homeDeliveryCost "tùy chọn, tối thiểu 0, mặc định 0"
+        number carryCost "phí bốc xếp, tùy chọn, tối thiểu 0, mặc định 0"
+        number homeDeliveryCostTotal "tổng phí giao tận nhà, tùy chọn"
+        enum vehicleType "motorbike|small-truck|large-truck, tùy chọn (nullable)"
+        number itemValue "giá trị hàng hóa, bắt buộc, tối thiểu 0"
+        number itemCost "phí trị giá, bắt buộc, tối thiểu 0"
+        number collectCost "thu hộ, bắt buộc, tối thiểu 0"
+        number collectForCustomer "thu dùm khách hàng, bắt buộc, tối thiểu 0"
+        number collectForCustomerCost "phí phụ thu, bắt buộc, tối thiểu 0"
+        string collectForCustomerNote "tùy chọn, trim"
+        object details "thông tin chi tiết hàng hóa, tùy chọn"
+        string notes "tùy chọn, trim"
+        number totalCost "phí dịch vụ"
+        number actualRevenue "tổng thực thu"
+        enum paymentType "paid|debt, bắt buộc"
+        boolean isFree "miễn phí, bắt buộc"
+        ObjectId createdByUser FK "tham chiếu: USERS, bắt buộc"
+        datetime originalCreatedAt "thời điểm tạo delivery gốc"
+        datetime originalUpdatedAt "thời điểm cập nhật delivery gốc"
+        boolean isReturn "đã trả hàng, mặc định false"
+        string inventory "tùy chọn"
+        string smsType "tùy chọn"
+        datetime timeToSendSMS "tùy chọn"
+        string upItems "hàng lên, tùy chọn"
+        string downItems "hàng xuống, tùy chọn"
+        number quantityReturn "số lượng trả, mặc định 0"
+        array returnDeliveryImages "ảnh trả hàng, tùy chọn"
+        datetime dateReturn "ngày trả hàng, tùy chọn"
+        ObjectId deletedBy FK "tham chiếu: USERS, bắt buộc, user đã xóa"
+        string reason "lý do xóa, bắt buộc, tối đa 500 ký tự"
+        datetime deletedAt "thời điểm xóa, bắt buộc, mặc định hiện tại"
+        datetime expiredAt "thời điểm hết hạn, bắt buộc, TTL index (tự động xóa sau 90 ngày)"
+    }
+
+    REMOVED_MONEY_DELIVERIES {
+        ObjectId _id PK
+        ObjectId originalMoneyDeliveryId FK "tham chiếu: MONEY_DELIVERIES, ID gốc"
+        string code "10 chữ số: DDMMYY+random sequence(0001-9999)"
+        string fullCode "định dạng: code+fromRouteCode+toRouteCode-T"
+        string subCode "timestamp/1000+sequence"
+        ObjectId sender FK "tham chiếu: CUSTOMERS, bắt buộc"
+        string senderName "tên người gửi, bắt buộc, trim"
+        ObjectId receiver FK "tham chiếu: CUSTOMERS, bắt buộc"
+        string receiverName "tên người nhận, bắt buộc, trim"
+        ObjectId fromRoute FK "tham chiếu: ROUTES, bắt buộc"
+        ObjectId toRoute FK "tham chiếu: ROUTES, bắt buộc"
+        number sendMoneyAmount "số tiền gửi, bắt buộc, tối thiểu 0"
+        number sendCost "phí dịch vụ, bắt buộc, tối thiểu 0"
+        enum transferType "regular|express, bắt buộc"
+        boolean isFree "miễn phí, bắt buộc"
+        number totalCost "tổng phí dịch vụ"
+        string notes "tùy chọn, trim"
+        enum status "waiting|done, bắt buộc"
+        enum type "normal|collect|collectForCustomer, bắt buộc"
+        ObjectId deliveryId FK "tham chiếu: DELIVERIES, tùy chọn"
+        array images "ảnh, tùy chọn"
+        ObjectId createdByUser FK "tham chiếu: USERS, bắt buộc"
+        datetime originalCreatedAt "thời điểm tạo money delivery gốc"
+        datetime originalUpdatedAt "thời điểm cập nhật money delivery gốc"
+        datetime dateReturn "ngày trả, tùy chọn"
+        string contentReturn "nội dung trả, tùy chọn"
+        ObjectId deletedBy FK "tham chiếu: USERS, bắt buộc, user đã xóa"
+        string reason "lý do xóa, bắt buộc, tối đa 500 ký tự"
+        datetime deletedAt "thời điểm xóa, bắt buộc, mặc định hiện tại"
+        datetime expiredAt "thời điểm hết hạn, bắt buộc, TTL index (tự động xóa sau 90 ngày)"
+    }
+
+    CUSTOMER_ADDRESS_HISTORY {
+        ObjectId _id PK
+        ObjectId customerId FK "tham chiếu: CUSTOMERS, bắt buộc"
+        string address "địa chỉ giao hàng, bắt buộc, tối đa 500 ký tự, trim"
+        number homeDeliveryCost "phí giao hàng, bắt buộc, tối thiểu 0, mặc định 0"
+        number carryCost "phí bốc xếp, bắt buộc, tối thiểu 0, mặc định 0"
+        number homeDeliveryTotalCost "tổng phí (carryCost+homeDeliveryCost), bắt buộc"
+        enum vehicleType "motorbike|small-truck|large-truck, tùy chọn (nullable), bắt buộc khi homeDelivery có giá trị"
+        datetime createdAt "tự động tạo"
+        datetime updatedAt "tự động cập nhật"
+    }
 
     DRAFT_DELIVERIES {
         ObjectId _id PK
@@ -168,6 +286,9 @@ erDiagram
         number cost "phí vận chuyển, bắt buộc, tối thiểu 0"
         string homeDelivery "địa chỉ giao hàng, tùy chọn, trim"
         number homeDeliveryCost "bắt buộc, tối thiểu 0, mặc định 0"
+        number carryCost "phí bốc xếp, tùy chọn, tối thiểu 0, mặc định 0"
+        number homeDeliveryCostTotal "tổng phí giao tận nhà (carryCost+homeDeliveryCost), tùy chọn"
+        enum vehicleType "motorbike|small-truck|large-truck, tùy chọn (nullable), bắt buộc khi homeDelivery có giá trị"
         number itemValue "giá trị hàng hóa, bắt buộc, tối thiểu 0"
         number itemCost "phí trị giá, bắt buộc, tối thiểu 0"
         number collectCost "thu hộ, bắt buộc, tối thiểu 0"
@@ -184,7 +305,8 @@ erDiagram
         string notes "tùy chọn, trim"
         enum paymentType "paid|debt, bắt buộc, mặc định paid"
         boolean isFree "miễn phí, bắt buộc, mặc định false"
-        number totalCost "tính toán: isFree ? 0 : (cost+itemCost+collectForCustomerCost)"
+        number totalCost "phí dịch vụ, tính toán: isFree ? 0 : (cost+itemCost+collectForCustomerCost+homeDeliveryCost)"
+        number actualRevenue "tổng thực thu, tính toán: isFree ? (collectCost+collectForCustomer) : (totalCost+collectCost+collectForCustomer)"
         ObjectId createdByUser FK "tham chiếu: USERS, bắt buộc"
         datetime createdAt "tự động tạo, TTL 90 ngày"
         datetime updatedAt "tự động cập nhật"
@@ -225,10 +347,13 @@ erDiagram
 - `users` - Tài khoản người dùng và xác thực
 - `customers` - Cơ sở dữ liệu thông tin khách hàng (delivery và money)
 - `customerBank` - Thông tin ngân hàng của khách hàng
+- `customerAddressHistories` - Lịch sử địa chỉ giao hàng tận nhà của khách hàng
 - `routes` - Cấu hình tuyến đường vận chuyển
 - `userRoutes` - Mối quan hệ nhiều-nhiều giữa người dùng và tuyến đường
 - `deliveries` - Giao dịch vận chuyển thông thường
 - `moneyDeliveries` - Giao dịch chuyển tiền
+- `removedDeliveries` - Giao dịch vận chuyển đã xóa (soft delete, lưu 90 ngày)
+- `removedMoneyDeliveries` - Giao dịch chuyển tiền đã xóa (soft delete, lưu 90 ngày)
 - `draftdeliveries` - Bản nháp delivery (lưu tạm thông tin chưa hoàn tất)
 - `settings` - Cấu hình hệ thống linh hoạt (shipping rates, product list, custom configs)
 
@@ -239,6 +364,17 @@ erDiagram
 - **Mật khẩu**: Tối thiểu 6 ký tự, mã hóa bằng bcrypt (salt rounds: 12)
 - **Phân cấp vai trò**: user(1) → manager(2) → admin(3) → superadmin(4)
 - **Tuyến đường đã chọn**: Tham chiếu tùy chọn đến tuyến đường ưa thích của người dùng
+- **Cấu hình thông tin bổ sung sản phẩm (additionalInformationProductConfig)**:
+  - Array các cấu hình thông tin bổ sung cho sản phẩm, mặc định `[]`
+  - Mỗi config có: `_id` (ObjectId), `content` (string, max 500 ký tự), `position` (number ≥ 1), `selected` (boolean, mặc định false)
+  - **Quy tắc nghiệp vụ**:
+    - Tối thiểu 1 config, tối đa 6 configs
+    - Position phải duy nhất (không được trùng lặp)
+    - Chỉ có tối đa 1 config có `selected = true`
+    - Nếu không có config nào được chọn, tự động chọn config đầu tiên (position nhỏ nhất)
+  - **API Endpoints**:
+    - `GET /api/user/additional-information-product-by-account` - Lấy danh sách configs
+    - `PUT /api/user/additional-information-product-by-account` - Cập nhật configs (auto-select first if none selected)
 
 #### Bảng CUSTOMERS
 - **Ràng buộc duy nhất**: Tổ hợp phone + type phải duy nhất (một số điện thoại có thể có cả customer delivery và money)
@@ -270,6 +406,7 @@ erDiagram
 - **Khoảng cách**: Trường tùy chọn, số dương (≥ 0), đơn vị theo km
 - **Phụ phí**: Trường tùy chọn, số dương (≥ 0), áp dụng theo surchargeUnit
 - **Đơn vị phụ phí**: percentage (%) hoặc fixed (số tiền cố định), mặc định percentage
+- **Số điện thoại**: Trường tùy chọn, định dạng quốc tế (`/^\+?[1-9]\d{1,14}$/`), lưu số liên lạc của tuyến đường
 
 #### Bảng USER_ROUTES
 - **Ràng buộc duy nhất**: Mỗi người dùng chỉ có thể được phân công vào một tuyến đường một lần (userId + routeId)
@@ -291,8 +428,14 @@ erDiagram
   - Tổng chi phí được tính tự động qua middleware
   - Số lượng phải tối thiểu 1
 - **Tính toán chi phí**:
-  - `totalCost = isFree ? 0 : (cost + itemCost + collectForCustomerCost)`
-  - Nếu isFree = true thì totalCost = 0, bất kể các chi phí khác
+  - `totalCost` (Phí dịch vụ = cước phí + phí trị giá + phụ phí + cước GTN):
+    - Khi isFree = false: `cost + itemCost + collectForCustomerCost + homeDeliveryCost`
+    - Khi isFree = true: `0` (miễn phí hoàn toàn)
+  - `actualRevenue` (Tổng thực thu bao gồm phí dịch vụ + thu hộ + thu dùm):
+    - Khi isFree = false: `totalCost + collectCost + collectForCustomer`
+    - Khi isFree = true: `collectCost + collectForCustomer` (chỉ thu hộ + thu dùm)
+  - Phân biệt: totalCost chỉ bao gồm phí dịch vụ, actualRevenue bao gồm cả tiền thu hộ (collectCost) và thu dùm (collectForCustomer)
+  - Lưu ý: collectCost (thu hộ) KHÔNG tính vào phí dịch vụ nhưng tính vào tổng thực thu vì đây là tiền thực tế thu từ khách
 - **Thông tin chi tiết hàng hóa (details)**:
   - `weight`: Khối lượng thực tế của hàng hóa (kg)
   - `length`, `width`, `height`: Kích thước hàng hóa (cm)
@@ -330,8 +473,75 @@ erDiagram
 - **Chi phí tổng**:
   - `totalCost = sendCost` khi isFree = false (regular/express)
   - `totalCost = 0` khi isFree = true (miễn phí)
+- **Trạng thái (status)**:
+  - `waiting` (mặc định): Đang chờ gửi tiền
+  - `done`: Đã hoàn thành gửi tiền
+  - **One-way transition**: Chỉ có thể chuyển từ waiting → done, không thể chuyển ngược lại
+- **Loại giao dịch (type)**:
+  - `normal` (mặc định): Giao dịch chuyển tiền bình thường, deliveryId = null
+  - `collect`: Thu hộ tiền từ giao hàng, deliveryId bắt buộc
+  - `collectForCustomer`: Thu dùm tiền cho khách hàng, deliveryId bắt buộc
+  - **Immutable field**: Không thể thay đổi type sau khi tạo
+- **Tham chiếu giao hàng (deliveryId)**:
+  - Bắt buộc khi type = 'collect' hoặc 'collectForCustomer'
+  - Phải null khi type = 'normal'
+  - Tham chiếu đến DELIVERIES collection
+- **Tự động tạo khi trả hàng**: Khi delivery.isReturn = true:
+  - Tự động tạo MoneyDelivery type='collect' nếu delivery.collectCost > 0
+  - Tự động tạo MoneyDelivery type='collectForCustomer' nếu delivery.collectForCustomer > 0
+  - Sender/Receiver đảo ngược: delivery (A → B) → money delivery (B → A)
+  - Routes đảo ngược: delivery (fromRoute → toRoute) → money delivery (toRoute → fromRoute)
+  - sendCost cho thu hộ: Tính bằng shipping fee calculator
+  - sendCost cho thu dùm: Sử dụng delivery.collectForCustomerCost
 - **Index hiệu suất**: Cùng pattern tối ưu như deliveries
 
+#### Bảng REMOVED_DELIVERIES (Soft Delete)
+
+- **Mục đích**: Lưu trữ các delivery đã bị xóa trong 90 ngày trước khi xóa vĩnh viễn
+- **Quy trình xóa (Soft Delete)**:
+  - Yêu cầu xác thực mật khẩu người dùng trước khi xóa
+  - Yêu cầu lý do xóa (bắt buộc, tối đa 500 ký tự)
+  - Sử dụng transaction để đảm bảo tính toàn vẹn dữ liệu
+  - Copy toàn bộ dữ liệu delivery gốc sang removed collection
+  - Xóa delivery gốc sau khi copy thành công
+- **Dữ liệu lưu trữ**:
+  - Tất cả fields từ delivery gốc (code, fullCode, sender, receiver, costs, etc.)
+  - `originalDeliveryId`: ID của delivery gốc
+  - `originalCreatedAt`, `originalUpdatedAt`: Timestamps gốc
+  - `deletedBy`: User đã thực hiện xóa
+  - `reason`: Lý do xóa
+  - `deletedAt`: Thời điểm xóa
+  - `expiredAt`: Thời điểm tự động xóa vĩnh viễn (90 ngày sau deletedAt)
+- **TTL Index**: Tự động xóa document sau khi `expiredAt` đến hạn
+- **Index hiệu suất**:
+  - `{deletedBy: 1, deletedAt: -1}` - Lịch sử xóa của user
+  - `{fullCode: 1}` - Tìm kiếm theo fullCode
+  - `{originalDeliveryId: 1}` - Tham chiếu đến delivery gốc
+  - `{fromRoute: 1, toRoute: 1}` - Phân tích theo tuyến đường
+  - `{deletedAt: -1}` - Các record xóa gần đây
+
+#### Bảng REMOVED_MONEY_DELIVERIES (Soft Delete)
+
+- **Mục đích**: Lưu trữ các money delivery đã bị xóa trong 90 ngày trước khi xóa vĩnh viễn
+- **Quy trình xóa (Soft Delete)**: Giống như REMOVED_DELIVERIES
+  - Xác thực mật khẩu + lý do xóa
+  - Transaction-based operation
+  - Copy + delete pattern
+- **Dữ liệu lưu trữ**:
+  - Tất cả fields từ money delivery gốc (code, fullCode, sender, receiver, amounts, etc.)
+  - `originalMoneyDeliveryId`: ID của money delivery gốc
+  - `originalCreatedAt`, `originalUpdatedAt`: Timestamps gốc
+  - `deletedBy`: User đã thực hiện xóa
+  - `reason`: Lý do xóa
+  - `deletedAt`: Thời điểm xóa
+  - `expiredAt`: Thời điểm tự động xóa vĩnh viễn (90 ngày sau deletedAt)
+- **TTL Index**: Tự động xóa document sau khi `expiredAt` đến hạn
+- **Index hiệu suất**: Giống REMOVED_DELIVERIES
+  - `{deletedBy: 1, deletedAt: -1}`
+  - `{fullCode: 1}`
+  - `{originalMoneyDeliveryId: 1}`
+  - `{fromRoute: 1, toRoute: 1}`
+  - `{deletedAt: -1}`
 
 #### Bảng DRAFT_DELIVERIES
 
@@ -342,7 +552,13 @@ erDiagram
   - Tự động xóa sau 90 ngày (TTL index)
   - Số lượng phải tối thiểu 1
   - Hỗ trợ thông tin chi tiết hàng hóa (weight, dimensions, overweight status)
+  - **Validation giao hàng tận nhà**: `homeDelivery` bắt buộc khi `carryCost > 0` hoặc `homeDeliveryCost > 0`
+  - **Tính toán tự động**: `homeDeliveryCostTotal = carryCost + homeDeliveryCost` khi có `homeDelivery`
+  - **Loại xe**: Hỗ trợ 3 loại (motorbike, small-truck, large-truck) cho phí bốc xếp phù hợp
 - **Chuyển đổi**: Có thể convert draft thành delivery chính thức với code và customer records
+- **Tính toán chi phí**: Giống bảng DELIVERIES
+  - `totalCost` tính phí dịch vụ
+  - `actualRevenue` tính tổng thực thu (bao gồm collectForCustomer)
 - **Index Strategy**:
   - `{fromRoute: 1, createdByUser: 1, createdAt: -1}` - Query chính
   - `{createdByUser: 1, createdAt: -1}` - User's drafts
@@ -390,6 +606,29 @@ erDiagram
     - `DELETE /api/settings/products/{id}` - Xóa 1 product theo ObjectId
 - **Index hiệu suất**: Unique index trên trường `name`
 
+#### Bảng CUSTOMER_ADDRESS_HISTORY
+- **Mục đích**: Lưu lịch sử địa chỉ giao hàng tận nhà của khách hàng để tái sử dụng
+- **Phone-based API Access**: Tất cả endpoints sử dụng `phone` thay vì `customerId`
+  - Service layer tự động chuyển đổi: `phone` → tìm customer (type='delivery') → `customerId` → query history
+  - Định dạng phone: `/^\+?[1-9]\d{1,14}$/` (international format, không bắt đầu bằng 0)
+- **Auto-create trigger**: Tự động tạo address history khi tạo delivery có `homeDelivery` không rỗng
+  - Trigger trong `DeliveryService.create()` sau khi tạo delivery thành công
+  - Non-blocking operation (log error only, không fail delivery creation)
+- **20-record limit**: Tối đa 20 records per customer
+  - FIFO pattern: Xóa record cũ nhất khi đạt giới hạn
+  - Enforce trước khi create new record
+- **Tính toán chi phí**:
+  - `homeDeliveryTotalCost = carryCost + homeDeliveryCost`
+  - Tự động tính toán khi tạo mới hoặc cập nhật
+- **Ownership verification**: Khi xóa, verify phone → customerId → addressHistory ownership
+- **Quyền truy cập**: Chỉ cần authentication, không giới hạn role
+- **API Endpoints**:
+  - `GET /api/customer-address-history/:phone` - Lấy tất cả address history của customer theo phone (sorted by createdAt DESC)
+  - `POST /api/customer-address-history/:phone` - Tạo mới address history manually theo phone
+  - `DELETE /api/customer-address-history/:phone/:addressHistoryId` - Xóa address history với ownership verification
+- **Index hiệu suất**: `{customerId: 1, createdAt: -1}` - Compound index cho query và sorting
+- **Sorting**: Luôn sort theo `createdAt: -1` (newest first) khi truy vấn
+
 ### Tối Ưu Hóa Hiệu Suất
 
 #### Chiến Lược Index Database
@@ -409,6 +648,7 @@ erDiagram
    - `{subCode: 1}` - Index cho tracking và debug purposes
 6. **Settings Index**: `{name: 1}` - Unique index cho settings name lookup
 7. **Settings Performance**: `{isActive: 1}` - Index cho active settings filter
+8. **Customer Address History Index**: `{customerId: 1, createdAt: -1}` - Compound index cho query theo customer và sorting theo thời gian
 
 #### Tính Năng Tối Ưu Truy Vấn
 - **Lean Queries**: Cho các thao tác chỉ đọc để giảm sử dụng bộ nhớ
@@ -559,9 +799,15 @@ erDiagram
   - **paymentType**: 'paid' (mặc định) hoặc 'debt' (loại bỏ 'free')
   - **isFree**: Boolean field riêng biệt để đánh dấu miễn phí (mặc định false)
   - Logic: Khi isFree = true thì totalCost = 0, bất kể paymentType
-- **Cập Nhật Công Thức TotalCost**: Tích hợp logic isFree và loại bỏ `homeDeliveryCost`
-  - Công thức cũ: `totalCost = cost + homeDeliveryCost + itemCost(phí trị giá) + collectForCustomerCost`
-  - Công thức mới: `totalCost = isFree ? 0 : (cost + itemCost + collectForCustomerCost)`
+- **Tách Biệt Phí Dịch Vụ và Tổng Thực Thu**: Thêm field `actualRevenue` vào DELIVERIES và DRAFT_DELIVERIES
+  - **totalCost** (Phí dịch vụ = cước phí + phí trị giá + phụ phí + cước GTN):
+    - Khi isFree = false: `cost + itemCost + collectForCustomerCost + homeDeliveryCost`
+    - Khi isFree = true: `0` (miễn phí hoàn toàn)
+    - **Loại bỏ collectCost** ra khỏi công thức (thu hộ là tiền của khách, không phải phí dịch vụ)
+  - **actualRevenue** (Tổng thực thu bao gồm phí dịch vụ + thu hộ + thu dùm):
+    - Khi isFree = false: `totalCost + collectCost + collectForCustomer`
+    - Khi isFree = true: `collectCost + collectForCustomer` (chỉ thu hộ + thu dùm)
+  - **Phân biệt**: totalCost chỉ phí dịch vụ, actualRevenue bao gồm cả tiền thu hộ (collectCost) và thu dùm (collectForCustomer)
 - **Money Delivery Transfer Types**: Cập nhật hình thức chuyển tiền cho MONEY_DELIVERIES
   - Cập nhật field `transferType`: regular (mặc định), express (loại bỏ 'free')
   - Thêm field `isFree`: boolean (mặc định false) - tách riêng logic miễn phí
@@ -571,9 +817,61 @@ erDiagram
   - Express: isFree = false → sử dụng expressShippingFee từ settings
 - **Routes Enhancement**: Thêm các trường mới cho bảng ROUTES
   - `distance`: Khoảng cách tuyến đường (number, optional, ≥ 0)
-  - `surcharge`: Phụ phí tuyến đường (number, optional, ≥ 0)  
+  - `surcharge`: Phụ phí tuyến đường (number, optional, ≥ 0)
   - `surchargeUnit`: Đơn vị phụ phí ('percentage' | 'fixed', mặc định 'percentage')
+  - `phone`: Số điện thoại liên lạc tuyến đường (string, optional, định dạng quốc tế)
   - Hỗ trợ tính phụ phí linh hoạt theo phần trăm hoặc số tiền cố định
+  - Populate phone field trong tất cả responses khi query fromRoute/toRoute
+- **Users Enhancement**: Thêm cấu hình thông tin bổ sung sản phẩm
+  - **additionalInformationProductConfig**: Array configs cho thông tin bổ sung sản phẩm (mặc định [])
+  - **Config Structure**: Mỗi config có `_id`, `content` (max 500 chars), `position` (1-6), `selected` (boolean)
+  - **Auto-Selection Logic**: Tự động chọn config đầu tiên nếu không có config nào được đánh dấu selected
+  - **Validation Rules**:
+    - Min 1, max 6 configs
+    - Position phải unique (không trùng lặp)
+    - Chỉ có tối đa 1 config được selected
+  - **API Endpoints**:
+    - `GET /api/user/additional-information-product-by-account` - Lấy configs của user
+    - `PUT /api/user/additional-information-product-by-account` - Cập nhật configs với auto-selection
+- **New Table: CUSTOMER_ADDRESS_HISTORY**: Thêm bảng lịch sử địa chỉ giao hàng tận nhà
+  - Lưu lịch sử địa chỉ homeDelivery của khách hàng để tái sử dụng
+  - Phone-based API access: Sử dụng `phone` thay vì `customerId` cho tất cả endpoints
+  - Auto-create trigger: Tự động tạo khi tạo delivery có homeDelivery không rỗng
+  - 20-record limit per customer: FIFO pattern, xóa record cũ nhất khi đạt giới hạn
+  - Fields: customerId, address, homeDeliveryCost, carryCost, homeDeliveryTotalCost, vehicleType
+  - Index: `{customerId: 1, createdAt: -1}` cho query và sorting hiệu quả
+  - **API Endpoints**:
+    - `GET /api/customer-address-history/:phone` - Lấy tất cả address history (sorted newest first)
+    - `POST /api/customer-address-history/:phone` - Tạo mới address history manually
+    - `DELETE /api/customer-address-history/:phone/:addressHistoryId` - Xóa với ownership verification
+- **Enhanced DELIVERIES & DRAFT_DELIVERIES Tables**: Thêm fields cho giao hàng tận nhà
+  - `carryCost`: Phí bốc xếp (optional, min 0, default 0)
+  - `homeDeliveryCostTotal`: Tổng phí giao tận nhà (carryCost + homeDeliveryCost, optional)
+  - `vehicleType`: Loại xe (motorbike|small-truck|large-truck, required, default motorbike)
+  - VehicleType enum được share giữa Delivery, DraftDelivery và CustomerAddressHistory models
+  - **Validation**: homeDelivery bắt buộc khi carryCost > 0 hoặc homeDeliveryCost > 0
+  - **Auto-calculation**: homeDeliveryCostTotal tự động tính = carryCost + homeDeliveryCost
+  - Cả DELIVERIES và DRAFT_DELIVERIES đều có cấu trúc fields và validation giống nhau
+- **Enhanced MONEY_DELIVERIES Table**: Thêm tracking và relationship với deliveries
+  - **status**: Trạng thái giao dịch (waiting|done, default: waiting)
+    - One-way transition: waiting → done only, không thể chuyển ngược lại
+    - Validation trong pre-save middleware
+  - **type**: Loại giao dịch (normal|collect|collectForCustomer, default: normal)
+    - normal: Giao dịch chuyển tiền bình thường
+    - collect: Thu hộ tiền từ giao hàng (tự động tạo khi trả hàng)
+    - collectForCustomer: Thu dùm tiền cho khách hàng (tự động tạo khi trả hàng)
+    - Immutable: Không thể thay đổi sau khi tạo
+  - **deliveryId**: Reference đến DELIVERIES (optional)
+    - Required khi type = collect hoặc collectForCustomer
+    - Null khi type = normal
+    - Conditional validation trong pre-save middleware
+  - **Auto-creation logic**: Tự động tạo khi delivery.isReturn = true
+    - Thu hộ (collect): Tạo nếu delivery.collectCost > 0
+    - Thu dùm (collectForCustomer): Tạo nếu delivery.collectForCustomer > 0
+    - Sender/Receiver/Routes đảo ngược (B → A)
+    - sendCost tính bằng shipping fee calculator (thu hộ) hoặc collectForCustomerCost (thu dùm)
+  - **Enums**: MoneyDeliveryStatus, MoneyDeliveryType, TransferType cho type safety
+  - **Consolidated middleware**: Single pre-save hook với tất cả validations
 
 ### Cân Nhắc Migration và Mở Rộng
 

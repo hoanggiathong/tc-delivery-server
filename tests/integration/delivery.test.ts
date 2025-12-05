@@ -2,6 +2,7 @@ import request from 'supertest';
 import app from '../../src/app';
 import jwt from 'jsonwebtoken';
 import { UserRole } from '../../src/types/user.type';
+import { VehicleType } from '../../src/models/delivery.model';
 import { DeliveryService } from '../../src/services/delivery.service';
 import {
   createMockDelivery,
@@ -49,6 +50,7 @@ describe('Delivery Endpoints', () => {
       cost: 50000,
       homeDelivery: '123 Main Street, District 1',
       homeDeliveryCost: 10000,
+      vehicleType: VehicleType.MOTORBIKE,
       itemValue: 1000000,
       itemCost: 30000,
       collectCost: 15000,
@@ -162,6 +164,50 @@ describe('Delivery Endpoints', () => {
       expect(response.body.success).toBe(false);
       expect(response.body.message).toBe('Failed to create delivery');
     });
+
+    it('should return 400 when carryCost > 0 but homeDelivery is empty', async () => {
+      MockedDeliveryService.prototype.createDelivery.mockRejectedValue(
+        new Error('homeDelivery is required when carryCost or homeDeliveryCost is greater than 0')
+      );
+
+      const invalidData = {
+        ...validDeliveryData,
+        homeDelivery: '', // Empty homeDelivery
+        carryCost: 20000, // But carryCost > 0
+        homeDeliveryCost: 0,
+      };
+
+      const response = await request(app)
+        .post('/api/delivery')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send(invalidData)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('homeDelivery is required');
+    });
+
+    it('should return 400 when homeDeliveryCost > 0 but homeDelivery is empty', async () => {
+      MockedDeliveryService.prototype.createDelivery.mockRejectedValue(
+        new Error('homeDelivery is required when carryCost or homeDeliveryCost is greater than 0')
+      );
+
+      const invalidData = {
+        ...validDeliveryData,
+        homeDelivery: '', // Empty homeDelivery
+        carryCost: 0,
+        homeDeliveryCost: 30000, // But homeDeliveryCost > 0
+      };
+
+      const response = await request(app)
+        .post('/api/delivery')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send(invalidData)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('homeDelivery is required');
+    });
   });
 
   describe('PUT /api/delivery/:id', () => {
@@ -238,6 +284,146 @@ describe('Delivery Endpoints', () => {
 
       expect(response.body.success).toBe(false);
       expect(response.body.message).toBe('Access token is required');
+    });
+
+    describe('toRoute update with fullCode regeneration', () => {
+      it('should regenerate fullCode when toRoute changes (no conflict)', async () => {
+        const originalDelivery = createMockDelivery({
+          id: deliveryId,
+          code: '1407250001',
+          fullCode: '1407250001T4T1',
+          subCode: '17324560001',
+          fromRoute: {
+            id: '507f1f77bcf86cd799439013',
+            code: 'T4',
+            name: 'Can Tho',
+            createdAt: new Date('2025-06-27T07:51:17.342Z'),
+            updatedAt: new Date('2025-06-27T07:51:17.342Z'),
+          },
+          toRoute: {
+            id: '507f1f77bcf86cd799439011',
+            code: 'T1',
+            name: 'Ho Chi Minh',
+            createdAt: new Date('2025-06-27T07:51:17.342Z'),
+            updatedAt: new Date('2025-06-27T07:51:17.342Z'),
+          },
+        });
+
+        // Mock updated delivery with new toRoute but same code (no conflict)
+        const updatedDelivery = createMockDelivery({
+          id: deliveryId,
+          code: '1407250001', // Code preserved
+          fullCode: '1407250001T4T2', // fullCode updated with new toRoute
+          subCode: originalDelivery.subCode,
+          fromRoute: originalDelivery.fromRoute,
+          toRoute: {
+            id: '507f1f77bcf86cd799439014',
+            code: 'T2',
+            name: 'Da Nang',
+            createdAt: new Date('2025-06-27T07:51:17.342Z'),
+            updatedAt: new Date('2025-06-27T07:51:17.342Z'),
+          },
+        });
+
+        MockedDeliveryService.prototype.updateDelivery.mockResolvedValue(updatedDelivery);
+
+        const response = await request(app)
+          .put(`/api/delivery/${deliveryId}`)
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send({ toRouteId: '507f1f77bcf86cd799439014' })
+          .expect(200);
+
+        expect(response.body.success).toBe(true);
+        expect(response.body.data.delivery.code).toBe('1407250001'); // Code preserved
+        expect(response.body.data.delivery.fullCode).toBe('1407250001T4T2'); // fullCode updated
+        expect(response.body.data.delivery.toRoute.code).toBe('T2');
+      });
+
+      it('should generate new code when toRoute change causes fullCode conflict', async () => {
+        const originalDelivery = createMockDelivery({
+          id: deliveryId,
+          code: '1407250001',
+          fullCode: '1407250001T4T1',
+          subCode: '17324560001',
+          fromRoute: {
+            id: '507f1f77bcf86cd799439013',
+            code: 'T4',
+            name: 'Can Tho',
+            createdAt: new Date('2025-06-27T07:51:17.342Z'),
+            updatedAt: new Date('2025-06-27T07:51:17.342Z'),
+          },
+          toRoute: {
+            id: '507f1f77bcf86cd799439011',
+            code: 'T1',
+            name: 'Ho Chi Minh',
+            createdAt: new Date('2025-06-27T07:51:17.342Z'),
+            updatedAt: new Date('2025-06-27T07:51:17.342Z'),
+          },
+        });
+
+        // Mock updated delivery with new code due to conflict
+        const updatedDelivery = createMockDelivery({
+          id: deliveryId,
+          code: '1407250201', // New code generated
+          fullCode: '1407250201T4T2', // New fullCode with new code
+          subCode: '17324560201',
+          fromRoute: originalDelivery.fromRoute,
+          toRoute: {
+            id: '507f1f77bcf86cd799439014',
+            code: 'T2',
+            name: 'Da Nang',
+            createdAt: new Date('2025-06-27T07:51:17.342Z'),
+            updatedAt: new Date('2025-06-27T07:51:17.342Z'),
+          },
+        });
+
+        MockedDeliveryService.prototype.updateDelivery.mockResolvedValue(updatedDelivery);
+
+        const response = await request(app)
+          .put(`/api/delivery/${deliveryId}`)
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send({ toRouteId: '507f1f77bcf86cd799439014' })
+          .expect(200);
+
+        expect(response.body.success).toBe(true);
+        expect(response.body.data.delivery.code).toBe('1407250201'); // New code
+        expect(response.body.data.delivery.fullCode).toBe('1407250201T4T2'); // New fullCode
+        expect(response.body.data.delivery.toRoute.code).toBe('T2');
+      });
+
+      it('should not regenerate fullCode when toRoute stays the same', async () => {
+        const originalDelivery = createMockDelivery({
+          id: deliveryId,
+          code: '1407250001',
+          fullCode: '1407250001T4T1',
+          subCode: '17324560001',
+          toRoute: {
+            id: '507f1f77bcf86cd799439011',
+            code: 'T1',
+            name: 'Ho Chi Minh',
+            createdAt: new Date('2025-06-27T07:51:17.342Z'),
+            updatedAt: new Date('2025-06-27T07:51:17.342Z'),
+          },
+        });
+
+        // Mock updated delivery - only cost changed, fullCode stays the same
+        const updatedDelivery = createMockDelivery({
+          ...originalDelivery,
+          cost: 100000, // Only cost changed
+        });
+
+        MockedDeliveryService.prototype.updateDelivery.mockResolvedValue(updatedDelivery);
+
+        const response = await request(app)
+          .put(`/api/delivery/${deliveryId}`)
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send({ cost: 100000 })
+          .expect(200);
+
+        expect(response.body.success).toBe(true);
+        expect(response.body.data.delivery.code).toBe('1407250001'); // Code unchanged
+        expect(response.body.data.delivery.fullCode).toBe('1407250001T4T1'); // fullCode unchanged
+      });
     });
   });
 
@@ -473,8 +659,6 @@ describe('Delivery Endpoints', () => {
     const validQuery = {
       startDate: oneWeekAgo.toISOString().split('T')[0],
       endDate: yesterday.toISOString().split('T')[0],
-      page: '1',
-      limit: '20',
     };
 
     it('should get cost report successfully', async () => {
@@ -488,12 +672,15 @@ describe('Delivery Endpoints', () => {
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.data).toEqualWithDateStrings(mockCostReportForIntegration);
+      expect(response.body.data).not.toHaveProperty('summary');
+      expect(response.body.data).toHaveProperty('deliveries');
+      expect(response.body.data).toHaveProperty('routeInfo');
+      expect(response.body.data.deliveries[0]).toHaveProperty('upItems');
+      expect(response.body.data.deliveries[0]).toHaveProperty('downItems');
       expect(MockedDeliveryService.prototype.getCostReport).toHaveBeenCalledWith(
         'admin123',
         new Date(validQuery.startDate),
-        new Date(validQuery.endDate),
-        1,
-        20
+        new Date(validQuery.endDate)
       );
     });
 
@@ -553,7 +740,7 @@ describe('Delivery Endpoints', () => {
 
     it('should return 400 for endDate in the future', async () => {
       const futureDate = new Date();
-      futureDate.setDate(futureDate.getDate() + 1);
+      futureDate.setDate(futureDate.getDate() + 2);
       const invalidQuery = { ...validQuery, endDate: futureDate.toISOString().split('T')[0] };
 
       const response = await request(app)
@@ -636,17 +823,12 @@ describe('Delivery Endpoints', () => {
       expect(response.body.message).toBe('Failed to generate cost report');
     });
 
-    it('should use default pagination values', async () => {
+    it('should return cost report without pagination', async () => {
       MockedDeliveryService.prototype.getCostReport.mockResolvedValue(mockCostReportForIntegration);
-
-      const queryWithoutPagination = {
-        startDate: validQuery.startDate,
-        endDate: validQuery.endDate,
-      };
 
       const response = await request(app)
         .get('/api/delivery/cost-report')
-        .query(queryWithoutPagination)
+        .query(validQuery)
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
 
@@ -654,9 +836,7 @@ describe('Delivery Endpoints', () => {
       expect(MockedDeliveryService.prototype.getCostReport).toHaveBeenCalledWith(
         'admin123',
         new Date(validQuery.startDate),
-        new Date(validQuery.endDate),
-        1, // default page
-        100 // default limit
+        new Date(validQuery.endDate)
       );
     });
   });

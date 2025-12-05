@@ -52,8 +52,26 @@ const userSchema = new Schema<IUser>(
       default: null,
     },
     additionalInformationProductConfig: {
-      type: Schema.Types.Mixed,
-      required: false,
+      type: [
+        {
+          content: {
+            type: String,
+            required: true,
+            trim: true,
+            maxlength: [500, 'Content must not exceed 500 characters'],
+          },
+          position: {
+            type: Number,
+            required: true,
+            min: [1, 'Position must be at least 1'],
+          },
+          selected: {
+            type: Boolean,
+            required: false,
+            default: false,
+          },
+        },
+      ],
       default: [],
     },
   },

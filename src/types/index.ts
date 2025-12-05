@@ -29,6 +29,12 @@ export interface BaseEntity {
 // Payment types for deliveries and drafts
 export type PaymentType = 'paid' | 'debt';
 
+// Common interface for date range queries (used in cost reports)
+export interface DateRangeQuery {
+  startDate: Date;
+  endDate: Date;
+}
+
 export interface JWTPayload {
   userId: string;
   username: string;

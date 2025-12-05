@@ -1,10 +1,12 @@
 import { Delivery } from '@/models/delivery.model';
 import { Route } from '@/models/route.model';
 import { Types, PipelineStage } from 'mongoose';
+import { omitBy, isUndefined } from 'lodash';
 import { CustomerService } from '@/services/customer.service';
 import { CodeGeneratorService } from '@/services/code-generator.service';
 import { SettingsService } from '@/services/settings.service';
 import { UserService } from '@/services/user.service';
+import { CustomerAddressHistoryService } from '@/services/customer-address-history.service';
 import {
   IDeliveryCreateRequest,
   IDeliveryUpdateRequest,
@@ -12,26 +14,27 @@ import {
   IDeliveryLeanPopulated,
   INextCodeResponse,
   IFrequentCustomer,
-  IDeliveryCostReport,
-  IDeliveryReportItem,
-  IDeliveryCostReportSummary,
   ITodayDeliveryReport,
-  ITodayDeliverySummary,
   ITodayDeliveryItem,
+  IDeliveryPopulated,
+  IGetListReportReturnDeliveryResponse,
 } from '@/types/delivery.type';
-import { PopulatedDelivery } from '@/services/delivery-receipt.service';
-import { ICustomer } from '@/models/customer.model';
+import { ICustomer, Customer } from '@/models/customer.model';
 import Logger from '@/utils/logger';
+import { PaymentType } from '@/types';
+import { getStartOfDayVietnam, getEndOfDayVietnam, convertVietnamToUTC } from '@/utils/date.utils';
 
 export class DeliveryService {
   private customerService: CustomerService;
   private settingsService: SettingsService;
   private userService: UserService;
+  private customerAddressHistoryService: CustomerAddressHistoryService;
 
   constructor() {
     this.customerService = new CustomerService();
     this.settingsService = new SettingsService();
     this.userService = new UserService();
+    this.customerAddressHistoryService = new CustomerAddressHistoryService();
   }
 
   /**
@@ -109,55 +112,53 @@ export class DeliveryService {
       subCode: delivery.subCode,
       sender: {
         id: delivery.sender._id,
-        name: delivery.sender.name,
+        name: delivery.senderName,
         phone: delivery.sender.phone,
-        ...(delivery.sender.routeId && { fromRouteId: delivery.sender.routeId.toString() }),
-        ...(delivery.sender.bankId && {
-          bank: {
-            id: delivery.sender.bankId._id,
-            name: delivery.sender.bankId.name,
-            bankName: delivery.sender.bankId.bankName,
-            bankAccount: delivery.sender.bankId.bankAccount,
-            ...(delivery.sender.bankId.bankBranch && {
+        fromRouteId: delivery.sender.routeId?.toString(),
+        bank: delivery.sender.bankId
+          ? {
+              id: delivery.sender.bankId._id,
+              name: delivery.sender.bankId.name,
+              bankName: delivery.sender.bankId.bankName,
+              bankAccount: delivery.sender.bankId.bankAccount,
               bankBranch: delivery.sender.bankId.bankBranch,
-            }),
-            ...(delivery.sender.bankId.bankAddress && {
               bankAddress: delivery.sender.bankId.bankAddress,
-            }),
-          },
-        }),
-        ...(delivery.sender.createdAt && { createdAt: delivery.sender.createdAt }),
-        ...(delivery.sender.updatedAt && { updatedAt: delivery.sender.updatedAt }),
+            }
+          : undefined,
+        createdAt: delivery.sender.createdAt,
+        updatedAt: delivery.sender.updatedAt,
       },
       receiver: {
         id: delivery.receiver._id,
-        name: delivery.receiver.name,
+        name: delivery.receiverName,
         phone: delivery.receiver.phone,
-        ...(delivery.receiver.routeId && { toRouteId: delivery.receiver.routeId.toString() }),
-        ...(delivery.receiver.createdAt && { createdAt: delivery.receiver.createdAt }),
-        ...(delivery.receiver.updatedAt && { updatedAt: delivery.receiver.updatedAt }),
+        toRouteId: delivery.receiver.routeId?.toString(),
+        createdAt: delivery.receiver.createdAt,
+        updatedAt: delivery.receiver.updatedAt,
       },
       fromRoute: {
         id: delivery.fromRoute._id,
         code: delivery.fromRoute.code,
         name: delivery.fromRoute.name,
         address: delivery.fromRoute.address,
-        ...(delivery.fromRoute.createdAt && { createdAt: delivery.fromRoute.createdAt }),
-        ...(delivery.fromRoute.updatedAt && { updatedAt: delivery.fromRoute.updatedAt }),
+        phone: delivery.fromRoute.phone,
       },
       toRoute: {
         id: delivery.toRoute._id,
         code: delivery.toRoute.code,
         name: delivery.toRoute.name,
         address: delivery.toRoute.address,
-        ...(delivery.toRoute.createdAt && { createdAt: delivery.toRoute.createdAt }),
-        ...(delivery.toRoute.updatedAt && { updatedAt: delivery.toRoute.updatedAt }),
+        phone: delivery.toRoute.phone,
       },
       name: delivery.name,
+      nameProductAndAdditionalInformation: delivery.nameProductAndAdditionalInformation,
       quantity: delivery.quantity,
       cost: delivery.cost,
       homeDelivery: delivery.homeDelivery,
       homeDeliveryCost: delivery.homeDeliveryCost,
+      carryCost: delivery.carryCost,
+      homeDeliveryCostTotal: delivery.homeDeliveryCostTotal,
+      vehicleType: delivery.vehicleType,
       itemValue: delivery.itemValue,
       itemCost: delivery.itemCost,
       collectCost: delivery.collectCost,
@@ -167,6 +168,7 @@ export class DeliveryService {
       details: delivery.details,
       notes: delivery.notes,
       totalCost: delivery.totalCost,
+      actualRevenue: delivery.actualRevenue,
       paymentType: delivery.paymentType,
       createdByUser: delivery.createdByUser.name,
       isFree: delivery.isFree,
@@ -182,22 +184,17 @@ export class DeliveryService {
     // Get user's selected route as fromRoute
     const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
 
-    // Find or create sender and receiver with type 'delivery'
+    // Find or create sender and receiver
     const sender = await this.customerService.findOrCreateCustomer(
       data.senderPhone,
       data.senderName,
-      selectedRouteId,
-      'delivery'
+      selectedRouteId
     );
     const receiver = await this.customerService.findOrCreateCustomer(
       data.receiverPhone,
       data.receiverName,
-      data.toRouteId,
-      'delivery'
+      data.toRouteId
     );
-
-    // Update sender's relativeReceiver array
-    await this.customerService.addRelativeReceiver(sender._id.toString(), receiver._id.toString());
 
     // Validate fromRoute and toRoute exist
     const [fromRoute, toRoute] = await Promise.all([
@@ -221,7 +218,9 @@ export class DeliveryService {
       fullCode: codeData.fullCode,
       subCode: codeData.subCode,
       sender: sender._id,
+      senderName: data.senderName,
       receiver: receiver._id,
+      receiverName: data.receiverName,
       fromRoute: selectedRouteId,
       toRoute: data.toRouteId,
       name: data.name,
@@ -230,6 +229,8 @@ export class DeliveryService {
       cost: data.cost,
       homeDelivery: data.homeDelivery,
       homeDeliveryCost: data.homeDeliveryCost,
+      carryCost: data.carryCost,
+      vehicleType: data.vehicleType,
       itemValue: data.itemValue,
       itemCost: data.itemCost,
       collectCost: data.collectCost,
@@ -244,20 +245,33 @@ export class DeliveryService {
 
     await delivery.save();
 
+    // Auto-create address history if homeDelivery exists
+    if (delivery.homeDelivery && delivery.homeDelivery.trim() !== '') {
+      try {
+        await this.customerAddressHistoryService.createFromDelivery(delivery);
+      } catch (error) {
+        // Log error but don't fail delivery creation
+        Logger.warn('Failed to create address history', {
+          deliveryId: delivery._id,
+          error: error instanceof Error ? error.message : error,
+        });
+      }
+    }
+
     // Query the saved delivery with populate and lean
     const populatedDelivery = await Delivery.findById(delivery._id)
       .populate([
         {
           path: 'sender',
-          select: '_id name phone routeId createdAt updatedAt',
+          select: '_id phone routeId createdAt updatedAt',
           populate: {
             path: 'bankId',
             select: '_id name bankName bankAccount bankBranch bankAddress',
           },
         },
-        { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
-        { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
-        { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
+        { path: 'receiver', select: '_id phone routeId createdAt updatedAt' },
+        { path: 'fromRoute', select: '_id code name address phone' },
+        { path: 'toRoute', select: '_id code name address phone' },
         { path: 'createdByUser', select: '_id username name' },
       ])
       .lean();
@@ -294,10 +308,12 @@ export class DeliveryService {
       const sender = await this.customerService.findOrCreateCustomer(
         senderPhone,
         senderName,
-        userSelectedRouteId,
-        'delivery'
+        userSelectedRouteId
       );
       updateData.sender = sender.id;
+      if (data.senderName) {
+        updateData.senderName = data.senderName;
+      }
     } else {
       updateData.sender = delivery.sender;
     }
@@ -312,10 +328,12 @@ export class DeliveryService {
       const receiver = await this.customerService.findOrCreateCustomer(
         receiverPhone,
         receiverName,
-        data.toRouteId || delivery.toRoute.toString(),
-        'delivery'
+        data.toRouteId || delivery.toRoute.toString()
       );
       updateData.receiver = receiver.id;
+      if (data.receiverName) {
+        updateData.receiverName = data.receiverName;
+      }
     } else {
       updateData.receiver = delivery.receiver;
     }
@@ -327,42 +345,33 @@ export class DeliveryService {
       }
       updateData.toRoute = data.toRouteId;
     }
-    if (data.name !== undefined) {
-      updateData.name = data.name;
-    }
-    if (data.cost !== undefined) {
-      updateData.cost = data.cost;
-    }
-    if (data.homeDelivery !== undefined) {
-      updateData.homeDelivery = data.homeDelivery;
-    }
-    if (data.homeDeliveryCost !== undefined) {
-      updateData.homeDeliveryCost = data.homeDeliveryCost;
-    }
-    if (data.itemValue !== undefined) {
-      updateData.itemValue = data.itemValue;
-    }
-    if (data.itemCost !== undefined) {
-      updateData.itemCost = data.itemCost;
-    }
-    if (data.collectCost !== undefined) {
-      updateData.collectCost = data.collectCost;
-    }
-    if (data.collectForCustomer !== undefined) {
-      updateData.collectForCustomer = data.collectForCustomer;
-    }
-    if (data.collectForCustomerCost !== undefined) {
-      updateData.collectForCustomerCost = data.collectForCustomerCost;
-    }
-    if (data.collectForCustomerNote !== undefined) {
-      updateData.collectForCustomerNote = data.collectForCustomerNote;
-    }
-    if (data.notes !== undefined) {
-      updateData.notes = data.notes;
-    }
-    if (data.paymentType !== undefined) {
-      updateData.paymentType = data.paymentType;
-    }
+    // Use lodash omitBy to filter out undefined values for optional fields
+    const optionalFieldsUpdate = omitBy(
+      {
+        name: data.name,
+        nameProductAndAdditionalInformation: data.nameProductAndAdditionalInformation,
+        quantity: data.quantity,
+        cost: data.cost,
+        homeDelivery: data.homeDelivery,
+        homeDeliveryCost: data.homeDeliveryCost,
+        carryCost: data.carryCost,
+        vehicleType: data.vehicleType,
+        itemValue: data.itemValue,
+        itemCost: data.itemCost,
+        collectCost: data.collectCost,
+        collectForCustomer: data.collectForCustomer,
+        collectForCustomerCost: data.collectForCustomerCost,
+        collectForCustomerNote: data.collectForCustomerNote,
+        details: data.details,
+        notes: data.notes,
+        paymentType: data.paymentType,
+        isFree: data.isFree,
+      },
+      isUndefined
+    );
+
+    // Merge optional fields into updateData
+    Object.assign(updateData, optionalFieldsUpdate);
 
     // Update delivery
     await Delivery.findByIdAndUpdate(id, { $set: updateData }, { runValidators: true });
@@ -372,15 +381,15 @@ export class DeliveryService {
       .populate([
         {
           path: 'sender',
-          select: '_id name phone routeId createdAt updatedAt',
+          select: '_id phone routeId createdAt updatedAt',
           populate: {
             path: 'bankId',
             select: '_id name bankName bankAccount bankBranch bankAddress',
           },
         },
-        { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
-        { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
-        { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
+        { path: 'receiver', select: '_id phone routeId createdAt updatedAt' },
+        { path: 'fromRoute', select: '_id code name address phone' },
+        { path: 'toRoute', select: '_id code name address phone' },
         { path: 'createdByUser', select: '_id username name' },
       ])
       .lean();
@@ -403,15 +412,15 @@ export class DeliveryService {
         .populate([
           {
             path: 'sender',
-            select: '_id name phone routeId createdAt updatedAt',
+            select: '_id phone routeId createdAt updatedAt',
             populate: {
               path: 'bankId',
               select: '_id name bankName bankAccount bankBranch bankAddress',
             },
           },
-          { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
-          { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
-          { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
+          { path: 'receiver', select: '_id phone routeId createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address phone createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name address phone createdAt updatedAt' },
           { path: 'createdByUser', select: '_id username name' },
         ])
         .lean();
@@ -429,7 +438,7 @@ export class DeliveryService {
   /**
    * Get delivery by ID with full population for PDF generation
    */
-  async getDeliveryByIdWithPopulation(id: string): Promise<PopulatedDelivery | null> {
+  async getDeliveryByIdWithPopulation(id: string): Promise<IDeliveryPopulated | null> {
     try {
       const delivery = await Delivery.findById(id).populate([
         { path: 'sender', model: 'Customer' },
@@ -442,39 +451,11 @@ export class DeliveryService {
         return null;
       }
 
-      return delivery as unknown as PopulatedDelivery;
+      return delivery as unknown as IDeliveryPopulated;
     } catch (error) {
       Logger.error('Failed to get delivery with population', {
         error: error instanceof Error ? error.message : error,
         deliveryId: id,
-      });
-      return null;
-    }
-  }
-
-  /**
-   * Get delivery by code with full population for PDF generation
-   */
-  async getDeliveryByCodeWithPopulation(code: string): Promise<PopulatedDelivery | null> {
-    try {
-      const delivery = await Delivery.findOne({ code })
-        .populate([
-          { path: 'sender', model: 'Customer' },
-          { path: 'receiver', model: 'Customer' },
-          { path: 'fromRoute', model: 'Route' },
-          { path: 'toRoute', model: 'Route' },
-        ])
-        .lean();
-
-      if (!delivery) {
-        return null;
-      }
-
-      return delivery as unknown as PopulatedDelivery;
-    } catch (error) {
-      Logger.error('Failed to get delivery by code with population', {
-        error: error instanceof Error ? error.message : error,
-        deliveryCode: code,
       });
       return null;
     }
@@ -496,8 +477,8 @@ export class DeliveryService {
             },
           },
           { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
-          { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
-          { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address phone createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name address phone createdAt updatedAt' },
           { path: 'createdByUser', select: '_id username name' },
         ])
         .sort({ createdAt: -1 })
@@ -546,8 +527,8 @@ export class DeliveryService {
             },
           },
           { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
-          { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
-          { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address phone createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name address phone createdAt updatedAt' },
           { path: 'createdByUser', select: '_id username name' },
         ])
         .sort({ createdAt: -1 })
@@ -616,16 +597,12 @@ export class DeliveryService {
         code: toRoute.code,
         name: toRoute.name,
         address: toRoute.address,
-        createdAt: toRoute.createdAt,
-        updatedAt: toRoute.updatedAt,
       },
       fromRoute: {
         id: fromRoute._id,
         code: fromRoute.code,
         name: fromRoute.name,
         address: fromRoute.address,
-        createdAt: fromRoute.createdAt,
-        updatedAt: fromRoute.updatedAt,
       },
     };
   }
@@ -665,8 +642,8 @@ export class DeliveryService {
       .populate([
         { path: 'sender', select: '_id name phone routeId createdAt updatedAt' },
         { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
-        { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
-        { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
+        { path: 'fromRoute', select: '_id code name address phone' },
+        { path: 'toRoute', select: '_id code name address phone' },
         { path: 'createdByUser', select: '_id username' },
       ])
       .lean();
@@ -772,58 +749,112 @@ export class DeliveryService {
     userId: string
   ): Promise<IFrequentCustomer[]> {
     try {
-      const receivers = await this.customerService.getFrequentReceivers(
-        senderIdentifier,
-        'delivery',
-        userId
-      );
+      // Get user's selected route
+      const userSelectedRouteId = await this.userService.getUserSelectedRouteId(userId);
 
-      if (receivers.length === 0) {
-        return [];
-      }
-
-      const sender = await this.customerService.getCustomerByPhoneAndType(
-        senderIdentifier,
-        'delivery'
-      );
+      // Find sender by phone and selected route
+      const sender = await Customer.findOne({
+        phone: senderIdentifier,
+        routeId: userSelectedRouteId,
+      }).lean();
 
       if (!sender) {
-        Logger.debug('Sender not found for frequent customers', { senderIdentifier });
+        Logger.debug('Sender not found for frequent customers', {
+          senderIdentifier,
+          userSelectedRouteId,
+        });
         return [];
       }
 
-      const routeIds = receivers.map(receiver => receiver.routeId);
-      const routes = await Route.find({ _id: { $in: routeIds } }).lean();
-      const routeMap = new Map(routes.map(route => [route._id.toString(), route]));
-
-      const frequentCustomers: IFrequentCustomer[] = receivers.map(receiver => {
-        const route = routeMap.get(receiver.routeId.toString());
-
-        if (!route) {
-          Logger.warn('Route not found for receiver', {
-            receiverId: receiver._id,
-            routeId: receiver.routeId,
-            senderIdentifier,
-          });
-        }
-
-        return {
-          senderName: sender.name,
-          senderPhone: sender.phone,
-          receiverName: receiver.name,
-          receiverPhone: receiver.phone,
-          toRoute: {
-            id: receiver.routeId.toString(),
-            code: route?.code || 'UNKNOWN',
-            name: route?.name || 'Unknown Route',
-            address: route?.address || 'Unknown Address',
+      // Aggregation to get 20 unique deliveries based on (senderName, receiverName, receiver phone, toRoute)
+      const pipeline: PipelineStage[] = [
+        // Match deliveries from this sender and fromRoute
+        {
+          $match: {
+            sender: sender._id,
+            fromRoute: sender.routeId,
           },
-        };
-      });
+        },
+        // Sort by most recent first
+        {
+          $sort: { createdAt: -1 },
+        },
+        // Lookup receiver to get phone
+        {
+          $lookup: {
+            from: 'customers',
+            localField: 'receiver',
+            foreignField: '_id',
+            as: 'receiverData',
+          },
+        },
+        {
+          $unwind: '$receiverData',
+        },
+        // Lookup toRoute to get route details
+        {
+          $lookup: {
+            from: 'routes',
+            localField: 'toRoute',
+            foreignField: '_id',
+            as: 'toRouteData',
+          },
+        },
+        {
+          $unwind: '$toRouteData',
+        },
+        // // Group by unique combination of (senderName, receiverName, receiver phone, toRoute)
+        {
+          $group: {
+            _id: {
+              senderName: '$senderName',
+              receiverName: '$receiverName',
+              receiverPhone: '$receiverData.phone',
+              toRoute: '$toRoute',
+            },
+            firstDeliveryDate: { $first: '$createdAt' },
+            toRouteData: { $first: '$toRouteData' },
+          },
+        },
+        // Sort by first delivery date (most recent combinations first)
+        {
+          $sort: { firstDeliveryDate: -1 },
+        },
+        // Limit to 20 unique combinations
+        {
+          $limit: 20,
+        },
+        // Project final structure
+        {
+          $project: {
+            _id: 1,
+            senderName: '$_id.senderName',
+            receiverName: '$_id.receiverName',
+            receiverPhone: '$_id.receiverPhone',
+            toRoute: {
+              id: { $toString: '$_id.toRoute' },
+              code: '$toRouteData.code',
+              name: '$toRouteData.name',
+              address: '$toRouteData.address',
+            },
+          },
+        },
+      ];
+
+      const results = await Delivery.aggregate(pipeline);
+
+      const frequentCustomers: IFrequentCustomer[] = results.map(result => ({
+        senderName: result.senderName,
+        senderPhone: sender.phone,
+        receiverName: result.receiverName,
+        receiverPhone: result.receiverPhone,
+        toRoute: result.toRoute,
+      }));
 
       Logger.debug('Frequent customers retrieved for delivery', {
         senderIdentifier,
         count: frequentCustomers.length,
+        userSelectedRouteId,
       });
 
       return frequentCustomers;
@@ -837,44 +868,34 @@ export class DeliveryService {
   }
 
   /**
-   * Get cost report for deliveries with filtering and pagination
+   * Get cost report for deliveries with date range filtering (max 30 days)
    */
   async getCostReport(
     userId: string,
     startDate: Date,
-    endDate: Date,
-    page: number = 1,
-    limit: number = 20
-  ): Promise<IDeliveryCostReport> {
+    endDate: Date
+  ): Promise<ITodayDeliveryReport> {
     try {
-      // Get user's selected route information
       const userRouteInfo = await this.userService.getUserSelectedRoute(userId);
       const selectedRouteId = userRouteInfo.selectedRouteId;
 
-      // Get the selected route information
       const fromRoute = await Route.findById(selectedRouteId).lean();
       if (!fromRoute) {
         throw new Error('Selected route not found');
       }
 
-      // Use provided date range
-      const dateRange = {
-        from: startDate,
-        to: endDate,
-      };
+      const startOfDay = getStartOfDayVietnam(startDate);
+      const endOfDay = getEndOfDayVietnam(endDate);
+      const startDateUTC = convertVietnamToUTC(startOfDay);
+      const endDateUTC = convertVietnamToUTC(endOfDay);
 
-      // Calculate skip for pagination
-      const skip = (page - 1) * limit;
-
-      // Build aggregation pipeline for deliveries
       const pipeline: PipelineStage[] = [
-        // Match by fromRoute and date range
         {
           $match: {
             fromRoute: new Types.ObjectId(selectedRouteId),
             createdAt: {
-              $gte: dateRange.from,
-              $lte: dateRange.to,
+              $gte: startDateUTC,
+              $lte: endDateUTC,
             },
           },
         },
@@ -912,13 +933,19 @@ export class DeliveryService {
           $project: {
             _id: 1,
             code: 1,
+            fullCode: 1,
+            subCode: 1,
+            name: 1,
+            nameProductAndAdditionalInformation: 1,
+            quantity: 1,
             createdAt: 1,
+            updatedAt: 1,
             sender: {
-              name: '$senderData.name',
+              name: '$senderName',
               phone: '$senderData.phone',
             },
             receiver: {
-              name: '$receiverData.name',
+              name: '$receiverName',
               phone: '$receiverData.phone',
             },
             toRoute: {
@@ -928,185 +955,83 @@ export class DeliveryService {
               address: '$toRouteData.address',
             },
             cost: 1,
+            homeDelivery: 1,
             homeDeliveryCost: 1,
+            carryCost: 1,
+            homeDeliveryCostTotal: 1,
+            vehicleType: 1,
             itemCost: 1,
             itemValue: 1,
             collectCost: 1,
             collectForCustomer: 1,
             collectForCustomerCost: 1,
+            collectForCustomerNote: 1,
             totalCost: 1,
+            actualRevenue: 1,
             paymentType: 1,
+            upItems: 1,
+            downItems: 1,
             notes: 1,
+            details: 1,
           },
         },
-        // Facet for pagination and data
+        // Sort by creation date descending
         {
-          $facet: {
-            // Get paginated data
-            data: [{ $sort: { createdAt: -1 } }, { $skip: skip }, { $limit: limit }],
-            // Get total count
-            totalCount: [{ $count: 'count' }],
-            // Get summary statistics
-            summary: [
-              {
-                $group: {
-                  _id: null,
-                  totalDeliveries: { $sum: 1 },
-                  totalCost: { $sum: '$totalCost' },
-                  totalHomeDeliveryCost: { $sum: '$homeDeliveryCost' },
-                  totalItemCost: { $sum: '$itemCost' },
-                  totalItemValue: { $sum: '$itemValue' },
-                  totalCollectCost: { $sum: '$collectCost' },
-                  totalCollectForCustomer: { $sum: '$collectForCustomer' },
-                  totalCollectForCustomerCost: { $sum: '$collectForCustomerCost' },
-
-                  // Payment type counts
-                  normalPaymentCount: {
-                    $sum: {
-                      $cond: [
-                        {
-                          $or: [
-                            { $eq: ['$paymentType', null] },
-                            { $eq: [{ $type: '$paymentType' }, 'missing'] },
-                          ],
-                        },
-                        1,
-                        0,
-                      ],
-                    },
-                  },
-                  normalPaymentAmount: {
-                    $sum: {
-                      $cond: [
-                        {
-                          $or: [
-                            { $eq: ['$paymentType', null] },
-                            { $eq: [{ $type: '$paymentType' }, 'missing'] },
-                          ],
-                        },
-                        '$totalCost',
-                        0,
-                      ],
-                    },
-                  },
-                  debtPaymentCount: {
-                    $sum: {
-                      $cond: [{ $eq: ['$paymentType', 'debt'] }, 1, 0],
-                    },
-                  },
-                  debtPaymentAmount: {
-                    $sum: {
-                      $cond: [{ $eq: ['$paymentType', 'debt'] }, '$totalCost', 0],
-                    },
-                  },
-                  freePaymentCount: {
-                    $sum: {
-                      $cond: [{ $eq: ['$paymentType', 'free'] }, 1, 0],
-                    },
-                  },
-                },
-              },
-            ],
-          },
+          $sort: { createdAt: -1 },
         },
       ];
 
       // Execute aggregation
       const result = await Delivery.aggregate(pipeline);
 
-      // Extract results
-      const deliveries = result[0]?.data || [];
-      const totalRecords = result[0]?.totalCount[0]?.count || 0;
-      const summaryData = result[0]?.summary[0] || {};
+      // Transform deliveries to ITodayDeliveryItem format
+      const deliveryItems: ITodayDeliveryItem[] = result.map((d: any) => ({
+        id: d._id.toString(),
+        code: d.code,
+        fullCode: d.fullCode,
+        subCode: d.subCode,
+        name: d.name,
+        nameProductAndAdditionalInformation: d.nameProductAndAdditionalInformation,
+        quantity: d.quantity,
+        sender: d.sender,
+        receiver: d.receiver,
+        toRoute: {
+          id: d.toRoute.id.toString(),
+          code: d.toRoute.code,
+          name: d.toRoute.name,
+          address: d.toRoute.address,
+        },
+        cost: d.cost,
+        homeDelivery: d.homeDelivery,
+        homeDeliveryCost: d.homeDeliveryCost,
+        itemCost: d.itemCost,
+        itemValue: d.itemValue,
+        collectCost: d.collectCost,
+        collectForCustomer: d.collectForCustomer,
+        collectForCustomerCost: d.collectForCustomerCost,
+        collectForCustomerNote: d.collectForCustomerNote,
+        totalCost: d.totalCost,
+        actualRevenue: d.actualRevenue,
+        paymentType: d.paymentType,
+        upItems: d.upItems || undefined,
+        downItems: d.downItems || undefined,
+        notes: d.notes,
+        details: d.details,
+        createdAt: d.createdAt,
+        updatedAt: d.updatedAt,
+      }));
 
-      // Calculate pagination info
-      const totalPages = Math.ceil(totalRecords / limit);
-      const hasNextPage = page < totalPages;
-      const hasPrevPage = page > 1;
-
-      // Transform deliveries to report items
-      const deliveryItems: IDeliveryReportItem[] = deliveries.map(
-        (d: {
-          _id: Types.ObjectId;
-          code: string;
-          createdAt: Date;
-          sender: { name: string; phone: string };
-          receiver: { name: string; phone: string };
-          toRoute: { id: Types.ObjectId; code: string; name: string; address: string };
-          cost: number;
-          homeDeliveryCost: number;
-          itemCost: number;
-          itemValue: number;
-          collectCost: number;
-          collectForCustomer: number;
-          collectForCustomerCost: number;
-          totalCost: number;
-          paymentType: 'debt' | 'free' | null;
-          notes?: string;
-        }) => ({
-          id: d._id.toString(),
-          code: d.code,
-          date: d.createdAt,
-          sender: d.sender,
-          receiver: d.receiver,
-          toRoute: {
-            id: d.toRoute.id.toString(),
-            code: d.toRoute.code,
-            name: d.toRoute.name,
-            address: d.toRoute.address,
-          },
-          cost: d.cost,
-          homeDeliveryCost: d.homeDeliveryCost,
-          itemCost: d.itemCost,
-          itemValue: d.itemValue,
-          collectCost: d.collectCost,
-          collectForCustomer: d.collectForCustomer,
-          collectForCustomerCost: d.collectForCustomerCost,
-          totalCost: d.totalCost,
-          paymentType: d.paymentType,
-          notes: d.notes,
-        })
-      );
-
-      // Build summary with calculated averages
-      const summary: IDeliveryCostReportSummary = {
-        totalDeliveries: summaryData.totalDeliveries || 0,
-        totalCost: summaryData.totalCost || 0,
-        totalHomeDeliveryCost: summaryData.totalHomeDeliveryCost || 0,
-        totalItemCost: summaryData.totalItemCost || 0,
-        totalItemValue: summaryData.totalItemValue || 0,
-        totalCollectCost: summaryData.totalCollectCost || 0,
-        totalCollectForCustomer: summaryData.totalCollectForCustomer || 0,
-        totalCollectForCustomerCost: summaryData.totalCollectForCustomerCost || 0,
-        totalRevenue: summaryData.totalCost || 0,
-
-        normalPaymentCount: summaryData.normalPaymentCount || 0,
-        normalPaymentAmount: summaryData.normalPaymentAmount || 0,
-        debtPaymentCount: summaryData.debtPaymentCount || 0,
-        debtPaymentAmount: summaryData.debtPaymentAmount || 0,
-        freePaymentCount: summaryData.freePaymentCount || 0,
-
-        averageCostPerDelivery:
-          summaryData.totalDeliveries > 0
-            ? (summaryData.totalCost || 0) / summaryData.totalDeliveries
-            : 0,
-        averageItemValue:
-          summaryData.totalDeliveries > 0
-            ? (summaryData.totalItemValue || 0) / summaryData.totalDeliveries
-            : 0,
-      };
-
-      // Build final response
-      const report: IDeliveryCostReport = {
-        summary,
+      // Build final response with routeInfo
+      const report: ITodayDeliveryReport = {
         deliveries: deliveryItems,
-        pagination: {
-          currentPage: page,
-          totalPages,
-          totalRecords,
-          limit,
-          hasNextPage,
-          hasPrevPage,
+        routeInfo: {
+          route: {
+            id: fromRoute._id.toString(),
+            code: fromRoute.code,
+            name: fromRoute.name,
+          },
+          routeCode: fromRoute.code,
+          routeName: fromRoute.name,
         },
       };
 
@@ -1117,8 +1042,6 @@ export class DeliveryService {
         userId,
         startDate,
         endDate,
-        page,
-        limit,
       });
       throw error;
     }
@@ -1213,11 +1136,11 @@ export class DeliveryService {
             createdAt: 1,
             updatedAt: 1,
             sender: {
-              name: '$senderData.name',
+              name: '$senderName',
               phone: '$senderData.phone',
             },
             receiver: {
-              name: '$receiverData.name',
+              name: '$receiverName',
               phone: '$receiverData.phone',
             },
             toRoute: {
@@ -1236,50 +1159,33 @@ export class DeliveryService {
             collectForCustomerCost: 1,
             collectForCustomerNote: 1,
             totalCost: 1,
+            actualRevenue: 1,
             paymentType: 1,
+            upItems: 1,
+            downItems: 1,
             notes: 1,
             details: 1,
+            nameProductAndAdditionalInformation: 1,
           },
         },
-        // Facet for data and summary (no pagination needed)
+        // Sort by creation time (newest first)
         {
-          $facet: {
-            // Get all data sorted by creation time (newest first)
-            data: [{ $sort: { createdAt: -1 } }],
-            // Get summary statistics
-            summary: [
-              {
-                $group: {
-                  _id: null,
-                  totalDeliveries: { $sum: 1 },
-                  totalQuantity: { $sum: '$quantity' },
-                  totalCost: { $sum: '$totalCost' },
-                  totalItemCost: { $sum: '$itemCost' },
-                  totalCollectCost: { $sum: '$collectCost' },
-                  totalCollectForCustomer: { $sum: '$collectForCustomer' },
-                  totalCollectForCustomerCost: { $sum: '$collectForCustomerCost' },
-                },
-              },
-            ],
-          },
+          $sort: { createdAt: -1 },
         },
       ];
 
       // Execute aggregation
       const result = await Delivery.aggregate(pipeline);
 
-      // Extract results
-      const deliveries = result[0]?.data || [];
-      const summaryData = result[0]?.summary[0] || {};
-
       // Transform deliveries to simplified items
-      const deliveryItems: ITodayDeliveryItem[] = deliveries.map(
+      const deliveryItems: ITodayDeliveryItem[] = result.map(
         (d: {
           _id: Types.ObjectId;
           code: string;
           fullCode?: string;
           subCode?: string;
           name: string;
+          nameProductAndAdditionalInformation?: string;
           quantity?: number;
           createdAt: Date;
           updatedAt?: Date;
@@ -1296,7 +1202,10 @@ export class DeliveryService {
           collectForCustomerCost?: number;
           collectForCustomerNote?: string;
           totalCost: number;
-          paymentType: 'debt' | 'free' | null;
+          actualRevenue: number;
+          paymentType: PaymentType;
+          upItems?: string;
+          downItems?: string;
           notes?: string;
           details?: {
             weight?: number;
@@ -1312,6 +1221,7 @@ export class DeliveryService {
           fullCode: d.fullCode,
           subCode: d.subCode,
           name: d.name,
+          nameProductAndAdditionalInformation: d.nameProductAndAdditionalInformation,
           quantity: d.quantity,
           sender: d.sender,
           receiver: d.receiver,
@@ -1331,25 +1241,16 @@ export class DeliveryService {
           collectForCustomerCost: d.collectForCustomerCost,
           collectForCustomerNote: d.collectForCustomerNote,
           totalCost: d.totalCost,
+          actualRevenue: d.actualRevenue,
           paymentType: d.paymentType,
+          upItems: d.upItems || undefined,
+          downItems: d.downItems || undefined,
           notes: d.notes,
           details: d.details,
           createdAt: d.createdAt,
           updatedAt: d.updatedAt,
         })
       );
-
-      // Build summary
-      const summary: ITodayDeliverySummary = {
-        totalDeliveries: summaryData.totalDeliveries || 0,
-        totalQuantity: summaryData.totalQuantity || 0,
-        totalCost: summaryData.totalCost || 0,
-        totalItemCost: summaryData.totalItemCost || 0,
-        totalCollectCost: summaryData.totalCollectCost || 0,
-        totalCollectForCustomer: summaryData.totalCollectForCustomer || 0,
-        totalCollectForCustomerCost: summaryData.totalCollectForCustomerCost || 0,
-        date: today.toISOString().split('T')[0], // Format as YYYY-MM-DD
-      };
 
       // Build route info
       const routeInfo = {
@@ -1364,7 +1265,6 @@ export class DeliveryService {
 
       // Build final response
       const report: ITodayDeliveryReport = {
-        summary,
         deliveries: deliveryItems,
         routeInfo,
       };
@@ -1376,6 +1276,101 @@ export class DeliveryService {
         userId,
       });
       throw error;
+    }
+  }
+
+  async getListReportReturnDeliveryWithStatusDone(
+    userId: string
+  ): Promise<IGetListReportReturnDeliveryResponse> {
+    try {
+      const toRouteId = await this.userService.getUserSelectedRouteId(userId);
+
+      const todayStart = new Date(new Date().setHours(0, 0, 0, 0));
+      const todayEnd = new Date(new Date().setHours(23, 59, 59, 999));
+      const sevenDaysAgo = new Date(todayStart);
+      sevenDaysAgo.setDate(todayStart.getDate() - 7);
+
+      // get quantity of Return created today
+      const quantityReturnIsToday = await Delivery.countDocuments({
+        toRoute: toRouteId,
+        isReturn: true,
+        createdAt: {
+          $gte: todayStart,
+          $lte: todayEnd,
+        },
+        dateReturn: {
+          $gte: todayStart,
+          $lte: todayEnd,
+        },
+      });
+
+      // get quantity of Return created from 7 days ago until start of today
+      const quantityReturnIsOld = await Delivery.countDocuments({
+        toRoute: toRouteId,
+        isReturn: true,
+        createdAt: {
+          $gte: sevenDaysAgo,
+          $lt: todayEnd,
+        },
+        dateReturn: {
+          $gte: todayStart,
+          $lte: todayEnd,
+        },
+      });
+
+      const quantityReturnTotalToday = quantityReturnIsToday + quantityReturnIsOld;
+
+      return {
+        quantityReturnIsToday: quantityReturnIsToday,
+        quantityReturnIsOld: quantityReturnIsOld,
+        quantityReturnTotalToday: quantityReturnTotalToday,
+      };
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to get list money delivery type collect cost with status done');
+    }
+  }
+
+  async getListReturnDeliveriesByToRouteId(
+    startDate: Date,
+    endDate: Date,
+    toRouteId?: string
+  ): Promise<IDeliveryResponse[]> {
+    try {
+      const where: Record<string, unknown> = {
+        isReturn: true,
+        dateReturn: {
+          $gte: startDate,
+          $lte: endDate,
+        },
+      };
+      if (toRouteId) {
+        where.toRoute = toRouteId;
+      }
+      const returnDeliveries = await Delivery.find(where)
+        .populate([
+          {
+            path: 'sender',
+            select: '_id phone routeId createdAt updatedAt',
+            populate: {
+              path: 'bankId',
+              select: '_id name bankName bankAccount bankBranch bankAddress',
+            },
+          },
+          { path: 'receiver', select: '_id phone routeId createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address phone' },
+          { path: 'toRoute', select: '_id code name address phone' },
+          { path: 'createdByUser', select: '_id username name' },
+        ])
+        .lean();
+
+      return returnDeliveries.map(delivery =>
+        this.transformDeliveryToResponseOptimized(this.toPopulatedDeliveryLean(delivery))
+      );
+    } catch (error) {
+      throw new Error('Failed to get list return deliveries by to route id');
     }
   }
 }

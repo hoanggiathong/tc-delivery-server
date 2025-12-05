@@ -1,15 +1,16 @@
 import { z } from 'zod';
+import { OBJECTID_PATTERN, VALIDATION_MESSAGES } from '@/utils/validation-patterns';
 
 export const createUserRouteSchema = z.object({
   body: z.object({
     userId: z
       .string()
       .min(1, 'User ID is required')
-      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid user ID format'),
+      .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID),
     routeId: z
       .string()
       .min(1, 'Route ID is required')
-      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid route ID format'),
+      .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID),
   }),
 });
 
@@ -18,9 +19,9 @@ export const assignMultipleRoutesSchema = z.object({
     userId: z
       .string()
       .min(1, 'User ID is required')
-      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid user ID format'),
+      .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID),
     routeIds: z
-      .array(z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid route ID format'))
+      .array(z.string().regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID))
       .min(1, 'At least one route ID is required')
       .max(50, 'Cannot assign more than 50 routes at once'),
   }),
@@ -31,9 +32,9 @@ export const removeMultipleRoutesSchema = z.object({
     userId: z
       .string()
       .min(1, 'User ID is required')
-      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid user ID format'),
+      .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID),
     routeIds: z
-      .array(z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid route ID format'))
+      .array(z.string().regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID))
       .min(1, 'At least one route ID is required')
       .max(50, 'Cannot remove more than 50 routes at once'),
   }),
@@ -44,7 +45,7 @@ export const userRouteParamsSchema = z.object({
     id: z
       .string()
       .min(1, 'User route ID is required')
-      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid user route ID format'),
+      .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID),
   }),
 });
 
@@ -53,7 +54,7 @@ export const userIdParamsSchema = z.object({
     userId: z
       .string()
       .min(1, 'User ID is required')
-      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid user ID format'),
+      .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID),
   }),
 });
 
@@ -62,7 +63,7 @@ export const routeIdParamsSchema = z.object({
     routeId: z
       .string()
       .min(1, 'Route ID is required')
-      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid route ID format'),
+      .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID),
   }),
 });
 

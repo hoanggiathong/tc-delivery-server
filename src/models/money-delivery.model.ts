@@ -1,4 +1,26 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import logger from '@/utils/logger';
+
+export enum MoneyDeliveryStatus {
+  WAITING = 'waiting',
+  DONE = 'done',
+}
+
+export enum MoneyDeliveryType {
+  NORMAL = 'normal', // giao hàng thường
+  COLLECT = 'collect', // collect cost => thu ho
+  COLLECT_FOR_CUSTOMER = 'collectForCustomer', // thu dùm
+}
+
+export enum TransferType {
+  REGULAR = 'regular',
+  EXPRESS = 'express',
+}
+
+export interface IMoneyDeliveryImage {
+  url: string;
+  rotate: number;
+}
 
 export interface IMoneyDelivery extends Document {
   _id: string;
@@ -6,18 +28,26 @@ export interface IMoneyDelivery extends Document {
   fullCode: string;
   subCode: string;
   sender: mongoose.Types.ObjectId;
+  senderName: string;
   receiver: mongoose.Types.ObjectId;
+  receiverName: string;
   fromRoute: mongoose.Types.ObjectId;
   toRoute: mongoose.Types.ObjectId;
   sendMoneyAmount: number;
   sendCost: number;
-  transferType: 'regular' | 'express';
+  transferType: TransferType;
   isFree: boolean;
   totalCost: number;
   notes?: string;
+  status: MoneyDeliveryStatus;
+  type: MoneyDeliveryType;
+  deliveryId?: mongoose.Types.ObjectId;
+  images?: IMoneyDeliveryImage[];
   createdByUser: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
+  dateReturn?: Date;
+  contentReturn?: string;
 }
 
 const moneyDeliverySchema = new Schema<IMoneyDelivery>(
@@ -43,10 +73,22 @@ const moneyDeliverySchema = new Schema<IMoneyDelivery>(
       ref: 'Customer',
       required: [true, 'Sender is required'],
     },
+    senderName: {
+      type: String,
+      required: [true, 'Sender name is required'],
+      trim: true,
+      maxlength: [100, 'Sender name must not exceed 100 characters'],
+    },
     receiver: {
       type: Schema.Types.ObjectId,
       ref: 'Customer',
       required: [true, 'Receiver is required'],
+    },
+    receiverName: {
+      type: String,
+      required: [true, 'Receiver name is required'],
+      trim: true,
+      maxlength: [100, 'Receiver name must not exceed 100 characters'],
     },
     fromRoute: {
       type: Schema.Types.ObjectId,
@@ -70,8 +112,8 @@ const moneyDeliverySchema = new Schema<IMoneyDelivery>(
     },
     transferType: {
       type: String,
-      enum: ['regular', 'express'],
-      default: 'regular',
+      enum: Object.values(TransferType),
+      default: TransferType.REGULAR,
       required: true,
     },
     isFree: {
@@ -89,10 +131,57 @@ const moneyDeliverySchema = new Schema<IMoneyDelivery>(
       type: String,
       trim: true,
     },
+    status: {
+      type: String,
+      enum: Object.values(MoneyDeliveryStatus),
+      default: MoneyDeliveryStatus.WAITING,
+      required: true,
+    },
+    type: {
+      type: String,
+      enum: Object.values(MoneyDeliveryType),
+      default: MoneyDeliveryType.NORMAL,
+      required: true,
+    },
+    deliveryId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Delivery',
+      required: false,
+    },
     createdByUser: {
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: [true, 'Created by user is required'],
+    },
+    images: {
+      type: [
+        {
+          url: {
+            type: String,
+            required: true,
+          },
+          rotate: {
+            type: Number,
+            default: 0,
+            enum: [0, 90, 180, 270],
+          },
+        },
+      ],
+      default: [],
+      validate: {
+        validator: function (images: IMoneyDeliveryImage[]) {
+          return images.length <= 5;
+        },
+        message: 'Maximum 5 images allowed',
+      },
+    },
+    dateReturn: {
+      type: Date,
+      default: null,
+    },
+    contentReturn: {
+      type: String,
+      default: null,
     },
   },
   {
@@ -119,12 +208,104 @@ moneyDeliverySchema.pre('save', async function (next) {
 
 // Business logic validation
 moneyDeliverySchema.pre('save', function (next) {
+  // Validate sender and receiver
   if (this.sender.toString() === this.receiver.toString()) {
     return next(new Error('Sender and receiver cannot be the same'));
   }
+
+  // Validate routes
   if (this.fromRoute.toString() === this.toRoute.toString()) {
     return next(new Error('From route and to route cannot be the same'));
   }
+
+  // Validate deliveryId based on type
+  if (
+    (this.type === MoneyDeliveryType.COLLECT ||
+      this.type === MoneyDeliveryType.COLLECT_FOR_CUSTOMER) &&
+    !this.deliveryId
+  ) {
+    return next(new Error('deliveryId is required when type is "collect" or "collectForCustomer"'));
+  }
+
+  if (this.type === MoneyDeliveryType.NORMAL && this.deliveryId) {
+    return next(new Error('deliveryId must be null when type is "normal"'));
+  }
+
+  // Prevent type changes after creation
+  if (!this.isNew && this.isModified('type')) {
+    return next(new Error('type field cannot be changed after creation'));
+  }
+
+  // Validate status transition (waiting → done only)
+  if (this.isModified('status') && !this.isNew) {
+    const originalDoc = (this as unknown as { $locals: { originalStatus?: MoneyDeliveryStatus } })
+      .$locals;
+    if (originalDoc?.originalStatus === MoneyDeliveryStatus.DONE) {
+      if (this.status === MoneyDeliveryStatus.WAITING) {
+        return next(new Error('Cannot change status from "done" back to "waiting"'));
+      }
+    }
+  }
+
+  next();
+});
+
+// Pre-update middleware to regenerate fullCode when toRoute changes
+moneyDeliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next) {
+  const rawUpdate = this.getUpdate() as any;
+  if (!rawUpdate) {
+    return next();
+  }
+
+  // Normalize update object - extract fields from $set if present, otherwise use direct fields
+  const updateFields = rawUpdate.$set || rawUpdate;
+
+  // Check if toRoute is being updated
+  if (updateFields.toRoute !== undefined) {
+    try {
+      // Get current document to access current fullCode and fromRoute
+      const currentDoc = await this.model.findOne(this.getQuery());
+      if (!currentDoc) {
+        return next(new Error('Money delivery not found'));
+      }
+
+      const currentToRouteId = currentDoc.toRoute.toString();
+      const newToRouteId = updateFields.toRoute.toString();
+
+      // Only regenerate if toRoute actually changed
+      if (currentToRouteId !== newToRouteId) {
+        const { CodeGeneratorService } = await import('@/services/code-generator.service');
+
+        // Regenerate fullCode with original code (or new code if conflict)
+        const regeneratedCode = await CodeGeneratorService.regenerateFullCodeForRouteChange(
+          currentDoc.fullCode,
+          currentDoc.fromRoute.toString(),
+          newToRouteId,
+          currentDoc._id.toString(),
+          true // isMoneyDelivery = true
+        );
+
+        // Update code fields
+        updateFields.code = regeneratedCode.code;
+        updateFields.fullCode = regeneratedCode.fullCode;
+        updateFields.subCode = regeneratedCode.subCode;
+
+        // Log the code change
+        if (regeneratedCode.codeChanged) {
+          logger.info(
+            `[MoneyDelivery ${currentDoc._id}] Code regenerated due to fullCode conflict: ${currentDoc.fullCode} -> ${regeneratedCode.fullCode}`
+          );
+        } else {
+          logger.info(
+            `[MoneyDelivery ${currentDoc._id}] fullCode updated: ${currentDoc.fullCode} -> ${regeneratedCode.fullCode}`
+          );
+        }
+      }
+    } catch (error) {
+      return next(error as Error);
+    }
+  }
+
   next();
 });
 
@@ -146,6 +327,45 @@ moneyDeliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next)
       update.fromRoute.toString() === update.toRoute.toString()
     ) {
       return next(new Error('From route and to route cannot be the same'));
+    }
+
+    // Prevent type changes in updates
+    if (update.type !== undefined) {
+      return next(new Error('type field cannot be changed after creation'));
+    }
+
+    // Validate status transition in updates
+    if (update.status !== undefined) {
+      const doc = await this.model.findOne(this.getQuery());
+      if (
+        doc &&
+        doc.status === MoneyDeliveryStatus.DONE &&
+        update.status === MoneyDeliveryStatus.WAITING
+      ) {
+        return next(new Error('Cannot change status from "done" back to "waiting"'));
+      }
+    }
+
+    // Validate deliveryId based on type
+    if (update.deliveryId !== undefined) {
+      const doc = await this.model.findOne(this.getQuery());
+      const effectiveType =
+        update.type !== undefined ? (update.type as MoneyDeliveryType) : doc?.type;
+
+      if (
+        effectiveType &&
+        (effectiveType === MoneyDeliveryType.COLLECT ||
+          effectiveType === MoneyDeliveryType.COLLECT_FOR_CUSTOMER) &&
+        !update.deliveryId
+      ) {
+        return next(
+          new Error('deliveryId is required when type is "collect" or "collectForCustomer"')
+        );
+      }
+
+      if (effectiveType === MoneyDeliveryType.NORMAL && update.deliveryId) {
+        return next(new Error('deliveryId must be null when type is "normal"'));
+      }
     }
 
     // Calculate totalCost based on isFree flag
@@ -177,12 +397,16 @@ moneyDeliverySchema.index({ createdAt: -1 }); // Recent first
 moneyDeliverySchema.index({ fromRoute: 1, toRoute: 1, createdAt: -1 }); // Route analysis
 moneyDeliverySchema.index({ sender: 1, createdAt: -1 }); // Sender history
 moneyDeliverySchema.index({ receiver: 1, createdAt: -1 }); // Receiver history
+moneyDeliverySchema.index({ sender: 1, fromRoute: 1, createdAt: -1 }); // getFrequentCustomers optimization
 
 // 7. Code-based queries optimization
 moneyDeliverySchema.index({ code: 1, fromRoute: 1, toRoute: 1 }); // For code + route lookup
 moneyDeliverySchema.index({ subCode: 1 });
 // Additional unique index for fullCode
 moneyDeliverySchema.index({ fullCode: 1 }, { unique: true });
+// Text search indexes for sender and receiver names
+moneyDeliverySchema.index({ senderName: 'text' });
+moneyDeliverySchema.index({ receiverName: 'text' });
 
 export const MoneyDelivery = mongoose.model<IMoneyDelivery>(
   'MoneyDelivery',

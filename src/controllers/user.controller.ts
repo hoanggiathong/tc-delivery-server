@@ -76,21 +76,20 @@ export class UserController {
         req.body.additionalInformationProductList;
 
       const userId = req.user.userId;
-      const success = await this.userService.updateAdditionalInformationProductWithDefaults(
+      const updatedData = await this.userService.updateAdditionalInformationProductWithDefaults(
         userId,
         additionalInformationProductList
       );
 
-      Logger.info('Additional information product config update attempted', {
-        success,
+      Logger.info('Additional information product config updated successfully', {
         userId: req.user.userId,
+        itemCount: updatedData.length,
       });
 
       const response: ApiResponse = {
-        success,
-        message: success
-          ? 'Additional information product updated successfully'
-          : 'Failed to update additional information product',
+        success: true,
+        message: 'Additional information product updated successfully',
+        data: updatedData,
       };
 
       res.status(201).json(response);

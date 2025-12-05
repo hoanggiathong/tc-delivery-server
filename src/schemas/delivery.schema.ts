@@ -1,65 +1,93 @@
 import { z } from 'zod';
-import { DELIVERY_IDENTIFIER_PATTERN, VALIDATION_MESSAGES } from '@/utils/validation-patterns';
+import {
+  DELIVERY_IDENTIFIER_PATTERN,
+  PHONE_NUMBER_PATTERN,
+  OBJECTID_PATTERN,
+  VALIDATION_MESSAGES,
+  DATE_YYYY_MM_DD_PATTERN,
+} from '@/utils/validation-patterns';
+import { VehicleType } from '@/models/delivery.model';
 
-export const createDeliverySchema = z.object({
-  body: z.object({
-    senderName: z
-      .string()
-      .min(1, 'Sender name is required')
-      .max(100, 'Sender name must not exceed 100 characters')
-      .trim(),
-    senderPhone: z
-      .string()
-      .min(1, 'Sender phone is required')
-      .regex(/^\+?[1-9]\d{1,14}$/, 'Please enter a valid sender phone number')
-      .trim(),
-    receiverName: z
-      .string()
-      .min(1, 'Receiver name is required')
-      .max(100, 'Receiver name must not exceed 100 characters')
-      .trim(),
-    receiverPhone: z
-      .string()
-      .min(1, 'Receiver phone is required')
-      .regex(/^\+?[1-9]\d{1,14}$/, 'Please enter a valid receiver phone number')
-      .trim(),
-    fromRouteId: z
-      .string()
-      .min(1, 'From route ID is required')
-      .regex(/^[0-9a-fA-F]{24}$/, 'Please provide a valid from route ID')
-      .trim(),
-    toRouteId: z
-      .string()
-      .min(1, 'To route ID is required')
-      .regex(/^[0-9a-fA-F]{24}$/, 'Please provide a valid to route ID')
-      .trim(),
-    name: z.string().min(1, 'Item name is required').trim(),
-    nameProductAndAdditionalInformation: z.string().trim().optional(),
-    quantity: z.number().min(1, 'Quantity must be at least 1').default(1).optional(),
-    cost: z.number().min(0, 'Cost must be positive'),
-    homeDelivery: z.string().trim().optional(),
-    homeDeliveryCost: z.number().min(0, 'Home delivery cost must be positive').default(0),
-    itemValue: z.number().min(0, 'Item value must be positive'),
-    itemCost: z.number().min(0, 'Item cost must be positive'),
-    collectCost: z.number().min(0, 'Collect cost must be positive'),
-    collectForCustomer: z.number().min(0, 'Collect for customer amount must be positive'),
-    collectForCustomerCost: z.number().min(0, 'Collect for customer cost must be positive'),
-    collectForCustomerNote: z.string().trim().optional(),
-    details: z
-      .object({
-        weight: z.number().min(0, 'Weight must be positive').optional(),
-        length: z.number().min(0, 'Length must be positive').optional(),
-        width: z.number().min(0, 'Width must be positive').optional(),
-        height: z.number().min(0, 'Height must be positive').optional(),
-        isOverweight: z.boolean().default(false).optional(),
-        convertedWeight: z.number().min(0, 'Converted weight must be positive').optional(),
-      })
-      .optional(),
-    notes: z.string().trim().optional(),
-    paymentType: z.enum(['paid', 'debt']).default('paid').optional(),
-    isFree: z.boolean().default(false).optional(),
-  }),
-});
+export const createDeliverySchema = z
+  .object({
+    body: z.object({
+      senderName: z
+        .string()
+        .min(1, 'Sender name is required')
+        .max(100, 'Sender name must not exceed 100 characters')
+        .trim(),
+      senderPhone: z
+        .string()
+        .min(1, 'Sender phone is required')
+        .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
+        .trim(),
+      receiverName: z
+        .string()
+        .min(1, 'Receiver name is required')
+        .max(100, 'Receiver name must not exceed 100 characters')
+        .trim(),
+      receiverPhone: z
+        .string()
+        .min(1, 'Receiver phone is required')
+        .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
+        .trim(),
+      fromRouteId: z
+        .string()
+        .min(1, 'From route ID is required')
+        .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
+        .trim(),
+      toRouteId: z
+        .string()
+        .min(1, 'To route ID is required')
+        .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
+        .trim(),
+      name: z.string().min(1, 'Item name is required').trim(),
+      nameProductAndAdditionalInformation: z.string().trim().optional(),
+      quantity: z.number().min(1, 'Quantity must be at least 1').default(1).optional(),
+      cost: z.number().min(0, 'Cost must be positive'),
+      homeDelivery: z.string().trim().optional(),
+      homeDeliveryCost: z
+        .number()
+        .min(0, 'Home delivery cost must be positive')
+        .default(0)
+        .optional(),
+      carryCost: z.number().min(0, 'Carry cost must be positive').default(0).optional(),
+      vehicleType: z.nativeEnum(VehicleType).nullable().optional(),
+      itemValue: z.number().min(0, 'Item value must be positive'),
+      itemCost: z.number().min(0, 'Item cost must be positive'),
+      collectCost: z.number().min(0, 'Collect cost must be positive'),
+      collectForCustomer: z.number().min(0, 'Collect for customer amount must be positive'),
+      collectForCustomerCost: z.number().min(0, 'Collect for customer cost must be positive'),
+      collectForCustomerNote: z.string().trim().optional(),
+      details: z
+        .object({
+          weight: z.number().min(0, 'Weight must be positive').optional(),
+          length: z.number().min(0, 'Length must be positive').optional(),
+          width: z.number().min(0, 'Width must be positive').optional(),
+          height: z.number().min(0, 'Height must be positive').optional(),
+          isOverweight: z.boolean().default(false).optional(),
+          convertedWeight: z.number().min(0, 'Converted weight must be positive').optional(),
+        })
+        .optional(),
+      notes: z.string().trim().optional(),
+      paymentType: z.enum(['paid', 'debt']).default('paid').optional(),
+      isFree: z.boolean().default(false).optional(),
+    }),
+  })
+  .refine(
+    data => {
+      const { homeDelivery, vehicleType } = data.body;
+      // If homeDelivery has value, vehicleType must be provided
+      if (homeDelivery && homeDelivery.trim() !== '' && !vehicleType) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: 'vehicleType is required when homeDelivery is provided',
+      path: ['body', 'vehicleType'],
+    }
+  );
 
 export const updateDeliverySchema = z.object({
   body: z.object({
@@ -72,7 +100,7 @@ export const updateDeliverySchema = z.object({
     senderPhone: z
       .string()
       .min(1, 'Sender phone is required')
-      .regex(/^\+?[1-9]\d{1,14}$/, 'Please enter a valid sender phone number')
+      .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
       .trim()
       .optional(),
     receiverName: z
@@ -84,19 +112,19 @@ export const updateDeliverySchema = z.object({
     receiverPhone: z
       .string()
       .min(1, 'Receiver phone is required')
-      .regex(/^\+?[1-9]\d{1,14}$/, 'Please enter a valid receiver phone number')
+      .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
       .trim()
       .optional(),
     fromRouteId: z
       .string()
       .min(1, 'From route ID is required')
-      .regex(/^[0-9a-fA-F]{24}$/, 'Please provide a valid from route ID')
+      .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
       .trim()
       .optional(),
     toRouteId: z
       .string()
       .min(1, 'To route ID is required')
-      .regex(/^[0-9a-fA-F]{24}$/, 'Please provide a valid to route ID')
+      .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
       .trim()
       .optional(),
     name: z.string().min(1, 'Item name is required').trim().optional(),
@@ -109,6 +137,8 @@ export const updateDeliverySchema = z.object({
       .min(0, 'Home delivery cost must be positive')
       .default(0)
       .optional(),
+    carryCost: z.number().min(0, 'Carry cost must be positive').default(0).optional(),
+    vehicleType: z.nativeEnum(VehicleType).nullable().optional(),
     itemValue: z.number().min(0, 'Item value must be positive').optional(),
     itemCost: z.number().min(0, 'Item cost must be positive').optional(),
     collectCost: z.number().min(0, 'Collect cost must be positive').optional(),
@@ -149,7 +179,7 @@ export const getNextCodeSchema = z.object({
     toRouteId: z
       .string()
       .min(1, 'To route ID is required')
-      .regex(/^[0-9a-fA-F]{24}$/, 'Please provide a valid to route ID')
+      .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
       .trim(),
   }),
 });
@@ -192,34 +222,36 @@ export const deliveryCostReportSchema = z
     query: z.object({
       startDate: z
         .string()
-        .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid start date in ISO format')
-        .transform(val => new Date(val))
-        .refine(val => {
-          const oneMonthAgo = new Date();
-          oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-          return val >= oneMonthAgo;
-        }, 'Start date cannot be more than 1 month in the past'),
+        .regex(DATE_YYYY_MM_DD_PATTERN, VALIDATION_MESSAGES.DATE_YYYY_MM_DD)
+        .transform(val => new Date(val)),
       endDate: z
         .string()
-        .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid end date in ISO format')
+        .regex(DATE_YYYY_MM_DD_PATTERN, VALIDATION_MESSAGES.DATE_YYYY_MM_DD)
         .transform(val => new Date(val))
-        .refine(val => val <= new Date(), 'End date cannot be in the future'),
-      page: z
-        .string()
-        .optional()
-        .transform(val => (val ? parseInt(val) : 1))
-        .refine(val => val >= 1, 'Page must be greater than 0'),
-      limit: z
-        .string()
-        .optional()
-        .transform(val => (val ? parseInt(val) : 100))
-        .refine(val => val >= 1 && val <= 100, 'Limit must be between 1 and 100'),
+        .refine(val => {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const endDate = new Date(val);
+          endDate.setHours(0, 0, 0, 0);
+          return endDate <= today;
+        }, 'End date cannot be in the future'),
     }),
   })
   .refine(data => data.query.startDate <= data.query.endDate, {
     message: 'Start date must be before or equal to end date',
     path: ['query', 'startDate'],
-  });
+  })
+  .refine(
+    data => {
+      const diffTime = Math.abs(data.query.endDate.getTime() - data.query.startDate.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays <= 30;
+    },
+    {
+      message: 'Date range cannot exceed 30 days',
+      path: ['query', 'endDate'],
+    }
+  );
 
 export type CreateDeliveryRequest = z.infer<typeof createDeliverySchema>['body'];
 export type UpdateDeliveryRequest = z.infer<typeof updateDeliverySchema>['body'];
@@ -227,18 +259,6 @@ export type GetNextCodeRequest = z.infer<typeof getNextCodeSchema>['query'];
 export type DeliveryCodeParams = z.infer<typeof deliveryCodeSchema>['params'];
 export type FrequentCustomersParams = z.infer<typeof frequentCustomersSchema>['params'];
 export type DeliveryCostReportQuery = z.infer<typeof deliveryCostReportSchema>['query'];
-
-// Schema for delivery receipt by code
-export const deliveryReceiptSchema = z.object({
-  params: z.object({
-    code: z
-      .string()
-      .min(10, 'Delivery code must be at least 10 characters')
-      .max(10, 'Delivery code must be exactly 10 characters')
-      .regex(/^\d{10}$/, 'Invalid delivery code format. Expected: 10 digits (e.g., 2412170001)')
-      .trim(),
-  }),
-});
 
 // Schema for delivery fullCode parameter
 export const deliveryFullCodeSchema = z.object({
@@ -252,7 +272,6 @@ export const deliveryFullCodeSchema = z.object({
   }),
 });
 
-export type DeliveryReceiptParams = z.infer<typeof deliveryReceiptSchema>['params'];
 export type DeliveryFullCodeParams = z.infer<typeof deliveryFullCodeSchema>['params'];
 
 // Schema for deleting delivery by fullCode with password verification

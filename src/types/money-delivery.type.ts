@@ -1,28 +1,54 @@
 import { Types } from 'mongoose';
 import { BaseEntity } from '.';
-import { ICustomerResponse } from './customer.type';
 import { IRouteResponse } from './route.type';
 import { ICustomer } from '@/models/customer.model';
-import { IMoneyDelivery } from '@/models/money-delivery.model';
+import {
+  IMoneyDelivery,
+  IMoneyDeliveryImage,
+  MoneyDeliveryStatus,
+  MoneyDeliveryType,
+  TransferType,
+} from '@/models/money-delivery.model';
 import { IUser } from '@/models/user.model';
 import { IRoute } from '@/models/route.model';
+
+// Simplified customer info for money delivery response
+export interface IMoneyDeliveryCustomerInfo {
+  id: string;
+  name: string;
+  phone: string;
+}
 
 // MoneyDelivery response interface
 export interface IMoneyDeliveryResponse extends BaseEntity {
   code: string;
   fullCode: string;
   subCode: string;
-  sender: ICustomerResponse;
-  receiver: ICustomerResponse;
+  sender: IMoneyDeliveryCustomerInfo;
+  receiver: IMoneyDeliveryCustomerInfo;
   fromRoute: IRouteResponse;
   toRoute: IRouteResponse;
   sendMoneyAmount: number;
   sendCost: number;
-  transferType: 'regular' | 'express';
+  transferType: TransferType;
   isFree: boolean;
   totalCost: number;
   notes?: string;
+  status: MoneyDeliveryStatus;
+  type: MoneyDeliveryType;
+  deliveryId?: string;
   createdByUser: string;
+  delivery?: {
+    _id: Types.ObjectId;
+    code: string;
+    name: string;
+    note: string;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+  dateReturn?: Date;
+  contentReturn?: string;
+  images?: IMoneyDeliveryImage[];
 }
 
 // MoneyDelivery creation request interface
@@ -34,12 +60,15 @@ export interface IMoneyDeliveryCreateRequest {
   toRouteId: string;
   sendMoneyAmount: number;
   sendCost: number;
-  transferType?: 'regular' | 'express';
+  transferType?: TransferType;
   isFree?: boolean;
   notes?: string;
+  status?: MoneyDeliveryStatus;
+  type?: MoneyDeliveryType;
+  deliveryId?: string;
+  fromRouteId?: string;
 }
 
-// MoneyDelivery update request interface
 export interface IMoneyDeliveryUpdateRequest {
   senderName?: string;
   senderPhone?: string;
@@ -48,9 +77,11 @@ export interface IMoneyDeliveryUpdateRequest {
   toRouteId?: string;
   sendMoneyAmount?: number;
   sendCost?: number;
-  transferType?: 'regular' | 'express';
+  transferType?: TransferType;
   isFree?: boolean;
   notes?: string;
+  status?: MoneyDeliveryStatus;
+  deliveryId?: string;
 }
 
 // Interface for populated money delivery (when sender, receiver, fromRoute, toRoute, createdByUser are populated)
@@ -69,22 +100,29 @@ export interface IMoneyDeliveryWithPopulatedRefs {
   code: string;
   fullCode: string;
   subCode: string;
+  senderName: string;
+  receiverName: string;
   sender: ICustomer;
   receiver: ICustomer;
   fromRoute: IRoute;
   toRoute: IRoute;
   sendMoneyAmount: number;
   sendCost: number;
-  transferType: 'regular' | 'express';
+  transferType: TransferType;
   isFree: boolean;
   totalCost: number;
   notes?: string;
+  status: MoneyDeliveryStatus;
+  type: MoneyDeliveryType;
+  deliveryId?: Types.ObjectId;
   createdByUser: {
     _id: string;
     username: string;
   };
   createdAt: Date;
   updatedAt: Date;
+  dateReturn?: Date;
+  contentReturn?: string;
 }
 
 // Interface for getting next money delivery code
@@ -117,9 +155,10 @@ export interface IMoneyDeliveryLeanPopulated {
   code: string;
   fullCode: string;
   subCode: string;
+  senderName: string;
+  receiverName: string;
   sender: {
     _id: string;
-    name: string;
     phone: string;
     routeId: Types.ObjectId;
     createdAt: Date;
@@ -127,7 +166,6 @@ export interface IMoneyDeliveryLeanPopulated {
   };
   receiver: {
     _id: string;
-    name: string;
     phone: string;
     routeId: Types.ObjectId;
     createdAt: Date;
@@ -138,6 +176,7 @@ export interface IMoneyDeliveryLeanPopulated {
     code: string;
     name: string;
     address: string;
+    phone?: string;
     createdAt: Date;
     updatedAt: Date;
   };
@@ -146,21 +185,28 @@ export interface IMoneyDeliveryLeanPopulated {
     code: string;
     name: string;
     address: string;
+    phone?: string;
     createdAt: Date;
     updatedAt: Date;
   };
   sendMoneyAmount: number;
   sendCost: number;
-  transferType: 'regular' | 'express';
+  transferType: TransferType;
   isFree: boolean;
   totalCost: number;
   notes?: string;
+  status: MoneyDeliveryStatus;
+  type: MoneyDeliveryType;
+  deliveryId?: string;
   createdByUser: {
     _id: string;
     username: string;
   };
   createdAt: Date;
   updatedAt: Date;
+  dateReturn?: Date;
+  contentReturn?: string;
+  images?: IMoneyDeliveryImage[];
 }
 
 // Interface for frequent money customers
@@ -173,29 +219,7 @@ export interface IFrequentMoneyCustomer {
     id: string;
     code: string;
     name: string;
-    address: string;
-  };
-  totalSendMoneyAmount: number;
-  totalSendCost: number;
-  totalCost: number;
-  lastDeliveryDate: Date;
-}
-
-// Interface for frequent money customers response
-export interface IFrequentMoneyCustomersResponse {
-  senderIdentifier: string;
-  senderInfo: {
-    name: string;
-    phone: string;
-  } | null;
-  frequentCustomers: IFrequentMoneyCustomer[];
-  pagination: {
-    currentPage: number;
-    totalPages: number;
-    totalRecords: number;
-    limit: number;
-    hasNextPage: boolean;
-    hasPrevPage: boolean;
+    address?: string;
   };
 }
 
@@ -207,7 +231,7 @@ export interface CreateMoneyDeliveryRequest {
   toRouteId: string;
   sendMoneyAmount: number;
   sendCost: number;
-  transferType?: 'regular' | 'express';
+  transferType?: TransferType;
   isFree?: boolean;
   notes?: string;
 }
@@ -220,22 +244,16 @@ export interface UpdateMoneyDeliveryRequest {
   toRouteId?: string;
   sendMoneyAmount?: number;
   sendCost?: number;
-  transferType?: 'regular' | 'express';
+  transferType?: TransferType;
   isFree?: boolean;
   notes?: string;
 }
 
 // Today Report Interfaces (simplified, no pagination)
-export interface ITodayMoneyDeliverySummary {
-  totalMoneyDeliveries: number;
-  totalSendMoneyAmount: number;
-  totalSendCost: number;
-  date: string; // YYYY-MM-DD format
-}
-
 export interface ITodayMoneyDeliveryItem {
   id: string;
   code: string;
+  subCode: string;
   sender: {
     name: string;
     phone: string;
@@ -252,15 +270,17 @@ export interface ITodayMoneyDeliveryItem {
   sendMoneyAmount: number;
   sendCost: number;
   totalCost: number;
-  transferType: 'regular' | 'express';
+  transferType: TransferType;
   isFree: boolean;
   notes: string;
   fullCode: string;
+  status: MoneyDeliveryStatus;
+  type: MoneyDeliveryType;
+  deliveryId?: string;
   createdAt: Date;
 }
 
 export interface ITodayMoneyDeliveryReport {
-  summary: ITodayMoneyDeliverySummary;
   moneyDeliveries: ITodayMoneyDeliveryItem[];
   routeInfo: {
     route: {
@@ -273,7 +293,7 @@ export interface ITodayMoneyDeliveryReport {
   };
 }
 
-// Cost Report Interfaces (with pagination)
+// Cost Report Interfaces
 export interface IMoneyDeliveryCostReportSummary {
   totalMoneyDeliveries: number;
   totalSendMoneyAmount: number;
@@ -310,24 +330,15 @@ export interface IMoneyDeliveryReportItem {
     code: string;
     name: string;
   };
-
-  // Chi tiết chi phí
   sendMoneyAmount: number;
   sendCost: number;
   totalCost: number;
-
-  transferType: 'regular' | 'express';
+  transferType: TransferType;
   isFree: boolean;
   notes?: string;
-}
-
-export interface IMoneyDeliveryCostReportPagination {
-  currentPage: number;
-  totalPages: number;
-  totalRecords: number;
-  limit: number;
-  hasNextPage: boolean;
-  hasPrevPage: boolean;
+  status: MoneyDeliveryStatus;
+  type: MoneyDeliveryType;
+  deliveryId?: string;
 }
 
 export interface IMoneyDeliveryCostReportFilter {
@@ -346,7 +357,6 @@ export interface IMoneyDeliveryCostReportFilter {
 export interface IMoneyDeliveryCostReport {
   summary: IMoneyDeliveryCostReportSummary;
   moneyDeliveries: IMoneyDeliveryReportItem[];
-  pagination: IMoneyDeliveryCostReportPagination;
   filter: IMoneyDeliveryCostReportFilter;
 }
 
@@ -369,4 +379,94 @@ export interface IMoneyAggregationResultItem {
     name: string;
     phone: string;
   };
+}
+
+export interface IMoneyDeliveryUpdateData {
+  sender?: Types.ObjectId;
+  receiver?: Types.ObjectId;
+  fromRoute?: Types.ObjectId;
+  toRoute?: Types.ObjectId;
+  sendMoneyAmount?: number;
+  sendCost?: number;
+  transferType?: TransferType;
+  isFree?: boolean;
+  notes?: string;
+  status?: MoneyDeliveryStatus;
+  deliveryId?: Types.ObjectId;
+  totalCost?: number;
+}
+
+export interface ITodayMoneyDeliveryRawItem {
+  _id: string;
+  code: string;
+  sender: {
+    name: string;
+    phone: string;
+  };
+  receiver: {
+    name: string;
+    phone: string;
+  };
+  toRoute: {
+    id: string;
+    code: string;
+    name: string;
+    address: string;
+  };
+  sendMoneyAmount: number;
+  sendCost: number;
+  totalCost: number;
+  transferType: TransferType;
+  notes?: string;
+  fullCode: string;
+  createdAt: Date;
+  status: MoneyDeliveryStatus;
+  type: MoneyDeliveryType;
+  deliveryId?: string;
+}
+
+export interface IMoneyDeliveryCostReportRawItem {
+  _id: string;
+  code: string;
+  fullCode: string;
+  subCode: string;
+  sender: {
+    name: string;
+    phone: string;
+  };
+  receiver: {
+    name: string;
+    phone: string;
+  };
+  toRoute: {
+    id: string;
+    code: string;
+    name: string;
+    address: string;
+  };
+  sendMoneyAmount: number;
+  sendCost: number;
+  totalCost: number;
+  transferType: TransferType;
+  notes?: string;
+  createdAt: Date;
+  status: MoneyDeliveryStatus;
+  type: MoneyDeliveryType;
+  deliveryId?: string;
+}
+
+export interface IReturnDeliveryAndMoneyDeliveryResponse {
+  _id: string;
+  sendMoneyAmount: number;
+  sendCost: number;
+  type: MoneyDeliveryType;
+  status: MoneyDeliveryStatus;
+  dateReturn?: Date;
+  contentReturn?: string;
+}
+
+export interface IGetListReportReturnMoneyDeliveryResponse {
+  quantityReturnIsToday: number;
+  quantityReturnIsOld: number;
+  quantityReturnTotalToday: number;
 }

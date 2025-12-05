@@ -1,4 +1,6 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import { appConfig } from '@/config/app.config';
+import { generateFullImageUrl, extractBasePath } from '@/utils/image-url.utils';
 
 export interface ICustomerBank extends Document {
   _id: string;
@@ -76,6 +78,13 @@ const customerBankSchema = new Schema<ICustomerBank>(
     toJSON: {
       transform: function (_doc, ret) {
         const { _id, __v, ...rest } = ret;
+
+        // Transform QR code URL to include domain
+        if (rest.qrCodeUrl && rest.qrCodeUrl.trim() !== '') {
+          const basePath = extractBasePath(rest.qrCodeUrl);
+          rest.qrCodeUrl = generateFullImageUrl(basePath, appConfig.baseUrl);
+        }
+
         return { id: _id, ...rest };
       },
     },

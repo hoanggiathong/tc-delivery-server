@@ -1,5 +1,6 @@
 import { DEBT_MANAGEMENT_TYPE, SORT_BY } from '@/const/debt-management.const';
 import z from 'zod';
+import { OBJECTID_PATTERN, VALIDATION_MESSAGES } from '@/utils/validation-patterns';
 
 const SortBySchema = z.union([
   z.literal(SORT_BY.TO_ROUTE),
@@ -47,7 +48,7 @@ export const getListReceiptDebtManagementSchema = z
       fromRouteId: z
         .string()
         .min(1, 'From route ID is required')
-        .regex(/^[0-9a-fA-F]{24}$/, 'Please provide a valid from route ID')
+        .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
         .trim(),
       keySort: keySortOptionalSchema,
       typeSort: typeSortOptionalSchema,
@@ -73,7 +74,7 @@ export const getListPaymentDebtManagementSchema = z
       toRouteId: z
         .string()
         .min(1, 'To route ID is required')
-        .regex(/^[0-9a-fA-F]{24}$/, 'Please provide a valid from route ID')
+        .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
         .trim(),
       keySort: keySortOptionalSchema,
       typeSort: typeSortOptionalSchema,
@@ -90,7 +91,7 @@ export const debtManagementParamsSchema = z.object({
     id: z
       .string()
       .min(1, 'Debt Management ID is required')
-      .regex(/^[0-9a-fA-F]{24}$/, 'Please provide a valid to route ID')
+      .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
       .trim(),
   }),
 });
@@ -105,12 +106,12 @@ export const createDebtManagementSchema = z.object({
     fromRoute: z
       .string()
       .min(1, 'To route ID is required')
-      .regex(/^[0-9a-fA-F]{24}$/, 'Please provide a valid to route ID')
+      .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
       .trim(),
     toRoute: z
       .string()
       .min(1, 'To route ID is required')
-      .regex(/^[0-9a-fA-F]{24}$/, 'Please provide a valid to route ID')
+      .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
       .trim(),
     cash: z.number().min(0, 'Send cost must be positive'),
     type: z.enum([

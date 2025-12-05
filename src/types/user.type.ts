@@ -43,6 +43,7 @@ export interface IUserBase {
   name: string;
   role: UserRole;
   selectedRouteId?: string | null;
+  additionalInformationProductConfig?: IAdditionalInformationProduct[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -55,6 +56,7 @@ export interface IUser extends Document {
   name: string;
   role: UserRole;
   selectedRouteId?: string | null;
+  additionalInformationProductConfig?: IAdditionalInformationProduct[];
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -67,6 +69,7 @@ export interface IUserResponse {
   name: string;
   role: UserRole;
   selectedRouteId?: string | null;
+  additionalInformationProductConfig?: IAdditionalInformationProductResponse[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -85,6 +88,7 @@ export interface IUserLean {
   name: string;
   role: UserRole;
   selectedRouteId?: string | null;
+  additionalInformationProductConfig?: IAdditionalInformationProduct[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -167,16 +171,27 @@ export const hasHigherOrEqualRole = (userRole: UserRole, targetRole: UserRole): 
 export interface IAdditionalInformationProductInput {
   content: string;
   position: number;
+  selected?: boolean;
 }
 
 export interface IAdditionalInformationProduct {
   _id?: mongoose.Types.ObjectId;
   content: string;
   position: number;
+  selected?: boolean;
 }
 
 export interface IAdditionalInformationProductResponse {
   id: string;
   content: string;
   position: number;
+  selected: boolean;
+}
+
+export interface IUserFullInformationResponse {
+  id: string;
+  username: string;
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
 }

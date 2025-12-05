@@ -13,6 +13,7 @@ import {
   deleteImageSchema,
   getCustomerByPhoneSchema,
   updateCustomerBankSchema,
+  updateDataImageCustomerSchema,
 } from '@/schemas/customer.schema';
 import { uploadMiddleware } from '@/middlewares/upload.middleware';
 
@@ -58,11 +59,6 @@ router.get(
  *                 maxLength: 100
  *                 example: 'Nguyễn Văn A'
  *                 description: Customer name (required when creating new customer)
- *               type:
- *                 type: string
- *                 enum: [delivery, money]
- *                 default: delivery
- *                 description: Customer type
  *               bankInfo:
  *                 type: object
  *                 properties:
@@ -91,7 +87,6 @@ router.get(
  *             type: object
  *             required:
  *               - phone
- *               - type
  *             properties:
  *               phone:
  *                 type: string
@@ -101,10 +96,6 @@ router.get(
  *                 type: string
  *                 maxLength: 100
  *                 example: 'Nguyễn Văn A'
- *               type:
- *                 type: string
- *                 enum: [delivery, money]
- *                 default: delivery
  *               bankInfo[name]:
  *                 type: string
  *                 example: 'Nguyễn Văn A'
@@ -281,6 +272,171 @@ router.put(
  *           description: Phone number of the customer
  */
 
+/**
+ * @swagger
+ * /api/customer/get-list-customer:
+ *   get:
+ *     summary: Get list customer
+ *     tags: [Customer]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List customer retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "List customer retrieved successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     customers:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             example: "507f1f77bcf86cd799439030"
+ *                           name:
+ *                             type: string
+ *                             example: "Nguyễn Văn A"
+ *                           phone:
+ *                             type: string
+ *                             example: "+84912345678"
+ *                           route:
+ *                             type: object
+ *                             properties:
+ *                               id:
+ *                                 type: string
+ *                               code:
+ *                                 type: string
+ *                               name:
+ *                                 type: string
+ *                               address:
+ *                                 type: string
+ *                           images:
+ *                             type: array
+ *                             items:
+ *                               type: object
+ *                               properties:
+ *                                 url:
+ *                                   type: string
+ *                                 rotate:
+ *                                   type: number
+ *                           bank:
+ *                             type: object
+ *                             properties:
+ *                               id:
+ *                                 type: string
+ *                               name:
+ *                                 type: string
+ *                               bankName:
+ *                                 type: string
+ *                               bankAccount:
+ *                                 type: string
+ *                           createdBy:
+ *                             type: object
+ *                             properties:
+ *                               id:
+ *                                 type: string
+ *                               username:
+ *                                 type: string
+ *                               name:
+ *                                 type: string
+ *                               createdAt:
+ *                                 type: string
+ *                               updatedAt:
+ *                                 type: string
+ *                           address:
+ *                             type: string
+ *                           identityCardIssuedDate:
+ *                             type: string
+ *                           identityCardNumber:
+ *                             type: string
+ *                           createdAt:
+ *                             type: string
+ *                           updatedAt:
+ *                             type: string
+ *             examples:
+ *               success:
+ *                 summary: Get list customer successfully
+ *                 value:
+ *                   success: true
+ *                   message: "List customer retrieved successfully"
+ *                   data:
+ *                     customers:
+ *                       - id: "507f1f77bcf86cd799439030"
+ *                         name: "Nguyễn Văn A"
+ *                         phone: "+84912345678"
+ *                         type: "delivery"
+ *                         route:
+ *                           id: "507f1f77bcf86cd799439031"
+ *                           code: "T1"
+ *                           name: "Tuyến 1"
+ *                           address: "123 Đường ABC"
+ *                         images:
+ *                           - url: "https://example.com/image1.jpg"
+ *                             rotate: 0
+ *                           - url: "https://example.com/image2.jpg"
+ *                             rotate: 90
+ *                         bank:
+ *                           id: "507f1f77bcf86cd799439032"
+ *                           name: "Nguyễn Văn A"
+ *                           bankName: "Vietcombank"
+ *                           bankAccount: "0071000123456"
+ *                         createdBy:
+ *                           id: "507f1f77bcf86cd799439033"
+ *                           username: "admin"
+ *                           name: "Administrator"
+ *                           createdAt: "2024-01-01T00:00:00.000Z"
+ *                           updatedAt: "2024-01-01T00:00:00.000Z"
+ *                         address: "123 Đường XYZ, Q1, TP.HCM"
+ *                         identityCardIssuedDate: "2020-01-01"
+ *                         identityCardNumber: "123456789"
+ *                         createdAt: "2024-12-17T10:00:00.000Z"
+ *                         updatedAt: "2024-12-17T10:00:00.000Z"
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Unauthorized"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
+ */
+router.get(
+  '/get-list-customer',
+  authenticateToken,
+  requireRole([UserRole.USER, UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]),
+  customerController.getListCustomer
+);
+
 // All customer routes require authentication and manager/admin/superadmin roles
 router.use(authenticateToken);
 router.use(requireRole([UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]));
@@ -369,6 +525,15 @@ router.delete(
   requireRole([UserRole.USER, UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]),
   validate(customerParamsSchema),
   customerController.deleteImagesAndBankInfo
+);
+
+// Update customer images data
+router.put(
+  '/update-data-images-customer/:customerId',
+  authenticateToken,
+  requireRole([UserRole.USER, UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]),
+  validate(updateDataImageCustomerSchema),
+  customerController.updateDataImageCustomer
 );
 
 export default router;

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import authRoutes from './auth.routes';
 import customerRoutes from './customer.routes';
+import customerAddressHistoryRoutes from './customer-address-history.routes';
 import debtManagementRoutes from './debt-management.route';
 import debtRoutes from './debt.routes';
 import deliveryRoutes from './delivery.routes';
@@ -11,12 +12,16 @@ import settingsRoutes from './settings.routes';
 import testRoutes from './test.routes';
 import userRouteRoutes from './user-route.routes';
 import userRoutes from './user.route';
+import returnDeliveriesRoutes from './return-deliveries.route';
+import returnMoneyDeliveriesRoutes from './return-money-deliveries.route';
+import reportRoutes from './report.routes';
 
 const router = Router();
 
 router.use('/test', testRoutes);
 router.use('/auth', authRoutes);
 router.use('/customer', customerRoutes);
+router.use('/customer-address-history', customerAddressHistoryRoutes);
 router.use('/delivery', deliveryRoutes);
 router.use('/money-deliveries', moneyDeliveryRoutes);
 router.use('/route', routeRoutes);
@@ -26,5 +31,8 @@ router.use('/settings', settingsRoutes);
 router.use('/draft-deliveries', draftDeliveryRoutes);
 router.use('/debt-management', debtManagementRoutes);
 router.use('/debt', debtRoutes);
+router.use('/return-deliveries', returnDeliveriesRoutes);
+router.use('/return-money-deliveries', returnMoneyDeliveriesRoutes);
+router.use('/report', reportRoutes);
 
 export default router;

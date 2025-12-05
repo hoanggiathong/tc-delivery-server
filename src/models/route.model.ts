@@ -1,5 +1,10 @@
 import mongoose, { Document, Schema } from 'mongoose';
-import { ROUTE_CODE_PATTERN, VALIDATION_MESSAGES } from '@/utils/validation-patterns';
+import {
+  PHONE_NUMBER_PATTERN,
+  ROUTE_CODE_PATTERN,
+  VALIDATION_MESSAGES,
+} from '@/utils/validation-patterns';
+import { SurchargeUnit } from '@/types/route.type';
 
 export interface IRoute extends Document {
   _id: string;
@@ -8,7 +13,8 @@ export interface IRoute extends Document {
   address?: string;
   distance?: number;
   surcharge?: number;
-  surchargeUnit?: 'percentage' | 'fixed';
+  surchargeUnit?: SurchargeUnit;
+  phone?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -61,10 +67,16 @@ const routeSchema = new Schema<IRoute>(
       type: String,
       required: false,
       enum: {
-        values: ['percentage', 'fixed'],
+        values: Object.values(SurchargeUnit),
         message: 'Surcharge unit must be either "percentage" or "fixed"',
       },
-      default: 'percentage',
+      default: SurchargeUnit.PERCENTAGE,
+    },
+    phone: {
+      type: String,
+      required: false,
+      trim: true,
+      match: [PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER],
     },
   },
   {

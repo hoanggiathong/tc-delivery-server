@@ -1,6 +1,5 @@
 import { Response } from 'express';
 import { DeliveryService } from '@/services/delivery.service';
-import { DeliveryReceiptService } from '@/services/delivery-receipt.service';
 import { RemovedDeliveryService } from '@/services/delivery-removed.service';
 import {
   CreateDeliveryRequest,
@@ -12,12 +11,10 @@ import Logger from '@/utils/logger';
 
 export class DeliveryController {
   private deliveryService: DeliveryService;
-  private receiptService: DeliveryReceiptService;
   private removedDeliveryService: RemovedDeliveryService;
 
   constructor() {
     this.deliveryService = new DeliveryService();
-    this.receiptService = new DeliveryReceiptService();
     this.removedDeliveryService = new RemovedDeliveryService();
   }
 
@@ -1432,7 +1429,8 @@ export class DeliveryController {
    * @swagger
    * /api/delivery/cost-report:
    *   get:
-   *     summary: Get cost report for deliveries with date range filtering and pagination
+   *     summary: Get cost report for all deliveries within date range (max 30 days, Vietnam timezone)
+   *     description: Returns all deliveries from user's selected route within the specified date range (Vietnam time UTC+7). No pagination - all matching records are returned. Date range cannot exceed 30 days. Dates are interpreted as Vietnam timezone and automatically converted to UTC for database queries.
    *     tags: [Delivery]
    *     security:
    *       - bearerAuth: []
@@ -1443,7 +1441,7 @@ export class DeliveryController {
    *         schema:
    *           type: string
    *           format: date
-   *         description: Start date for filtering (ISO format). Cannot be more than 1 month in the past.
+   *         description: Start date in YYYY-MM-DD format (Vietnam timezone). Will query from 00:00:00 Vietnam time. Date range cannot exceed 30 days.
    *         example: "2024-01-01"
    *       - in: query
    *         name: endDate
@@ -1451,23 +1449,11 @@ export class DeliveryController {
    *         schema:
    *           type: string
    *           format: date
-   *         description: End date for filtering (ISO format). Cannot be in the future.
+   *         description: End date in YYYY-MM-DD format (Vietnam timezone). Will query until 23:59:59 Vietnam time. Cannot be in the future. Date range cannot exceed 30 days.
    *         example: "2024-01-31"
-   *       - in: query
-   *         name: page
-   *         schema:
-   *           type: integer
-   *           default: 1
-   *         description: Page number for pagination
-   *       - in: query
-   *         name: limit
-   *         schema:
-   *           type: integer
-   *           default: 20
-   *         description: Number of records per page
    *     responses:
    *       200:
-   *         description: Cost report retrieved successfully
+   *         description: Cost report retrieved successfully with all deliveries in date range
    *         content:
    *           application/json:
    *             schema:
@@ -1475,27 +1461,79 @@ export class DeliveryController {
    *               properties:
    *                 success:
    *                   type: boolean
+   *                   example: true
    *                 message:
    *                   type: string
+   *                   example: "Cost report retrieved successfully"
    *                 data:
    *                   type: object
    *                   properties:
-   *                     summary:
-   *                       type: object
-   *                       description: Summary statistics for the deliveries
    *                     deliveries:
    *                       type: array
-   *                       description: List of deliveries with cost details
-   *                     pagination:
+   *                       description: Complete list of all deliveries with cost details (sorted by date descending)
+   *                       items:
+   *                         type: object
+   *                         properties:
+   *                           id:
+   *                             type: string
+   *                           code:
+   *                             type: string
+   *                           sender:
+   *                             type: object
+   *                             properties:
+   *                               name:
+   *                                 type: string
+   *                               phone:
+   *                                 type: string
+   *                           receiver:
+   *                             type: object
+   *                             properties:
+   *                               name:
+   *                                 type: string
+   *                               phone:
+   *                                 type: string
+   *                           totalCost:
+   *                             type: number
+   *                           actualRevenue:
+   *                             type: number
+   *                           upItems:
+   *                             type: string
+   *                             nullable: true
+   *                             description: Items loaded at origin (lên hàng)
+   *                             example: "Hàng lên tại HCM"
+   *                           downItems:
+   *                             type: string
+   *                             nullable: true
+   *                             description: Items unloaded at destination (xuống hàng)
+   *                             example: "Hàng xuống tại Hà Nội"
+   *                     routeInfo:
    *                       type: object
-   *                       description: Pagination information
-   *                     filter:
-   *                       type: object
-   *                       description: Applied filter information
+   *                       description: Route information
+   *                       properties:
+   *                         route:
+   *                           type: object
+   *                           properties:
+   *                             id:
+   *                               type: string
+   *                             code:
+   *                               type: string
+   *                             name:
+   *                               type: string
    *       400:
-   *         description: Validation error, invalid date range, or user has no selected route
+   *         description: Validation error (date range > 30 days, invalid dates) or user has no selected route
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Date range cannot exceed 30 days"
    *       401:
-   *         description: Unauthorized
+   *         description: Unauthorized - missing or invalid authentication token
    */
   getCostReport = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
@@ -1509,16 +1547,10 @@ export class DeliveryController {
       }
 
       // Get query parameters from validated request
-      const { startDate, endDate, page, limit } = req.query as unknown as DeliveryCostReportQuery;
+      const { startDate, endDate } = req.query as unknown as DeliveryCostReportQuery;
 
-      // Call service to get cost report
-      const report = await this.deliveryService.getCostReport(
-        req.user.userId,
-        startDate,
-        endDate,
-        page,
-        limit
-      );
+      // Call service to get cost report (no pagination - returns all records)
+      const report = await this.deliveryService.getCostReport(req.user.userId, startDate, endDate);
 
       const response: ApiResponse = {
         success: true,
@@ -1538,7 +1570,7 @@ export class DeliveryController {
 
       // Determine appropriate status code
       let statusCode = 500;
-      if (message.includes('selected route')) {
+      if (message.includes('selected route') || message.includes('Date range')) {
         statusCode = 400;
       }
 
@@ -1740,192 +1772,6 @@ export class DeliveryController {
       };
 
       res.status(statusCode).json(response);
-    }
-  };
-
-  /**
-   * @swagger
-   * /api/delivery/receipt/{code}:
-   *   get:
-   *     summary: Generate PDF receipt for delivery by code
-   *     tags: [Delivery]
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: path
-   *         name: code
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: Delivery code
-   *         example: "0907250001"
-   *     responses:
-   *       200:
-   *         description: PDF receipt generated successfully
-   *         content:
-   *           application/pdf:
-   *             schema:
-   *               type: string
-   *               format: binary
-   *         headers:
-   *           Content-Disposition:
-   *             schema:
-   *               type: string
-   *               example: "attachment; filename=delivery-receipt-0907250001.pdf"
-   *       404:
-   *         description: Delivery not found
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 success:
-   *                   type: boolean
-   *                   example: false
-   *                 message:
-   *                   type: string
-   *                   example: "Delivery not found"
-   *       401:
-   *         description: Unauthorized
-   *       500:
-   *         description: Failed to generate PDF receipt
-   */
-  generateDeliveryReceiptByCode = async (req: AuthRequest, res: Response): Promise<void> => {
-    try {
-      if (!req.user) {
-        const response: ApiResponse = {
-          success: false,
-          message: 'Unauthorized',
-        };
-        res.status(401).json(response);
-        return;
-      }
-
-      const { code } = req.params;
-
-      // Get delivery by code with populated references
-      const delivery = await this.deliveryService.getDeliveryByCodeWithPopulation(code);
-
-      if (!delivery) {
-        Logger.warn('Delivery not found for receipt generation', {
-          deliveryCode: code,
-          userId: req.user.userId,
-        });
-        const response: ApiResponse = {
-          success: false,
-          message: 'Delivery not found',
-        };
-        res.status(404).json(response);
-        return;
-      }
-
-      // Generate PDF receipt
-      const pdfBuffer = await this.receiptService.generateReceiptPDF(delivery);
-
-      Logger.info('PDF receipt generated successfully', {
-        deliveryId: delivery.id,
-        deliveryCode: delivery.code,
-        userId: req.user.userId,
-      });
-
-      // Set response headers for PDF download
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader(
-        'Content-Disposition',
-        `attachment; filename=delivery-receipt-${delivery.code}.pdf`
-      );
-      res.setHeader('Content-Length', pdfBuffer.length);
-
-      res.send(pdfBuffer);
-    } catch (error) {
-      Logger.error('Failed to generate delivery receipt', {
-        error: error instanceof Error ? error.message : error,
-        deliveryCode: req.params.code,
-        userId: req.user?.userId,
-      });
-
-      const message = error instanceof Error ? error.message : 'Failed to generate PDF receipt';
-      const response: ApiResponse = {
-        success: false,
-        message,
-      };
-
-      res.status(500).json(response);
-    }
-  };
-
-  /**
-   * @swagger
-   * /api/delivery/receipt-preview/{code}:
-   *   get:
-   *     summary: Generate HTML preview for delivery receipt
-   *     tags: [Delivery]
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: path
-   *         name: code
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: Delivery code
-   *         example: "0907250001"
-   *     responses:
-   *       200:
-   *         description: HTML preview generated successfully
-   *         content:
-   *           text/html:
-   *             schema:
-   *               type: string
-   *       404:
-   *         description: Delivery not found
-   *       401:
-   *         description: Unauthorized
-   */
-  generateDeliveryReceiptPreview = async (req: AuthRequest, res: Response): Promise<void> => {
-    try {
-      if (!req.user) {
-        const response: ApiResponse = {
-          success: false,
-          message: 'Unauthorized',
-        };
-        res.status(401).json(response);
-        return;
-      }
-
-      const { code } = req.params;
-
-      // Get delivery by code with populated references
-      const delivery = await this.deliveryService.getDeliveryByCodeWithPopulation(code);
-
-      if (!delivery) {
-        const response: ApiResponse = {
-          success: false,
-          message: 'Delivery not found',
-        };
-        res.status(404).json(response);
-        return;
-      }
-
-      // Generate HTML preview
-      const html = await this.receiptService.generateReceiptHTMLPreview(delivery);
-
-      res.setHeader('Content-Type', 'text/html');
-      res.send(html);
-    } catch (error) {
-      Logger.error('Failed to generate delivery receipt preview', {
-        error: error instanceof Error ? error.message : error,
-        deliveryCode: req.params.code,
-        userId: req.user?.userId,
-      });
-
-      const message = error instanceof Error ? error.message : 'Failed to generate HTML preview';
-      const response: ApiResponse = {
-        success: false,
-        message,
-      };
-
-      res.status(500).json(response);
     }
   };
 }

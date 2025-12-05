@@ -345,9 +345,6 @@ export class CustomerController {
    *                           type: string
    *                         phone:
    *                           type: string
-   *                         type:
-   *                           type: string
-   *                           enum: [delivery, money]
    *                         bankId:
    *                           type: object
    *                           properties:
@@ -389,7 +386,6 @@ export class CustomerController {
    *                       id: "507f1f77bcf86cd799439030"
    *                       name: "Nguyễn Văn A"
    *                       phone: "+84912345678"
-   *                       type: "money"
    *                       bankId:
    *                         id: "507f1f77bcf86cd799439031"
    *                         name: "Nguyễn Văn A"
@@ -411,7 +407,6 @@ export class CustomerController {
    *                       id: "507f1f77bcf86cd799439030"
    *                       name: "Phạm Văn Đức"
    *                       phone: "+84912345678"
-   *                       type: "delivery"
    *                       bankId: null
    *                       images: []
    *                       createdAt: "2024-12-17T10:00:00.000Z"
@@ -507,8 +502,9 @@ export class CustomerController {
    */
   uploadImage = async (req: AuthRequestWithFileUploads, res: Response): Promise<void> => {
     try {
-      const { name, phone, routeId, type, imageIndex, rotate } = req.body as UploadImageRequest;
+      const { name, phone, routeId, imageIndex, rotate } = req.body as UploadImageRequest;
       const file = req.file;
+      const userId = req.user?.userId;
 
       if (!file) {
         res.status(400).json({
@@ -522,11 +518,11 @@ export class CustomerController {
         phone,
         name,
         routeId,
-        type || 'delivery',
         imageIndex,
         file.buffer,
         file.originalname,
-        rotate || 0
+        rotate || 0,
+        userId
       );
 
       res.status(200).json({
@@ -551,6 +547,7 @@ export class CustomerController {
       const { id } = req.params;
       const { imageIndex, rotate } = req.body;
       const file = req.file;
+      const userId = req.user?.userId;
 
       if (!file) {
         res.status(400).json({
@@ -565,7 +562,8 @@ export class CustomerController {
         imageIndex,
         file.buffer,
         file.originalname,
-        rotate || 0
+        rotate || 0,
+        userId
       );
 
       res.status(200).json({
@@ -592,8 +590,14 @@ export class CustomerController {
     try {
       const { id, index } = req.params;
       const { rotate } = req.body;
+      const userId = req.user?.userId;
 
-      const customer = await this.customerService.updateImageRotation(id, parseInt(index), rotate);
+      const customer = await this.customerService.updateImageRotation(
+        id,
+        parseInt(index),
+        rotate,
+        userId
+      );
 
       res.status(200).json({
         success: true,
@@ -641,7 +645,7 @@ export class CustomerController {
    */
   updateBankInfo = async (req: AuthRequestWithFileUploads, res: Response): Promise<void> => {
     try {
-      const { phone, name, type, bankInfo, images } = req.body as UpdateCustomerBankRequest;
+      const { phone, name, bankInfo, images } = req.body as UpdateCustomerBankRequest;
       const filesObject = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
       const userId = req.user?.userId;
 
@@ -680,11 +684,18 @@ export class CustomerController {
         }));
       }
 
-      // Update customer with all data
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'User not authenticated',
+        });
+        return;
+      }
+
       const customer = await this.customerService.updateCustomerBankInfo(
         phone,
         routeId,
-        type || 'delivery',
+        userId,
         name,
         bankInfo,
         imagesData.length > 0 ? imagesData : undefined
@@ -746,6 +757,231 @@ export class CustomerController {
         success: false,
         message: error instanceof Error ? error.message : 'Failed to delete images and bank info',
       });
+    }
+  };
+
+  getListCustomer = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'User not authenticated',
+        });
+        return;
+      }
+
+      const customers = await this.customerService.getListCustomer(userId);
+
+      res.status(200).json({
+        success: true,
+        message: 'List customer retrieved successfully',
+        data: customers,
+      });
+    } catch (error) {
+      console.error('Get list customer error:', error);
+      const statusCode =
+        error instanceof Error && error.message === 'Customer not found' ? 404 : 500;
+      res.status(statusCode).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to get list customer',
+      });
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/customer/update-data-images-customer/{customerId}:
+   *   put:
+   *     summary: Update customer images data
+   *     tags: [Customer]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: customerId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Customer ID
+   *         example: "507f1f77bcf86cd799439011"
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               images:
+   *                 type: array
+   *                 maxItems: 5
+   *                 items:
+   *                   type: object
+   *                   properties:
+   *                     id:
+   *                       type: string
+   *                       description: Image ID (optional)
+   *                       example: "507f1f77bcf86cd799439011"
+   *                     url:
+   *                       type: string
+   *                       description: Image URL
+   *                       example: "/uploads/customers/507f1f77bcf86cd799439011/customer_1_1734567890123.jpg?v=1734567890123"
+   *                     rotate:
+   *                       type: number
+   *                       enum: [0, 90, 180, 270]
+   *                       default: 0
+   *                       description: Rotation angle
+   *                       example: 0
+   *                 description: Array of image objects (max 5)
+   *           examples:
+   *             updateImages:
+   *               summary: Update images data
+   *               value:
+   *                 images:
+   *                   - id: "507f1f77bcf86cd799439011"
+   *                     url: "/uploads/customers/507f1f77bcf86cd799439011/customer_1_1734567890123.jpg?v=1734567890123"
+   *                     rotate: 90
+   *                   - id: "507f1f77bcf86cd799439012"
+   *                     url: "/uploads/customers/507f1f77bcf86cd799439011/customer_2_1734567890124.jpg?v=1734567890124"
+   *                     rotate: 0
+   *     responses:
+   *       200:
+   *         description: Update data images customer successful
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "update data images customer successful"
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       url:
+   *                         type: string
+   *                         example: "/uploads/customers/507f1f77bcf86cd799439011/customer_1_1734567890123.jpg?v=1734567890123"
+   *                       rotate:
+   *                         type: number
+   *                         example: 0
+   *             examples:
+   *               success:
+   *                 summary: Update images successful
+   *                 value:
+   *                   success: true
+   *                   message: "update data images customer successful"
+   *                   data:
+   *                     - url: "/uploads/customers/507f1f77bcf86cd799439011/customer_1_1734567890123.jpg?v=1734567890123"
+   *                       rotate: 90
+   *                     - url: "/uploads/customers/507f1f77bcf86cd799439011/customer_2_1734567890124.jpg?v=1734567890124"
+   *                       rotate: 0
+   *       400:
+   *         description: Validation error or business logic error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   examples:
+   *                     validation:
+   *                       value: 'Validation failed: Customer ID is required'
+   *                     not_found:
+   *                       value: 'Customer not found'
+   *       401:
+   *         description: Unauthorized - Invalid or missing token
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: 'Unauthorized'
+   *       404:
+   *         description: Customer not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: 'Customer not found'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: 'Failed to update data images customer'
+   */
+  updateDataImageCustomer = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { customerId } = req.params;
+      const { images } = req.body;
+
+      // Convert images array to ICustomerImage[] format (remove id field if present)
+      const imagesData: Array<{ url: string; rotate: number }> =
+        images?.map((img: { id?: string; url: string; rotate: number }) => ({
+          url: img.url,
+          rotate: img.rotate || 0,
+        })) || [];
+
+      const result = await this.customerService.updateDataImageCustomer(customerId, imagesData);
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'update data images customer successful',
+        data: result,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      console.error('Update data images customer error:', error);
+
+      const message =
+        error instanceof Error ? error.message : 'Failed to update data images customer';
+      const statusCode =
+        error instanceof Error && error.message === 'Customer not found' ? 404 : 400;
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(statusCode).json(response);
     }
   };
 }

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { OBJECTID_PATTERN, VALIDATION_MESSAGES } from '@/utils/validation-patterns';
 
 const shippingRateSchema = z.object({
   fromAmount: z.number().min(0, 'From amount must be non-negative'),
@@ -154,13 +155,13 @@ export const updateProductListSchema = z.object({
 
 export const deleteShippingRateSchema = z.object({
   params: z.object({
-    id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format'),
+    id: z.string().regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID),
   }),
 });
 
 export const updateShippingRateByIdSchema = z.object({
   params: z.object({
-    id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format'),
+    id: z.string().regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID),
   }),
   body: z
     .object({
@@ -203,13 +204,13 @@ export const updateShippingRateByIdSchema = z.object({
 
 export const deleteProductSchema = z.object({
   params: z.object({
-    id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format'),
+    id: z.string().regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID),
   }),
 });
 
 export const updateProductByIdSchema = z.object({
   params: z.object({
-    id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format'),
+    id: z.string().regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID),
   }),
   body: z
     .object({

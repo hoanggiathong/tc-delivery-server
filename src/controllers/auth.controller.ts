@@ -98,21 +98,21 @@ export class AuthController {
    *             properties:
    *               username:
    *                 type: string
-   *                 example: "user123"
+   *                 example: "admin"
    *               password:
    *                 type: string
-   *                 example: "Password123!"
+   *                 example: "Admin@123"
    *           examples:
-   *             userLogin:
+   *            adminLogin:
+   *               summary: Admin login
+   *               value:
+   *                 username: "admin"
+   *                 password: "Admin@123"
+   *            userLogin:
    *               summary: User login
    *               value:
    *                 username: "user123"
    *                 password: "Password123!"
-   *             adminLogin:
-   *               summary: Admin login
-   *               value:
-   *                 username: "admin"
-   *                 password: "AdminPass123!"
    *     responses:
    *       200:
    *         description: Login successful

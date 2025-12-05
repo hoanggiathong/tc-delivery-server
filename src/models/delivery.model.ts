@@ -1,5 +1,12 @@
-import mongoose, { Document, Schema } from 'mongoose';
 import { PaymentType } from '@/types';
+import mongoose, { Document, Schema } from 'mongoose';
+import logger from '@/utils/logger';
+
+export enum VehicleType {
+  MOTORBIKE = 'motorbike',
+  SMALL_TRUCK = 'small-truck',
+  LARGE_TRUCK = 'large-truck',
+}
 
 export interface IDelivery extends Document {
   _id: string;
@@ -7,7 +14,9 @@ export interface IDelivery extends Document {
   fullCode: string;
   subCode: string;
   sender: mongoose.Types.ObjectId;
+  senderName: string;
   receiver: mongoose.Types.ObjectId;
+  receiverName: string;
   fromRoute: mongoose.Types.ObjectId;
   toRoute: mongoose.Types.ObjectId;
   name: string;
@@ -16,6 +25,9 @@ export interface IDelivery extends Document {
   cost: number;
   homeDelivery?: string;
   homeDeliveryCost: number;
+  carryCost: number; // Phí bốc xếp
+  homeDeliveryCostTotal?: number; // Tổng phí giao tận nhà (carryCost + homeDeliveryCost)
+  vehicleType?: VehicleType | null; // Loại phương tiện (required when homeDeliveryCost > 0)
   itemValue: number;
   itemCost: number;
   collectCost: number; // Thu hộ
@@ -32,11 +44,26 @@ export interface IDelivery extends Document {
   };
   notes?: string;
   totalCost: number;
+  actualRevenue: number; // Tổng thực thu (bao gồm cả tiền thu dùm)
   paymentType: PaymentType; // 'paid' (default), 'debt' (nợ)
   isFree: boolean; // Miễn phí (default false)
   createdByUser: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
+  isReturn: boolean; // tra hang
+  inventory?: string; // kho
+  smsType?: string;
+  timeToSendSMS?: Date;
+  upItems?: string; // len hang
+  downItems?: string; //xuong hang
+  quantityReturn: number; // so luong tra hang
+  returnDeliveryImages?: IReturnDeliveryImage[];
+  dateReturn?: Date; // ngay tra hang
+}
+
+export interface IReturnDeliveryImage {
+  url: string;
+  rotate: number;
 }
 
 const deliverySchema = new Schema<IDelivery>(
@@ -62,10 +89,22 @@ const deliverySchema = new Schema<IDelivery>(
       ref: 'Customer',
       required: [true, 'Sender is required'],
     },
+    senderName: {
+      type: String,
+      required: [true, 'Sender name is required'],
+      trim: true,
+      maxlength: [100, 'Sender name must not exceed 100 characters'],
+    },
     receiver: {
       type: Schema.Types.ObjectId,
       ref: 'Customer',
       required: [true, 'Receiver is required'],
+    },
+    receiverName: {
+      type: String,
+      required: [true, 'Receiver name is required'],
+      trim: true,
+      maxlength: [100, 'Receiver name must not exceed 100 characters'],
     },
     fromRoute: {
       type: Schema.Types.ObjectId,
@@ -100,9 +139,26 @@ const deliverySchema = new Schema<IDelivery>(
     },
     homeDeliveryCost: {
       type: Number,
-      required: [true, 'Home delivery cost is required'],
+      required: false,
       min: [0, 'Home delivery cost must be positive'],
       default: 0,
+    },
+    carryCost: {
+      type: Number,
+      required: false,
+      min: [0, 'Carry cost must be positive'],
+      default: 0,
+    },
+    homeDeliveryCostTotal: {
+      type: Number,
+      required: false,
+      min: [0, 'Home delivery cost total must be positive'],
+    },
+    vehicleType: {
+      type: String,
+      enum: Object.values(VehicleType),
+      required: false,
+      default: null,
     },
     itemValue: {
       type: Number,
@@ -134,6 +190,12 @@ const deliverySchema = new Schema<IDelivery>(
       type: Number,
       required: false, // Will be calculated by pre-save middleware
       min: [0, 'Total cost must be positive'],
+      default: 0,
+    },
+    actualRevenue: {
+      type: Number,
+      required: false, // Will be calculated by pre-save middleware
+      min: [0, 'Actual revenue must be positive'],
       default: 0,
     },
     collectForCustomerNote: {
@@ -191,8 +253,70 @@ const deliverySchema = new Schema<IDelivery>(
     },
     nameProductAndAdditionalInformation: {
       type: String,
-      required: [true, 'Item name and additional information is required'],
+      required: false,
       trim: true,
+    },
+    isReturn: {
+      type: Boolean,
+      default: false,
+    },
+    smsType: {
+      type: String,
+      default: null,
+      // enum: RETURN_DELIVERIES_SMS_TYPE,
+      // default: RETURN_DELIVERIES_SMS_TYPE.SMS,
+    },
+    timeToSendSMS: {
+      type: Date,
+    },
+    inventory: {
+      type: String,
+      default: null,
+    },
+    upItems: {
+      type: String,
+      default: null,
+    },
+    downItems: {
+      type: String,
+      default: null,
+    },
+    quantityReturn: {
+      type: Number,
+      default: 0,
+    },
+    dateReturn: {
+      type: Date,
+      default: null,
+    },
+    returnDeliveryImages: {
+      type: [
+        {
+          url: {
+            type: String,
+            required: true,
+            trim: true,
+          },
+          rotate: {
+            type: Number,
+            default: 0,
+            enum: [0, 90, 180, 270],
+            validate: {
+              validator: function (value: number) {
+                return [0, 90, 180, 270].includes(value);
+              },
+              message: 'Rotate must be 0, 90, 180, or 270 degrees',
+            },
+          },
+        },
+      ],
+      default: [],
+      validate: {
+        validator: function (images: IReturnDeliveryImage[]) {
+          return images.length <= 5;
+        },
+        message: 'Maximum 5 images allowed',
+      },
     },
   },
   {
@@ -216,61 +340,199 @@ deliverySchema.pre('save', function (next) {
     return next(new Error('From route and to route cannot be the same'));
   }
 
-  // Calculate totalCost: if isFree, then 0; otherwise cost + itemCost + collectForCustomerCost
+  // Validation: homeDelivery is required when carryCost or homeDeliveryCost > 0
+  if (
+    (this.carryCost > 0 || this.homeDeliveryCost > 0) &&
+    (!this.homeDelivery || this.homeDelivery.trim() === '')
+  ) {
+    return next(
+      new Error('homeDelivery is required when carryCost or homeDeliveryCost is greater than 0')
+    );
+  }
+
+  // Validation: vehicleType is required when homeDelivery has value
+  if (this.homeDelivery && this.homeDelivery.trim() !== '' && !this.vehicleType) {
+    return next(new Error('vehicleType is required when homeDelivery is provided'));
+  }
+
+  // Calculate homeDeliveryCostTotal
+  if (this.homeDelivery && this.homeDelivery.trim() !== '') {
+    this.homeDeliveryCostTotal = this.carryCost + this.homeDeliveryCost;
+  } else {
+    this.homeDeliveryCostTotal = undefined;
+  }
+
+  // Calculate totalCost (service fees only: cost + itemCost + collectForCustomerCost + homeDeliveryCost)
   if (this.isFree) {
     this.totalCost = 0;
   } else {
-    this.totalCost = this.cost + this.itemCost + this.collectForCustomerCost;
+    this.totalCost =
+      this.cost + this.itemCost + this.collectForCustomerCost + this.homeDeliveryCost;
   }
+
+  // Calculate actualRevenue (totalCost + collectCost + collectForCustomer)
+  this.actualRevenue = this.totalCost + this.collectCost + this.collectForCustomer;
+
+  next();
+});
+
+// Pre-update middleware to regenerate fullCode when toRoute changes
+deliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next) {
+  const rawUpdate = this.getUpdate() as any;
+  if (!rawUpdate) {
+    return next();
+  }
+
+  // Normalize update object - extract fields from $set if present, otherwise use direct fields
+  const updateFields = rawUpdate.$set || rawUpdate;
+
+  // Check if toRoute is being updated
+  if (updateFields.toRoute !== undefined) {
+    try {
+      // Get current document to access current fullCode and fromRoute
+      const currentDoc = await this.model.findOne(this.getQuery());
+      if (!currentDoc) {
+        return next(new Error('Delivery not found'));
+      }
+
+      const currentToRouteId = currentDoc.toRoute.toString();
+      const newToRouteId = updateFields.toRoute.toString();
+
+      // Only regenerate if toRoute actually changed
+      if (currentToRouteId !== newToRouteId) {
+        const { CodeGeneratorService } = await import('@/services/code-generator.service');
+
+        // Regenerate fullCode with original code (or new code if conflict)
+        const regeneratedCode = await CodeGeneratorService.regenerateFullCodeForRouteChange(
+          currentDoc.fullCode,
+          currentDoc.fromRoute.toString(),
+          newToRouteId,
+          currentDoc._id.toString()
+        );
+
+        // Update code fields
+        updateFields.code = regeneratedCode.code;
+        updateFields.fullCode = regeneratedCode.fullCode;
+        updateFields.subCode = regeneratedCode.subCode;
+
+        // Log the code change
+        if (regeneratedCode.codeChanged) {
+          logger.info(
+            `[Delivery ${currentDoc._id}] Code regenerated due to fullCode conflict: ${currentDoc.fullCode} -> ${regeneratedCode.fullCode}`
+          );
+        } else {
+          logger.info(
+            `[Delivery ${currentDoc._id}] fullCode updated: ${currentDoc.fullCode} -> ${regeneratedCode.fullCode}`
+          );
+        }
+      }
+    } catch (error) {
+      return next(error as Error);
+    }
+  }
+
   next();
 });
 
 // Pre-update middleware to calculate totalCost
 deliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next) {
-  const update = this.getUpdate() as any;
-  if (update) {
-    // Business logic validation for updates
-    if (
-      update.sender &&
-      update.receiver &&
-      update.sender.toString() === update.receiver.toString()
-    ) {
-      return next(new Error('Sender and receiver cannot be the same'));
-    }
-    if (
-      update.fromRoute &&
-      update.toRoute &&
-      update.fromRoute.toString() === update.toRoute.toString()
-    ) {
-      return next(new Error('From route and to route cannot be the same'));
-    }
+  const rawUpdate = this.getUpdate() as any;
+  if (!rawUpdate) {
+    return next();
+  }
 
-    // Only calculate if at least one cost field or isFree is being updated
-    if (
-      update.cost !== undefined ||
-      update.itemCost !== undefined ||
-      update.collectCost !== undefined ||
-      update.collectForCustomerCost !== undefined ||
-      update.isFree !== undefined
-    ) {
-      // Get current document to merge with updates
-      const currentDoc = await this.model.findOne(this.getQuery());
-      if (currentDoc) {
-        const cost = update.cost !== undefined ? update.cost : currentDoc.cost;
-        const itemCost = update.itemCost !== undefined ? update.itemCost : currentDoc.itemCost;
-        const collectForCustomerCost =
-          update.collectForCustomerCost !== undefined
-            ? update.collectForCustomerCost
-            : currentDoc.collectForCustomerCost;
-        const isFree = update.isFree !== undefined ? update.isFree : currentDoc.isFree;
+  // Normalize update object - extract fields from $set if present, otherwise use direct fields
+  const updateFields = rawUpdate.$set || rawUpdate;
 
-        // Calculate totalCost: if isFree, then 0; otherwise cost + itemCost + collectForCustomerCost
-        if (isFree) {
-          update.totalCost = 0;
-        } else {
-          update.totalCost = cost + itemCost + collectForCustomerCost;
-        }
+  // Business logic validation for updates
+  if (
+    updateFields.sender &&
+    updateFields.receiver &&
+    updateFields.sender.toString() === updateFields.receiver.toString()
+  ) {
+    return next(new Error('Sender and receiver cannot be the same'));
+  }
+  if (
+    updateFields.fromRoute &&
+    updateFields.toRoute &&
+    updateFields.fromRoute.toString() === updateFields.toRoute.toString()
+  ) {
+    return next(new Error('From route and to route cannot be the same'));
+  }
+
+  // Only calculate if at least one cost field or isFree is being updated
+  if (
+    updateFields.cost !== undefined ||
+    updateFields.itemCost !== undefined ||
+    updateFields.collectCost !== undefined ||
+    updateFields.collectForCustomerCost !== undefined ||
+    updateFields.collectForCustomer !== undefined ||
+    updateFields.homeDeliveryCost !== undefined ||
+    updateFields.carryCost !== undefined ||
+    updateFields.homeDelivery !== undefined ||
+    updateFields.isFree !== undefined
+  ) {
+    // Get current document to merge with updates
+    const currentDoc = await this.model.findOne(this.getQuery());
+    if (currentDoc) {
+      const cost = updateFields.cost !== undefined ? updateFields.cost : currentDoc.cost;
+      const itemCost =
+        updateFields.itemCost !== undefined ? updateFields.itemCost : currentDoc.itemCost;
+      const collectCost =
+        updateFields.collectCost !== undefined ? updateFields.collectCost : currentDoc.collectCost;
+      const collectForCustomerCost =
+        updateFields.collectForCustomerCost !== undefined
+          ? updateFields.collectForCustomerCost
+          : currentDoc.collectForCustomerCost;
+      const collectForCustomer =
+        updateFields.collectForCustomer !== undefined
+          ? updateFields.collectForCustomer
+          : currentDoc.collectForCustomer;
+      const homeDeliveryCost =
+        updateFields.homeDeliveryCost !== undefined
+          ? updateFields.homeDeliveryCost
+          : currentDoc.homeDeliveryCost;
+      const carryCost =
+        updateFields.carryCost !== undefined ? updateFields.carryCost : currentDoc.carryCost;
+      const homeDelivery =
+        updateFields.homeDelivery !== undefined
+          ? updateFields.homeDelivery
+          : currentDoc.homeDelivery;
+      const vehicleType =
+        updateFields.vehicleType !== undefined ? updateFields.vehicleType : currentDoc.vehicleType;
+      const isFree = updateFields.isFree !== undefined ? updateFields.isFree : currentDoc.isFree;
+
+      // Validation: homeDelivery is required when carryCost or homeDeliveryCost > 0
+      if (
+        (carryCost > 0 || homeDeliveryCost > 0) &&
+        (!homeDelivery || homeDelivery.trim() === '')
+      ) {
+        return next(
+          new Error('homeDelivery is required when carryCost or homeDeliveryCost is greater than 0')
+        );
       }
+
+      // Validation: vehicleType is required when homeDelivery has value
+      if (homeDelivery && homeDelivery.trim() !== '' && !vehicleType) {
+        return next(new Error('vehicleType is required when homeDelivery is provided'));
+      }
+
+      // Calculate homeDeliveryCostTotal
+      if (homeDelivery && homeDelivery.trim() !== '') {
+        updateFields.homeDeliveryCostTotal = carryCost + homeDeliveryCost;
+      } else {
+        updateFields.homeDeliveryCostTotal = undefined;
+      }
+
+      // Calculate totalCost (service fees only: cost + itemCost + collectForCustomerCost + homeDeliveryCost)
+      if (isFree) {
+        updateFields.totalCost = 0;
+      } else {
+        updateFields.totalCost = cost + itemCost + collectForCustomerCost + homeDeliveryCost;
+      }
+
+      // Calculate actualRevenue (totalCost + collectCost + collectForCustomer)
+      updateFields.actualRevenue = updateFields.totalCost + collectCost + collectForCustomer;
     }
   }
   next();
@@ -298,5 +560,7 @@ deliverySchema.index({ sender: 1, receiver: 1, toRoute: 1 });
 deliverySchema.index({ receiver: 1, toRoute: 1 });
 // Optimized index for cost report queries
 deliverySchema.index({ fromRoute: 1, createdAt: -1 }); // Cost report by route and date
+deliverySchema.index({ toRoute: 1, createdAt: -1, isReturn: 1 });
+deliverySchema.index({ sender: 1, fromRoute: 1, createdAt: -1 }); // getFrequentCustomers optimization
 
 export const Delivery = mongoose.model<IDelivery>('Delivery', deliverySchema);

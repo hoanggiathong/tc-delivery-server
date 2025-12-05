@@ -3,6 +3,12 @@
  * This file contains all regex patterns used for validation across the application
  */
 
+// Phone number validation pattern (international format)
+export const PHONE_NUMBER_PATTERN = /^\+?[1-9]\d{1,14}$/;
+
+// MongoDB ObjectId validation pattern
+export const OBJECTID_PATTERN = /^[0-9a-fA-F]{24}$/;
+
 // Route code validation patterns
 export const ROUTE_CODE_PATTERN = /^[A-Z]([A-Z]|\d+)$/;
 
@@ -12,6 +18,9 @@ export const DELIVERY_IDENTIFIER_PATTERN = /^\d{10}[A-Z]([A-Z]|\d+)[A-Z]([A-Z]|\
 // Money delivery identifier validation patterns
 export const MONEY_DELIVERY_IDENTIFIER_PATTERN = /^\d{10}[A-Z]([A-Z]|\d+)[A-Z]([A-Z]|\d+)-T$/;
 
+// Date validation pattern (YYYY-MM-DD format)
+export const DATE_YYYY_MM_DD_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
 // Parsing patterns for delivery services
 export const DELIVERY_IDENTIFIER_PARSE_PATTERN = /^(\d{10})([A-Z]([A-Z]|\d+))([A-Z]([A-Z]|\d+))$/;
 export const MONEY_DELIVERY_IDENTIFIER_PARSE_PATTERN =
@@ -19,16 +28,32 @@ export const MONEY_DELIVERY_IDENTIFIER_PARSE_PATTERN =
 
 // Error messages
 export const VALIDATION_MESSAGES = {
+  PHONE_NUMBER: 'Please enter a valid phone number (international format, e.g., +84901234567)',
+  OBJECTID: 'Invalid ID format',
   ROUTE_CODE:
     'Code must start with a letter followed by another letter or numbers (e.g., T1, T2, AB, CD)',
   DELIVERY_IDENTIFIER:
     'Invalid delivery identifier format. Expected: codeFromRouteToRoute (e.g., 0907250001T4T1, 0907250001ABCD)',
   MONEY_DELIVERY_IDENTIFIER:
     'Invalid money delivery identifier format. Expected: codeFromRouteToRoute-T (e.g., 0907250001T4T1-T, 0907250001ABCD-T)',
+  DATE_YYYY_MM_DD: 'Date must be in YYYY-MM-DD format',
 } as const;
 
 // Pattern explanations for documentation
 export const PATTERN_EXPLANATIONS = {
+  PHONE_NUMBER: {
+    pattern: '^\\+?[1-9]\\d{1,14}$',
+    description:
+      'Phone number: International format, optional + prefix, starts with 1-9, total 2-15 digits',
+    examples: ['+84901234567', '84901234567', '1234567890'],
+    invalidExamples: ['0901234567', '+0901234567', '123', 'abc123'],
+  },
+  OBJECTID: {
+    pattern: '^[0-9a-fA-F]{24}$',
+    description: 'MongoDB ObjectId: 24-character hexadecimal string',
+    examples: ['507f1f77bcf86cd799439011', '60d5ec49f1b2c72b8c8e4a01'],
+    invalidExamples: ['invalid-id', '507f1f77bcf86cd79943901', '507f1f77bcf86cd799439011Z'],
+  },
   ROUTE_CODE: {
     pattern: '^[A-Z]([A-Z]|\\d+)$',
     description:
@@ -99,4 +124,18 @@ export const parseMoneyDeliveryIdentifier = (
 
   const [, code, fromRouteCode, , toRouteCode] = match;
   return { code, fromRouteCode, toRouteCode };
+};
+
+/**
+ * Helper function to validate phone number
+ */
+export const isValidPhoneNumber = (phone: string): boolean => {
+  return PHONE_NUMBER_PATTERN.test(phone);
+};
+
+/**
+ * Helper function to validate MongoDB ObjectId
+ */
+export const isValidObjectId = (id: string): boolean => {
+  return OBJECTID_PATTERN.test(id);
 };

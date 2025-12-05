@@ -20,3 +20,33 @@ export const uploadMiddleware = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
   fileFilter: fileFilter,
 });
+
+export const uploadMultipleImages = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: fileFilter,
+}).fields([{ name: 'images', maxCount: 5 }]);
+
+export const uploadReturnDeliveryImagesFields = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: fileFilter,
+}).fields([
+  { name: 'customerImages', maxCount: 5 },
+  { name: 'returnDeliveryImages', maxCount: 5 },
+]);
+
+export const uploadMoneyDeliveryImagesFields = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: fileFilter,
+}).fields([{ name: 'images', maxCount: 5 }]);
+
+export const uploadMoneyDeliveryDualImagesFields = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: fileFilter,
+}).fields([
+  { name: 'customerImages', maxCount: 5 },
+  { name: 'moneyImages', maxCount: 5 },
+]);

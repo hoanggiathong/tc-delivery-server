@@ -2,8 +2,10 @@ import { Customer, ICustomer, ICustomerImage } from '@/models/customer.model';
 import { CreateCustomerRequest, UpdateCustomerRequest } from '@/schemas/customer.schema';
 import { BankCreateData, CustomerBankService } from '@/services/customer-bank.service';
 import { UserService } from '@/services/user.service';
+import { ICustomerFullInformationResponse } from '@/types/customer.type';
 import { generateVersionedUrl } from '@/utils/image-url.utils';
 import Logger from '@/utils/logger';
+import { omitBy, isUndefined } from 'lodash';
 import fs from 'fs';
 import { Types } from 'mongoose';
 import path from 'path';
@@ -77,42 +79,47 @@ export class CustomerService {
   }
 
   /**
-   * Find or create a customer with specific type
+   * Find or create a customer by phone
+   * IMPORTANT: Only updates name for NEW customers, NOT for existing ones
    */
-  async findOrCreateCustomer(
-    phone: string,
-    name: string,
-    routeId: string,
-    type: 'delivery' | 'money'
-  ): Promise<ICustomer> {
+  async findOrCreateCustomer(phone: string, name: string, routeId: string): Promise<ICustomer> {
     try {
-      const customer = await Customer.findOneAndUpdate(
-        { phone, type },
-        {
-          name,
-          routeId: new Types.ObjectId(routeId),
-          type,
-        },
-        {
-          upsert: true,
-          new: true,
-          setDefaultsOnInsert: true,
-        }
-      );
+      // Try to find existing customer first
+      let customer = await Customer.findOne({ phone });
 
-      Logger.debug('Customer found or created', {
-        phone,
-        type,
-        customerId: customer._id,
-        isNew: !customer.createdAt || customer.createdAt === customer.updatedAt,
-      });
+      if (customer) {
+        // Customer exists - DON'T update name, only update routeId if needed
+        if (customer.routeId.toString() !== routeId) {
+          customer.routeId = new Types.ObjectId(routeId);
+          await customer.save();
+        }
+        Logger.debug('Existing customer found, name NOT updated', {
+          phone,
+          existingName: customer.name,
+          requestedName: name,
+          customerId: customer._id,
+        });
+      } else {
+        // Customer doesn't exist - create new with provided name
+        customer = new Customer({
+          phone,
+          name, // Use provided name for new customer
+          routeId: new Types.ObjectId(routeId),
+          relativeReceiver: [],
+        });
+        await customer.save();
+        Logger.debug('New customer created', {
+          phone,
+          name,
+          customerId: customer._id,
+        });
+      }
 
       return customer;
     } catch (error) {
       Logger.error('Failed to find or create customer', {
         error: error instanceof Error ? error.message : error,
         phone,
-        type,
       });
       throw new Error(
         `Failed to find or create customer: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -121,102 +128,26 @@ export class CustomerService {
   }
 
   /**
-   * Add a receiver to sender's relativeReceiver array if not exists
+   * Get customer by phone
    */
-  async addRelativeReceiver(senderId: string, receiverId: string): Promise<void> {
+  async getCustomerByPhone(phone: string): Promise<ICustomer | null> {
     try {
-      await Customer.findByIdAndUpdate(senderId, {
-        $addToSet: { relativeReceiver: new Types.ObjectId(receiverId) },
-      });
+      const customer = await Customer.findOne({ phone });
 
-      Logger.debug('Relative receiver added', {
-        senderId,
-        receiverId,
-      });
-    } catch (error) {
-      Logger.error('Failed to add relative receiver', {
-        error: error instanceof Error ? error.message : error,
-        senderId,
-        receiverId,
-      });
-      throw new Error(
-        `Failed to add relative receiver: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    }
-  }
-
-  /**
-   * Get frequent receivers for a sender by phone and type, filtered by user's selected route
-   */
-  async getFrequentReceivers(
-    senderPhone: string,
-    type: 'delivery' | 'money',
-    userId: string
-  ): Promise<ICustomer[]> {
-    try {
-      const userSelectedRouteId = await this.userService.getUserSelectedRouteId(userId);
-
-      const sender = await Customer.findOne({
-        phone: senderPhone,
-        type,
-        routeId: userSelectedRouteId,
-      }).populate('relativeReceiver');
-
-      if (!sender) {
-        Logger.debug('Sender not found', { senderPhone, type, userSelectedRouteId });
-        return [];
-      }
-
-      const frequentReceivers = sender.relativeReceiver as unknown as ICustomer[];
-
-      Logger.debug('Frequent receivers retrieved', {
-        senderPhone,
-        type,
-        userId,
-        receiversCount: frequentReceivers.length,
-        userSelectedRouteId,
-      });
-
-      return frequentReceivers;
-    } catch (error) {
-      Logger.error('Failed to get frequent receivers', {
-        error: error instanceof Error ? error.message : error,
-        senderPhone,
-        type,
-        userId,
-      });
-      throw new Error(
-        `Failed to get frequent receivers: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    }
-  }
-
-  /**
-   * Get customer by phone and type
-   */
-  async getCustomerByPhoneAndType(
-    phone: string,
-    type: 'delivery' | 'money'
-  ): Promise<ICustomer | null> {
-    try {
-      const customer = await Customer.findOne({ phone, type });
-
-      Logger.debug('Customer retrieved by phone and type', {
+      Logger.debug('Customer retrieved by phone', {
         phone,
-        type,
         found: !!customer,
         customerId: customer?._id,
       });
 
       return customer;
     } catch (error) {
-      Logger.error('Failed to get customer by phone and type', {
+      Logger.error('Failed to get customer by phone', {
         error: error instanceof Error ? error.message : error,
         phone,
-        type,
       });
       throw new Error(
-        `Failed to get customer by phone and type: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Failed to get customer by phone: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
   }
@@ -280,7 +211,6 @@ export class CustomerService {
         name: data.name,
         phone: data.phone,
         routeId: new Types.ObjectId(data.routeId),
-        type: data.type,
         relativeReceiver: data.relativeReceiver
           ? data.relativeReceiver.map(id => new Types.ObjectId(id))
           : [],
@@ -291,7 +221,6 @@ export class CustomerService {
       Logger.debug('Customer created', {
         customerId: savedCustomer._id,
         phone: savedCustomer.phone,
-        type: savedCustomer.type,
       });
 
       return savedCustomer;
@@ -328,7 +257,6 @@ export class CustomerService {
         Logger.debug('Customer updated', {
           customerId: updatedCustomer._id,
           phone: updatedCustomer.phone,
-          type: updatedCustomer.type,
         });
       }
 
@@ -350,7 +278,7 @@ export class CustomerService {
    */
   async getCustomerById(id: string): Promise<ICustomer | null> {
     try {
-      const customer = await Customer.findById(id).populate('relativeReceiver');
+      const customer = await Customer.findById(id);
 
       Logger.debug('Customer retrieved by ID', {
         id,
@@ -386,16 +314,15 @@ export class CustomerService {
       if (customerId) {
         const existingCustomer = await Customer.findById(customerId);
         if (existingCustomer) {
-          const updateData: any = {};
-          if (name) {
-            updateData.name = name;
-          }
-          if (phone) {
-            updateData.phone = phone;
-          }
-          if (fromRouteId) {
-            updateData.routeId = new Types.ObjectId(fromRouteId);
-          }
+          // Use lodash omitBy to filter out undefined values
+          const updateData: any = omitBy(
+            {
+              name: name,
+              phone: phone,
+              routeId: fromRouteId ? new Types.ObjectId(fromRouteId) : undefined,
+            },
+            isUndefined
+          );
 
           const updatedCustomer = await Customer.findByIdAndUpdate(customerId, updateData, {
             new: true,
@@ -414,7 +341,6 @@ export class CustomerService {
         name: name || 'Unknown',
         phone: phone || '',
         routeId: fromRouteId ? new Types.ObjectId(fromRouteId) : new Types.ObjectId(),
-        type: 'money', // Default for money delivery operations
         relativeReceiver: [],
       });
 
@@ -423,7 +349,6 @@ export class CustomerService {
       Logger.debug('Customer updated or created', {
         customerId: savedCustomer._id,
         phone: savedCustomer.phone,
-        type: savedCustomer.type,
       });
 
       return savedCustomer;
@@ -449,15 +374,15 @@ export class CustomerService {
     phone: string,
     name: string,
     routeId: string,
-    type: 'delivery' | 'money',
     imageIndex: number,
     imageBuffer: Buffer,
     originalName: string,
-    rotate: number = 0
+    rotate: number = 0,
+    userId?: string
   ): Promise<ICustomer> {
     try {
       // Find or create customer using existing method
-      const customer = await this.findOrCreateCustomer(phone, name, routeId, type);
+      const customer = await this.findOrCreateCustomer(phone, name, routeId);
 
       // Create customer folder if not exists
       const customerFolder = path.join('public/uploads/customers', customer._id.toString());
@@ -489,6 +414,12 @@ export class CustomerService {
 
       // Save updated customer
       customer.images = images.filter(img => img && img.url).slice(0, 5);
+
+      // Set createdBy if userId is provided
+      if (userId) {
+        customer.createdBy = new Types.ObjectId(userId);
+      }
+
       await customer.save();
 
       Logger.debug('Image uploaded for customer', {
@@ -518,7 +449,8 @@ export class CustomerService {
     imageIndex: number,
     imageBuffer: Buffer,
     originalName: string,
-    rotate: number = 0
+    rotate: number = 0,
+    userId?: string
   ): Promise<ICustomer> {
     const customer = await Customer.findById(customerId);
     if (!customer) {
@@ -554,6 +486,11 @@ export class CustomerService {
     };
     customer.images = images.filter(img => img && img.url).slice(0, 5);
 
+    // Set createdBy if userId is provided
+    if (userId) {
+      customer.createdBy = new Types.ObjectId(userId);
+    }
+
     return await customer.save();
   }
 
@@ -563,7 +500,8 @@ export class CustomerService {
   async updateImageRotation(
     customerId: string,
     imageIndex: number,
-    rotate: number
+    rotate: number,
+    userId?: string
   ): Promise<ICustomer> {
     const customer = await Customer.findById(customerId);
     if (!customer) {
@@ -576,6 +514,11 @@ export class CustomerService {
 
     // Update rotation
     customer.images[imageIndex - 1].rotate = rotate;
+
+    // Set createdBy if userId is provided
+    if (userId) {
+      customer.createdBy = new Types.ObjectId(userId);
+    }
 
     return await customer.save();
   }
@@ -637,7 +580,7 @@ export class CustomerService {
   async updateCustomerBankInfo(
     phone: string,
     routeId: string,
-    type: 'delivery' | 'money',
+    userId: string,
     name?: string,
     bankInfo?: BankCreateData,
     imagesData?: Array<{
@@ -649,14 +592,14 @@ export class CustomerService {
   ): Promise<ICustomer> {
     try {
       // Try to find existing customer
-      let customer = await Customer.findOne({ phone, type, routeId });
+      let customer = await Customer.findOne({ phone });
 
       if (!customer) {
         // Customer not found - need name to create new
         if (!name) {
           throw new Error('Name is required when creating new customer');
         }
-        const newCustomer = await this.findOrCreateCustomer(phone, name, routeId, type);
+        const newCustomer = await this.findOrCreateCustomer(phone, name, routeId);
         customer = await Customer.findById(newCustomer._id);
         if (!customer) {
           throw new Error('Failed to retrieve newly created customer');
@@ -664,13 +607,11 @@ export class CustomerService {
         Logger.debug('New customer created for bank update', {
           customerId: customer._id,
           phone,
-          type,
         });
       } else {
         Logger.debug('Existing customer found for bank update', {
           customerId: customer._id,
           phone,
-          type,
         });
       }
 
@@ -758,6 +699,9 @@ export class CustomerService {
         customer.images = images.filter(img => img && img.url).slice(0, 5);
       }
 
+      // Set createdBy to track who updated the customer
+      customer.createdBy = new Types.ObjectId(userId);
+
       // Save and return updated customer
       const updatedCustomer = await customer.save();
 
@@ -773,8 +717,8 @@ export class CustomerService {
       Logger.error('Failed to update customer bank info', {
         error: error instanceof Error ? error.message : error,
         phone,
-        type,
         routeId,
+        userId,
       });
       throw error;
     }
@@ -821,5 +765,92 @@ export class CustomerService {
       });
       throw error;
     }
+  }
+
+  async getListCustomer(userId: string): Promise<ICustomerFullInformationResponse[]> {
+    const userSelectedRouteId = await this.userService.getUserSelectedRouteId(userId);
+    try {
+      const customers = await Customer.find({
+        routeId: userSelectedRouteId,
+        bankId: {
+          $ne: null,
+        },
+      })
+        .populate([
+          { path: 'bankId', select: '_id bankName bankAccount name' },
+          { path: 'createdBy', select: '_id username name createdAt updatedAt' },
+          { path: 'routeId', select: '_id code name address' },
+        ])
+        .lean();
+
+      const customersFullInformation: ICustomerFullInformationResponse[] = customers.map(
+        (customer: any) => ({
+          id: customer._id.toString(),
+          name: customer.name,
+          phone: customer.phone,
+          route: customer.routeId
+            ? {
+                id: customer.routeId._id.toString(),
+                code: customer.routeId.code,
+                name: customer.routeId.name,
+                address: customer.routeId.address,
+              }
+            : undefined,
+          bank: customer.bankId
+            ? {
+                id: customer.bankId._id.toString(),
+                name: customer.bankId.name,
+                bankName: customer.bankId.bankName,
+                bankAccount: customer.bankId.bankAccount,
+              }
+            : null,
+          createdBy: customer.createdBy
+            ? {
+                id: customer.createdBy._id.toString(),
+                username: customer.createdBy.username,
+                name: customer.createdBy.name,
+                createdAt: customer.createdBy.createdAt,
+                updatedAt: customer.createdBy.updatedAt,
+              }
+            : null,
+          images: customer.images,
+          address: customer.address,
+          identityCardIssuedDate: customer.identityCardIssuedDate,
+          identityCardNumber: customer.identityCardNumber,
+          createdAt: customer.createdAt,
+          updatedAt: customer.updatedAt,
+        })
+      );
+      return customersFullInformation;
+    } catch (error) {
+      Logger.error('Failed to delete images and bank info', {
+        error: error instanceof Error ? error.message : error,
+        userId,
+      });
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to get list customer');
+    }
+  }
+
+  /**
+   * Update customer images data
+   */
+  async updateDataImageCustomer(
+    customerId: string,
+    images: ICustomerImage[]
+  ): Promise<ICustomerImage[]> {
+    const customer = await Customer.findById(customerId);
+
+    if (!customer) {
+      throw new Error('Customer not found');
+    }
+
+    // Update images data
+    customer.images = images;
+    await customer.save();
+
+    return customer.images;
   }
 }

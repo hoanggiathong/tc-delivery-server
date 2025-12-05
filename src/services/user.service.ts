@@ -94,16 +94,22 @@ export class UserService {
   async updateAdditionalInformationProductWithDefaults(
     userId: string,
     listAdditionalInformationProduct: IAdditionalInformationProductInput[]
-  ): Promise<boolean> {
+  ): Promise<IAdditionalInformationProductResponse[]> {
     try {
+      // Sort by position first
+      const sortedList = listAdditionalInformationProduct.sort((a, b) => a.position - b.position);
+
+      // Check if any item has selected = true
+      const hasSelected = sortedList.some(item => item.selected === true);
+
+      // Map items and auto-select first one if none selected
       const additionalInformationProductWithDefaults: IAdditionalInformationProduct[] =
-        listAdditionalInformationProduct
-          .map(item => ({
-            _id: new mongoose.Types.ObjectId(),
-            content: item.content || '',
-            position: item.position,
-          }))
-          .sort((a, b) => a.position - b.position);
+        sortedList.map((item, index) => ({
+          _id: new mongoose.Types.ObjectId(),
+          content: item.content || '',
+          position: item.position,
+          selected: hasSelected ? item.selected === true : index === 0, // Auto-select first if none selected
+        }));
 
       const result = await User.findOneAndUpdate(
         { _id: userId },
@@ -113,7 +119,18 @@ export class UserService {
         },
         { upsert: true, new: true, runValidators: true }
       );
-      return !!result;
+
+      if (!result) {
+        throw new AppError('User not found', 404);
+      }
+
+      // Return the updated list in response format
+      return additionalInformationProductWithDefaults.map(item => ({
+        id: item._id?.toString() || '',
+        content: item.content,
+        position: item.position,
+        selected: item.selected === true,
+      }));
     } catch (error) {
       if (error instanceof AppError) {
         throw error;
@@ -127,16 +144,31 @@ export class UserService {
   ): Promise<IAdditionalInformationProductResponse[]> {
     const user = await User.findById(userId);
 
-    const additionalInformationProductList = user?.additionalInformationProductConfig;
-    if (!additionalInformationProductList || additionalInformationProductList.length === 0) {
+    if (!user) {
       return [];
     }
 
-    const result = additionalInformationProductList.map((item: IAdditionalInformationProduct) => ({
-      id: item._id?.toString() || '',
-      content: item.content,
-      position: item.position,
-    }));
+    const additionalInformationProductList = user.additionalInformationProductConfig || [];
+
+    // If list is empty, return empty array
+    if (additionalInformationProductList.length === 0) {
+      return [];
+    }
+
+    // Check if any item has selected = true
+    const hasSelected = additionalInformationProductList.some(
+      (item: IAdditionalInformationProduct) => item.selected === true
+    );
+
+    // Map items and ensure first one is selected if none selected
+    const result = additionalInformationProductList.map(
+      (item: IAdditionalInformationProduct, index: number) => ({
+        id: item._id?.toString() || '',
+        content: item.content,
+        position: item.position,
+        selected: hasSelected ? item.selected === true : index === 0, // Auto-select first if none selected
+      })
+    );
 
     return result;
   }
