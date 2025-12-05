@@ -36,17 +36,17 @@ jobs:
             # Generate version tag
             YEAR=$(date +%Y)
             MONTH=$(date +%-m)
-            PREFIX="${YEAR}.${MONTH}"
+            TAG_PREFIX="${YEAR}.${MONTH}"
 
             # Get latest tag for this month
-            LATEST_TAG=$(git tag -l "${PREFIX}.*" | sort -t. -k3 -n | tail -1)
+            LATEST_TAG=$(git tag -l "${TAG_PREFIX}.*" | sort -t. -k3 -n | tail -1)
 
             if [ -z "$LATEST_TAG" ]; then
-              NEW_VERSION="${PREFIX}.1"
+              NEW_VERSION="${TAG_PREFIX}.1"
             else
               LAST_NUM=$(echo "$LATEST_TAG" | cut -d. -f3)
               NEW_NUM=$((LAST_NUM + 1))
-              NEW_VERSION="${PREFIX}.${NEW_NUM}"
+              NEW_VERSION="${TAG_PREFIX}.${NEW_NUM}"
             fi
 
             echo "Creating tag: ${NEW_VERSION}"
