@@ -33,7 +33,7 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 3011,
-        BASE_URL: 'https://vantai.giaphuocexpress.vn'
+        BASE_URL: 'https://vantai.giaphuocexpress.vn',
       },
 
       // Logging
@@ -73,7 +73,7 @@ module.exports = {
       env: {
         NODE_ENV: 'uat',
         PORT: 3010,
-        BASE_URL: 'https://uat.giaphuocexpress.vn'
+        BASE_URL: 'https://uat.giaphuocexpress.vn',
       },
 
       // Logging
