@@ -1,0 +1,108 @@
+name: Deploy to VPS Production Environment
+
+on:
+  push:
+    branches: [prod]
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  deploy:
+    name: Deploy to VPS Production
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for tags
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.4'
+
+      - name: Generate version tag
+        id: version
+        run: |
+          YEAR=$(date +%Y)
+          MONTH=$(date +%-m)
+          PREFIX="${YEAR}.${MONTH}"
+
+          # Get all tags matching current year.month pattern
+          LATEST_TAG=$(git tag -l "${PREFIX}.*" | sort -t. -k3 -n | tail -1)
+
+          if [ -z "$LATEST_TAG" ]; then
+            # No tags for this month, start at 1
+            NEW_VERSION="${PREFIX}.1"
+          else
+            # Extract the last number and increment
+            LAST_NUM=$(echo "$LATEST_TAG" | cut -d. -f3)
+            NEW_NUM=$((LAST_NUM + 1))
+            NEW_VERSION="${PREFIX}.${NEW_NUM}"
+          fi
+
+          echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
+          echo "Generated version: ${NEW_VERSION}"
+
+      - name: Create and push tag
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git tag -a ${{ steps.version.outputs.version }} -m "Production release ${{ steps.version.outputs.version }}"
+          git push origin ${{ steps.version.outputs.version }}
+
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: ${{ secrets.VPS_PORT }}
+          script: |
+            cd prod/tc-delivery-server/
+
+            # Pull latest changes
+            git pull origin prod
+
+            # Load NVM and use default Node version
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+            echo "Current Node version:"
+            node --version
+
+            nvm use default
+
+            # Install dependencies
+            npm ci
+
+            # Clean typescript build cache
+            rm -rf dist/
+
+            # Build and deploy Production environment
+            npm run deploy:prod
+
+            # Show PM2 status
+            pm2 status tc-delivery-server-prod
+
+            # Show logs (last 20 lines)
+            pm2 logs tc-delivery-server-prod --lines 20 --nostream
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: Release ${{ steps.version.outputs.version }}
+          body: |
+            ## Production Release ${{ steps.version.outputs.version }}
+
+            **Deployed at:** ${{ github.event.head_commit.timestamp }}
+            **Commit:** ${{ github.sha }}
+            **Author:** ${{ github.actor }}
+
+            ### Changes
+            ${{ github.event.head_commit.message }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

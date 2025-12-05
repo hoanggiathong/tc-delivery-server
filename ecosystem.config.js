@@ -33,11 +33,7 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 3011,
-        BASE_URL: 'https://giaphuocexpress.vn',
-        PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'true',
-        PUPPETEER_EXECUTABLE_PATH: '/usr/bin/chromium-browser',
-        PUPPETEER_ARGS:
-          '--no-sandbox,--disable-setuid-sandbox,--disable-dev-shm-usage,--disable-extensions,--disable-plugins,--disable-images',
+        BASE_URL: 'https://vantai.giaphuocexpress.vn'
       },
 
       // Logging
@@ -77,11 +73,7 @@ module.exports = {
       env: {
         NODE_ENV: 'uat',
         PORT: 3010,
-        BASE_URL: 'https://uat.giaphuocexpress.vn',
-        PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'true',
-        PUPPETEER_EXECUTABLE_PATH: '/usr/bin/chromium-browser',
-        PUPPETEER_ARGS:
-          '--no-sandbox,--disable-setuid-sandbox,--disable-dev-shm-usage,--disable-extensions,--disable-plugins,--disable-images',
+        BASE_URL: 'https://uat.giaphuocexpress.vn'
       },
 
       // Logging
