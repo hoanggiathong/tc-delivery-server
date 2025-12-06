@@ -173,9 +173,23 @@ export class AuthService {
    */
   async updateSelectedRoute(
     userId: string,
-    data: UpdateSelectedRouteRequest
+    data: UpdateSelectedRouteRequest,
+    userRole: UserRole
   ): Promise<{ user: IUserResponse }> {
     try {
+      if (data.selectedRouteId) {
+        if (userRole === UserRole.USER) {
+          const userRoute = await UserRoute.findOne({
+            userId,
+            routeId: data.selectedRouteId,
+          }).lean();
+
+          if (!userRoute) {
+            throw new Error('Route not assigned to user');
+          }
+        }
+      }
+
       const user = await User.findByIdAndUpdate(
         userId,
         { selectedRouteId: data.selectedRouteId },

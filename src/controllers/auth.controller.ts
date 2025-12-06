@@ -455,7 +455,11 @@ export class AuthController {
       }
 
       const data: UpdateSelectedRouteRequest = req.body;
-      const result = await this.authService.updateSelectedRoute(req.user.userId, data);
+      const result = await this.authService.updateSelectedRoute(
+        req.user.userId,
+        data,
+        req.user.role as UserRole
+      );
 
       const response: ApiResponse = {
         success: true,
@@ -468,7 +472,12 @@ export class AuthController {
       console.error('Update selected route error:', error);
 
       const message = error instanceof Error ? error.message : 'Failed to update selected route';
-      const statusCode = message === 'User not found' ? 404 : 500;
+      let statusCode = 500;
+      if (message === 'User not found') {
+        statusCode = 404;
+      } else if (message === 'Route not assigned to user') {
+        statusCode = 403;
+      }
 
       const response: ApiResponse = {
         success: false,

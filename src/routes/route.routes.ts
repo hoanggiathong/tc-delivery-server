@@ -72,21 +72,29 @@ const routeController = new RouteController();
  *           description: Name of the route
  */
 
-// All route routes require authentication and manager/admin/superadmin roles
 router.use(authenticateToken);
-router.use(requireRole([UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]));
 
-// Route routes
-router.post('/', validate(createRouteSchema), routeController.createRoute);
+router.post(
+  '/',
+  requireRole([UserRole.ADMIN, UserRole.SUPERADMIN]),
+  validate(createRouteSchema),
+  routeController.createRoute
+);
 router.put(
   '/:id',
+  requireRole([UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]),
   validate(routeParamsSchema),
   validate(updateRouteSchema),
   routeController.updateRoute
 );
-router.get('/:id', validate(routeParamsSchema), routeController.getRouteById);
-router.delete('/:id', validate(routeParamsSchema), routeController.deleteRoute);
+router.delete(
+  '/:id',
+  requireRole([UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]),
+  validate(routeParamsSchema),
+  routeController.deleteRoute
+);
 router.get('/code/:code', routeController.getRouteByCode);
+router.get('/:id', validate(routeParamsSchema), routeController.getRouteById);
 router.get('/', routeController.getAllRoutes);
 
 export default router;
