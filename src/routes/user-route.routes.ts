@@ -99,30 +99,48 @@ const userRouteController = new UserRouteController();
  *           description: Array of route IDs to remove
  */
 
-// All user-route routes require authentication and manager/admin/superadmin roles
 router.use(authenticateToken);
-router.use(requireRole([UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]));
 
-// User-route routes
-router.post('/assign', validate(createUserRouteSchema), userRouteController.assignRouteToUser);
+router.post(
+  '/assign',
+  requireRole([UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]),
+  validate(createUserRouteSchema),
+  userRouteController.assignRouteToUser
+);
 router.post(
   '/assign-multiple',
+  requireRole([UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]),
   validate(assignMultipleRoutesSchema),
   userRouteController.assignMultipleRoutesToUser
 );
 router.delete(
   '/remove-multiple',
+  requireRole([UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]),
   validate(removeMultipleRoutesSchema),
   userRouteController.removeMultipleRoutesFromUser
 );
-router.delete('/:id', validate(userRouteParamsSchema), userRouteController.removeRouteFromUser);
+router.delete(
+  '/:id',
+  requireRole([UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]),
+  validate(userRouteParamsSchema),
+  userRouteController.removeRouteFromUser
+);
 router.get('/user/:userId', validate(userIdParamsSchema), userRouteController.getUserRoutes);
 router.get(
   '/user/:userId/routes',
   validate(userIdParamsSchema),
   userRouteController.getRoutesForUser
 );
-router.get('/route/:routeId', validate(routeIdParamsSchema), userRouteController.getUsersForRoute);
-router.get('/', userRouteController.getAllUserRoutes);
+router.get(
+  '/route/:routeId',
+  requireRole([UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]),
+  validate(routeIdParamsSchema),
+  userRouteController.getUsersForRoute
+);
+router.get(
+  '/',
+  requireRole([UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]),
+  userRouteController.getAllUserRoutes
+);
 
 export default router;
