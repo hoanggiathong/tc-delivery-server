@@ -6,6 +6,8 @@ import {
 } from '@/types/report.type';
 import { DeliveryService } from './delivery.service';
 import { MoneyDeliveryService } from './money-delivery.service';
+import { MoneyDeliveryType } from '@/models/money-delivery.model';
+import { PAYMENT_TYPE } from '@/const/money-deliveries.const';
 
 export class ReportService {
   private moneyDeliveryService: MoneyDeliveryService;
@@ -67,10 +69,69 @@ export class ReportService {
         );
       }
 
+      let totalSendMoneyAmountTypeNormalMoneyDelivery: number = 0;
+      let totalSendMoneyAmountTypeCollectMoneyDelivery: number = 0;
+      let totalCostWithPaymentTypeDebtDelivery: number = 0;
+      let totalSendCostWithTypeNormalMoneyDelivery: number = 0;
+      let totalSendCostWithTypeCollectMoneyDelivery: number = 0;
+      let totalCostDelivery: number = 0;
+      let homeDeliveryCostWithPaymentTypePaidDelivery: number = 0;
+      let totalCollectForCustomerCostWithPaymentTypePaidDelivery: number = 0;
+
+      const moneyDeliveryList = [...moneyDeliveriesTypeNormal, ...moneyDeliveriesTypeCollect];
+
+      for (const moneyDelivery of moneyDeliveryList) {
+        if (moneyDelivery.type === MoneyDeliveryType.NORMAL) {
+          totalSendMoneyAmountTypeNormalMoneyDelivery += moneyDelivery.sendMoneyAmount;
+          totalSendCostWithTypeNormalMoneyDelivery += moneyDelivery.sendCost;
+        } else {
+          totalSendMoneyAmountTypeCollectMoneyDelivery += moneyDelivery.sendMoneyAmount;
+          totalSendCostWithTypeCollectMoneyDelivery += moneyDelivery.sendCost;
+        }
+      }
+
+      for (const delivery of returnDeliveries) {
+        totalCostDelivery += delivery.cost;
+        if (delivery.paymentType === PAYMENT_TYPE.PAID) {
+          homeDeliveryCostWithPaymentTypePaidDelivery += delivery.homeDeliveryCost || 0;
+          totalCollectForCustomerCostWithPaymentTypePaidDelivery += delivery.collectForCustomerCost;
+        } else {
+          totalCostWithPaymentTypeDebtDelivery += delivery.cost;
+        }
+      }
+
+      const totalCostWithPaymentTypePaidDelivery: number =
+        totalCostDelivery - totalCostWithPaymentTypeDebtDelivery;
+
+      const totalCostPaid: number =
+        totalCostWithPaymentTypePaidDelivery +
+        totalCollectForCustomerCostWithPaymentTypePaidDelivery +
+        homeDeliveryCostWithPaymentTypePaidDelivery;
+      const totalCostNotHomeDeliveryCostAndCollectForCustomerCost: number =
+        totalCostDelivery +
+        totalSendCostWithTypeCollectMoneyDelivery +
+        totalSendCostWithTypeNormalMoneyDelivery;
+
+      const sum = {
+        totalSendMoneyAmountTypeNormalMoneyDelivery: totalSendMoneyAmountTypeNormalMoneyDelivery,
+        totalSendMoneyAmountTypeCollectMoneyDelivery: totalSendMoneyAmountTypeCollectMoneyDelivery,
+        totalCostWithPaymentTypeDebtDelivery: totalCostWithPaymentTypeDebtDelivery,
+        totalSendCostWithTypeNormalMoneyDelivery: totalSendCostWithTypeNormalMoneyDelivery,
+        totalSendCostWithTypeCollectMoneyDelivery: totalSendCostWithTypeCollectMoneyDelivery,
+        totalCostDelivery: totalCostDelivery,
+        homeDeliveryCostWithPaymentTypePaidDelivery: homeDeliveryCostWithPaymentTypePaidDelivery,
+        totalCollectForCustomerCostWithPaymentTypePaidDelivery:
+          totalCollectForCustomerCostWithPaymentTypePaidDelivery,
+        totalCostPaid: totalCostPaid,
+        totalCostNotHomeDeliveryCostAndCollectForCustomerCost:
+          totalCostNotHomeDeliveryCostAndCollectForCustomerCost,
+      };
+
       const data: IReportReturnMoneyDeliveryAndReturnDeliveryResponse = {
         deliveries: returnDeliveries,
         moneyDeliveriesTypeNormal: moneyDeliveriesTypeNormal,
         moneyDeliveriesTypeCollect: moneyDeliveriesTypeCollect,
+        sum: sum,
       };
 
       return data;

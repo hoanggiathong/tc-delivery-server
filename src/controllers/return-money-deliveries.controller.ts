@@ -1529,6 +1529,7 @@ export class ReturnMoneyDeliveriesController {
         identityCardIssuedDate,
         identityCardNumber,
         contentReturn,
+        identityCardName,
         customerImages,
         moneyImages,
       } = req.body;
@@ -1588,6 +1589,7 @@ export class ReturnMoneyDeliveriesController {
             moneyDeliveryId,
             customerId,
             address,
+            identityCardName,
             identityCardIssuedDate,
             identityCardNumber,
           },
