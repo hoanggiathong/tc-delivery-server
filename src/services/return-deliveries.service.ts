@@ -213,6 +213,7 @@ export class ReturnDeliveriesService {
           name: route?.name,
         },
         address: receiver.address,
+        identityCardName: receiver.identityCardName,
         identityCardIssuedDate: receiver.identityCardIssuedDate,
         identityCardNumber: receiver.identityCardNumber,
         images: receiver.images,
@@ -906,6 +907,7 @@ export class ReturnDeliveriesService {
       deliveryId: string;
       customerId: string;
       address?: string;
+      identityCardName?: string;
       identityCardIssuedDate?: string;
       identityCardNumber?: string;
     },
@@ -923,8 +925,14 @@ export class ReturnDeliveriesService {
     }>
   ): Promise<IDelivery> {
     try {
-      const { deliveryId, customerId, address, identityCardIssuedDate, identityCardNumber } =
-        updateData;
+      const {
+        deliveryId,
+        customerId,
+        address,
+        identityCardName,
+        identityCardIssuedDate,
+        identityCardNumber,
+      } = updateData;
 
       // Get delivery by ID
       const delivery = await Delivery.findById(deliveryId).populate([
@@ -967,11 +975,14 @@ export class ReturnDeliveriesService {
       }
 
       // Update customer information if provided
-      if (address || identityCardIssuedDate || identityCardNumber) {
+      if (address || identityCardName || identityCardIssuedDate || identityCardNumber) {
         const updateCustomerData: Record<string, unknown> = {};
 
         if (address) {
           updateCustomerData.address = address;
+        }
+        if (identityCardName) {
+          updateCustomerData.identityCardName = identityCardName;
         }
         if (identityCardIssuedDate) {
           updateCustomerData.identityCardIssuedDate = identityCardIssuedDate;

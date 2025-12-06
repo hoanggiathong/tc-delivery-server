@@ -271,6 +271,7 @@ export const updateStatusWithCustomerImagesAndMoneyImagesSchema = z.object({
       .min(1, 'Customer ID is required')
       .regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format'),
     address: z.string().optional(),
+    identityCardName: z.string().optional(),
     identityCardIssuedDate: z.string().optional(),
     identityCardNumber: z.string().optional(),
     contentReturn: z.string().optional(),

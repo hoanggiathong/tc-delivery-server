@@ -815,6 +815,7 @@ export class CustomerService {
             : null,
           images: customer.images,
           address: customer.address,
+          identityCardName: customer.identityCardName,
           identityCardIssuedDate: customer.identityCardIssuedDate,
           identityCardNumber: customer.identityCardNumber,
           createdAt: customer.createdAt,
