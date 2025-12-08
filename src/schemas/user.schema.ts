@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 const additionalInformationProductConfigSchema = z.object({
-  content: z.string().min(1, 'Content is required').trim(),
+  content: z.string().trim().optional(),
   position: z.number().min(1, 'Position is required').max(6, 'Maximum 6 position are allowed'),
   selected: z.boolean().optional(),
 });
