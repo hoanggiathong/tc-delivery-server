@@ -838,6 +838,7 @@ export class ReturnDeliveriesService {
             username: item.createdByUser.username,
             name: item.createdByUser.name,
           },
+          nameProductAndAdditionalInformation: item.nameProductAndAdditionalInformation || '',
         })
       );
       return returnDeliveriesResponse;
