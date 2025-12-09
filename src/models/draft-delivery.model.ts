@@ -32,6 +32,7 @@ export interface IDraftDelivery extends Document {
     height?: number;
     isOverweight?: boolean;
     convertedWeight?: number;
+    goodsType?: string;
   };
   notes?: string;
   totalCost: number;
@@ -184,6 +185,10 @@ const draftDeliverySchema = new Schema<IDraftDelivery>(
         convertedWeight: {
           type: Number,
           min: [0, 'Converted weight must be positive'],
+        },
+        goodsType: {
+          type: String,
+          default: '',
         },
       },
       required: false,

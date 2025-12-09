@@ -41,6 +41,7 @@ export interface IDelivery extends Document {
     height?: number; // Cao (cm)
     isOverweight?: boolean; // Quá tải
     convertedWeight?: number; // Khối lượng quy đổi
+    goodsType?: string; // Loại hàng hóa
   };
   notes?: string;
   totalCost: number;
@@ -227,6 +228,10 @@ const deliverySchema = new Schema<IDelivery>(
         convertedWeight: {
           type: Number,
           min: [0, 'Converted weight must be positive'],
+        },
+        goodsType: {
+          type: String,
+          default: '',
         },
       },
       required: false,

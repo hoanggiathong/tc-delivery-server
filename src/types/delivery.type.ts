@@ -39,6 +39,7 @@ export interface IDeliveryResponse extends BaseEntity {
     height?: number;
     isOverweight?: boolean;
     convertedWeight?: number;
+    goodsType?: string;
   };
   notes?: string;
   totalCost: number;
@@ -77,6 +78,7 @@ export interface IDeliveryCreateRequest {
     height?: number;
     isOverweight?: boolean;
     convertedWeight?: number;
+    goodsType?: string;
   };
   notes?: string;
   paymentType?: PaymentType;
@@ -110,6 +112,7 @@ export interface IDeliveryUpdateRequest {
     height?: number;
     isOverweight?: boolean;
     convertedWeight?: number;
+    goodsType?: string;
   };
   notes?: string;
   paymentType?: PaymentType;
@@ -158,6 +161,7 @@ export interface IDeliveryWithPopulatedRefs {
     height?: number;
     isOverweight?: boolean;
     convertedWeight?: number;
+    goodsType?: string;
   };
   notes?: string;
   totalCost: number;
