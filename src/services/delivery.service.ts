@@ -755,7 +755,6 @@ export class DeliveryService {
       // Find sender by phone and selected route
       const sender = await Customer.findOne({
         phone: senderIdentifier,
-        routeId: userSelectedRouteId,
       }).lean();
 
       if (!sender) {
@@ -772,7 +771,7 @@ export class DeliveryService {
         {
           $match: {
             sender: sender._id,
-            fromRoute: sender.routeId,
+            fromRoute: new Types.ObjectId(userSelectedRouteId),
           },
         },
         // Sort by most recent first

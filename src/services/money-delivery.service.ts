@@ -559,10 +559,9 @@ export class MoneyDeliveryService {
       // Get user's selected route
       const userSelectedRouteId = await this.userService.getUserSelectedRouteId(userId);
 
-      // Find sender by phone and selected route
+      // Find sender by phone only
       const sender = await Customer.findOne({
         phone: senderIdentifier,
-        routeId: userSelectedRouteId,
       }).lean();
 
       if (!sender) {
@@ -579,7 +578,7 @@ export class MoneyDeliveryService {
         {
           $match: {
             sender: sender._id,
-            fromRoute: userSelectedRouteId,
+            fromRoute: new Types.ObjectId(userSelectedRouteId),
           },
         },
         // Sort by most recent first
@@ -1011,6 +1010,7 @@ export class MoneyDeliveryService {
       const moneyDeliveries: IMoneyDeliveryReportItem[] = dataItems.map((item: any) => ({
         id: item._id.toString(),
         code: item.code,
+        fullCode: item.fullCode,
         date: item.createdAt,
         sender: item.sender,
         receiver: item.receiver,

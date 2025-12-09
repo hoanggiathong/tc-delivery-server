@@ -84,33 +84,29 @@ export class CustomerService {
    */
   async findOrCreateCustomer(phone: string, name: string, routeId: string): Promise<ICustomer> {
     try {
-      // Try to find existing customer first
+      // Try to find existing customer by phone only
       let customer = await Customer.findOne({ phone });
 
       if (customer) {
-        // Customer exists - DON'T update name, only update routeId if needed
-        if (customer.routeId.toString() !== routeId) {
-          customer.routeId = new Types.ObjectId(routeId);
-          await customer.save();
-        }
-        Logger.debug('Existing customer found, name NOT updated', {
+        // Customer exists - keep as is, don't update anything
+        Logger.debug('Existing customer found, keeping as is', {
           phone,
           existingName: customer.name,
           requestedName: name,
           customerId: customer._id,
         });
       } else {
-        // Customer doesn't exist - create new with provided name
+        // Customer doesn't exist - create new with provided name and routeId
         customer = new Customer({
           phone,
-          name, // Use provided name for new customer
+          name,
           routeId: new Types.ObjectId(routeId),
-          relativeReceiver: [],
         });
         await customer.save();
         Logger.debug('New customer created', {
           phone,
           name,
+          routeId,
           customerId: customer._id,
         });
       }

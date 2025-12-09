@@ -316,6 +316,7 @@ export interface IMoneyDeliveryCostReportSummary {
 export interface IMoneyDeliveryReportItem {
   id: string;
   code: string;
+  fullCode: string;
   date: Date;
   sender: {
     name: string;
