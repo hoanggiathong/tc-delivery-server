@@ -229,14 +229,7 @@ export const deliveryCostReportSchema = z
       endDate: z
         .string()
         .regex(DATE_YYYY_MM_DD_PATTERN, VALIDATION_MESSAGES.DATE_YYYY_MM_DD)
-        .transform(val => new Date(val))
-        .refine(val => {
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          const endDate = new Date(val);
-          endDate.setHours(0, 0, 0, 0);
-          return endDate <= today;
-        }, 'End date cannot be in the future'),
+        .transform(val => new Date(val)),
     }),
   })
   .refine(data => data.query.startDate <= data.query.endDate, {
