@@ -1085,7 +1085,7 @@ export class DeliveryService {
 
       // Build aggregation pipeline for today's deliveries
       const pipeline: PipelineStage[] = [
-        // Match by fromRoute and today's date
+        // Match by fromRoute and today's date, exclude returned deliveries
         {
           $match: {
             fromRoute: new Types.ObjectId(selectedRouteId),
@@ -1093,6 +1093,7 @@ export class DeliveryService {
               $gte: startOfDay,
               $lte: endOfDay,
             },
+            isReturn: { $ne: true },
           },
         },
         // Lookup related collections
