@@ -1357,6 +1357,7 @@ export class ReturnDeliveriesController {
         identityCardNumber,
         customerImages,
         returnDeliveryImages,
+        identityCardName,
       } = req.body;
       const filesObject = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
 
@@ -1414,6 +1415,7 @@ export class ReturnDeliveriesController {
           deliveryId,
           customerId,
           address,
+          identityCardName,
           identityCardIssuedDate,
           identityCardNumber,
         },

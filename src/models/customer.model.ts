@@ -16,6 +16,7 @@ export interface ICustomer extends Document {
   bankId: Types.ObjectId;
   images: ICustomerImage[];
   address: string;
+  identityCardName: string;
   identityCardIssuedDate: Date;
   identityCardNumber: string;
   createdBy: Types.ObjectId;
@@ -76,6 +77,10 @@ const customerSchema = new Schema<ICustomer>(
       },
     },
     address: {
+      type: String,
+      default: null,
+    },
+    identityCardName: {
       type: String,
       default: null,
     },

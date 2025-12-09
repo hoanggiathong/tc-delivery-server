@@ -35,6 +35,7 @@ export interface ICustomerInformationResponse {
   route: IRouteResponse;
   images: ICustomerImage[];
   address: string;
+  identityCardName: string;
   identityCardIssuedDate: Date;
   identityCardNumber: string;
   createdAt: Date;
@@ -51,6 +52,7 @@ export interface ICustomerFullInformationResponse {
   bank: ICustomerBankResponse | null;
   createdBy: IUserFullInformationResponse | null;
   address: string;
+  identityCardName: string;
   identityCardIssuedDate: Date;
   identityCardNumber: string;
   createdAt: Date;

@@ -353,6 +353,7 @@ export class ReturnMoneyDeliveriesService {
           name: route?.name,
         },
         address: receiver.address,
+        identityCardName: receiver.identityCardName,
         identityCardIssuedDate: receiver.identityCardIssuedDate,
         identityCardNumber: receiver.identityCardNumber,
         images: receiver.images,
@@ -373,6 +374,7 @@ export class ReturnMoneyDeliveriesService {
       moneyDeliveryId: string;
       customerId: string;
       address?: string;
+      identityCardName?: string;
       identityCardIssuedDate?: string;
       identityCardNumber?: string;
     },
@@ -391,8 +393,14 @@ export class ReturnMoneyDeliveriesService {
     }>
   ): Promise<IMoneyDelivery> {
     try {
-      const { moneyDeliveryId, customerId, address, identityCardIssuedDate, identityCardNumber } =
-        updateData;
+      const {
+        moneyDeliveryId,
+        customerId,
+        address,
+        identityCardName,
+        identityCardIssuedDate,
+        identityCardNumber,
+      } = updateData;
 
       const moneyDeliveryDoc = await MoneyDelivery.findById(moneyDeliveryId);
       if (!moneyDeliveryDoc) {
@@ -419,11 +427,14 @@ export class ReturnMoneyDeliveriesService {
       }
 
       // Update customer information if provided
-      if (address || identityCardIssuedDate || identityCardNumber) {
+      if (address || identityCardName || identityCardIssuedDate || identityCardNumber) {
         const updateCustomerData: Record<string, unknown> = {};
 
         if (address) {
           updateCustomerData.address = address;
+        }
+        if (identityCardName) {
+          updateCustomerData.identityCardName = identityCardName;
         }
         if (identityCardIssuedDate) {
           updateCustomerData.identityCardIssuedDate = identityCardIssuedDate;
