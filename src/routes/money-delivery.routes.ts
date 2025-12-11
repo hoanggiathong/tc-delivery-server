@@ -16,6 +16,8 @@ import {
   getDetailImagesMoneyDeliverySchema,
   updateDataImagesMoneyDeliverySchema,
   deleteMoneyDeliveryByFullCodeSchema,
+  recoveryMoneyDeliveryWithTypeCollectSchema,
+  recoveryMoneyDeliveryWithTypeNormalSchema,
 } from '@/schemas/money-delivery.schema';
 
 const router = Router();
@@ -251,6 +253,19 @@ router.put(
   '/update-data-images-money-delivery/:moneyDeliveryId',
   validate(updateDataImagesMoneyDeliverySchema),
   moneyDeliveryController.updateDataImagesMoneyDelivery
+);
+
+// Recovery routes (must be before /:id to avoid conflicts)
+router.put(
+  '/recovery/collect',
+  validate(recoveryMoneyDeliveryWithTypeCollectSchema),
+  moneyDeliveryController.recoveryMoneyDeliveryWithTypeCollect
+);
+
+router.put(
+  '/recovery/normal',
+  validate(recoveryMoneyDeliveryWithTypeNormalSchema),
+  moneyDeliveryController.recoveryMoneyDeliveryWithTypeNormal
 );
 
 router.get(

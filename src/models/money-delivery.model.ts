@@ -48,6 +48,7 @@ export interface IMoneyDelivery extends Document {
   updatedAt: Date;
   dateReturn?: Date;
   contentReturn?: string;
+  staffNameRecoveryMoney?: string;
 }
 
 const moneyDeliverySchema = new Schema<IMoneyDelivery>(
@@ -180,6 +181,10 @@ const moneyDeliverySchema = new Schema<IMoneyDelivery>(
       default: null,
     },
     contentReturn: {
+      type: String,
+      default: null,
+    },
+    staffNameRecoveryMoney: {
       type: String,
       default: null,
     },

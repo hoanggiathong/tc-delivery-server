@@ -341,3 +341,44 @@ export const deleteMoneyDeliveryByFullCodeSchema = z.object({
 export type DeleteMoneyDeliveryByFullCodeRequest = z.infer<
   typeof deleteMoneyDeliveryByFullCodeSchema
 >;
+
+// Schema for recovery money delivery with type COLLECT
+export const recoveryMoneyDeliveryWithTypeCollectSchema = z.object({
+  body: z.object({
+    fullCode: z
+      .string()
+      .min(14, 'Money delivery fullCode must be at least 14 characters')
+      .max(22, 'Money delivery fullCode must not exceed 22 characters')
+      .regex(MONEY_DELIVERY_IDENTIFIER_PATTERN, VALIDATION_MESSAGES.MONEY_DELIVERY_IDENTIFIER)
+      .trim(),
+    staffNameRecoveryMoney: z
+      .string()
+      .min(1, 'Staff name recovery money is required')
+      .max(100, 'Staff name recovery money must not exceed 100 characters')
+      .trim(),
+  }),
+});
+
+// Schema for recovery money delivery with type NORMAL
+export const recoveryMoneyDeliveryWithTypeNormalSchema = z.object({
+  body: z.object({
+    fullCode: z
+      .string()
+      .min(14, 'Money delivery fullCode must be at least 14 characters')
+      .max(22, 'Money delivery fullCode must not exceed 22 characters')
+      .regex(MONEY_DELIVERY_IDENTIFIER_PATTERN, VALIDATION_MESSAGES.MONEY_DELIVERY_IDENTIFIER)
+      .trim(),
+    staffNameRecoveryMoney: z
+      .string()
+      .min(1, 'Staff name recovery money is required')
+      .max(100, 'Staff name recovery money must not exceed 100 characters')
+      .trim(),
+  }),
+});
+
+export type RecoveryMoneyDeliveryWithTypeCollectRequest = z.infer<
+  typeof recoveryMoneyDeliveryWithTypeCollectSchema
+>;
+export type RecoveryMoneyDeliveryWithTypeNormalRequest = z.infer<
+  typeof recoveryMoneyDeliveryWithTypeNormalSchema
+>;
