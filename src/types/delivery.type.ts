@@ -275,6 +275,7 @@ export interface IDeliveryLeanPopulated {
   isFree?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
+  isReturn?: boolean;
 }
 
 // Frequent customers interfaces
