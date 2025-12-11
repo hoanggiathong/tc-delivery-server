@@ -297,3 +297,24 @@ export type DeleteDeliveryByFullCodeParams = z.infer<
   typeof deleteDeliveryByFullCodeSchema
 >['params'];
 export type DeleteDeliveryByFullCodeBody = z.infer<typeof deleteDeliveryByFullCodeSchema>['body'];
+
+// Schema for recovery delivery by fullCode
+export const recoveryDeliveryByFullCodeSchema = z.object({
+  body: z.object({
+    fullCode: z
+      .string()
+      .min(12, 'Delivery fullCode must be at least 12 characters')
+      .max(20, 'Delivery fullCode must not exceed 20 characters')
+      .regex(DELIVERY_IDENTIFIER_PATTERN, VALIDATION_MESSAGES.DELIVERY_IDENTIFIER)
+      .trim(),
+    note: z
+      .string()
+      .min(1, 'Note is required')
+      .max(500, 'Note must not exceed 500 characters')
+      .trim(),
+  }),
+});
+
+export type RecoveryDeliveryByFullCodeRequest = z.infer<
+  typeof recoveryDeliveryByFullCodeSchema
+>;
