@@ -173,6 +173,7 @@ export class DeliveryService {
       paymentType: delivery.paymentType,
       createdByUser: delivery.createdByUser.name,
       isFree: delivery.isFree,
+      isReturn: delivery.isReturn,
       createdAt: delivery.createdAt,
       updatedAt: delivery.updatedAt,
     };
