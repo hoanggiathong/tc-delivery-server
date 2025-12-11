@@ -1,5 +1,6 @@
 import { Delivery } from '@/models/delivery.model';
 import { Route } from '@/models/route.model';
+import { MoneyDelivery, MoneyDeliveryStatus } from '@/models/money-delivery.model';
 import { Types, PipelineStage } from 'mongoose';
 import { omitBy, isUndefined } from 'lodash';
 import { CustomerService } from '@/services/customer.service';
@@ -1336,18 +1337,18 @@ export class DeliveryService {
   async getListReturnDeliveriesByToRouteId(
     startDate: Date,
     endDate: Date,
-    toRouteId?: string
+    routeId?: string
   ): Promise<IDeliveryResponse[]> {
     try {
       const where: Record<string, unknown> = {
-        isReturn: true,
-        dateReturn: {
+        isReturn: false,
+        createdAt: {
           $gte: startDate,
           $lte: endDate,
         },
       };
-      if (toRouteId) {
-        where.toRoute = toRouteId;
+      if (routeId) {
+        where.fromRoute = routeId;
       }
       const returnDeliveries = await Delivery.find(where)
         .populate([
@@ -1371,6 +1372,55 @@ export class DeliveryService {
       );
     } catch (error) {
       throw new Error('Failed to get list return deliveries by to route id');
+    }
+  }
+
+  async recoveryDeliveryByFullCode(fullCode: string, note: string): Promise<void> {
+    try {
+      const delivery = await Delivery.findOne({
+        fullCode: fullCode,
+        isReturn: true,
+      });
+
+      if (!delivery) {
+        throw new Error(`Delivery not found with fullCode: ${fullCode} and isReturn: true`);
+      }
+
+      const moneyDelivery = await MoneyDelivery.findOne({
+        deliveryId: delivery._id,
+      });
+
+      if (moneyDelivery) {
+        if (moneyDelivery.status === MoneyDeliveryStatus.DONE) {
+          throw new Error(
+            `Cannot recover delivery ${fullCode} because associated money delivery has status DONE`
+          );
+        }
+
+        if (moneyDelivery.status === MoneyDeliveryStatus.WAITING) {
+          await MoneyDelivery.findByIdAndDelete(moneyDelivery._id);
+        }
+      }
+
+      const existingNotes = typeof delivery.notes === 'string' ? delivery.notes : '';
+      const newNote = existingNotes ? `${note}, ${existingNotes}` : note;
+
+      await Delivery.findByIdAndUpdate(
+        delivery._id,
+        {
+          $set: {
+            isReturn: false,
+            dateReturn: null,
+            notes: newNote,
+          },
+        },
+        { new: true, runValidators: true }
+      );
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to recover delivery by fullCode');
     }
   }
 }

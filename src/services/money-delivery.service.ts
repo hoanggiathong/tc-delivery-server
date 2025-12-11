@@ -1852,9 +1852,9 @@ export class MoneyDeliveryService {
   ): Promise<IMoneyDeliveryResponse[]> {
     try {
       const where: Record<string, unknown> = {
-        status: MoneyDeliveryStatus.DONE,
+        status: MoneyDeliveryStatus.WAITING,
         type: MoneyDeliveryType.NORMAL,
-        dateReturn: {
+        createdAt: {
           $gte: startDate,
           $lte: endDate,
         },
@@ -1948,8 +1948,6 @@ export class MoneyDeliveryService {
       const existingNotes = typeof moneyDelivery.notes === 'string' ? moneyDelivery.notes : '';
       const newNote = existingNotes ? `${note}, ${existingNotes}` : note;
 
-      // Use updateOne to bypass pre-save middleware validation that prevents status change from DONE to WAITING
-      // This is intentional for recovery operations
       await MoneyDelivery.updateOne(
         { _id: moneyDelivery._id },
         {
@@ -1957,11 +1955,11 @@ export class MoneyDeliveryService {
             status: MoneyDeliveryStatus.WAITING,
             staffNameRecoveryMoney: staffNameRecoveryMoney,
             notes: newNote,
-            dateReturn: null, // Clear dateReturn when recovering
-            contentReturn: null, // Clear contentReturn when recovering
+            dateReturn: null,
+            contentReturn: null,
           },
         },
-        { runValidators: false } // Bypass validation middleware for recovery operation
+        { runValidators: false }
       );
 
       Logger.info(`Money delivery recovered: ${fullCode} by ${staffNameRecoveryMoney}`, {
@@ -2002,8 +2000,6 @@ export class MoneyDeliveryService {
       const existingNotes = typeof moneyDelivery.notes === 'string' ? moneyDelivery.notes : '';
       const newNote = existingNotes ? `${note}, ${existingNotes}` : note;
 
-      // Use updateOne to bypass pre-save middleware validation that prevents status change from DONE to WAITING
-      // This is intentional for recovery operations
       await MoneyDelivery.updateOne(
         { _id: moneyDelivery._id },
         {
@@ -2011,11 +2007,11 @@ export class MoneyDeliveryService {
             status: MoneyDeliveryStatus.WAITING,
             staffNameRecoveryMoney: staffNameRecoveryMoney,
             notes: newNote,
-            dateReturn: null, // Clear dateReturn when recovering
-            contentReturn: null, // Clear contentReturn when recovering
+            dateReturn: null,
+            contentReturn: null,
           },
         },
-        { runValidators: false } // Bypass validation middleware for recovery operation
+        { runValidators: false }
       );
 
       Logger.info(`Money delivery recovered: ${fullCode} by ${staffNameRecoveryMoney}`, {
