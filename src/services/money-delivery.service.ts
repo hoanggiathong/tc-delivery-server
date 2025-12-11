@@ -1928,4 +1928,112 @@ export class MoneyDeliveryService {
       throw new Error('Failed to get list money delivery type collect with status done');
     }
   }
+
+  async recoveryMoneyDeliveryWithTypeCollectByFullCodeAndStaffNameRecoveryMoney(
+    fullCode: string,
+    staffNameRecoveryMoney: string
+  ): Promise<void> {
+    try {
+      const moneyDelivery = await MoneyDelivery.findOne({
+        fullCode: fullCode,
+        status: MoneyDeliveryStatus.DONE,
+        type: MoneyDeliveryType.COLLECT,
+      });
+
+      if (!moneyDelivery) {
+        throw new Error(`Money delivery not found with fullCode: ${fullCode} and type: COLLECT`);
+      }
+
+      const note = `Khôi phục: mã thu hộ ${fullCode} bởi ${staffNameRecoveryMoney}`;
+      const existingNotes = typeof moneyDelivery.notes === 'string' ? moneyDelivery.notes : '';
+      const newNote = existingNotes ? `${note}, ${existingNotes}` : note;
+
+      // Use updateOne to bypass pre-save middleware validation that prevents status change from DONE to WAITING
+      // This is intentional for recovery operations
+      await MoneyDelivery.updateOne(
+        { _id: moneyDelivery._id },
+        {
+          $set: {
+            status: MoneyDeliveryStatus.WAITING,
+            staffNameRecoveryMoney: staffNameRecoveryMoney,
+            notes: newNote,
+            dateReturn: null, // Clear dateReturn when recovering
+            contentReturn: null, // Clear contentReturn when recovering
+          },
+        },
+        { runValidators: false } // Bypass validation middleware for recovery operation
+      );
+
+      Logger.info(`Money delivery recovered: ${fullCode} by ${staffNameRecoveryMoney}`, {
+        moneyDeliveryId: moneyDelivery._id.toString(),
+        fullCode,
+        staffNameRecoveryMoney,
+        type: MoneyDeliveryType.COLLECT,
+      });
+    } catch (error) {
+      Logger.error('Error recovering money delivery with type COLLECT', {
+        error: error instanceof Error ? error.message : error,
+        fullCode,
+        staffNameRecoveryMoney,
+      });
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to recover money delivery with type COLLECT');
+    }
+  }
+
+  async recoveryMoneyDeliveryWithTypeNormalByFullCodeAndStaffNameRecoveryMoney(
+    fullCode: string,
+    staffNameRecoveryMoney: string
+  ): Promise<void> {
+    try {
+      const moneyDelivery = await MoneyDelivery.findOne({
+        fullCode: fullCode,
+        status: MoneyDeliveryStatus.DONE,
+        type: MoneyDeliveryType.NORMAL,
+      });
+
+      if (!moneyDelivery) {
+        throw new Error(`Money delivery not found with fullCode: ${fullCode} and type: NORMAL`);
+      }
+
+      const note = `Khôi phục: mã chuyển tiền ${fullCode} bởi ${staffNameRecoveryMoney}`;
+      const existingNotes = typeof moneyDelivery.notes === 'string' ? moneyDelivery.notes : '';
+      const newNote = existingNotes ? `${note}, ${existingNotes}` : note;
+
+      // Use updateOne to bypass pre-save middleware validation that prevents status change from DONE to WAITING
+      // This is intentional for recovery operations
+      await MoneyDelivery.updateOne(
+        { _id: moneyDelivery._id },
+        {
+          $set: {
+            status: MoneyDeliveryStatus.WAITING,
+            staffNameRecoveryMoney: staffNameRecoveryMoney,
+            notes: newNote,
+            dateReturn: null, // Clear dateReturn when recovering
+            contentReturn: null, // Clear contentReturn when recovering
+          },
+        },
+        { runValidators: false } // Bypass validation middleware for recovery operation
+      );
+
+      Logger.info(`Money delivery recovered: ${fullCode} by ${staffNameRecoveryMoney}`, {
+        moneyDeliveryId: moneyDelivery._id.toString(),
+        fullCode,
+        staffNameRecoveryMoney,
+        type: MoneyDeliveryType.NORMAL,
+      });
+    } catch (error) {
+      Logger.error('Error recovering money delivery with type NORMAL', {
+        error: error instanceof Error ? error.message : error,
+        fullCode,
+        staffNameRecoveryMoney,
+      });
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to recover money delivery with type NORMAL');
+    }
+  }
 }

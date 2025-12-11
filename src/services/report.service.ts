@@ -82,21 +82,22 @@ export class ReportService {
 
       for (const moneyDelivery of moneyDeliveryList) {
         if (moneyDelivery.type === MoneyDeliveryType.NORMAL) {
-          totalSendMoneyAmountTypeNormalMoneyDelivery += moneyDelivery.sendMoneyAmount;
-          totalSendCostWithTypeNormalMoneyDelivery += moneyDelivery.sendCost;
+          totalSendMoneyAmountTypeNormalMoneyDelivery += moneyDelivery.sendMoneyAmount || 0;
+          totalSendCostWithTypeNormalMoneyDelivery += moneyDelivery.sendCost || 0;
         } else {
-          totalSendMoneyAmountTypeCollectMoneyDelivery += moneyDelivery.sendMoneyAmount;
-          totalSendCostWithTypeCollectMoneyDelivery += moneyDelivery.sendCost;
+          totalSendMoneyAmountTypeCollectMoneyDelivery += moneyDelivery.sendMoneyAmount || 0;
+          totalSendCostWithTypeCollectMoneyDelivery += moneyDelivery.sendCost || 0;
         }
       }
 
       for (const delivery of returnDeliveries) {
-        totalCostDelivery += delivery.cost;
+        totalCostDelivery += delivery.cost || 0;
         if (delivery.paymentType === PAYMENT_TYPE.PAID) {
           homeDeliveryCostWithPaymentTypePaidDelivery += delivery.homeDeliveryCost || 0;
-          totalCollectForCustomerCostWithPaymentTypePaidDelivery += delivery.collectForCustomerCost;
+          totalCollectForCustomerCostWithPaymentTypePaidDelivery +=
+            delivery.collectForCustomerCost || 0;
         } else {
-          totalCostWithPaymentTypeDebtDelivery += delivery.cost;
+          totalCostWithPaymentTypeDebtDelivery += delivery.cost || 0;
         }
       }
 
