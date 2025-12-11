@@ -47,6 +47,7 @@ export interface IDeliveryResponse extends BaseEntity {
   paymentType?: PaymentType;
   isFree?: boolean;
   createdByUser: string;
+  isReturn?: boolean;
 }
 
 // Delivery creation request interface
