@@ -91,13 +91,13 @@ export class ReportService {
       }
 
       for (const delivery of returnDeliveries) {
-        totalCostDelivery += delivery.cost || 0;
+        totalCostDelivery += (delivery.cost || 0) + (delivery.itemCost || 0);
         if (delivery.paymentType === PAYMENT_TYPE.PAID) {
           homeDeliveryCostWithPaymentTypePaidDelivery += delivery.homeDeliveryCost || 0;
           totalCollectForCustomerCostWithPaymentTypePaidDelivery +=
             delivery.collectForCustomerCost || 0;
         } else {
-          totalCostWithPaymentTypeDebtDelivery += delivery.cost || 0;
+          totalCostWithPaymentTypeDebtDelivery += (delivery.cost || 0) + (delivery.itemCost || 0);
         }
       }
 
