@@ -67,6 +67,7 @@ export const createDeliverySchema = z
           height: z.number().min(0, 'Height must be positive').optional(),
           isOverweight: z.boolean().default(false).optional(),
           convertedWeight: z.number().min(0, 'Converted weight must be positive').optional(),
+          goodsType: z.string().optional(),
         })
         .optional(),
       notes: z.string().trim().optional(),
@@ -159,6 +160,7 @@ export const updateDeliverySchema = z.object({
         height: z.number().min(0, 'Height must be positive').optional(),
         isOverweight: z.boolean().optional(),
         convertedWeight: z.number().min(0, 'Converted weight must be positive').optional(),
+        goodsType: z.string().optional(),
       })
       .optional(),
     notes: z.string().trim().optional(),
@@ -227,14 +229,7 @@ export const deliveryCostReportSchema = z
       endDate: z
         .string()
         .regex(DATE_YYYY_MM_DD_PATTERN, VALIDATION_MESSAGES.DATE_YYYY_MM_DD)
-        .transform(val => new Date(val))
-        .refine(val => {
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          const endDate = new Date(val);
-          endDate.setHours(0, 0, 0, 0);
-          return endDate <= today;
-        }, 'End date cannot be in the future'),
+        .transform(val => new Date(val)),
     }),
   })
   .refine(data => data.query.startDate <= data.query.endDate, {
@@ -302,3 +297,24 @@ export type DeleteDeliveryByFullCodeParams = z.infer<
   typeof deleteDeliveryByFullCodeSchema
 >['params'];
 export type DeleteDeliveryByFullCodeBody = z.infer<typeof deleteDeliveryByFullCodeSchema>['body'];
+
+// Schema for recovery delivery by fullCode
+export const recoveryDeliveryByFullCodeSchema = z.object({
+  body: z.object({
+    fullCode: z
+      .string()
+      .min(12, 'Delivery fullCode must be at least 12 characters')
+      .max(20, 'Delivery fullCode must not exceed 20 characters')
+      .regex(DELIVERY_IDENTIFIER_PATTERN, VALIDATION_MESSAGES.DELIVERY_IDENTIFIER)
+      .trim(),
+    note: z
+      .string()
+      .min(1, 'Note is required')
+      .max(500, 'Note must not exceed 500 characters')
+      .trim(),
+  }),
+});
+
+export type RecoveryDeliveryByFullCodeRequest = z.infer<
+  typeof recoveryDeliveryByFullCodeSchema
+>;

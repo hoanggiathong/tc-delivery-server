@@ -39,6 +39,7 @@ export interface IDeliveryResponse extends BaseEntity {
     height?: number;
     isOverweight?: boolean;
     convertedWeight?: number;
+    goodsType?: string;
   };
   notes?: string;
   totalCost: number;
@@ -46,6 +47,7 @@ export interface IDeliveryResponse extends BaseEntity {
   paymentType?: PaymentType;
   isFree?: boolean;
   createdByUser: string;
+  isReturn?: boolean;
 }
 
 // Delivery creation request interface
@@ -77,6 +79,7 @@ export interface IDeliveryCreateRequest {
     height?: number;
     isOverweight?: boolean;
     convertedWeight?: number;
+    goodsType?: string;
   };
   notes?: string;
   paymentType?: PaymentType;
@@ -110,6 +113,7 @@ export interface IDeliveryUpdateRequest {
     height?: number;
     isOverweight?: boolean;
     convertedWeight?: number;
+    goodsType?: string;
   };
   notes?: string;
   paymentType?: PaymentType;
@@ -158,6 +162,7 @@ export interface IDeliveryWithPopulatedRefs {
     height?: number;
     isOverweight?: boolean;
     convertedWeight?: number;
+    goodsType?: string;
   };
   notes?: string;
   totalCost: number;
@@ -271,6 +276,7 @@ export interface IDeliveryLeanPopulated {
   isFree?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
+  isReturn?: boolean;
 }
 
 // Frequent customers interfaces

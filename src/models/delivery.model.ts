@@ -29,7 +29,7 @@ export interface IDelivery extends Document {
   homeDeliveryCostTotal?: number; // Tổng phí giao tận nhà (carryCost + homeDeliveryCost)
   vehicleType?: VehicleType | null; // Loại phương tiện (required when homeDeliveryCost > 0)
   itemValue: number;
-  itemCost: number;
+  itemCost: number; // phí gia tri
   collectCost: number; // Thu hộ
   collectForCustomer: number; // Thu dùm
   collectForCustomerCost: number; // Phụ phí
@@ -41,6 +41,7 @@ export interface IDelivery extends Document {
     height?: number; // Cao (cm)
     isOverweight?: boolean; // Quá tải
     convertedWeight?: number; // Khối lượng quy đổi
+    goodsType?: string; // Loại hàng hóa
   };
   notes?: string;
   totalCost: number;
@@ -227,6 +228,10 @@ const deliverySchema = new Schema<IDelivery>(
         convertedWeight: {
           type: Number,
           min: [0, 'Converted weight must be positive'],
+        },
+        goodsType: {
+          type: String,
+          default: '',
         },
       },
       required: false,

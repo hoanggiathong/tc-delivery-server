@@ -1774,4 +1774,180 @@ export class DeliveryController {
       res.status(statusCode).json(response);
     }
   };
+
+  /**
+   * Recovery delivery by fullCode
+   * PUT /api/delivery/recovery
+   * @swagger
+   * /api/delivery/recovery:
+   *   put:
+   *     summary: Recovery delivery by fullCode
+   *     description: Khôi phục đơn hàng trả về (isReturn = true) về trạng thái bình thường. Nếu đơn hàng có money delivery với status DONE thì không cho recovery. Nếu money delivery có status WAITING thì xóa money delivery đó.
+   *     tags: [Delivery]
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - fullCode
+   *               - note
+   *             properties:
+   *               fullCode:
+   *                 type: string
+   *                 description: Full code of the delivery (e.g., 0907250001T4T1)
+   *                 example: "0907250001T4T1"
+   *               note:
+   *                 type: string
+   *                 description: Ghi chú khôi phục (sẽ được append vào notes cũ)
+   *                 minLength: 1
+   *                 maxLength: 500
+   *                 example: "Khôi phục: mã đơn hàng 0907250001T4T1 bởi Nguyen Van A"
+   *           examples:
+   *             recovery:
+   *               summary: Recovery delivery
+   *               value:
+   *                 fullCode: "0907250001T4T1"
+   *                 note: "Khôi phục: mã đơn hàng 0907250001T4T1 bởi Nguyen Van A"
+   *     responses:
+   *       200:
+   *         description: Delivery recovered successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Delivery recovered successfully"
+   *       400:
+   *         description: Validation error or cannot recover
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *             examples:
+   *               invalidFullCode:
+   *                 summary: Invalid fullCode format
+   *                 value:
+   *                   success: false
+   *                   message: "Validation error: Delivery fullCode must match pattern"
+   *               cannotRecover:
+   *                 summary: Cannot recover because money delivery is DONE
+   *                 value:
+   *                   success: false
+   *                   message: "Cannot recover delivery 0907250001T4T1 because associated money delivery has status DONE"
+   *       401:
+   *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Unauthorized"
+   *       404:
+   *         description: Delivery not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *             examples:
+   *               notFound:
+   *                 summary: Delivery not found
+   *                 value:
+   *                   success: false
+   *                   message: "Delivery not found with fullCode: 0907250001T4T1 and isReturn: true"
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Failed to recover delivery by fullCode"
+   */
+  recoveryDeliveryByFullCode = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { fullCode, note } = req.body;
+
+      await this.deliveryService.recoveryDeliveryByFullCode(fullCode, note);
+
+      Logger.info(`Delivery recovered: ${fullCode}`, {
+        userId: req.user.userId,
+        fullCode,
+        note,
+      });
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Delivery recovered successfully',
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Failed to recover delivery by fullCode', {
+        error: error instanceof Error ? error.message : error,
+        userId: req.user?.userId,
+        fullCode: req.body?.fullCode,
+      });
+
+      let statusCode = 500;
+      const message =
+        error instanceof Error ? error.message : 'Failed to recover delivery by fullCode';
+
+      if (message.includes('not found')) {
+        statusCode = 404;
+      } else if (
+        message.includes('Validation error') ||
+        message.includes('required') ||
+        message.includes('Cannot recover')
+      ) {
+        statusCode = 400;
+      }
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(statusCode).json(response);
+    }
+  };
 }
