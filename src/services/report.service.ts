@@ -19,7 +19,8 @@ export class ReportService {
 
   // report for return money delivery and return delivery
   async getReportReturnMoneyDeliveryAndReturnDelivery(
-    query: IReportReturnMoneyDeliveryAndReturnDeliveryRequest
+    query: IReportReturnMoneyDeliveryAndReturnDeliveryRequest,
+    userId: string
   ): Promise<IReportReturnMoneyDeliveryAndReturnDeliveryResponse> {
     const { startDate, endDate, routeId } = query;
 
@@ -36,6 +37,7 @@ export class ReportService {
       if (routeId) {
         moneyDeliveriesTypeNormal =
           await this.moneyDeliveryService.getListMoneyDeliveryByTypeNormalAndStatusDone(
+            userId,
             start,
             end,
             routeId
@@ -43,27 +45,35 @@ export class ReportService {
 
         moneyDeliveriesTypeCollect =
           await this.moneyDeliveryService.getListMoneyDeliveryByTypeCollectAndStatusDone(
+            userId,
             start,
             end,
             routeId
           );
 
         returnDeliveries = await this.deliveryService.getListReturnDeliveriesByToRouteId(
+          userId,
           start,
           end,
           routeId
         );
       } else {
         moneyDeliveriesTypeNormal =
-          await this.moneyDeliveryService.getListMoneyDeliveryByTypeNormalAndStatusDone(start, end);
+          await this.moneyDeliveryService.getListMoneyDeliveryByTypeNormalAndStatusDone(
+            userId,
+            start,
+            end
+          );
 
         moneyDeliveriesTypeCollect =
           await this.moneyDeliveryService.getListMoneyDeliveryByTypeCollectAndStatusDone(
+            userId,
             start,
             end
           );
 
         returnDeliveries = await this.deliveryService.getListReturnDeliveriesByToRouteId(
+          userId,
           start,
           end
         );

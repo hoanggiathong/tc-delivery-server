@@ -144,6 +144,11 @@ export class ReturnDeliveriesService {
             code: item.toRoute.code,
             name: item.toRoute.name,
           },
+          fromRoute: {
+            id: item.fromRoute._id.toString(),
+            code: item.fromRoute.code,
+            name: item.fromRoute.name,
+          },
           cost: item.cost,
           homeDelivery: item.homeDelivery,
           homeDeliveryCost: item.homeDeliveryCost,
@@ -282,6 +287,11 @@ export class ReturnDeliveriesService {
             code: item.toRoute.code,
             name: item.toRoute.name,
           },
+          fromRoute: {
+            id: item.fromRoute._id.toString(),
+            code: item.fromRoute.code,
+            name: item.fromRoute.name,
+          },
           cost: item.cost,
           homeDelivery: item.homeDelivery,
           homeDeliveryCost: item.homeDeliveryCost,
@@ -378,6 +388,11 @@ export class ReturnDeliveriesService {
               id: item.toRoute._id.toString(),
               code: item.toRoute.code,
               name: item.toRoute.name,
+            },
+            fromRoute: {
+              id: item.fromRoute._id.toString(),
+              code: item.fromRoute.code,
+              name: item.fromRoute.name,
             },
             cost: item.cost,
             homeDelivery: item.homeDelivery,
@@ -486,6 +501,11 @@ export class ReturnDeliveriesService {
               id: item.toRoute._id.toString(),
               code: item.toRoute.code,
               name: item.toRoute.name,
+            },
+            fromRoute: {
+              id: item.fromRoute._id.toString(),
+              code: item.fromRoute.code,
+              name: item.fromRoute.name,
             },
             cost: item.cost,
             homeDelivery: item.homeDelivery,
@@ -607,6 +627,11 @@ export class ReturnDeliveriesService {
               code: item.toRoute.code,
               name: item.toRoute.name,
             },
+            fromRoute: {
+              id: item.fromRoute._id.toString(),
+              code: item.fromRoute.code,
+              name: item.fromRoute.name,
+            },
             cost: item.cost,
             homeDelivery: item.homeDelivery,
             homeDeliveryCost: item.homeDeliveryCost,
@@ -714,6 +739,11 @@ export class ReturnDeliveriesService {
             code: item.toRoute.code,
             name: item.toRoute.name,
           },
+          fromRoute: {
+            id: item.fromRoute._id.toString(),
+            code: item.fromRoute.code,
+            name: item.fromRoute.name,
+          },
           cost: item.cost,
           homeDelivery: item.homeDelivery,
           homeDeliveryCost: item.homeDeliveryCost,
@@ -811,6 +841,11 @@ export class ReturnDeliveriesService {
             code: item.toRoute.code,
             name: item.toRoute.name,
           },
+          fromRoute: {
+            id: item.fromRoute._id.toString(),
+            code: item.fromRoute.code,
+            name: item.fromRoute.name,
+          },
           cost: item.cost,
           homeDelivery: item.homeDelivery,
           homeDeliveryCost: item.homeDeliveryCost,
@@ -899,9 +934,6 @@ export class ReturnDeliveriesService {
     return uploadedImages;
   }
 
-  /**
-   * Update status with images (new formData format)
-   */
   async updateStatusWithImages(
     userId: string,
     updateData: {
@@ -1095,9 +1127,6 @@ export class ReturnDeliveriesService {
     }
   }
 
-  /**
-   * Update status return delivery without images (case update data only)
-   */
   async updateStatusReturnDeliveryWithoutImages(
     userId: string,
     updateData: IReturnDeliveryUpdateRequest
@@ -1301,10 +1330,6 @@ export class ReturnDeliveriesService {
     return uploadedImages;
   }
 
-  /**
-   * Get report for return delivery with status done
-   * Returns count of today's returns and old returns (7 days ago until today)
-   */
   async getListReportReturnDeliveryWithStatusDone(
     userId: string
   ): Promise<IGetListReportReturnDeliveryResponse> {

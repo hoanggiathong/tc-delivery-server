@@ -1846,14 +1846,17 @@ export class MoneyDeliveryService {
   }
 
   async getListMoneyDeliveryByTypeNormalAndStatusDone(
+    userId: string,
     startDate: Date,
     endDate: Date,
     routeId?: string
   ): Promise<IMoneyDeliveryResponse[]> {
     try {
+      const toRouteId = await this.userService.getUserSelectedRouteId(userId);
       const where: Record<string, unknown> = {
         status: MoneyDeliveryStatus.WAITING,
         type: MoneyDeliveryType.NORMAL,
+        toRoute: toRouteId,
         createdAt: {
           $gte: startDate,
           $lte: endDate,
@@ -1862,6 +1865,10 @@ export class MoneyDeliveryService {
 
       if (routeId) {
         where.fromRoute = routeId;
+      } else {
+        where.fromRoute = {
+          $ne: toRouteId,
+        };
       }
 
       const moneyDeliveries = await MoneyDelivery.find(where)
@@ -1888,14 +1895,17 @@ export class MoneyDeliveryService {
   }
 
   async getListMoneyDeliveryByTypeCollectAndStatusDone(
+    userId: string,
     startDate: Date,
     endDate: Date,
     routeId?: string
   ): Promise<IMoneyDeliveryResponse[]> {
     try {
+      const fromRouteId = await this.userService.getUserSelectedRouteId(userId);
       const where: Record<string, unknown> = {
         status: MoneyDeliveryStatus.DONE,
         type: MoneyDeliveryType.COLLECT,
+        fromRoute: fromRouteId,
         dateReturn: {
           $gte: startDate,
           $lte: endDate,
@@ -1904,6 +1914,10 @@ export class MoneyDeliveryService {
 
       if (routeId) {
         where.toRoute = routeId;
+      } else {
+        where.toRoute = {
+          $ne: fromRouteId,
+        };
       }
 
       const moneyDeliveries = await MoneyDelivery.find(where)
