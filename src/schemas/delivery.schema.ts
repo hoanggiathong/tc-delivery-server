@@ -315,6 +315,83 @@ export const recoveryDeliveryByFullCodeSchema = z.object({
   }),
 });
 
-export type RecoveryDeliveryByFullCodeRequest = z.infer<
-  typeof recoveryDeliveryByFullCodeSchema
->;
+export type RecoveryDeliveryByFullCodeRequest = z.infer<typeof recoveryDeliveryByFullCodeSchema>;
+
+export const getListDeliveryInventorySchema = z.object({
+  query: z.object({
+    toRoute: z
+      .preprocess(val => {
+        if (val === undefined || val === null || val === '') {
+          return undefined;
+        }
+        return String(val).toLowerCase() === 'true';
+      }, z.boolean().optional())
+      .optional(),
+    fromRoute: z
+      .preprocess(val => {
+        if (val === undefined || val === null || val === '') {
+          return undefined;
+        }
+        return String(val).toLowerCase() === 'true';
+      }, z.boolean().optional())
+      .optional(),
+    collectCost: z
+      .preprocess(val => {
+        if (val === undefined || val === null || val === '') {
+          return undefined;
+        }
+        return String(val).toLowerCase() === 'true';
+      }, z.boolean().optional())
+      .optional(),
+    homeDeliveryCost: z
+      .preprocess(val => {
+        if (val === undefined || val === null || val === '') {
+          return undefined;
+        }
+        return String(val).toLowerCase() === 'true';
+      }, z.boolean().optional())
+      .optional(),
+    collectForCustomer: z
+      .preprocess(val => {
+        if (val === undefined || val === null || val === '') {
+          return undefined;
+        }
+        return String(val).toLowerCase() === 'true';
+      }, z.boolean().optional())
+      .optional(),
+    paymentType: z
+      .preprocess(val => {
+        if (val === undefined || val === null || val === '') {
+          return undefined;
+        }
+        return String(val).toLowerCase() === 'true';
+      }, z.boolean().optional())
+      .optional(),
+    itemCost: z
+      .preprocess(val => {
+        if (val === undefined || val === null || val === '') {
+          return undefined;
+        }
+        return String(val).toLowerCase() === 'true';
+      }, z.boolean().optional())
+      .optional(),
+    time: z
+      .preprocess(val => {
+        if (val === undefined || val === null || val === '') {
+          return undefined;
+        }
+        const num = parseInt(String(val), 10);
+        return isNaN(num) ? undefined : num;
+      }, z.number().int().min(1, 'Time must be at least 1 day').optional())
+      .optional(),
+  }),
+});
+
+export type GetListDeliveryInventoryQuery = z.infer<typeof getListDeliveryInventorySchema>['query'];
+
+// Schema for getListDeliveryInventoryAboutHomeDelivery (same params as getListDeliveryInventory)
+export const getListDeliveryInventoryAboutHomeDeliverySchema = getListDeliveryInventorySchema;
+
+export type GetListDeliveryInventoryAboutHomeDeliveryQuery = z.infer<
+  typeof getListDeliveryInventoryAboutHomeDeliverySchema
+>['query'];

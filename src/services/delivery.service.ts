@@ -19,11 +19,18 @@ import {
   ITodayDeliveryItem,
   IDeliveryPopulated,
   IGetListReportReturnDeliveryResponse,
+  IGetListDeliveryInventoryRequest,
+  IGetListDeliveryInventoryAboutHomeDeliveryResponse,
 } from '@/types/delivery.type';
+import {
+  IReturnDeliveryResponse,
+  IReturnDeliveryLeanPopulated,
+} from '@/types/return-delivery.type';
 import { ICustomer, Customer } from '@/models/customer.model';
 import Logger from '@/utils/logger';
 import { PaymentType } from '@/types';
 import { getStartOfDayVietnam, getEndOfDayVietnam, convertVietnamToUTC } from '@/utils/date.utils';
+import { PAYMENT_TYPE } from '@/const/money-deliveries.const';
 
 export class DeliveryService {
   private customerService: CustomerService;
@@ -98,6 +105,13 @@ export class DeliveryService {
    */
   private toPopulatedDeliveryLean(delivery: unknown): IDeliveryLeanPopulated {
     return delivery as IDeliveryLeanPopulated;
+  }
+
+  /**
+   * Type assertion helper for lean populated return delivery objects
+   */
+  private toPopulatedReturnDeliveryLean(returnDelivery: unknown): IReturnDeliveryLeanPopulated[] {
+    return returnDelivery as IReturnDeliveryLeanPopulated[];
   }
 
   /**
@@ -1336,13 +1350,16 @@ export class DeliveryService {
   }
 
   async getListReturnDeliveriesByToRouteId(
+    userId: string,
     startDate: Date,
     endDate: Date,
     routeId?: string
   ): Promise<IDeliveryResponse[]> {
     try {
+      const toRouteId = await this.userService.getUserSelectedRouteId(userId);
       const where: Record<string, unknown> = {
         isReturn: false,
+        toRoute: toRouteId,
         createdAt: {
           $gte: startDate,
           $lte: endDate,
@@ -1350,7 +1367,12 @@ export class DeliveryService {
       };
       if (routeId) {
         where.fromRoute = routeId;
+      } else {
+        where.fromRoute = {
+          $ne: toRouteId,
+        };
       }
+
       const returnDeliveries = await Delivery.find(where)
         .populate([
           {
@@ -1422,6 +1444,317 @@ export class DeliveryService {
         throw error;
       }
       throw new Error('Failed to recover delivery by fullCode');
+    }
+  }
+
+  async getListDeliveryInventory(
+    userId: string,
+    query: IGetListDeliveryInventoryRequest
+  ): Promise<IReturnDeliveryResponse[]> {
+    try {
+      const {
+        toRoute,
+        fromRoute,
+        collectCost,
+        homeDeliveryCost,
+        collectForCustomer,
+        paymentType,
+        itemCost,
+        time,
+      } = query;
+
+      const routeId = await this.userService.getUserSelectedRouteId(userId);
+      const where: Record<string, unknown> = {
+        isReturn: false,
+      };
+
+      if (toRoute) {
+        where.toRoute = routeId;
+      }
+
+      if (fromRoute) {
+        where.fromRoute = routeId;
+      }
+
+      if (collectCost === true) {
+        where.collectCost = { $gt: 0 };
+      }
+
+      if (homeDeliveryCost === true) {
+        where.homeDeliveryCost = { $gt: 0 };
+      }
+
+      if (collectForCustomer === true) {
+        where.collectForCustomer = { $gt: 0 };
+      }
+
+      if (paymentType === true) {
+        where.paymentType = PAYMENT_TYPE.DEBT;
+      }
+
+      if (itemCost === true) {
+        where.itemCost = { $gt: 0 };
+      }
+
+      const daysToSubtract = time || 15;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const cutoffDate = new Date(today);
+      cutoffDate.setDate(cutoffDate.getDate() - daysToSubtract);
+      cutoffDate.setHours(23, 59, 59, 999);
+      where.createdAt = { $lte: cutoffDate };
+
+      // Query deliveries
+      const deliveries = await Delivery.find(where)
+        .populate([
+          { path: 'sender', select: '_id name phone routeId createdAt updatedAt' },
+          { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
+          { path: 'createdByUser', select: '_id username name' },
+        ])
+        .sort({ createdAt: 1 })
+        .lean();
+
+      const populatedDeliveries = this.toPopulatedReturnDeliveryLean(deliveries);
+
+      const deliveriesResponse: IReturnDeliveryResponse[] = populatedDeliveries.map(
+        (item: any) => ({
+          id: item._id.toString(),
+          code: item.code,
+          name: item.name,
+          fullCode: item.fullCode,
+          subCode: item.subCode,
+          quantity: item.quantity,
+          sender: {
+            name: item.senderName,
+            phone: item.sender.phone,
+          },
+          receiver: {
+            name: item.receiverName,
+            phone: item.receiver.phone,
+          },
+          fromRoute: {
+            id: item.fromRoute._id.toString(),
+            code: item.fromRoute.code,
+            name: item.fromRoute.name,
+          },
+          toRoute: {
+            id: item.toRoute._id.toString(),
+            code: item.toRoute.code,
+            name: item.toRoute.name,
+          },
+          cost: item.cost,
+          homeDelivery: item.homeDelivery,
+          homeDeliveryCost: item.homeDeliveryCost,
+          collectForCustomer: item.collectForCustomer,
+          collectForCustomerCost: item.collectForCustomerCost,
+          collectForCustomerNote: item.collectForCustomerNote,
+          itemValue: item.itemValue,
+          itemCost: item.itemCost,
+          totalCost: item.totalCost,
+          actualRevenue: item.actualRevenue,
+          paymentType: item.paymentType,
+          notes: item.notes,
+          isReturn: item.isReturn,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+          upItems: item.upItems || '',
+          downItems: item.downItems || '',
+          inventory: item.inventory || '',
+          smsType: item.smsType || '',
+          timeToSendSMS: item.timeToSendSMS,
+          quantityReturn: item.quantityReturn || 0,
+          dateReturn: item.dateReturn,
+          collectCost: item.collectCost || 0,
+          createdByUser: {
+            _id: item.createdByUser._id.toString(),
+            username: item.createdByUser.username,
+            name: item.createdByUser.name,
+          },
+          nameProductAndAdditionalInformation: item.nameProductAndAdditionalInformation || '',
+        })
+      );
+
+      return deliveriesResponse;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to get list delivery inventory');
+    }
+  }
+
+  async getListDeliveryInventoryAboutHomeDelivery(
+    userId: string
+  ): Promise<IGetListDeliveryInventoryAboutHomeDeliveryResponse> {
+    try {
+      const routeId = await this.userService.getUserSelectedRouteId(userId);
+
+      const deliveries = await Delivery.find({
+        isReturn: false,
+        toRoute: routeId,
+        homeDeliveryCost: { $gt: 0 },
+      })
+        .populate([
+          { path: 'sender', select: '_id name phone routeId createdAt updatedAt' },
+          { path: 'receiver', select: '_id name phone routeId createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
+          { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
+          { path: 'createdByUser', select: '_id username name' },
+        ])
+        .sort({ createdAt: 1 })
+        .lean();
+
+      const populatedDeliveries = this.toPopulatedReturnDeliveryLean(deliveries);
+
+      const deliveriesResponse: IReturnDeliveryResponse[] = populatedDeliveries.map(
+        (item: any) => ({
+          id: item._id.toString(),
+          code: item.code,
+          name: item.name,
+          fullCode: item.fullCode,
+          subCode: item.subCode,
+          quantity: item.quantity,
+          sender: {
+            name: item.senderName,
+            phone: item.sender.phone,
+          },
+          receiver: {
+            name: item.receiverName,
+            phone: item.receiver.phone,
+          },
+          toRoute: {
+            id: item.toRoute._id.toString(),
+            code: item.toRoute.code,
+            name: item.toRoute.name,
+          },
+          fromRoute: {
+            id: item.fromRoute._id.toString(),
+            code: item.fromRoute.code,
+            name: item.fromRoute.name,
+          },
+          cost: item.cost,
+          homeDelivery: item.homeDelivery,
+          homeDeliveryCost: item.homeDeliveryCost,
+          collectForCustomer: item.collectForCustomer,
+          collectForCustomerCost: item.collectForCustomerCost,
+          collectForCustomerNote: item.collectForCustomerNote,
+          itemValue: item.itemValue,
+          itemCost: item.itemCost,
+          totalCost: item.totalCost,
+          actualRevenue: item.actualRevenue,
+          paymentType: item.paymentType,
+          notes: item.notes,
+          isReturn: item.isReturn,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+          upItems: item.upItems || '',
+          downItems: item.downItems || '',
+          inventory: item.inventory || '',
+          smsType: item.smsType || '',
+          timeToSendSMS: item.timeToSendSMS,
+          quantityReturn: item.quantityReturn || 0,
+          dateReturn: item.dateReturn,
+          collectCost: item.collectCost || 0,
+          createdByUser: {
+            _id: item.createdByUser._id.toString(),
+            username: item.createdByUser.username,
+            name: item.createdByUser.name,
+          },
+          nameProductAndAdditionalInformation: item.nameProductAndAdditionalInformation || '',
+        })
+      );
+
+      let totalAllCostWithPaymentTypePaid = 0;
+      let totalCostWithPaymentTypePaid = 0; // cước phí (đã thu)
+      let totalItemCostWithPaymentTypePaid = 0; // phí giá trị (đã thu)
+      let totalCollectForCustomerCostWithPaymentTypePaid = 0; // phụ phí đi (đã thu)
+
+      let totalAllCostWithPaymentTypeDebt = 0;
+      let totalCostWithPaymentTypeDebt = 0; // cước phí (nợ)
+      let totalItemCostWithPaymentTypeDebt = 0; // phí giá trị (nợ)
+      let totalCollectForCustomerCostWithPaymentTypeDebt = 0; // phụ phí đi (nợ)
+
+      let totalHomeDeliveryCostWithPaymentTypePaid = 0;
+      let totalHomeDeliveryCostWithPaymentTypeDebt = 0;
+
+      let totalCost = 0;
+      let totalHomeDeliveryCost = 0;
+      let totalCollectForCustomer = 0;
+      let totalCollectCost = 0;
+      let totalActualCost = 0;
+
+      deliveriesResponse.forEach(delivery => {
+        const isPaid = delivery.paymentType === PAYMENT_TYPE.PAID;
+        const isDebt = delivery.paymentType === PAYMENT_TYPE.DEBT;
+
+        totalCollectForCustomer += delivery.collectForCustomer || 0;
+        totalCollectCost += delivery.collectCost || 0;
+
+        if (isPaid) {
+          totalCostWithPaymentTypePaid += delivery.cost;
+          totalItemCostWithPaymentTypePaid += delivery.itemCost;
+          totalCollectForCustomerCostWithPaymentTypePaid += delivery.collectForCustomerCost || 0;
+
+          // GTN đã thu
+          totalHomeDeliveryCostWithPaymentTypePaid += delivery.homeDeliveryCost || 0;
+        }
+
+        if (isDebt) {
+          totalCostWithPaymentTypeDebt += delivery.cost;
+          totalItemCostWithPaymentTypeDebt += delivery.itemCost;
+          totalCollectForCustomerCostWithPaymentTypeDebt += delivery.collectForCustomerCost || 0;
+
+          //GTN nợ
+          totalHomeDeliveryCostWithPaymentTypeDebt += delivery.homeDeliveryCost || 0;
+        }
+      });
+
+      totalAllCostWithPaymentTypePaid =
+        totalCostWithPaymentTypePaid +
+        totalItemCostWithPaymentTypePaid +
+        totalCollectForCustomerCostWithPaymentTypePaid;
+
+      totalAllCostWithPaymentTypeDebt =
+        totalCostWithPaymentTypeDebt +
+        totalItemCostWithPaymentTypeDebt +
+        totalCollectForCustomerCostWithPaymentTypeDebt;
+
+      totalCost = totalAllCostWithPaymentTypePaid + totalAllCostWithPaymentTypeDebt;
+
+      totalHomeDeliveryCost =
+        totalHomeDeliveryCostWithPaymentTypePaid + totalHomeDeliveryCostWithPaymentTypeDebt;
+
+      totalActualCost =
+        totalAllCostWithPaymentTypeDebt +
+        totalHomeDeliveryCostWithPaymentTypeDebt +
+        totalCollectCost +
+        totalCollectForCustomer;
+
+      const sum = {
+        totalAllCostWithPaymentTypePaid,
+        totalHomeDeliveryCostWithPaymentTypePaid,
+        totalAllCostWithPaymentTypeDebt,
+        totalHomeDeliveryCostWithPaymentTypeDebt,
+        totalCost,
+        totalHomeDeliveryCost,
+        totalCollectForCustomer,
+        totalCollectCost,
+        totalActualCost,
+      };
+
+      return {
+        data: deliveriesResponse,
+        sum,
+      };
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to get list delivery inventory about home delivery');
     }
   }
 }
