@@ -7,6 +7,7 @@ import {
   DATE_YYYY_MM_DD_PATTERN,
 } from '@/utils/validation-patterns';
 import { VehicleType } from '@/models/delivery.model';
+import { InventoryType } from '@/types/delivery.type';
 
 export const createDeliverySchema = z
   .object({
@@ -319,22 +320,11 @@ export type RecoveryDeliveryByFullCodeRequest = z.infer<typeof recoveryDeliveryB
 
 export const getListDeliveryInventorySchema = z.object({
   query: z.object({
-    toRoute: z
-      .preprocess(val => {
-        if (val === undefined || val === null || val === '') {
-          return undefined;
-        }
-        return String(val).toLowerCase() === 'true';
-      }, z.boolean().optional())
-      .optional(),
-    fromRoute: z
-      .preprocess(val => {
-        if (val === undefined || val === null || val === '') {
-          return undefined;
-        }
-        return String(val).toLowerCase() === 'true';
-      }, z.boolean().optional())
-      .optional(),
+    inventoryType: z.nativeEnum(InventoryType, {
+      errorMap: () => ({
+        message: `inventoryType must be either "${InventoryType.FROM_ROUTE}" or "${InventoryType.TO_ROUTE}"`,
+      }),
+    }),
     collectCost: z
       .preprocess(val => {
         if (val === undefined || val === null || val === '') {

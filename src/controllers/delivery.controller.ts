@@ -1962,17 +1962,20 @@ export class DeliveryController {
    *       - bearerAuth: []
    *     parameters:
    *       - in: query
-   *         name: toRoute
+   *         name: inventoryType
+   *         required: true
    *         schema:
-   *           type: boolean
-   *         description: If true, filter by user's selected route for toRoute
-   *         example: true
-   *       - in: query
-   *         name: fromRoute
-   *         schema:
-   *           type: boolean
-   *         description: If true, filter by user's selected route for fromRoute
-   *         example: true
+   *           type: string
+   *           enum: [fromRoute, toRoute]
+   *         description: Filter by inventory type - 'fromRoute' to filter by user's selected route for fromRoute, 'toRoute' to filter by user's selected route for toRoute
+   *         example: toRoute
+   *         examples:
+   *           fromRoute:
+   *             value: fromRoute
+   *             summary: Filter by fromRoute
+   *           toRoute:
+   *             value: toRoute
+   *             summary: Filter by toRoute
    *       - in: query
    *         name: collectCost
    *         schema:
