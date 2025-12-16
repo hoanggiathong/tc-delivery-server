@@ -9,7 +9,11 @@ import { IRoute } from '@/models/route.model';
 import { ICustomerBankLean } from '@/models/customer-bank.model';
 import { IReturnDeliveryResponse } from './return-delivery.type';
 
-// Delivery response interface
+export enum InventoryType {
+  FROM_ROUTE = 'fromRoute',
+  TO_ROUTE = 'toRoute',
+}
+
 export interface IDeliveryResponse extends BaseEntity {
   code: string;
   fullCode: string;
@@ -411,8 +415,7 @@ export interface IGetListReportReturnDeliveryResponse {
 }
 
 export interface IGetListDeliveryInventoryRequest {
-  toRoute?: boolean;
-  fromRoute?: boolean;
+  inventoryType: InventoryType;
   collectCost?: boolean;
   homeDeliveryCost?: boolean;
   collectForCustomer?: boolean;

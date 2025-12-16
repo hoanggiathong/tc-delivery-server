@@ -21,6 +21,7 @@ import {
   IGetListReportReturnDeliveryResponse,
   IGetListDeliveryInventoryRequest,
   IGetListDeliveryInventoryAboutHomeDeliveryResponse,
+  InventoryType,
 } from '@/types/delivery.type';
 import {
   IReturnDeliveryResponse,
@@ -1453,8 +1454,7 @@ export class DeliveryService {
   ): Promise<IReturnDeliveryResponse[]> {
     try {
       const {
-        toRoute,
-        fromRoute,
+        inventoryType,
         collectCost,
         homeDeliveryCost,
         collectForCustomer,
@@ -1468,11 +1468,9 @@ export class DeliveryService {
         isReturn: false,
       };
 
-      if (toRoute) {
+      if (inventoryType === InventoryType.TO_ROUTE) {
         where.toRoute = routeId;
-      }
-
-      if (fromRoute) {
+      } else if (inventoryType === InventoryType.FROM_ROUTE) {
         where.fromRoute = routeId;
       }
 
