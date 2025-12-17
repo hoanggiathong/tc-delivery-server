@@ -721,7 +721,7 @@ export class DeliveryService {
         },
         { path: 'receiver', select: '_id name phone' },
         { path: 'fromRoute', select: '_id code name address phone' },
-        { path: 'toRoute', select: '_id code name address' },
+        { path: 'toRoute', select: '_id code name address phone' },
         { path: 'createdByUser', select: '_id username name' },
       ])
       .lean();
