@@ -420,7 +420,7 @@ export interface IGetListDeliveryInventoryRequest {
   homeDeliveryCost?: boolean;
   collectForCustomer?: boolean;
   paymentType?: boolean;
-  itemCost?: boolean;
+  itemValue?: boolean;
   time?: number;
 }
 

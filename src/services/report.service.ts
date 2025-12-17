@@ -114,10 +114,8 @@ export class ReportService {
       const totalCostWithPaymentTypePaidDelivery: number =
         totalCostDelivery - totalCostWithPaymentTypeDebtDelivery;
 
-      const totalCostPaid: number =
-        totalCostWithPaymentTypePaidDelivery +
-        totalCollectForCustomerCostWithPaymentTypePaidDelivery +
-        homeDeliveryCostWithPaymentTypePaidDelivery;
+      const totalCostPaid: number = totalCostWithPaymentTypePaidDelivery;
+
       const totalCostNotHomeDeliveryCostAndCollectForCustomerCost: number =
         totalCostDelivery +
         totalSendCostWithTypeCollectMoneyDelivery +
