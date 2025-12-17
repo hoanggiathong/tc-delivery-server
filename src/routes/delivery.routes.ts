@@ -1,19 +1,20 @@
-import { Router } from 'express';
 import { DeliveryController } from '@/controllers/delivery.controller';
-import { validate } from '@/middlewares/validation.middleware';
 import { authenticateToken } from '@/middlewares/auth.middleware';
+import { validate } from '@/middlewares/validation.middleware';
 import {
   createDeliverySchema,
-  updateDeliverySchema,
-  deliveryParamsSchema,
-  getNextCodeSchema,
+  deleteDeliveryByFullCodeSchema,
   deliveryCodeSchema,
-  frequentCustomersSchema,
   deliveryCostReportSchema,
   deliveryFullCodeSchema,
-  deleteDeliveryByFullCodeSchema,
+  deliveryParamsSchema,
+  frequentCustomersSchema,
+  getListDeliveryInventorySchema,
+  getNextCodeSchema,
   recoveryDeliveryByFullCodeSchema,
+  updateDeliverySchema,
 } from '@/schemas/delivery.schema';
+import { Router } from 'express';
 
 const router = Router();
 const deliveryController = new DeliveryController();
@@ -217,6 +218,16 @@ router.get('/', deliveryController.getAllDeliveries);
 router.get('/next-code', validate(getNextCodeSchema), deliveryController.getNextCode);
 router.get('/cost-report', validate(deliveryCostReportSchema), deliveryController.getCostReport);
 router.get('/today-report', deliveryController.getTodayReport);
+
+router.get(
+  '/inventory/home-delivery',
+  deliveryController.getListDeliveryInventoryAboutHomeDelivery
+);
+router.get(
+  '/inventory',
+  validate(getListDeliveryInventorySchema),
+  deliveryController.getListDeliveryInventory
+);
 
 router.get(
   '/search/:fullCode',

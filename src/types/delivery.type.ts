@@ -7,8 +7,13 @@ import { IDelivery, VehicleType } from '@/models/delivery.model';
 import { IUser } from '@/models/user.model';
 import { IRoute } from '@/models/route.model';
 import { ICustomerBankLean } from '@/models/customer-bank.model';
+import { IReturnDeliveryResponse } from './return-delivery.type';
 
-// Delivery response interface
+export enum InventoryType {
+  FROM_ROUTE = 'fromRoute',
+  TO_ROUTE = 'toRoute',
+}
+
 export interface IDeliveryResponse extends BaseEntity {
   code: string;
   fullCode: string;
@@ -407,4 +412,32 @@ export interface IGetListReportReturnDeliveryResponse {
   quantityReturnIsToday: number;
   quantityReturnIsOld: number;
   quantityReturnTotalToday: number;
+}
+
+export interface IGetListDeliveryInventoryRequest {
+  inventoryType: InventoryType;
+  collectCost?: boolean;
+  homeDeliveryCost?: boolean;
+  collectForCustomer?: boolean;
+  paymentType?: boolean;
+  itemValue?: boolean;
+  time?: number;
+}
+
+export interface IGetListDeliveryInventoryAboutHomeDeliveryResponse {
+  data: IReturnDeliveryResponse[];
+  sum: ITotalHomeDeliveryCost;
+}
+
+export interface ITotalHomeDeliveryCost {
+  totalAllCostWithPaymentTypePaid: number; //Tổng cước phí (đã thu)
+  totalHomeDeliveryCostWithPaymentTypePaid: number; //Tổng phí giao tận nhà (đã thu)
+  totalAllCostWithPaymentTypeDebt: number; //Tổng cước phí (nợ)
+  totalHomeDeliveryCostWithPaymentTypeDebt: number; //Tổng phí giao tận nhà (nợ)
+  totalCost: number; //Tổng cước phí
+  totalHomeDeliveryCost: number; //Tổng phí giao tận nhà
+
+  totalCollectForCustomer: number; //Tổng thu dùm
+  totalCollectCost: number; //Tổng thu hộ
+  totalActualCost: number; //Tổng thực thu
 }

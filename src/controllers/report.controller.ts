@@ -212,7 +212,10 @@ export class ReportController {
         originalUrl: req.originalUrl,
       });
 
-      const result = await this.reportService.getReportReturnMoneyDeliveryAndReturnDelivery(query);
+      const result = await this.reportService.getReportReturnMoneyDeliveryAndReturnDelivery(
+        query,
+        req.user.userId
+      );
 
       const response: ApiResponse = {
         success: true,

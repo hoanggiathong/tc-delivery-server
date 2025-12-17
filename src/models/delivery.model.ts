@@ -28,7 +28,7 @@ export interface IDelivery extends Document {
   carryCost: number; // Phí bốc xếp
   homeDeliveryCostTotal?: number; // Tổng phí giao tận nhà (carryCost + homeDeliveryCost)
   vehicleType?: VehicleType | null; // Loại phương tiện (required when homeDeliveryCost > 0)
-  itemValue: number;
+  itemValue: number; // tri gia
   itemCost: number; // phí gia tri
   collectCost: number; // Thu hộ
   collectForCustomer: number; // Thu dùm

@@ -50,6 +50,11 @@ export interface IReturnDeliveryResponse {
     code: string;
     name: string;
   };
+  fromRoute: {
+    id: string;
+    code: string;
+    name: string;
+  };
   cost: number;
   homeDelivery?: string;
   homeDeliveryCost?: number;
@@ -99,6 +104,11 @@ export interface IReturnDeliveryLeanPopulated {
     phone: string;
   };
   toRoute: {
+    _id: string;
+    code: string;
+    name: string;
+  };
+  fromRoute: {
     _id: string;
     code: string;
     name: string;
