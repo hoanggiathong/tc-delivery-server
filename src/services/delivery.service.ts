@@ -1459,7 +1459,7 @@ export class DeliveryService {
         homeDeliveryCost,
         collectForCustomer,
         paymentType,
-        itemCost,
+        itemValue,
         time,
       } = query;
 
@@ -1490,8 +1490,8 @@ export class DeliveryService {
         where.paymentType = PAYMENT_TYPE.DEBT;
       }
 
-      if (itemCost === true) {
-        where.itemCost = { $gt: 0 };
+      if (itemValue === true) {
+        where.itemValue = { $gt: 0 };
       }
 
       const daysToSubtract = time || 15;

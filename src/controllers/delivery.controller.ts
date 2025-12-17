@@ -2001,10 +2001,10 @@ export class DeliveryController {
    *         description: If true, filter by paymentType == 'debt'
    *         example: true
    *       - in: query
-   *         name: itemCost
+   *         name: itemValue
    *         schema:
    *           type: boolean
-   *         description: If true, filter by itemCost > 0
+   *         description: If true, filter by itemValue > 0
    *         example: true
    *       - in: query
    *         name: time

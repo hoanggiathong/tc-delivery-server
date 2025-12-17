@@ -357,7 +357,7 @@ export const getListDeliveryInventorySchema = z.object({
         return String(val).toLowerCase() === 'true';
       }, z.boolean().optional())
       .optional(),
-    itemCost: z
+    itemValue: z
       .preprocess(val => {
         if (val === undefined || val === null || val === '') {
           return undefined;
