@@ -1,4 +1,5 @@
 import { IDeliveryResponse } from '@/types/delivery.type';
+import { SMSStatus } from '@/types/sms-notification.type';
 
 export const createMockDelivery = (
   overrides: Partial<IDeliveryResponse> = {}
@@ -55,6 +56,8 @@ export const createMockDelivery = (
     actualRevenue: 120000,
     paymentType: 'paid',
     isFree: false,
+    isReturn: false,
+    smsStatus: SMSStatus.NOT_SENT,
     createdByUser: 'testuser',
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2023-01-01'),

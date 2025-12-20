@@ -1,5 +1,6 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import { VehicleType, IReturnDeliveryImage } from './delivery.model';
+import { SMSStatus, SMSType } from '@/types/sms-notification.type';
 
 export interface IRemovedDelivery extends Document {
   _id: string;
@@ -47,7 +48,8 @@ export interface IRemovedDelivery extends Document {
   originalUpdatedAt: Date;
   isReturn: boolean;
   inventory?: string;
-  smsType?: string;
+  smsType?: SMSType;
+  smsStatus: SMSStatus;
   timeToSendSMS?: Date;
   upItems?: string;
   downItems?: string;
@@ -272,7 +274,13 @@ const removedDeliverySchema = new Schema<IRemovedDelivery>(
     },
     smsType: {
       type: String,
+      enum: Object.values(SMSType),
       default: null,
+    },
+    smsStatus: {
+      type: Number,
+      enum: Object.values(SMSStatus).filter(v => typeof v === 'number'),
+      default: SMSStatus.NOT_SENT,
     },
     timeToSendSMS: {
       type: Date,

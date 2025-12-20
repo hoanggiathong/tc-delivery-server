@@ -28,6 +28,8 @@ erDiagram
     CUSTOMERS ||--o{ CUSTOMER_ADDRESS_HISTORY : "có lịch sử địa chỉ"
     DELIVERIES ||--o| CUSTOMER_ADDRESS_HISTORY : "tự động tạo history"
     DELIVERIES ||--o{ MONEY_DELIVERIES : "tự động tạo thu hộ/thu dùm"
+    DELIVERIES ||--o{ SMS_LOGS : "có lịch sử gửi tin"
+    USERS ||--o{ SMS_LOGS : "gửi tin (sentBy)"
     USERS ||--o{ REMOVED_DELIVERIES : "xóa (deletedBy)"
     USERS ||--o{ REMOVED_MONEY_DELIVERIES : "xóa (deletedBy)"
 
@@ -149,7 +151,27 @@ erDiagram
         string notes "tùy chọn, trim"
         enum paymentType "paid|debt, mặc định paid, loại thanh toán"
         boolean isFree "miễn phí, bắt buộc, mặc định false"
+        enum smsStatus "-3=Lỗi SĐT, -2=Chờ App, -1=Chờ Zalo/SMS, 0=Chưa nhắn (default), 1=Đã nhắn"
+        enum smsType "zalo_zns|sms|app, tùy chọn, loại tin nhắn đã gửi thành công"
+        datetime timeToSendSMS "thời điểm gửi tin nhắn thành công, tùy chọn"
         ObjectId createdByUser FK "tham chiếu: USERS, bắt buộc"
+        datetime createdAt "tự động tạo"
+        datetime updatedAt "tự động cập nhật"
+    }
+
+    SMS_LOGS {
+        ObjectId _id PK
+        ObjectId deliveryId FK "tham chiếu: DELIVERIES, bắt buộc"
+        string phone "SĐT nhận tin, bắt buộc, trim"
+        enum messageType "zalo_zns|sms|app, bắt buộc"
+        string templateId "template ID đã sử dụng, bắt buộc, trim"
+        enum status "pending|success|failed, mặc định pending"
+        string errorCode "mã lỗi từ API, tùy chọn"
+        string errorMessage "chi tiết lỗi, tùy chọn"
+        mixed apiResponse "response gốc từ API, tùy chọn"
+        number retryCount "số lần retry, mặc định 0, min 0"
+        datetime sentAt "thời điểm gửi thành công, tùy chọn"
+        ObjectId sentBy FK "tham chiếu: USERS, bắt buộc, user thực hiện gửi"
         datetime createdAt "tự động tạo"
         datetime updatedAt "tự động cập nhật"
     }
@@ -215,7 +237,8 @@ erDiagram
         datetime originalUpdatedAt "thời điểm cập nhật delivery gốc"
         boolean isReturn "đã trả hàng, mặc định false"
         string inventory "tùy chọn"
-        string smsType "tùy chọn"
+        enum smsStatus "-3=Lỗi SĐT, -2=Chờ App, -1=Chờ Zalo/SMS, 0=Chưa nhắn, 1=Đã nhắn"
+        enum smsType "zalo_zns|sms|app, tùy chọn"
         datetime timeToSendSMS "tùy chọn"
         string upItems "hàng lên, tùy chọn"
         string downItems "hàng xuống, tùy chọn"
@@ -356,6 +379,7 @@ erDiagram
 - `removedMoneyDeliveries` - Giao dịch chuyển tiền đã xóa (soft delete, lưu 90 ngày)
 - `draftdeliveries` - Bản nháp delivery (lưu tạm thông tin chưa hoàn tất)
 - `settings` - Cấu hình hệ thống linh hoạt (shipping rates, product list, custom configs)
+- `smslogs` - Lịch sử gửi tin nhắn SMS/Zalo ZNS cho deliveries
 
 ### Ràng Buộc và Xác Thực Chính
 
