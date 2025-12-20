@@ -338,9 +338,7 @@ const deliverySchema = new Schema<IDelivery>(
 // Pre-save middleware for totalCost calculation and business logic validation
 deliverySchema.pre('save', function (next) {
   // Business logic validation
-  if (this.sender.toString() === this.receiver.toString()) {
-    return next(new Error('Sender and receiver cannot be the same'));
-  }
+  // Note: sender and receiver can be the same (same phone number is allowed)
   if (this.fromRoute.toString() === this.toRoute.toString()) {
     return next(new Error('From route and to route cannot be the same'));
   }
@@ -450,13 +448,7 @@ deliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next) {
   const updateFields = rawUpdate.$set || rawUpdate;
 
   // Business logic validation for updates
-  if (
-    updateFields.sender &&
-    updateFields.receiver &&
-    updateFields.sender.toString() === updateFields.receiver.toString()
-  ) {
-    return next(new Error('Sender and receiver cannot be the same'));
-  }
+  // Note: sender and receiver can be the same (same phone number is allowed)
   if (
     updateFields.fromRoute &&
     updateFields.toRoute &&
