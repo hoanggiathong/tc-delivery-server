@@ -1,4 +1,5 @@
 import { PaymentType } from '@/types';
+import { SMSStatus, SMSType } from '@/types/sms-notification.type';
 import mongoose, { Document, Schema } from 'mongoose';
 import logger from '@/utils/logger';
 
@@ -53,7 +54,8 @@ export interface IDelivery extends Document {
   updatedAt: Date;
   isReturn: boolean; // tra hang
   inventory?: string; // kho
-  smsType?: string;
+  smsType?: SMSType; // Loại tin nhắn đã gửi thành công
+  smsStatus: SMSStatus; // Trạng thái gửi tin
   timeToSendSMS?: Date;
   upItems?: string; // len hang
   downItems?: string; //xuong hang
@@ -267,9 +269,13 @@ const deliverySchema = new Schema<IDelivery>(
     },
     smsType: {
       type: String,
+      enum: Object.values(SMSType),
       default: null,
-      // enum: RETURN_DELIVERIES_SMS_TYPE,
-      // default: RETURN_DELIVERIES_SMS_TYPE.SMS,
+    },
+    smsStatus: {
+      type: Number,
+      enum: Object.values(SMSStatus).filter(v => typeof v === 'number'),
+      default: SMSStatus.NOT_SENT,
     },
     timeToSendSMS: {
       type: Date,
@@ -338,9 +344,7 @@ const deliverySchema = new Schema<IDelivery>(
 // Pre-save middleware for totalCost calculation and business logic validation
 deliverySchema.pre('save', function (next) {
   // Business logic validation
-  if (this.sender.toString() === this.receiver.toString()) {
-    return next(new Error('Sender and receiver cannot be the same'));
-  }
+  // Note: sender and receiver can be the same (same phone number is allowed)
   if (this.fromRoute.toString() === this.toRoute.toString()) {
     return next(new Error('From route and to route cannot be the same'));
   }
@@ -450,13 +454,7 @@ deliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next) {
   const updateFields = rawUpdate.$set || rawUpdate;
 
   // Business logic validation for updates
-  if (
-    updateFields.sender &&
-    updateFields.receiver &&
-    updateFields.sender.toString() === updateFields.receiver.toString()
-  ) {
-    return next(new Error('Sender and receiver cannot be the same'));
-  }
+  // Note: sender and receiver can be the same (same phone number is allowed)
   if (
     updateFields.fromRoute &&
     updateFields.toRoute &&

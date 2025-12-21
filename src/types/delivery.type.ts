@@ -8,6 +8,7 @@ import { IUser } from '@/models/user.model';
 import { IRoute } from '@/models/route.model';
 import { ICustomerBankLean } from '@/models/customer-bank.model';
 import { IReturnDeliveryResponse } from './return-delivery.type';
+import { SMSStatus, SMSType } from './sms-notification.type';
 
 export enum InventoryType {
   FROM_ROUTE = 'fromRoute',
@@ -53,6 +54,8 @@ export interface IDeliveryResponse extends BaseEntity {
   isFree?: boolean;
   createdByUser: string;
   isReturn?: boolean;
+  smsType?: SMSType;
+  smsStatus: SMSStatus;
 }
 
 // Delivery creation request interface
@@ -282,6 +285,8 @@ export interface IDeliveryLeanPopulated {
   createdAt?: Date;
   updatedAt?: Date;
   isReturn?: boolean;
+  smsType?: SMSType;
+  smsStatus: SMSStatus;
 }
 
 // Frequent customers interfaces

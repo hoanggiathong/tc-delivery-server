@@ -1,6 +1,7 @@
 import { IReturnDeliveryImage } from '@/models/delivery.model';
 import { PaymentType } from '.';
 import { IReturnDeliveryAndMoneyDeliveryResponse } from './money-delivery.type';
+import { SMSStatus, SMSType } from './sms-notification.type';
 
 export interface IReturnDeliveryListRequest {
   startDate: string;
@@ -74,7 +75,8 @@ export interface IReturnDeliveryResponse {
   downItems?: string;
   isReturn: boolean;
   inventory: string;
-  smsType?: string;
+  smsType?: SMSType;
+  smsStatus: SMSStatus;
   timeToSendSMS?: Date;
   quantityReturn?: number;
   dateReturn?: Date;
@@ -131,7 +133,8 @@ export interface IReturnDeliveryLeanPopulated {
   upItems?: string;
   downItems?: string;
   inventory?: string;
-  smsType?: string;
+  smsType?: SMSType;
+  smsStatus: SMSStatus;
   timeToSendSMS?: Date;
   quantityReturn?: number;
   nameProductAndAdditionalInformation?: string;

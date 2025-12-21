@@ -2544,7 +2544,9 @@ export class MoneyDeliveryController {
 
       let statusCode = 500;
       const message =
-        error instanceof Error ? error.message : 'Failed to recover money delivery with type COLLECT';
+        error instanceof Error
+          ? error.message
+          : 'Failed to recover money delivery with type COLLECT';
 
       if (message.includes('not found')) {
         statusCode = 404;
@@ -2722,7 +2724,9 @@ export class MoneyDeliveryController {
 
       let statusCode = 500;
       const message =
-        error instanceof Error ? error.message : 'Failed to recover money delivery with type NORMAL';
+        error instanceof Error
+          ? error.message
+          : 'Failed to recover money delivery with type NORMAL';
 
       if (message.includes('not found')) {
         statusCode = 404;

@@ -252,18 +252,18 @@ router.get(
   deliveryController.getFrequentCustomers
 );
 
+// Recovery delivery by fullCode - must come before /:id route
+router.put(
+  '/recovery',
+  validate(recoveryDeliveryByFullCodeSchema),
+  deliveryController.recoveryDeliveryByFullCode
+);
+
 router.put(
   '/:id',
   validate(deliveryParamsSchema),
   validate(updateDeliverySchema),
   deliveryController.updateDelivery
-);
-
-// Recovery delivery by fullCode
-router.put(
-  '/recovery',
-  validate(recoveryDeliveryByFullCodeSchema),
-  deliveryController.recoveryDeliveryByFullCode
 );
 
 // Delete delivery by fullCode with password verification
