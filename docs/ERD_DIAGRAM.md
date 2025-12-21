@@ -630,6 +630,46 @@ erDiagram
     - `DELETE /api/settings/products/{id}` - Xóa 1 product theo ObjectId
 - **Index hiệu suất**: Unique index trên trường `name`
 
+#### Bảng SMS_LOGS
+- **Mục đích**: Lưu lịch sử gửi tin nhắn Zalo ZNS/SMS cho các delivery hàng về (isReturn=true)
+- **Quy tắc nghiệp vụ**:
+  - Gửi tin nhắn cho **Receiver** (người nhận hàng) khi hàng đã về trạm
+  - Ưu tiên gửi Zalo ZNS, fallback sang SMS nếu khách chưa đăng ký Zalo
+  - Chỉ gửi cho delivery có `isReturn=true` và `smsStatus=0` (chưa nhắn)
+  - Không gửi lại nếu `smsStatus=1` (đã nhắn)
+  - Cho phép retry khi `smsStatus=-3` (lỗi SĐT)
+- **Message Type (messageType)**:
+  - `zalo_zns`: Gửi qua Zalo ZNS API (ưu tiên cao nhất)
+  - `sms`: Gửi qua SMS API (fallback khi Zalo không thành công)
+  - `app`: Gửi qua App notification (tương lai)
+- **Status (status)**:
+  - `pending`: Đang chờ xử lý
+  - `success`: Gửi thành công
+  - `failed`: Gửi thất bại
+- **Template Variables** (mapping từ Delivery):
+  - `ten_khach_hang`: receiverName (người nhận tin)
+  - `chi_nhanh`: toRoute.name (tên chi nhánh)
+  - `ma_van_don`: fullCode (mã vận đơn)
+  - `nguoi_gui`: senderName (người gửi hàng)
+  - `buu_pham`: name (tên hàng hóa)
+  - `trang_thai`: "Đã đến trạm phát" (fixed)
+  - `gia`: collectCost (formatted VND)
+  - `hinh_thuc`: "Giao dịch trực tiếp tại quầy" hoặc "Giao tận nhà"
+  - `dia_chi`: toRoute.address (địa chỉ chi nhánh)
+  - `link_toi_cta`: toRoute.phone (SĐT chi nhánh)
+- **Index hiệu suất**:
+  - `{deliveryId: 1, createdAt: -1}` - Lịch sử gửi tin của delivery
+  - `{status: 1, createdAt: -1}` - Query theo trạng thái
+  - `{phone: 1}` - Tìm kiếm theo SĐT
+  - `{sentBy: 1, createdAt: -1}` - Lịch sử gửi của user
+- **API Endpoints**:
+  - `POST /api/sms/send` - Gửi tin nhắn cho selected deliveries (Admin+)
+  - `POST /api/sms/retry/:deliveryId` - Retry gửi tin thất bại (Admin+)
+  - `GET /api/sms/eligible` - Lấy danh sách delivery đủ điều kiện gửi tin (Admin+)
+  - `PUT /api/sms/update-status/:deliveryId` - Cập nhật trạng thái SMS thủ công (Admin+)
+  - `GET /api/sms/logs/:deliveryId` - Lấy lịch sử gửi tin của delivery (Admin+)
+  - `GET /api/sms/logs` - Lấy tất cả logs với filter (Admin+)
+
 #### Bảng CUSTOMER_ADDRESS_HISTORY
 - **Mục đích**: Lưu lịch sử địa chỉ giao hàng tận nhà của khách hàng để tái sử dụng
 - **Phone-based API Access**: Tất cả endpoints sử dụng `phone` thay vì `customerId`
@@ -768,6 +808,31 @@ erDiagram
 
 #### Phiên Bản Mới Nhất
 
+- **New Table: SMS_LOGS**: Thêm bảng lịch sử gửi tin nhắn Zalo ZNS/SMS
+  - Lưu lịch sử gửi tin nhắn cho các delivery hàng về (isReturn=true)
+  - Track status (pending/success/failed), error codes, retry counts
+  - Lưu API response gốc để debug
+  - Index tối ưu cho query theo deliveryId, status, phone, sentBy
+  - Hỗ trợ multiple message types: zalo_zns, sms, app
+- **Enhanced DELIVERIES Table**: Thêm fields cho SMS notification
+  - **smsStatus**: Enum (-3=Lỗi SĐT, -2=Chờ App, -1=Chờ Zalo/SMS, 0=Chưa nhắn (default), 1=Đã nhắn)
+  - **smsType**: Enum (zalo_zns|sms|app) - loại tin nhắn đã gửi thành công
+  - **timeToSendSMS**: Thời điểm gửi tin thành công
+  - Business logic: Gửi tin cho Receiver khi delivery có isReturn=true
+  - Ưu tiên Zalo ZNS, fallback sang SMS nếu không đăng ký Zalo
+- **New SMS Notification APIs**: Endpoints cho quản lý gửi tin
+  - `POST /api/sms/send` - Gửi tin cho selected deliveries (Admin+)
+  - `POST /api/sms/retry/:deliveryId` - Retry gửi tin thất bại
+  - `GET /api/sms/eligible` - Lấy danh sách eligible deliveries
+  - `PUT /api/sms/update-status/:deliveryId` - Manual status update
+  - `GET /api/sms/logs/:deliveryId` - Lấy lịch sử gửi tin
+  - `GET /api/sms/logs` - Lấy tất cả logs với filters
+- **Environment Variables**: Thêm cấu hình YourSales API
+  - `YOURSALES_API_URL` - URL của YourSales API
+  - `YOURSALES_API_KEY` - API Key
+  - `YOURSALES_TOKEN` - Authentication token
+  - `ZALO_ZNS_TEMPLATE_ID` - Template ID cho Zalo ZNS
+  - `SMS_TEMPLATE_ID` - Template ID cho SMS
 - **New Table: CUSTOMER_BANK**: Thêm bảng thông tin ngân hàng khách hàng
   - Lưu thông tin ngân hàng chi tiết (name, bankName, bankAccount, bankBranch, bankAddress)
   - Unique constraint trên bankAccount
