@@ -142,7 +142,7 @@ export class ReportController {
    *                 summary: Invalid date format
    *                 value:
    *                   success: false
-   *                   message: "Please provide a valid start date in ISO format"
+   *                   message: "Date must be in YYYY-MM-DD format"
    *               invalidRouteId:
    *                 summary: Invalid route ID format
    *                 value:
