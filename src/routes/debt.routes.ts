@@ -11,7 +11,7 @@ const debtController = new DebtController();
 
 // All debt routes require authentication (any role)
 router.use(authenticateToken);
-router.use(requireRole([UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]));
+router.use(requireRole([UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN, UserRole.USER]));
 
 router.get('/get-list-debt', validate(getListDebtSchema), debtController.getListDebt);
 
