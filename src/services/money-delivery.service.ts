@@ -1852,11 +1852,11 @@ export class MoneyDeliveryService {
     routeId?: string
   ): Promise<IMoneyDeliveryResponse[]> {
     try {
-      const toRouteId = await this.userService.getUserSelectedRouteId(userId);
+      const fromRouteId = await this.userService.getUserSelectedRouteId(userId);
       const where: Record<string, unknown> = {
         status: MoneyDeliveryStatus.WAITING,
         type: MoneyDeliveryType.NORMAL,
-        toRoute: toRouteId,
+        fromRoute: fromRouteId,
         createdAt: {
           $gte: startDate,
           $lte: endDate,
@@ -1864,10 +1864,10 @@ export class MoneyDeliveryService {
       };
 
       if (routeId) {
-        where.fromRoute = routeId;
+        where.toRoute = routeId;
       } else {
-        where.fromRoute = {
-          $ne: toRouteId,
+        where.toRoute = {
+          $ne: fromRouteId,
         };
       }
 
@@ -1901,11 +1901,12 @@ export class MoneyDeliveryService {
     routeId?: string
   ): Promise<IMoneyDeliveryResponse[]> {
     try {
-      const fromRouteId = await this.userService.getUserSelectedRouteId(userId);
+      const toRouteId = await this.userService.getUserSelectedRouteId(userId);
+
       const where: Record<string, unknown> = {
         status: MoneyDeliveryStatus.DONE,
         type: MoneyDeliveryType.COLLECT,
-        fromRoute: fromRouteId,
+        toRoute: toRouteId,
         dateReturn: {
           $gte: startDate,
           $lte: endDate,
@@ -1913,10 +1914,10 @@ export class MoneyDeliveryService {
       };
 
       if (routeId) {
-        where.toRoute = routeId;
+        where.fromRoute = routeId;
       } else {
-        where.toRoute = {
-          $ne: fromRouteId,
+        where.fromRoute = {
+          $ne: toRouteId,
         };
       }
 
