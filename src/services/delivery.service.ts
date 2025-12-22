@@ -1358,20 +1358,22 @@ export class DeliveryService {
     routeId?: string
   ): Promise<IDeliveryResponse[]> {
     try {
-      const toRouteId = await this.userService.getUserSelectedRouteId(userId);
+      const fromRouteId = await this.userService.getUserSelectedRouteId(userId);
+
       const where: Record<string, unknown> = {
         isReturn: false,
-        toRoute: toRouteId,
+        fromRoute: fromRouteId,
         createdAt: {
           $gte: startDate,
           $lte: endDate,
         },
       };
+
       if (routeId) {
-        where.fromRoute = routeId;
+        where.toRoute = routeId;
       } else {
-        where.fromRoute = {
-          $ne: toRouteId,
+        where.toRoute = {
+          $ne: fromRouteId,
         };
       }
 
