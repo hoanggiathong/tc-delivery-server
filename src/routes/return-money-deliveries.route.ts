@@ -1,25 +1,23 @@
 import { ReturnMoneyDeliveriesController } from '@/controllers/return-money-deliveries.controller';
 import { authenticateToken } from '@/middlewares/auth.middleware';
-import { requireRole } from '@/middlewares/role.middleware';
+import {
+  uploadMoneyDeliveryDualImagesFields,
+  uploadMoneyDeliveryImagesFields,
+} from '@/middlewares/upload.middleware';
 import { validate } from '@/middlewares/validation.middleware';
 import {
-  uploadMoneyDeliveryImagesFields,
-  uploadMoneyDeliveryDualImagesFields,
-} from '@/middlewares/upload.middleware';
-import {
   getInformationReceiverSchema,
-  getListReturnMoneyDeliveriesTypeCollectStatusDoneSchema,
-  getListOldMoneyDeliveryNotTypeCollectCostSchema,
   getListMoneyDeliveryNotTypeCollectCostWithStatusDoneSchema,
-  getListMoneyDeliveryTypeNormalWithStatusWaitingSchema,
   getListMoneyDeliveryTypeCollectCostWithStatusDoneSchema,
-  getListReturnMoneyTypeCollectCostWithStatusWaitingSchema,
-  getListReportReturnMoneyDeliveryTypeCollectWithStatusDoneSchema,
+  getListMoneyDeliveryTypeNormalWithStatusWaitingSchema,
+  getListOldMoneyDeliveryNotTypeCollectCostSchema,
   getListReportReturnMoneyDeliveryNotTypeCollectWithStatusDoneSchema,
+  getListReportReturnMoneyDeliveryTypeCollectWithStatusDoneSchema,
+  getListReturnMoneyDeliveriesTypeCollectStatusDoneSchema,
+  getListReturnMoneyTypeCollectCostWithStatusWaitingSchema,
   updateStatusReturnMoneyDeliveryWithImagesSchema,
   updateStatusWithCustomerImagesAndMoneyImagesSchema,
 } from '@/schemas/return-money-deliveries.schema';
-import { UserRole } from '@/types/user.type';
 import { Router } from 'express';
 
 const router = Router();
@@ -27,7 +25,7 @@ const returnMoneyDeliveriesController = new ReturnMoneyDeliveriesController();
 
 // All routes require authentication and specific roles
 router.use(authenticateToken);
-router.use(requireRole([UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]));
+// router.use(requireRole([UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN, UserRole.USER]));
 
 router.get(
   '/information-receiver/:phoneReceiver',

@@ -1,28 +1,26 @@
 import { ReturnDeliveriesController } from '@/controllers/return-deliveries.controller';
 import { authenticateToken } from '@/middlewares/auth.middleware';
-import { requireRole } from '@/middlewares/role.middleware';
 import {
   uploadMultipleImages,
   uploadReturnDeliveryImagesFields,
 } from '@/middlewares/upload.middleware';
 import { validate } from '@/middlewares/validation.middleware';
 import {
-  getInformationReceiverSchema,
-  getListReturnDeliveriesSchema,
-  getListDebtOfReturnDeliveriesTodaySchema,
-  getListCollectForCustomerNotCollectedSchema,
-  getListAllReturnDeliveriesSchema,
-  getListReturnDeliveriesIsReturnSchema,
   getDetailImagesReturnDeliverySchema,
-  updateNoteReturnDeliverySchema,
-  uploadReturnDeliveryImagesSchema,
-  updateStatusWithImagesSchema,
-  updateStatusWithoutImagesSchema,
+  getInformationReceiverSchema,
+  getListAllReturnDeliveriesSchema,
   getListCollectCostOfReturnDeliveriesNotCollectedSchema,
   getListCollectCostOfReturnDeliveriesSchema,
+  getListCollectForCustomerNotCollectedSchema,
+  getListDebtOfReturnDeliveriesTodaySchema,
   getListReportReturnDeliveryWithStatusDoneSchema,
+  getListReturnDeliveriesIsReturnSchema,
+  getListReturnDeliveriesSchema,
+  updateNoteReturnDeliverySchema,
+  updateStatusWithImagesSchema,
+  updateStatusWithoutImagesSchema,
+  uploadReturnDeliveryImagesSchema,
 } from '@/schemas/return-deliveries.schema';
-import { UserRole } from '@/types/user.type';
 import { Router } from 'express';
 
 const router = Router();
@@ -30,7 +28,7 @@ const returnDeliveriesController = new ReturnDeliveriesController();
 
 // All debt routes require authentication (any role)
 router.use(authenticateToken);
-router.use(requireRole([UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]));
+// router.use(requireRole([UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN, UserRole.USER]));
 
 router.get(
   '/information-receiver/:phoneReceiver',
