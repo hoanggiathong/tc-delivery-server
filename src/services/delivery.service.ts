@@ -1361,7 +1361,6 @@ export class DeliveryService {
       const fromRouteId = await this.userService.getUserSelectedRouteId(userId);
 
       const where: Record<string, unknown> = {
-        isReturn: false,
         fromRoute: fromRouteId,
         createdAt: {
           $gte: startDate,

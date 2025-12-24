@@ -1854,7 +1854,6 @@ export class MoneyDeliveryService {
     try {
       const fromRouteId = await this.userService.getUserSelectedRouteId(userId);
       const where: Record<string, unknown> = {
-        status: MoneyDeliveryStatus.WAITING,
         type: MoneyDeliveryType.NORMAL,
         fromRoute: fromRouteId,
         createdAt: {
