@@ -11,8 +11,31 @@ import Logger from '@/utils/logger';
 
 const app = express();
 
-// Security middleware
-app.use(cors());
+// CORS configuration
+const allowedOrigins = [
+  'https://uat.giaphuocexpress.vn',
+  'https://vantai.giaphuocexpress.vn',
+  ...(process.env.NODE_ENV === 'development' ? ['http://localhost:8080'] : []),
+];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, Postman, server-to-server)
+      if (!origin) {
+        return callback(null, true);
+      }
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`Origin ${origin} not allowed by CORS`));
+      }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
 
 // Debug middleware (only in development)
 if (process.env.NODE_ENV === 'development') {

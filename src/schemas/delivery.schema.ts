@@ -226,11 +226,19 @@ export const deliveryCostReportSchema = z
       startDate: z
         .string()
         .regex(DATE_YYYY_MM_DD_PATTERN, VALIDATION_MESSAGES.DATE_YYYY_MM_DD)
-        .transform(val => new Date(val)),
+        .transform(val => {
+          // Parse date as server's local timezone start of day (00:00:00)
+          const [year, month, day] = val.split('-').map(Number);
+          return new Date(year, month - 1, day, 0, 0, 0, 0);
+        }),
       endDate: z
         .string()
         .regex(DATE_YYYY_MM_DD_PATTERN, VALIDATION_MESSAGES.DATE_YYYY_MM_DD)
-        .transform(val => new Date(val)),
+        .transform(val => {
+          // Parse date as server's local timezone end of day (23:59:59.999)
+          const [year, month, day] = val.split('-').map(Number);
+          return new Date(year, month - 1, day, 23, 59, 59, 999);
+        }),
     }),
   })
   .refine(data => data.query.startDate <= data.query.endDate, {
