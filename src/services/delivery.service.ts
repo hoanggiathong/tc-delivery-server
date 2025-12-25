@@ -30,7 +30,6 @@ import {
 import { ICustomer, Customer } from '@/models/customer.model';
 import Logger from '@/utils/logger';
 import { PaymentType } from '@/types';
-import { getStartOfDayVietnam, getEndOfDayVietnam, convertVietnamToUTC } from '@/utils/date.utils';
 import { PAYMENT_TYPE } from '@/const/money-deliveries.const';
 
 export class DeliveryService {
@@ -901,18 +900,14 @@ export class DeliveryService {
         throw new Error('Selected route not found');
       }
 
-      const startOfDay = getStartOfDayVietnam(startDate);
-      const endOfDay = getEndOfDayVietnam(endDate);
-      const startDateUTC = convertVietnamToUTC(startOfDay);
-      const endDateUTC = convertVietnamToUTC(endOfDay);
-
+      // startDate and endDate are already in UTC (converted from Vietnam timezone in schema)
       const pipeline: PipelineStage[] = [
         {
           $match: {
             fromRoute: new Types.ObjectId(selectedRouteId),
             createdAt: {
-              $gte: startDateUTC,
-              $lte: endDateUTC,
+              $gte: startDate,
+              $lte: endDate,
             },
           },
         },
@@ -1361,7 +1356,6 @@ export class DeliveryService {
       const fromRouteId = await this.userService.getUserSelectedRouteId(userId);
 
       const where: Record<string, unknown> = {
-        isReturn: false,
         fromRoute: fromRouteId,
         createdAt: {
           $gte: startDate,
