@@ -198,10 +198,10 @@ export interface IMoneyDeliveryLeanPopulated {
   status: MoneyDeliveryStatus;
   type: MoneyDeliveryType;
   deliveryId?: string;
-  createdByUser: {
+  createdByUser?: {
     _id: string;
     username: string;
-  };
+  } | null;
   createdAt: Date;
   updatedAt: Date;
   dateReturn?: Date;
