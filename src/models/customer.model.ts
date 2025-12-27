@@ -22,6 +22,7 @@ export interface ICustomer extends Document {
   createdBy: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
+  isRoute: boolean;
 }
 
 const customerSchema = new Schema<ICustomer>(
@@ -96,6 +97,10 @@ const customerSchema = new Schema<ICustomer>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       default: null,
+    },
+    isRoute: {
+      type: Boolean,
+      default: false,
     },
   },
   {

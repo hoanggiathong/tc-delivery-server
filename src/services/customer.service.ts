@@ -814,6 +814,7 @@ export class CustomerService {
           identityCardName: customer.identityCardName,
           identityCardIssuedDate: customer.identityCardIssuedDate,
           identityCardNumber: customer.identityCardNumber,
+          isRoute: customer.isRoute || false,
           createdAt: customer.createdAt,
           updatedAt: customer.updatedAt,
         })
