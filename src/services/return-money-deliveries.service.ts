@@ -357,6 +357,7 @@ export class ReturnMoneyDeliveriesService {
         identityCardIssuedDate: receiver.identityCardIssuedDate,
         identityCardNumber: receiver.identityCardNumber,
         images: receiver.images,
+        isRoute: receiver.isRoute || false,
         createdAt: receiver.createdAt,
         updatedAt: receiver.updatedAt,
       } as ICustomerInformationResponse;
