@@ -15,7 +15,9 @@ const app = express();
 const allowedOrigins = [
   'https://uat.giaphuocexpress.vn',
   'https://vantai.giaphuocexpress.vn',
-  ...(process.env.NODE_ENV === 'development' ? ['http://localhost:8080'] : []),
+  ...(process.env.NODE_ENV === 'development'
+    ? ['http://localhost:8080', 'http://localhost:3000']
+    : []),
 ];
 
 app.use(

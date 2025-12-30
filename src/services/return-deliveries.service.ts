@@ -1048,55 +1048,11 @@ export class ReturnDeliveriesService {
       if (populatedDeliveryData) {
         const typedDelivery = populatedDeliveryData;
 
-        // Check field collectCost > 0 (thu hộ)
-        if (typedDelivery.collectCost > 0) {
-          const feeMoney = await this.settingsService.calculateShippingFee(
-            typedDelivery.collectCost,
-            false,
-            false
-          );
-          await this.moneyDeliveryService.createMoneyDelivery(
-            {
-              senderName: typedDelivery.receiverName,
-              senderPhone: typedDelivery.receiver.phone,
-              receiverName: typedDelivery.senderName,
-              receiverPhone: typedDelivery.sender.phone,
-              toRouteId: typedDelivery.toRoute._id.toString(),
-              sendMoneyAmount: typedDelivery.collectCost - feeMoney,
-              sendCost: feeMoney,
-              transferType: TransferType.REGULAR,
-              isFree: false,
-              notes: `Thu hộ từ giao hàng ${typedDelivery.fullCode}`,
-              status: MoneyDeliveryStatus.WAITING,
-              type: MoneyDeliveryType.COLLECT,
-              deliveryId: typedDelivery._id.toString(),
-              fromRouteId: typedDelivery.fromRoute._id.toString(),
-            },
-            userId
-          );
-        }
+        // Tạo money delivery cho thu hộ (collectCost)
+        await this.createMoneyDeliveryForCollect(typedDelivery, userId);
 
-        // Check field collectForCustomer > 0 (thu dùm)
-        if (typedDelivery.collectForCustomer > 0) {
-          await this.moneyDeliveryService.createMoneyDelivery(
-            {
-              senderName: typedDelivery.receiverName,
-              senderPhone: typedDelivery.receiver.phone,
-              receiverName: typedDelivery.senderName,
-              receiverPhone: typedDelivery.sender.phone,
-              toRouteId: typedDelivery.fromRoute._id.toString(),
-              sendMoneyAmount: typedDelivery.collectForCustomer,
-              sendCost: 0,
-              transferType: TransferType.REGULAR,
-              isFree: false,
-              notes: `Thu dùm từ giao hàng ${typedDelivery.fullCode}`,
-              status: MoneyDeliveryStatus.WAITING,
-              type: MoneyDeliveryType.COLLECT_FOR_CUSTOMER,
-              deliveryId: typedDelivery._id.toString(),
-            },
-            userId
-          );
-        }
+        // Tạo money delivery cho thu dùm (collectForCustomer)
+        await this.createMoneyDeliveryForCollectForCustomer(typedDelivery, userId);
       }
 
       // Then update status return delivery with field isReturn = true
@@ -1177,56 +1133,11 @@ export class ReturnDeliveriesService {
         if (populatedDeliveryData) {
           const typedDelivery = populatedDeliveryData;
 
-          // Check field collectCost > 0 (thu hộ)
-          if (typedDelivery.collectCost > 0) {
-            const feeMoney = await this.settingsService.calculateShippingFee(
-              typedDelivery.collectCost,
-              false,
-              false
-            );
+          // Tạo money delivery cho thu hộ (collectCost)
+          await this.createMoneyDeliveryForCollect(typedDelivery, userId);
 
-            await this.moneyDeliveryService.createMoneyDelivery(
-              {
-                senderName: typedDelivery.receiverName,
-                senderPhone: typedDelivery.receiver.phone,
-                receiverName: typedDelivery.senderName,
-                receiverPhone: typedDelivery.sender.phone,
-                toRouteId: typedDelivery.toRoute._id.toString(),
-                sendMoneyAmount: typedDelivery.collectCost - feeMoney,
-                sendCost: feeMoney,
-                transferType: TransferType.REGULAR,
-                isFree: false,
-                notes: `Thu hộ từ giao hàng ${typedDelivery.fullCode}`,
-                status: MoneyDeliveryStatus.WAITING,
-                type: MoneyDeliveryType.COLLECT,
-                deliveryId: typedDelivery._id.toString(),
-                fromRouteId: typedDelivery.fromRoute._id.toString(),
-              },
-              userId
-            );
-          }
-
-          // Check field collectForCustomer > 0 (thu dùm)
-          if (typedDelivery.collectForCustomer > 0) {
-            await this.moneyDeliveryService.createMoneyDelivery(
-              {
-                senderName: typedDelivery.receiverName,
-                senderPhone: typedDelivery.receiver.phone,
-                receiverName: typedDelivery.senderName,
-                receiverPhone: typedDelivery.sender.phone,
-                toRouteId: typedDelivery.fromRoute._id.toString(),
-                sendMoneyAmount: typedDelivery.collectForCustomer,
-                sendCost: 0,
-                transferType: TransferType.REGULAR,
-                isFree: false,
-                notes: `Thu dùm từ giao hàng ${typedDelivery.fullCode}`,
-                status: MoneyDeliveryStatus.WAITING,
-                type: MoneyDeliveryType.COLLECT_FOR_CUSTOMER,
-                deliveryId: typedDelivery._id.toString(),
-              },
-              userId
-            );
-          }
+          // Tạo money delivery cho thu dùm (collectForCustomer) với useRouteCustomer = true
+          await this.createMoneyDeliveryForCollectForCustomer(typedDelivery, userId);
         }
 
         // Then update status return delivery with field isReturn = true
@@ -1245,9 +1156,103 @@ export class ReturnDeliveriesService {
     } catch (error) {
       Logger.error('Failed to update return delivery status without images', {
         error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined,
       });
+      // Re-throw the original error with its message for better debugging
+      if (error instanceof Error) {
+        throw error;
+      }
       throw new Error('update status return delivery without images failed');
     }
+  }
+
+  /**
+   * Tạo money delivery cho thu hộ (collectCost)
+   */
+  private async createMoneyDeliveryForCollect(
+    typedDelivery: IDeliveryLeanPopulated,
+    userId: string
+  ): Promise<void> {
+    if (typedDelivery.collectCost <= 0) {
+      return;
+    }
+
+    const feeMoney = await this.settingsService.calculateShippingFee(
+      typedDelivery.collectCost,
+      false,
+      false
+    );
+
+    await this.moneyDeliveryService.createMoneyDelivery(
+      {
+        senderName: typedDelivery.receiverName,
+        senderPhone: typedDelivery.receiver.phone,
+        receiverName: typedDelivery.senderName,
+        receiverPhone: typedDelivery.sender.phone,
+        toRouteId: typedDelivery.toRoute._id.toString(),
+        sendMoneyAmount: typedDelivery.collectCost - feeMoney,
+        sendCost: feeMoney,
+        transferType: TransferType.REGULAR,
+        isFree: false,
+        notes: `Thu hộ từ giao hàng ${typedDelivery.fullCode}`,
+        status: MoneyDeliveryStatus.WAITING,
+        type: MoneyDeliveryType.COLLECT,
+        deliveryId: typedDelivery._id.toString(),
+        fromRouteId: typedDelivery.fromRoute._id.toString(),
+      },
+      userId
+    );
+  }
+
+  /**
+   * Tạo money delivery cho thu dùm (collectForCustomer)
+   */
+  private async createMoneyDeliveryForCollectForCustomer(
+    typedDelivery: IDeliveryLeanPopulated,
+    userId: string
+  ): Promise<void> {
+    if (typedDelivery.collectForCustomer <= 0) {
+      return;
+    }
+
+    const customerToRoute = await this.customerService.getInformationRouteCustomer(
+      typedDelivery.toRoute._id.toString()
+    );
+
+    if (!customerToRoute) {
+      throw new Error(
+        `Customer to route with ID ${typedDelivery.toRoute._id.toString()} not found`
+      );
+    }
+
+    const customerFromRoute = await this.customerService.getInformationRouteCustomer(
+      typedDelivery.fromRoute._id.toString()
+    );
+
+    if (!customerFromRoute) {
+      throw new Error(
+        `Customer from route with ID ${typedDelivery.fromRoute._id.toString()} not found`
+      );
+    }
+
+    await this.moneyDeliveryService.createMoneyDelivery(
+      {
+        senderName: customerToRoute.name,
+        senderPhone: customerToRoute.phone,
+        receiverName: customerFromRoute.name,
+        receiverPhone: customerFromRoute.phone,
+        toRouteId: typedDelivery.fromRoute._id.toString(),
+        sendMoneyAmount: typedDelivery.collectForCustomer,
+        sendCost: 0,
+        transferType: TransferType.REGULAR,
+        isFree: false,
+        notes: `Thu dùm từ giao hàng ${typedDelivery.fullCode}`,
+        status: MoneyDeliveryStatus.WAITING,
+        type: MoneyDeliveryType.COLLECT_FOR_CUSTOMER,
+        deliveryId: typedDelivery._id.toString(),
+      },
+      userId
+    );
   }
 
   async handleUploadImagesReturnDelivery(
