@@ -832,9 +832,6 @@ export class CustomerService {
     }
   }
 
-  /**
-   * Update customer images data
-   */
   async updateDataImageCustomer(
     customerId: string,
     images: ICustomerImage[]
@@ -850,5 +847,17 @@ export class CustomerService {
     await customer.save();
 
     return customer.images;
+  }
+
+  async getInformationRouteCustomer(routeId: string): Promise<ICustomer | null> {
+    const customer = await Customer.findOne({
+      routeId: routeId,
+    });
+
+    if (!customer) {
+      return null;
+    }
+
+    return customer;
   }
 }
