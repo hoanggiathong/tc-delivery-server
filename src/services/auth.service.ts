@@ -75,7 +75,7 @@ export class AuthService {
   async login(data: LoginRequest): Promise<{ user: IUserResponse; token: string }> {
     try {
       // Find user and include password to verify
-      const user = await User.findOne({ username: data.username }).select('+password');
+      const user = await User.findOne({ username: data.username }, '+password');
       if (!user) {
         throw new Error('Invalid credentials');
       }
