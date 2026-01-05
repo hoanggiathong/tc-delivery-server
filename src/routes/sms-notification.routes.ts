@@ -27,6 +27,7 @@ const smsController = new SMSNotificationController();
  * /api/sms/eligible:
  *   get:
  *     summary: Get deliveries eligible for SMS notification
+ *     description: Get all return deliveries (isReturn=true) that haven't been sent SMS yet (smsStatus=0). Optionally filter by date to get results from a specific date and before.
  *     tags: [SMS Notifications]
  *     security:
  *       - bearerAuth: []
@@ -37,6 +38,21 @@ const smsController = new SMSNotificationController();
  *         schema:
  *           type: string
  *         description: Route ID to filter deliveries
+ *       - in: query
+ *         name: fromDate
+ *         required: false
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Get all results from this date and before (e.g., 2025-10-08 will get 8, 7, 6, 5... and earlier)
+ *       - in: query
+ *         name: dateField
+ *         required: false
+ *         schema:
+ *           type: string
+ *           enum: [dateReturn, createdAt]
+ *           default: dateReturn
+ *         description: Field to filter by date - dateReturn (default) or createdAt
  *     responses:
  *       200:
  *         description: List of eligible deliveries
@@ -51,6 +67,53 @@ router.get(
   requireRole(ROLES.ADMIN),
   validate(getEligibleDeliveriesSchema),
   smsController.getEligibleDeliveries
+);
+
+/**
+ * @swagger
+ * /api/sms/incomplete-quantity:
+ *   get:
+ *     summary: Get deliveries with incomplete quantity (kiểm kê số lượng)
+ *     description: Get return deliveries where quantityReturn < quantity. Used when items have physically arrived but not fully scanned in the system.
+ *     tags: [SMS Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: routeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Route ID to filter deliveries
+ *       - in: query
+ *         name: fromDate
+ *         required: false
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Get all results from this date and before
+ *       - in: query
+ *         name: dateField
+ *         required: false
+ *         schema:
+ *           type: string
+ *           enum: [dateReturn, createdAt]
+ *           default: dateReturn
+ *         description: Field to filter by date
+ *     responses:
+ *       200:
+ *         description: List of incomplete quantity deliveries
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admin role required
+ */
+router.get(
+  '/incomplete-quantity',
+  authenticateToken,
+  requireRole(ROLES.ADMIN),
+  validate(getEligibleDeliveriesSchema),
+  smsController.getIncompleteQuantityDeliveries
 );
 
 /**

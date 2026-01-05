@@ -131,6 +131,15 @@ export interface IEligibleDeliveryForSMS {
 }
 
 /**
+ * Incomplete Quantity Delivery for SMS (kiểm kê số lượng)
+ * Delivery where quantityReturn < quantity
+ */
+export interface IIncompleteQuantityDeliveryForSMS extends IEligibleDeliveryForSMS {
+  quantity: number;
+  quantityReturn: number;
+}
+
+/**
  * Populated Delivery for SMS notification (lean query result)
  */
 export interface IDeliveryForSMSLean {
@@ -145,6 +154,8 @@ export interface IDeliveryForSMSLean {
   smsStatus: SMSStatus;
   smsType?: SMSType;
   createdAt: Date;
+  quantity: number;
+  quantityReturn: number;
   receiver: {
     _id: string;
     phone: string;

@@ -17,10 +17,14 @@ export class SMSNotificationController {
   /**
    * GET /api/sms/eligible
    * Get deliveries eligible for SMS notification
+   * Query params:
+   * - routeId (required): Route ID to filter
+   * - fromDate (optional): Get all results from this date and before (ISO date string)
+   * - dateField (optional): Field to filter by date - 'dateReturn' (default) or 'createdAt'
    */
   getEligibleDeliveries = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-      const { routeId } = req.query;
+      const { routeId, fromDate, dateField } = req.query;
 
       if (!routeId || typeof routeId !== 'string') {
         res.status(400).json({
@@ -30,7 +34,19 @@ export class SMSNotificationController {
         return;
       }
 
-      const deliveries = await this.smsNotificationService.getEligibleDeliveries(routeId);
+      // Build filters object
+      const filters: { fromDate?: Date; dateField?: 'dateReturn' | 'createdAt' } = {};
+      if (fromDate && typeof fromDate === 'string') {
+        filters.fromDate = new Date(fromDate);
+      }
+      if (dateField === 'dateReturn' || dateField === 'createdAt') {
+        filters.dateField = dateField;
+      }
+
+      const deliveries = await this.smsNotificationService.getEligibleDeliveries(
+        routeId,
+        Object.keys(filters).length > 0 ? filters : undefined
+      );
 
       res.status(200).json({
         success: true,
@@ -42,6 +58,56 @@ export class SMSNotificationController {
       res.status(500).json({
         success: false,
         message: error instanceof Error ? error.message : 'Failed to get eligible deliveries',
+      });
+    }
+  };
+
+  /**
+   * GET /api/sms/incomplete-quantity
+   * Get deliveries with incomplete quantity (quantityReturn < quantity)
+   * For inventory verification - when items have arrived but not fully scanned
+   * Query params:
+   * - routeId (required): Route ID to filter
+   * - fromDate (optional): Get all results from this date and before (ISO date string)
+   * - dateField (optional): Field to filter by date - 'dateReturn' (default) or 'createdAt'
+   */
+  getIncompleteQuantityDeliveries = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      const { routeId, fromDate, dateField } = req.query;
+
+      if (!routeId || typeof routeId !== 'string') {
+        res.status(400).json({
+          success: false,
+          message: 'Validation error: routeId is required',
+        });
+        return;
+      }
+
+      // Build filters object
+      const filters: { fromDate?: Date; dateField?: 'dateReturn' | 'createdAt' } = {};
+      if (fromDate && typeof fromDate === 'string') {
+        filters.fromDate = new Date(fromDate);
+      }
+      if (dateField === 'dateReturn' || dateField === 'createdAt') {
+        filters.dateField = dateField;
+      }
+
+      const deliveries = await this.smsNotificationService.getIncompleteQuantityDeliveries(
+        routeId,
+        Object.keys(filters).length > 0 ? filters : undefined
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Incomplete quantity deliveries retrieved successfully',
+        data: deliveries,
+      });
+    } catch (error) {
+      console.error('Get incomplete quantity deliveries error:', error);
+      res.status(500).json({
+        success: false,
+        message:
+          error instanceof Error ? error.message : 'Failed to get incomplete quantity deliveries',
       });
     }
   };
