@@ -1059,7 +1059,9 @@ export class ReturnDeliveriesService {
       delivery.isReturn = true;
       // Update field note with string 'Đã trả hàng + now date' + old value of note
       const now = new Date();
-      const returnDateString = `Đã trả hàng ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const returnDateString = `Đã trả hàng ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} ${hours}:${minutes}`;
       const existingNotes = typeof delivery.notes === 'string' ? delivery.notes : '';
       delivery.notes = existingNotes ? `${returnDateString}, ${existingNotes}` : returnDateString;
       delivery.updatedAt = now;
@@ -1103,9 +1105,11 @@ export class ReturnDeliveriesService {
         throw new Error('Array list return delivery is empty');
       }
 
-      // format now with format dd/mm/yyyy
+      // format now with format dd/mm/yyyy hh:mm
       const now = new Date();
-      const returnDateString = `Đã trả hàng ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const returnDateString = `Đã trả hàng ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} ${hours}:${minutes}`;
 
       // Handle multiple return deliveries (without images)
       for (const item of arrayListReturnDelivery) {

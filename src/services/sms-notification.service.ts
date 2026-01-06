@@ -13,6 +13,7 @@ import {
   IDeliveryForSMSLean,
   IYourSalesAPIData,
   ISMSLogLeanPopulated,
+  IIncompleteQuantityDeliveryForSMS,
 } from '@/types/sms-notification.type';
 import Logger from '@/utils/logger';
 
@@ -38,13 +39,28 @@ export class SMSNotificationService {
   /**
    * Get deliveries eligible for SMS notification
    * Condition: isReturn=true AND smsStatus=0 (NOT_SENT)
+   * Optional: filter by date (fromDate) - gets all results from that date and before
    */
-  async getEligibleDeliveries(routeId: string): Promise<IEligibleDeliveryForSMS[]> {
-    const deliveries = await Delivery.find({
+  async getEligibleDeliveries(
+    routeId: string,
+    filters?: {
+      fromDate?: Date;
+      dateField?: 'dateReturn' | 'createdAt';
+    }
+  ): Promise<IEligibleDeliveryForSMS[]> {
+    const query: Record<string, unknown> = {
       toRoute: routeId,
       isReturn: true,
       smsStatus: SMSStatus.NOT_SENT,
-    })
+    };
+
+    // Filter by date if fromDate is provided
+    if (filters?.fromDate) {
+      const dateField = filters.dateField || 'dateReturn';
+      query[dateField] = { $lte: filters.fromDate };
+    }
+
+    const deliveries = await Delivery.find(query)
       .populate('receiver', 'phone')
       .populate('toRoute', '_id code name address phone')
       .lean<IDeliveryForSMSLean[]>();
@@ -57,6 +73,61 @@ export class SMSNotificationService {
       senderName: delivery.senderName,
       name: delivery.name,
       collectCost: delivery.collectCost,
+      toRoute: {
+        _id: delivery.toRoute._id.toString(),
+        code: delivery.toRoute.code,
+        name: delivery.toRoute.name,
+        address: delivery.toRoute.address,
+        phone: delivery.toRoute.phone,
+      },
+      isReturn: delivery.isReturn,
+      smsStatus: delivery.smsStatus,
+      smsType: delivery.smsType,
+      createdAt: delivery.createdAt,
+    }));
+  }
+
+  /**
+   * Get deliveries with incomplete quantity for SMS notification (kiểm kê số lượng)
+   * Condition: isReturn=true AND smsStatus=0 (NOT_SENT) AND quantityReturn < quantity
+   * Optional: filter by date (fromDate) - gets all results from that date and before
+   */
+  async getIncompleteQuantityDeliveries(
+    routeId: string,
+    filters?: {
+      fromDate?: Date;
+      dateField?: 'dateReturn' | 'createdAt';
+    }
+  ): Promise<IIncompleteQuantityDeliveryForSMS[]> {
+    const query: Record<string, unknown> = {
+      toRoute: routeId,
+      isReturn: true,
+      smsStatus: SMSStatus.NOT_SENT,
+      // Use $expr to compare two fields: quantityReturn < quantity
+      $expr: { $lt: ['$quantityReturn', '$quantity'] },
+    };
+
+    // Filter by date if fromDate is provided
+    if (filters?.fromDate) {
+      const dateField = filters.dateField || 'dateReturn';
+      query[dateField] = { $lte: filters.fromDate };
+    }
+
+    const deliveries = await Delivery.find(query)
+      .populate('receiver', 'phone')
+      .populate('toRoute', '_id code name address phone')
+      .lean<IDeliveryForSMSLean[]>();
+
+    return deliveries.map(delivery => ({
+      _id: delivery._id.toString(),
+      fullCode: delivery.fullCode,
+      receiverName: delivery.receiverName,
+      receiverPhone: delivery.receiver?.phone || '',
+      senderName: delivery.senderName,
+      name: delivery.name,
+      collectCost: delivery.collectCost,
+      quantity: delivery.quantity,
+      quantityReturn: delivery.quantityReturn,
       toRoute: {
         _id: delivery.toRoute._id.toString(),
         code: delivery.toRoute.code,

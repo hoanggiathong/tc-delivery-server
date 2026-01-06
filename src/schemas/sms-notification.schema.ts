@@ -3,10 +3,16 @@ import { SMSLogStatus, SMSStatus } from '@/types/sms-notification.type';
 
 /**
  * Schema for getting eligible deliveries
+ * Query params:
+ * - routeId (required): Route ID to filter
+ * - fromDate (optional): Get all results from this date and before (ISO date string)
+ * - dateField (optional): Field to filter by date - 'dateReturn' (default) or 'createdAt'
  */
 export const getEligibleDeliveriesSchema = z.object({
   query: z.object({
     routeId: z.string().min(1, 'routeId is required'),
+    fromDate: z.string().optional(),
+    dateField: z.enum(['dateReturn', 'createdAt']).optional(),
   }),
 });
 
