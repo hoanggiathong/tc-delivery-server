@@ -20,11 +20,11 @@ export class SMSNotificationController {
    * Query params:
    * - routeId (required): Route ID to filter
    * - fromDate (optional): Get all results from this date and before (ISO date string)
-   * - dateField (optional): Field to filter by date - 'dateReturn' (default) or 'createdAt'
+   * Note: Always filters by createdAt field
    */
   getEligibleDeliveries = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-      const { routeId, fromDate, dateField } = req.query;
+      const { routeId, fromDate } = req.query;
 
       if (!routeId || typeof routeId !== 'string') {
         res.status(400).json({
@@ -34,13 +34,12 @@ export class SMSNotificationController {
         return;
       }
 
-      // Build filters object
-      const filters: { fromDate?: Date; dateField?: 'dateReturn' | 'createdAt' } = {};
+      // Build filters object - always use createdAt for date filtering
+      const filters: { fromDate?: Date; dateField: 'createdAt' } = {
+        dateField: 'createdAt',
+      };
       if (fromDate && typeof fromDate === 'string') {
         filters.fromDate = new Date(fromDate);
-      }
-      if (dateField === 'dateReturn' || dateField === 'createdAt') {
-        filters.dateField = dateField;
       }
 
       const deliveries = await this.smsNotificationService.getEligibleDeliveries(
@@ -69,11 +68,11 @@ export class SMSNotificationController {
    * Query params:
    * - routeId (required): Route ID to filter
    * - fromDate (optional): Get all results from this date and before (ISO date string)
-   * - dateField (optional): Field to filter by date - 'dateReturn' (default) or 'createdAt'
+   * Note: Always filters by createdAt field
    */
   getIncompleteQuantityDeliveries = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-      const { routeId, fromDate, dateField } = req.query;
+      const { routeId, fromDate } = req.query;
 
       if (!routeId || typeof routeId !== 'string') {
         res.status(400).json({
@@ -83,13 +82,12 @@ export class SMSNotificationController {
         return;
       }
 
-      // Build filters object
-      const filters: { fromDate?: Date; dateField?: 'dateReturn' | 'createdAt' } = {};
+      // Build filters object - always use createdAt for date filtering
+      const filters: { fromDate?: Date; dateField: 'createdAt' } = {
+        dateField: 'createdAt',
+      };
       if (fromDate && typeof fromDate === 'string') {
         filters.fromDate = new Date(fromDate);
-      }
-      if (dateField === 'dateReturn' || dateField === 'createdAt') {
-        filters.dateField = dateField;
       }
 
       const deliveries = await this.smsNotificationService.getIncompleteQuantityDeliveries(
