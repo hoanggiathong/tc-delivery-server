@@ -1,18 +1,17 @@
 import { z } from 'zod';
 import { SMSLogStatus, SMSStatus } from '@/types/sms-notification.type';
+import { getEndOfDayUTC, getStartOfDayUTC } from '@/utils/date.utils';
 
 /**
  * Schema for getting eligible deliveries
  * Query params:
  * - routeId (required): Route ID to filter
- * - fromDate (optional): Get all results from this date and before (ISO date string)
- * - dateField (optional): Field to filter by date - 'dateReturn' (default) or 'createdAt'
+ * - toDate (optional): End date for 7-day range filter (gets data from 7 days before to this date)
  */
 export const getEligibleDeliveriesSchema = z.object({
   query: z.object({
     routeId: z.string().min(1, 'routeId is required'),
-    fromDate: z.string().optional(),
-    dateField: z.enum(['dateReturn', 'createdAt']).optional(),
+    toDate: z.string().optional().transform(val => val ? getEndOfDayUTC(val) : undefined),
   }),
 });
 
@@ -61,8 +60,8 @@ export const getSMSLogsByDeliverySchema = z.object({
 export const getAllSMSLogsSchema = z.object({
   query: z.object({
     status: z.nativeEnum(SMSLogStatus).optional(),
-    startDate: z.string().optional(),
-    endDate: z.string().optional(),
+    startDate: z.string().optional().transform(val => val ? getStartOfDayUTC(val) : undefined),
+    endDate: z.string().optional().transform(val => val ? getEndOfDayUTC(val) : undefined),
     page: z.string().optional(),
     limit: z.string().optional(),
   }),

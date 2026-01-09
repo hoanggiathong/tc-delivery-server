@@ -19,12 +19,12 @@ export class SMSNotificationController {
    * Get deliveries eligible for SMS notification
    * Query params:
    * - routeId (required): Route ID to filter
-   * - fromDate (optional): Get all results from this date and before (ISO date string)
+   * - toDate (optional): End date for 7-day range filter (gets data from 7 days before to this date)
    * Note: Always filters by createdAt field
    */
   getEligibleDeliveries = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-      const { routeId, fromDate } = req.query;
+      const { routeId, toDate } = req.query;
 
       if (!routeId || typeof routeId !== 'string') {
         res.status(400).json({
@@ -34,18 +34,10 @@ export class SMSNotificationController {
         return;
       }
 
-      // Build filters object - always use createdAt for date filtering
-      const filters: { fromDate?: Date; dateField: 'createdAt' } = {
-        dateField: 'createdAt',
-      };
-      if (fromDate && typeof fromDate === 'string') {
-        filters.fromDate = new Date(fromDate);
-      }
+      // Build filters object for 7-day range filtering (schema already transforms toDate to Date)
+      const filters: { toDate?: Date } | undefined = toDate ? { toDate: toDate as unknown as Date } : undefined;
 
-      const deliveries = await this.smsNotificationService.getEligibleDeliveries(
-        routeId,
-        Object.keys(filters).length > 0 ? filters : undefined
-      );
+      const deliveries = await this.smsNotificationService.getEligibleDeliveries(routeId, filters);
 
       res.status(200).json({
         success: true,
@@ -67,12 +59,12 @@ export class SMSNotificationController {
    * For inventory verification - when items have arrived but not fully scanned
    * Query params:
    * - routeId (required): Route ID to filter
-   * - fromDate (optional): Get all results from this date and before (ISO date string)
+   * - toDate (optional): End date for 7-day range filter (gets data from 7 days before to this date)
    * Note: Always filters by createdAt field
    */
   getIncompleteQuantityDeliveries = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-      const { routeId, fromDate } = req.query;
+      const { routeId, toDate } = req.query;
 
       if (!routeId || typeof routeId !== 'string') {
         res.status(400).json({
@@ -82,17 +74,12 @@ export class SMSNotificationController {
         return;
       }
 
-      // Build filters object - always use createdAt for date filtering
-      const filters: { fromDate?: Date; dateField: 'createdAt' } = {
-        dateField: 'createdAt',
-      };
-      if (fromDate && typeof fromDate === 'string') {
-        filters.fromDate = new Date(fromDate);
-      }
+      // Build filters object for 7-day range filtering (schema already transforms toDate to Date)
+      const filters: { toDate?: Date } | undefined = toDate ? { toDate: toDate as unknown as Date } : undefined;
 
       const deliveries = await this.smsNotificationService.getIncompleteQuantityDeliveries(
         routeId,
-        Object.keys(filters).length > 0 ? filters : undefined
+        filters
       );
 
       res.status(200).json({
@@ -298,11 +285,12 @@ export class SMSNotificationController {
       if (status && Object.values(SMSLogStatus).includes(status as SMSLogStatus)) {
         filters.status = status as SMSLogStatus;
       }
+      // Schema already transforms startDate/endDate to Date objects
       if (startDate) {
-        filters.startDate = new Date(startDate as string);
+        filters.startDate = startDate as unknown as Date;
       }
       if (endDate) {
-        filters.endDate = new Date(endDate as string);
+        filters.endDate = endDate as unknown as Date;
       }
       if (page) {
         filters.page = parseInt(page as string, 10);
