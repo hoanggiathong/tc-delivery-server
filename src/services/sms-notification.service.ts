@@ -16,6 +16,7 @@ import {
   IIncompleteQuantityDeliveryForSMS,
 } from '@/types/sms-notification.type';
 import Logger from '@/utils/logger';
+import { getStartOfDayVietnam, getEndOfDayVietnam, convertVietnamToUTC } from '@/utils/date.utils';
 
 /**
  * SMS Notification Service
@@ -39,26 +40,31 @@ export class SMSNotificationService {
   /**
    * Get deliveries eligible for SMS notification
    * Condition: isReturn=true AND smsStatus=0 (NOT_SENT)
-   * Optional: filter by date (fromDate) - gets all results from that date and before
+   * Optional: filter by date (toDate) - gets results from 7 days before that date up to that date
    */
   async getEligibleDeliveries(
     routeId: string,
     filters?: {
-      fromDate?: Date;
-      dateField?: 'dateReturn' | 'createdAt';
+      toDate?: Date;
     }
   ): Promise<IEligibleDeliveryForSMS[]> {
     const query: Record<string, unknown> = {
       toRoute: routeId,
-      isReturn: true,
+      isReturn: { $ne: true },
       smsStatus: SMSStatus.NOT_SENT,
     };
 
-    // Filter by date if fromDate is provided
-    if (filters?.fromDate) {
-      const dateField = filters.dateField || 'dateReturn';
-      query[dateField] = { $lte: filters.fromDate };
-    }
+    // Always apply 7-day filter (default to today if not provided)
+    const endDate = filters?.toDate || getEndOfDayVietnam(new Date());
+
+    const startDateCalc = new Date(endDate);
+    startDateCalc.setDate(startDateCalc.getDate() - 7); // Subtract 7 days
+    const startDate = getStartOfDayVietnam(startDateCalc); // Set to 00:00:00
+
+    query.createdAt = {
+      $gte: convertVietnamToUTC(startDate),
+      $lte: endDate, // Already UTC from schema transform or getEndOfDayVietnam
+    };
 
     const deliveries = await Delivery.find(query)
       .populate('receiver', 'phone')
@@ -90,28 +96,33 @@ export class SMSNotificationService {
   /**
    * Get deliveries with incomplete quantity for SMS notification (kiểm kê số lượng)
    * Condition: isReturn=true AND smsStatus=0 (NOT_SENT) AND quantityReturn < quantity
-   * Optional: filter by date (fromDate) - gets all results from that date and before
+   * Optional: filter by date (toDate) - gets results from 7 days before that date up to that date
    */
   async getIncompleteQuantityDeliveries(
     routeId: string,
     filters?: {
-      fromDate?: Date;
-      dateField?: 'dateReturn' | 'createdAt';
+      toDate?: Date;
     }
   ): Promise<IIncompleteQuantityDeliveryForSMS[]> {
     const query: Record<string, unknown> = {
       toRoute: routeId,
-      isReturn: true,
+      isReturn: { $ne: true },
       smsStatus: SMSStatus.NOT_SENT,
       // Use $expr to compare two fields: quantityReturn < quantity
       $expr: { $lt: ['$quantityReturn', '$quantity'] },
     };
 
-    // Filter by date if fromDate is provided
-    if (filters?.fromDate) {
-      const dateField = filters.dateField || 'dateReturn';
-      query[dateField] = { $lte: filters.fromDate };
-    }
+    // Always apply 7-day filter (default to today if not provided)
+    const endDate = filters?.toDate || getEndOfDayVietnam(new Date());
+
+    const startDateCalc = new Date(endDate);
+    startDateCalc.setDate(startDateCalc.getDate() - 7); // Subtract 7 days
+    const startDate = getStartOfDayVietnam(startDateCalc); // Set to 00:00:00
+
+    query.createdAt = {
+      $gte: convertVietnamToUTC(startDate),
+      $lte: endDate, // Already UTC from schema transform or getEndOfDayVietnam
+    };
 
     const deliveries = await Delivery.find(query)
       .populate('receiver', 'phone')

@@ -39,20 +39,12 @@ const smsController = new SMSNotificationController();
  *           type: string
  *         description: Route ID to filter deliveries
  *       - in: query
- *         name: fromDate
+ *         name: toDate
  *         required: false
  *         schema:
  *           type: string
  *           format: date
- *         description: Get all results from this date and before (e.g., 2025-10-08 will get 8, 7, 6, 5... and earlier)
- *       - in: query
- *         name: dateField
- *         required: false
- *         schema:
- *           type: string
- *           enum: [dateReturn, createdAt]
- *           default: dateReturn
- *         description: Field to filter by date - dateReturn (default) or createdAt
+ *         description: End date for 7-day range filter. Returns deliveries from 7 days before this date up to this date. Defaults to today if not provided. (e.g., 2024-08-08 will return data from 2024-08-01 00:00:00 to 2024-08-08 23:59:59)
  *     responses:
  *       200:
  *         description: List of eligible deliveries
@@ -86,20 +78,12 @@ router.get(
  *           type: string
  *         description: Route ID to filter deliveries
  *       - in: query
- *         name: fromDate
+ *         name: toDate
  *         required: false
  *         schema:
  *           type: string
  *           format: date
- *         description: Get all results from this date and before
- *       - in: query
- *         name: dateField
- *         required: false
- *         schema:
- *           type: string
- *           enum: [dateReturn, createdAt]
- *           default: dateReturn
- *         description: Field to filter by date
+ *         description: End date for 7-day range filter. Returns deliveries from 7 days before this date up to this date. Defaults to today if not provided.
  *     responses:
  *       200:
  *         description: List of incomplete quantity deliveries
