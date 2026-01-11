@@ -155,6 +155,11 @@ export const updateCustomerBankSchema = z.object({
       )
       .max(5, 'Maximum 5 images allowed')
       .optional(),
+    // Delete specific image indexes
+    deleteIndexes: z
+      .array(z.coerce.number().min(1).max(5))
+      .max(5, 'Maximum 5 indexes allowed')
+      .optional(),
   }),
 });
 

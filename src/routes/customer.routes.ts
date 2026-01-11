@@ -82,6 +82,15 @@ router.get(
  *                     type: string
  *                     example: '285 Cách Mạng Tháng 8'
  *                     description: Bank address (optional)
+ *               deleteIndexes:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                   minimum: 1
+ *                   maximum: 5
+ *                 maxItems: 5
+ *                 example: [2]
+ *                 description: Array of image indexes (1-5) to delete
  *         multipart/form-data:
  *           schema:
  *             type: object
@@ -141,6 +150,15 @@ router.get(
  *                 enum: [0, 90, 180, 270]
  *                 default: 0
  *                 description: Rotation angle for second image
+ *               deleteIndexes:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                   minimum: 1
+ *                   maximum: 5
+ *                 maxItems: 5
+ *                 example: [2]
+ *                 description: Array of image indexes (1-5) to delete
  *     responses:
  *       200:
  *         description: Bank info updated successfully
