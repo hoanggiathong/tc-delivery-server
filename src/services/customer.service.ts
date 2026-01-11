@@ -584,7 +584,8 @@ export class CustomerService {
       buffer: Buffer;
       originalName: string;
       rotate: number;
-    }>
+    }>,
+    deleteIndexes?: number[]
   ): Promise<ICustomer> {
     try {
       // Try to find existing customer
@@ -649,6 +650,32 @@ export class CustomerService {
         }
       }
 
+      // Handle deleting images at specified indexes (1-based)
+      if (deleteIndexes && deleteIndexes.length > 0 && customer.images) {
+        for (const index of deleteIndexes) {
+          const arrayIndex = index - 1; // Convert 1-based to 0-based
+          if (customer.images[arrayIndex]) {
+            // Delete physical file
+            const oldImageUrl = customer.images[arrayIndex].url;
+            // Remove version query string if present
+            const cleanUrl = oldImageUrl.split('?')[0];
+            const oldImagePath = path.join('public', cleanUrl);
+            if (fs.existsSync(oldImagePath)) {
+              fs.unlinkSync(oldImagePath);
+              Logger.debug('Image deleted at index', {
+                customerId: customer._id,
+                imageIndex: index,
+                path: oldImagePath,
+              });
+            }
+            // Set to null to mark for removal
+            (customer.images as (ICustomerImage | null)[])[arrayIndex] = null;
+          }
+        }
+        // Filter out null values
+        customer.images = customer.images.filter((img): img is ICustomerImage => img !== null);
+      }
+
       // Handle multiple images upload if provided
       if (imagesData && imagesData.length > 0) {
         // Create customer folder if not exists
@@ -706,6 +733,7 @@ export class CustomerService {
         hasBankInfo: !!bankInfo,
         hasImages: !!(imagesData && imagesData.length > 0),
         imagesCount: imagesData?.length || 0,
+        deletedIndexes: deleteIndexes || [],
       });
 
       return updatedCustomer;
