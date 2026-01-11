@@ -35,7 +35,9 @@ export class SMSNotificationController {
       }
 
       // Build filters object for 7-day range filtering (schema already transforms toDate to Date)
-      const filters: { toDate?: Date } | undefined = toDate ? { toDate: toDate as unknown as Date } : undefined;
+      const filters: { toDate?: Date } | undefined = toDate
+        ? { toDate: toDate as unknown as Date }
+        : undefined;
 
       const deliveries = await this.smsNotificationService.getEligibleDeliveries(routeId, filters);
 
@@ -75,7 +77,9 @@ export class SMSNotificationController {
       }
 
       // Build filters object for 7-day range filtering (schema already transforms toDate to Date)
-      const filters: { toDate?: Date } | undefined = toDate ? { toDate: toDate as unknown as Date } : undefined;
+      const filters: { toDate?: Date } | undefined = toDate
+        ? { toDate: toDate as unknown as Date }
+        : undefined;
 
       const deliveries = await this.smsNotificationService.getIncompleteQuantityDeliveries(
         routeId,

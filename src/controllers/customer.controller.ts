@@ -645,7 +645,8 @@ export class CustomerController {
    */
   updateBankInfo = async (req: AuthRequestWithFileUploads, res: Response): Promise<void> => {
     try {
-      const { phone, name, bankInfo, images, deleteIndexes } = req.body as UpdateCustomerBankRequest;
+      const { phone, name, bankInfo, images, deleteIndexes } =
+        req.body as UpdateCustomerBankRequest;
       const filesObject = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
       const userId = req.user?.userId;
 

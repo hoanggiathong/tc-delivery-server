@@ -11,7 +11,10 @@ import { getEndOfDayUTC, getStartOfDayUTC } from '@/utils/date.utils';
 export const getEligibleDeliveriesSchema = z.object({
   query: z.object({
     routeId: z.string().min(1, 'routeId is required'),
-    toDate: z.string().optional().transform(val => val ? getEndOfDayUTC(val) : undefined),
+    toDate: z
+      .string()
+      .optional()
+      .transform(val => (val ? getEndOfDayUTC(val) : undefined)),
   }),
 });
 
@@ -60,8 +63,14 @@ export const getSMSLogsByDeliverySchema = z.object({
 export const getAllSMSLogsSchema = z.object({
   query: z.object({
     status: z.nativeEnum(SMSLogStatus).optional(),
-    startDate: z.string().optional().transform(val => val ? getStartOfDayUTC(val) : undefined),
-    endDate: z.string().optional().transform(val => val ? getEndOfDayUTC(val) : undefined),
+    startDate: z
+      .string()
+      .optional()
+      .transform(val => (val ? getStartOfDayUTC(val) : undefined)),
+    endDate: z
+      .string()
+      .optional()
+      .transform(val => (val ? getEndOfDayUTC(val) : undefined)),
     page: z.string().optional(),
     limit: z.string().optional(),
   }),
