@@ -27,17 +27,11 @@ const smsController = new SMSNotificationController();
  * /api/sms/eligible:
  *   get:
  *     summary: Get deliveries eligible for SMS notification
- *     description: Get all return deliveries (isReturn=true) that haven't been sent SMS yet (smsStatus=0). Optionally filter by date to get results from a specific date and before.
+ *     description: Get all return deliveries (isReturn=true) that haven't been sent SMS yet (smsStatus=0). Automatically filters by the authenticated user's selected route. Optionally filter by date to get results from a specific date and before.
  *     tags: [SMS Notifications]
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: query
- *         name: routeId
- *         required: true
- *         schema:
- *           type: string
- *         description: Route ID to filter deliveries
  *       - in: query
  *         name: toDate
  *         required: false
@@ -48,6 +42,8 @@ const smsController = new SMSNotificationController();
  *     responses:
  *       200:
  *         description: List of eligible deliveries
+ *       400:
+ *         description: User must have a selected route
  *       401:
  *         description: Unauthorized
  *       403:
@@ -66,17 +62,11 @@ router.get(
  * /api/sms/incomplete-quantity:
  *   get:
  *     summary: Get deliveries with incomplete quantity (kiểm kê số lượng)
- *     description: Get return deliveries where quantityReturn < quantity. Used when items have physically arrived but not fully scanned in the system.
+ *     description: Get return deliveries where quantityReturn < quantity. Automatically filters by the authenticated user's selected route. Used when items have physically arrived but not fully scanned in the system.
  *     tags: [SMS Notifications]
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: query
- *         name: routeId
- *         required: true
- *         schema:
- *           type: string
- *         description: Route ID to filter deliveries
  *       - in: query
  *         name: toDate
  *         required: false
@@ -87,6 +77,8 @@ router.get(
  *     responses:
  *       200:
  *         description: List of incomplete quantity deliveries
+ *       400:
+ *         description: User must have a selected route
  *       401:
  *         description: Unauthorized
  *       403:

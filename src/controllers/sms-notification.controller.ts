@@ -18,18 +18,18 @@ export class SMSNotificationController {
    * GET /api/sms/eligible
    * Get deliveries eligible for SMS notification
    * Query params:
-   * - routeId (required): Route ID to filter
    * - toDate (optional): End date for 7-day range filter (gets data from 7 days before to this date)
-   * Note: Always filters by createdAt field
+   * Note: Always filters by createdAt field and user's selected route
    */
   getEligibleDeliveries = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-      const { routeId, toDate } = req.query;
+      const { toDate } = req.query;
+      const userId = req.user?.userId;
 
-      if (!routeId || typeof routeId !== 'string') {
-        res.status(400).json({
+      if (!userId) {
+        res.status(401).json({
           success: false,
-          message: 'Validation error: routeId is required',
+          message: 'User not authenticated',
         });
         return;
       }
@@ -39,7 +39,7 @@ export class SMSNotificationController {
         ? { toDate: toDate as unknown as Date }
         : undefined;
 
-      const deliveries = await this.smsNotificationService.getEligibleDeliveries(routeId, filters);
+      const deliveries = await this.smsNotificationService.getEligibleDeliveries(userId, filters);
 
       res.status(200).json({
         success: true,
@@ -48,9 +48,17 @@ export class SMSNotificationController {
       });
     } catch (error) {
       console.error('Get eligible deliveries error:', error);
-      res.status(500).json({
+
+      // Handle selected route error with 400 status
+      const message = error instanceof Error ? error.message : 'Failed to get eligible deliveries';
+      let statusCode = 500;
+      if (message.includes('selected route')) {
+        statusCode = 400;
+      }
+
+      res.status(statusCode).json({
         success: false,
-        message: error instanceof Error ? error.message : 'Failed to get eligible deliveries',
+        message,
       });
     }
   };
@@ -60,18 +68,18 @@ export class SMSNotificationController {
    * Get deliveries with incomplete quantity (quantityReturn < quantity)
    * For inventory verification - when items have arrived but not fully scanned
    * Query params:
-   * - routeId (required): Route ID to filter
    * - toDate (optional): End date for 7-day range filter (gets data from 7 days before to this date)
-   * Note: Always filters by createdAt field
+   * Note: Always filters by createdAt field and user's selected route
    */
   getIncompleteQuantityDeliveries = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-      const { routeId, toDate } = req.query;
+      const { toDate } = req.query;
+      const userId = req.user?.userId;
 
-      if (!routeId || typeof routeId !== 'string') {
-        res.status(400).json({
+      if (!userId) {
+        res.status(401).json({
           success: false,
-          message: 'Validation error: routeId is required',
+          message: 'User not authenticated',
         });
         return;
       }
@@ -82,7 +90,7 @@ export class SMSNotificationController {
         : undefined;
 
       const deliveries = await this.smsNotificationService.getIncompleteQuantityDeliveries(
-        routeId,
+        userId,
         filters
       );
 
@@ -93,10 +101,18 @@ export class SMSNotificationController {
       });
     } catch (error) {
       console.error('Get incomplete quantity deliveries error:', error);
-      res.status(500).json({
+
+      // Handle selected route error with 400 status
+      const message =
+        error instanceof Error ? error.message : 'Failed to get incomplete quantity deliveries';
+      let statusCode = 500;
+      if (message.includes('selected route')) {
+        statusCode = 400;
+      }
+
+      res.status(statusCode).json({
         success: false,
-        message:
-          error instanceof Error ? error.message : 'Failed to get incomplete quantity deliveries',
+        message,
       });
     }
   };

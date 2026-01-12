@@ -17,6 +17,7 @@ import {
 } from '@/types/sms-notification.type';
 import Logger from '@/utils/logger';
 import { getStartOfDayVietnam, getEndOfDayVietnam, convertVietnamToUTC } from '@/utils/date.utils';
+import { UserService } from '@/services/user.service';
 
 /**
  * SMS Notification Service
@@ -28,6 +29,7 @@ export class SMSNotificationService {
   private apiToken: string;
   private zaloTemplateId: string;
   private smsTemplateId: string;
+  private userService: UserService;
 
   constructor() {
     this.apiUrl = process.env.YOURSALES_API_URL || 'https://api.yoursales.vn';
@@ -35,21 +37,26 @@ export class SMSNotificationService {
     this.apiToken = process.env.YOURSALES_TOKEN || '';
     this.zaloTemplateId = process.env.ZALO_ZNS_TEMPLATE_ID || '';
     this.smsTemplateId = process.env.SMS_TEMPLATE_ID || '';
+    this.userService = new UserService();
   }
 
   /**
    * Get deliveries eligible for SMS notification
    * Condition: isReturn=true AND smsStatus=0 (NOT_SENT)
    * Optional: filter by date (toDate) - gets results from 7 days before that date up to that date
+   * Automatically filters by user's selected route
    */
   async getEligibleDeliveries(
-    routeId: string,
+    userId: string,
     filters?: {
       toDate?: Date;
     }
   ): Promise<IEligibleDeliveryForSMS[]> {
+    // Fetch user's selected route ID
+    const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
+
     const query: Record<string, unknown> = {
-      toRoute: routeId,
+      toRoute: selectedRouteId,
       isReturn: { $ne: true },
       smsStatus: SMSStatus.NOT_SENT,
     };
@@ -97,15 +104,19 @@ export class SMSNotificationService {
    * Get deliveries with incomplete quantity for SMS notification (kiểm kê số lượng)
    * Condition: isReturn=true AND smsStatus=0 (NOT_SENT) AND quantityReturn < quantity
    * Optional: filter by date (toDate) - gets results from 7 days before that date up to that date
+   * Automatically filters by user's selected route
    */
   async getIncompleteQuantityDeliveries(
-    routeId: string,
+    userId: string,
     filters?: {
       toDate?: Date;
     }
   ): Promise<IIncompleteQuantityDeliveryForSMS[]> {
+    // Fetch user's selected route ID
+    const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
+
     const query: Record<string, unknown> = {
-      toRoute: routeId,
+      toRoute: selectedRouteId,
       isReturn: { $ne: true },
       smsStatus: SMSStatus.NOT_SENT,
       // Use $expr to compare two fields: quantityReturn < quantity
