@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { SMSNotificationController } from '@/controllers/sms-notification.controller';
 import { authenticateToken } from '@/middlewares/auth.middleware';
-import { requireRole, ROLES } from '@/middlewares/role.middleware';
 import { validate } from '@/middlewares/validation.middleware';
 import {
   getEligibleDeliveriesSchema,
@@ -46,13 +45,10 @@ const smsController = new SMSNotificationController();
  *         description: User must have a selected route
  *       401:
  *         description: Unauthorized
- *       403:
- *         description: Forbidden - Admin role required
  */
 router.get(
   '/eligible',
   authenticateToken,
-  requireRole(ROLES.ADMIN),
   validate(getEligibleDeliveriesSchema),
   smsController.getEligibleDeliveries
 );
@@ -81,13 +77,10 @@ router.get(
  *         description: User must have a selected route
  *       401:
  *         description: Unauthorized
- *       403:
- *         description: Forbidden - Admin role required
  */
 router.get(
   '/incomplete-quantity',
   authenticateToken,
-  requireRole(ROLES.ADMIN),
   validate(getEligibleDeliveriesSchema),
   smsController.getIncompleteQuantityDeliveries
 );
@@ -121,13 +114,10 @@ router.get(
  *         description: Validation error
  *       401:
  *         description: Unauthorized
- *       403:
- *         description: Forbidden - Admin role required
  */
 router.post(
   '/send',
   authenticateToken,
-  requireRole(ROLES.ADMIN),
   validate(sendNotificationsSchema),
   smsController.sendNotifications
 );
@@ -153,13 +143,10 @@ router.post(
  *         description: Cannot retry or validation error
  *       401:
  *         description: Unauthorized
- *       403:
- *         description: Forbidden - Admin role required
  */
 router.post(
   '/retry/:deliveryId',
   authenticateToken,
-  requireRole(ROLES.ADMIN),
   validate(retryNotificationSchema),
   smsController.retryNotification
 );
@@ -198,15 +185,12 @@ router.post(
  *         description: Validation error
  *       401:
  *         description: Unauthorized
- *       403:
- *         description: Forbidden - Admin role required
  *       404:
  *         description: Delivery not found
  */
 router.put(
   '/update-status/:deliveryId',
   authenticateToken,
-  requireRole(ROLES.ADMIN),
   validate(updateSMSStatusSchema),
   smsController.updateSMSStatus
 );
@@ -230,13 +214,10 @@ router.put(
  *         description: SMS logs retrieved successfully
  *       401:
  *         description: Unauthorized
- *       403:
- *         description: Forbidden - Admin role required
  */
 router.get(
   '/logs/:deliveryId',
   authenticateToken,
-  requireRole(ROLES.ADMIN),
   validate(getSMSLogsByDeliverySchema),
   smsController.getSMSLogsByDelivery
 );
@@ -280,13 +261,10 @@ router.get(
  *         description: SMS logs retrieved successfully
  *       401:
  *         description: Unauthorized
- *       403:
- *         description: Forbidden - Admin role required
  */
 router.get(
   '/logs',
   authenticateToken,
-  requireRole(ROLES.ADMIN),
   validate(getAllSMSLogsSchema),
   smsController.getAllSMSLogs
 );
