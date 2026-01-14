@@ -34,9 +34,7 @@ export interface IDebtManagementResponse {
 
 export interface ICreateDebtManagementRequest {
   fromRoute: string;
-  toRoute: string;
   content: string;
-  type: string;
   cash: number;
   cashDate: Date;
 }

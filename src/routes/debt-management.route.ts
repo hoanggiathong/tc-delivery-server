@@ -1,6 +1,5 @@
 import { DebtManagementController } from '@/controllers/debt-management.controller';
 import { authenticateToken } from '@/middlewares/auth.middleware';
-import { requireRole } from '@/middlewares/role.middleware';
 import { validate } from '@/middlewares/validation.middleware';
 import {
   createDebtManagementSchema,
@@ -8,7 +7,6 @@ import {
   getListPaymentDebtManagementSchema,
   getListReceiptDebtManagementSchema,
 } from '@/schemas/debt-management.schema';
-import { UserRole } from '@/types/user.type';
 import { Router } from 'express';
 
 const router = Router();
@@ -16,7 +14,7 @@ const debtManagementController = new DebtManagementController();
 
 // All debt routes require authentication (any role)
 router.use(authenticateToken);
-router.use(requireRole([UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]));
+// router.use(requireRole([UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN, UserRole.USER]));
 
 router.get(
   '/get-list-payment',

@@ -214,20 +214,20 @@ export class CronjobService {
         }
 
         // calculate totalDebt
-        if (lastDebt) {
-          item.totalDebt =
-            item.costFromRoute +
-            item.feeCODToRoute +
-            item.homeDeliveryFromRoute -
-            (item.costToRoute + item.feeCODFromRoute + item.homeDeliveryToRoute) +
-            lastDebt.paymentDebt;
-        } else {
-          item.totalDebt =
-            item.costFromRoute +
-            item.feeCODToRoute +
-            item.homeDeliveryFromRoute -
-            (item.costToRoute + item.feeCODFromRoute + item.homeDeliveryToRoute);
-        }
+        // if (lastDebt) {
+        //   item.totalDebt =
+        //     item.costFromRoute +
+        //     item.feeCODToRoute +
+        //     item.homeDeliveryFromRoute -
+        //     (item.costToRoute + item.feeCODFromRoute + item.homeDeliveryToRoute) +
+        //     lastDebt.paymentDebt;
+        // } else {
+        item.totalDebt =
+          item.costFromRoute +
+          item.feeCODToRoute +
+          item.homeDeliveryFromRoute -
+          (item.costToRoute + item.feeCODFromRoute + item.homeDeliveryToRoute);
+        // }
 
         ops.push({ insertOne: { document: item } });
       }

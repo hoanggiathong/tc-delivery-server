@@ -1,19 +1,24 @@
 import { SORT_BY_DEBT } from '@/const/debt.const';
 import { Debt } from '@/models/debt.model';
-import { Types } from 'mongoose';
+import { UserService } from './user.service';
 
 export class DebtService {
-  async getListDebt(req: any): Promise<any[]> {
-    const { startDate, endDate, fromRouteId, keySort } = req.query;
+  private userService: UserService;
+  constructor() {
+    this.userService = new UserService();
+  }
+
+  async getListDebt(req: any, userId: string): Promise<any[]> {
+    const { startDate, endDate, keySort } = req.query;
 
     let { typeSort } = req.query;
+
+    const toRouteId = await this.userService.getUserSelectedRouteId(userId);
 
     const start = new Date(String(startDate));
     // Set end date to end of day
     const endOfDay = new Date(endDate);
     endOfDay.setHours(23, 59, 59, 999);
-
-    const fromId = new Types.ObjectId(String(fromRouteId));
 
     let sort = {};
 
@@ -25,7 +30,7 @@ export class DebtService {
 
       switch (keySort) {
         case SORT_BY_DEBT.TOTAL_COST:
-          sort = { cash: typeSort };
+          sort = { totalDebt: typeSort };
           break;
         case SORT_BY_DEBT.TO_ROUTE:
           sort = { 'toRoute.name': typeSort };
@@ -41,7 +46,7 @@ export class DebtService {
       const pipeline = [
         {
           $match: {
-            fromRoute: fromId,
+            toRoute: toRouteId,
             createdAt: { $gte: start, $lte: endOfDay },
           },
         },
@@ -71,6 +76,7 @@ export class DebtService {
             _id: 1,
             fromRoute: { _id: '$fromRoute._id', name: '$fromRoute.name' },
             toRoute: { _id: '$toRoute._id', name: '$toRoute.name' },
+            openingBalance: 1,
             costFromRoute: 1,
             feeCODToRoute: 1,
             costToRoute: 1,
