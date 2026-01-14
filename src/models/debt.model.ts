@@ -4,7 +4,7 @@ export interface IDebt extends Document {
   _id: string;
   fromRoute: ObjectId; // tram account dang su dung
   toRoute: ObjectId;
-  openingBalance: number; // ton dau
+  openingBalance: number; // ton dau (co the am - bieu thi so du co hoac tra vuot)
   costFromRoute: number; // tien cuoc di
   feeCODToRoute: number; // no cuoc ve
   costToRoute: number; // tien cuoc ve
@@ -15,8 +15,7 @@ export interface IDebt extends Document {
   homeDeliveryToRoute: number; // GTN ve
   surchargeToRoute: number; // phu phi di
   surchargeFromRoute: number; // phu phi ve
-  totalDebt: number; // cong no
-  paymentDebt: number; // tra cong no
+  totalDebt: number; // cong no (co the am - bieu thi so du co hoac tra vuot)
   createdAt: Date;
   updatedAt: Date;
 }
@@ -37,6 +36,7 @@ const debtSchema = new Schema<IDebt>(
       type: Schema.Types.Number,
       required: false,
       default: 0,
+      // Note: Can be negative (represents credit balance or overpayment)
     },
     costFromRoute: {
       type: Schema.Types.Number,
@@ -92,11 +92,7 @@ const debtSchema = new Schema<IDebt>(
       type: Schema.Types.Number,
       required: false,
       default: 0,
-    },
-    paymentDebt: {
-      type: Schema.Types.Number,
-      required: false,
-      default: 0,
+      // Note: Can be negative (represents credit balance or overpayment)
     },
   },
   {
@@ -179,6 +175,8 @@ debtSchema.index({ fromRoute: 1, toRoute: 1, createdAt: -1 });
 debtSchema.index({ fromRoute: 1, toRoute: 1 });
 debtSchema.index({ fromRoute: 1, createdAt: -1 });
 debtSchema.index({ fromRoute: 1 });
+debtSchema.index({ toRoute: 1 });
+debtSchema.index({ toRoute: 1, createdAt: -1 });
 debtSchema.index({ createdAt: -1 });
 
 // Index is already created by unique: true in the field definition

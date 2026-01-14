@@ -69,7 +69,9 @@ const debtManagementSchema = new Schema<IDebtManagement>(
 debtManagementSchema.index({ fromRoute: 1, toRoute: 1, type: 1, createdAt: -1 });
 debtManagementSchema.index({ fromRoute: 1, toRoute: 1, createdAt: -1 });
 debtManagementSchema.index({ fromRoute: 1, type: 1, createdAt: -1 });
+debtManagementSchema.index({ toRoute: 1, type: 1, createdAt: -1 });
 debtManagementSchema.index({ fromRoute: 1, type: 1 });
+debtManagementSchema.index({ toRoute: 1, type: 1 });
 debtManagementSchema.index({ createdAt: -1 });
 
 export const DebtManagement = mongoose.model<IDebtManagement>(
