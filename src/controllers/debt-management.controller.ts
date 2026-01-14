@@ -2,7 +2,7 @@ import { DebtManagementService } from '@/services/deb-management.service';
 import { ApiResponse, AuthRequest } from '@/types';
 import { IDebtManagement } from '@/types/debt-management.type';
 import logger from '@/utils/logger';
-import { Request, Response } from 'express';
+import { Response } from 'express';
 
 export class DebtManagementController {
   private debtManagementService: DebtManagementService;
@@ -15,7 +15,7 @@ export class DebtManagementController {
    * @swagger
    * /api/debt-management/get-list-payment:
    *   get:
-   *     summary: api get list payment debt management
+   *     summary: Get list of payment debt management records
    *     tags: [Debt Management]
    *     security:
    *       - bearerAuth: []
@@ -34,35 +34,27 @@ export class DebtManagementController {
    *         schema:
    *           type: string
    *           format: date
-   *         description: End date for filtering (ISO format). Cannot be in the future.
+   *         description: End date for filtering (ISO format).
    *         example: "2024-01-31"
-   *       - in: query
-   *         name: toRouteId
-   *         required: true
-   *         schema:
-   *           type: string
-   *           pattern: '^[0-9a-fA-F]{24}$'
-   *         description: ObjectId of the destination route
-   *         example: "68d136cea293c306f0d629f1"
    *       - in: query
    *         name: keySort
    *         required: false
    *         schema:
    *           type: string
-   *           enum: ["toRoute","cash", "cashDate"]
-   *         description: field to want to sort
-   *         example: "toRoute"
+   *           enum: ["toRoute", "cash", "cashDate"]
+   *         description: Field to sort by
+   *         example: "cashDate"
    *       - in: query
    *         name: typeSort
    *         required: false
    *         schema:
    *           type: string
-   *           enum: ["ASC","DESC", "asc", "desc"]
-   *         description: field to want to sort by asc or desc
-   *         example: "ASC"
+   *           enum: ["asc", "desc", "1", "-1"]
+   *         description: Sort order (asc/desc or 1/-1)
+   *         example: "desc"
    *     responses:
    *       200:
-   *         description: get list payment debt management successful
+   *         description: Get list payment debt management successful
    *         content:
    *           application/json:
    *             schema:
@@ -70,10 +62,67 @@ export class DebtManagementController {
    *               properties:
    *                 success:
    *                   type: boolean
+   *                   example: true
    *                 message:
    *                   type: string
+   *                   example: "get list payment debt management successful"
    *                 data:
-   *                   type: object
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       _id:
+   *                         type: string
+   *                         example: "507f1f77bcf86cd799439011"
+   *                       fromRoute:
+   *                         type: object
+   *                         properties:
+   *                           _id:
+   *                             type: string
+   *                           name:
+   *                             type: string
+   *                       toRoute:
+   *                         type: object
+   *                         properties:
+   *                           _id:
+   *                             type: string
+   *                           name:
+   *                             type: string
+   *                       content:
+   *                         type: string
+   *                         example: "TPHCM CK"
+   *                       type:
+   *                         type: string
+   *                         enum: [PAYMENT, RECEIPT, COLLECTION]
+   *                         example: "PAYMENT"
+   *                       cash:
+   *                         type: number
+   *                         example: 50000
+   *                       cashDate:
+   *                         type: string
+   *                         format: date-time
+   *                         example: "2024-01-15T08:30:00.000Z"
+   *                       createdAt:
+   *                         type: string
+   *                         format: date-time
+   *                       updatedAt:
+   *                         type: string
+   *                         format: date-time
+   *       400:
+   *         description: Bad request (validation error)
+   *       401:
+   *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Unauthorized"
    *       500:
    *         description: Internal server error
    *         content:
@@ -86,12 +135,22 @@ export class DebtManagementController {
    *                   example: false
    *                 message:
    *                   type: string
-   *                   example: "get list payment debt management fail"
+   *                   example: "get list payment debt management failed"
    */
-  getListPayment = async (request: Request, res: Response): Promise<void> => {
+  getListPayment = async (request: AuthRequest, res: Response): Promise<void> => {
     try {
+      if (!request.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const userId = request.user.userId;
       const result: IDebtManagement[] =
-        await this.debtManagementService.getListPaymentDebtMangement(request);
+        await this.debtManagementService.getListPaymentDebtMangement(request, userId);
 
       const response: ApiResponse = {
         success: true,
@@ -166,7 +225,7 @@ export class DebtManagementController {
    *         example: "ASC"
    *     responses:
    *       200:
-   *         description: get list receipt debt management successful
+   *         description: Get list receipt debt management successful
    *         content:
    *           application/json:
    *             schema:
@@ -174,10 +233,67 @@ export class DebtManagementController {
    *               properties:
    *                 success:
    *                   type: boolean
+   *                   example: true
    *                 message:
    *                   type: string
+   *                   example: "get list receipt debt management successful"
    *                 data:
    *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       _id:
+   *                         type: string
+   *                         example: "507f1f77bcf86cd799439011"
+   *                       fromRoute:
+   *                         type: object
+   *                         properties:
+   *                           _id:
+   *                             type: string
+   *                           name:
+   *                             type: string
+   *                       toRoute:
+   *                         type: object
+   *                         properties:
+   *                           _id:
+   *                             type: string
+   *                           name:
+   *                             type: string
+   *                       content:
+   *                         type: string
+   *                         example: "TPHCM CK"
+   *                       type:
+   *                         type: string
+   *                         enum: [PAYMENT, RECEIPT, COLLECTION]
+   *                         example: "RECEIPT"
+   *                       cash:
+   *                         type: number
+   *                         example: 50000
+   *                       cashDate:
+   *                         type: string
+   *                         format: date-time
+   *                         example: "2024-01-15T08:30:00.000Z"
+   *                       createdAt:
+   *                         type: string
+   *                         format: date-time
+   *                       updatedAt:
+   *                         type: string
+   *                         format: date-time
+   *       400:
+   *         description: Bad request (validation error)
+   *       401:
+   *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Unauthorized"
    *       500:
    *         description: Internal server error
    *         content:
@@ -190,12 +306,22 @@ export class DebtManagementController {
    *                   example: false
    *                 message:
    *                   type: string
-   *                   example: "get list receipt debt management fail"
+   *                   example: "get list receipt debt management failed"
    */
-  getListReceipt = async (request: Request, res: Response): Promise<void> => {
+  getListReceipt = async (request: AuthRequest, res: Response): Promise<void> => {
     try {
+      if (!request.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const userId = request.user.userId;
       const result: IDebtManagement[] =
-        await this.debtManagementService.getListReceiptDebtMangement(request);
+        await this.debtManagementService.getListReceiptDebtMangement(request, userId);
 
       const response: ApiResponse = {
         success: true,
@@ -362,6 +488,19 @@ export class DebtManagementController {
    *                     cashDate: "2024-12-17T10:00:00.000Z"
    *                     createdAt: "2024-12-17T10:00:00.000Z"
    *                     updatedAt: "2024-12-17T10:00:00.000Z"
+   *       401:
+   *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Unauthorized"
    *       404:
    *         description: Route not found
    *         content:
@@ -389,10 +528,20 @@ export class DebtManagementController {
    *         description: Internal server error
    */
 
-  createDebtManagement = async (request: Request, res: Response): Promise<void> => {
+  createDebtManagement = async (request: AuthRequest, res: Response): Promise<void> => {
     try {
+      if (!request.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
       const result: IDebtManagement = await this.debtManagementService.createDebtManagement(
-        request.body
+        request.body,
+        request.user.userId
       );
 
       const response: ApiResponse = {
@@ -424,8 +573,6 @@ export class DebtManagementController {
   };
 
   /**
-   * Delete debt-management by ID
-   * DELETE /api/debt-management/:id
    * @swagger
    * /api/debt-management/{id}:
    *   delete:
@@ -439,14 +586,62 @@ export class DebtManagementController {
    *         required: true
    *         schema:
    *           type: string
-   *         description: debt management ID
+   *           pattern: '^[0-9a-fA-F]{24}$'
+   *         description: Debt management ID
+   *         example: "507f1f77bcf86cd799439011"
    *     responses:
    *       200:
-   *         description: Money delivery deleted successfully
-   *       404:
-   *         description: Money delivery not found
+   *         description: Debt management deleted successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "debt management deleted successfully"
    *       401:
    *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "User not authenticated"
+   *       404:
+   *         description: Debt management not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Debt Management not found"
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "delete debt management failed"
    */
   deleteDebtManagement = async (req: AuthRequest, res: Response): Promise<void> => {
     try {

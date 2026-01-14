@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { SMSNotificationController } from '@/controllers/sms-notification.controller';
 import { authenticateToken } from '@/middlewares/auth.middleware';
-import { requireRole, ROLES } from '@/middlewares/role.middleware';
 import { validate } from '@/middlewares/validation.middleware';
 import {
   getEligibleDeliveriesSchema,
@@ -27,17 +26,11 @@ const smsController = new SMSNotificationController();
  * /api/sms/eligible:
  *   get:
  *     summary: Get deliveries eligible for SMS notification
- *     description: Get all return deliveries (isReturn=true) that haven't been sent SMS yet (smsStatus=0). Optionally filter by date to get results from a specific date and before.
+ *     description: Get all return deliveries (isReturn=true) that haven't been sent SMS yet (smsStatus=0). Automatically filters by the authenticated user's selected route. Optionally filter by date to get results from a specific date and before.
  *     tags: [SMS Notifications]
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: query
- *         name: routeId
- *         required: true
- *         schema:
- *           type: string
- *         description: Route ID to filter deliveries
  *       - in: query
  *         name: toDate
  *         required: false
@@ -48,15 +41,14 @@ const smsController = new SMSNotificationController();
  *     responses:
  *       200:
  *         description: List of eligible deliveries
+ *       400:
+ *         description: User must have a selected route
  *       401:
  *         description: Unauthorized
- *       403:
- *         description: Forbidden - Admin role required
  */
 router.get(
   '/eligible',
   authenticateToken,
-  requireRole(ROLES.ADMIN),
   validate(getEligibleDeliveriesSchema),
   smsController.getEligibleDeliveries
 );
@@ -66,17 +58,11 @@ router.get(
  * /api/sms/incomplete-quantity:
  *   get:
  *     summary: Get deliveries with incomplete quantity (kiểm kê số lượng)
- *     description: Get return deliveries where quantityReturn < quantity. Used when items have physically arrived but not fully scanned in the system.
+ *     description: Get return deliveries where quantityReturn < quantity. Automatically filters by the authenticated user's selected route. Used when items have physically arrived but not fully scanned in the system.
  *     tags: [SMS Notifications]
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: query
- *         name: routeId
- *         required: true
- *         schema:
- *           type: string
- *         description: Route ID to filter deliveries
  *       - in: query
  *         name: toDate
  *         required: false
@@ -87,15 +73,14 @@ router.get(
  *     responses:
  *       200:
  *         description: List of incomplete quantity deliveries
+ *       400:
+ *         description: User must have a selected route
  *       401:
  *         description: Unauthorized
- *       403:
- *         description: Forbidden - Admin role required
  */
 router.get(
   '/incomplete-quantity',
   authenticateToken,
-  requireRole(ROLES.ADMIN),
   validate(getEligibleDeliveriesSchema),
   smsController.getIncompleteQuantityDeliveries
 );
@@ -129,13 +114,10 @@ router.get(
  *         description: Validation error
  *       401:
  *         description: Unauthorized
- *       403:
- *         description: Forbidden - Admin role required
  */
 router.post(
   '/send',
   authenticateToken,
-  requireRole(ROLES.ADMIN),
   validate(sendNotificationsSchema),
   smsController.sendNotifications
 );
@@ -161,13 +143,10 @@ router.post(
  *         description: Cannot retry or validation error
  *       401:
  *         description: Unauthorized
- *       403:
- *         description: Forbidden - Admin role required
  */
 router.post(
   '/retry/:deliveryId',
   authenticateToken,
-  requireRole(ROLES.ADMIN),
   validate(retryNotificationSchema),
   smsController.retryNotification
 );
@@ -206,15 +185,12 @@ router.post(
  *         description: Validation error
  *       401:
  *         description: Unauthorized
- *       403:
- *         description: Forbidden - Admin role required
  *       404:
  *         description: Delivery not found
  */
 router.put(
   '/update-status/:deliveryId',
   authenticateToken,
-  requireRole(ROLES.ADMIN),
   validate(updateSMSStatusSchema),
   smsController.updateSMSStatus
 );
@@ -238,13 +214,10 @@ router.put(
  *         description: SMS logs retrieved successfully
  *       401:
  *         description: Unauthorized
- *       403:
- *         description: Forbidden - Admin role required
  */
 router.get(
   '/logs/:deliveryId',
   authenticateToken,
-  requireRole(ROLES.ADMIN),
   validate(getSMSLogsByDeliverySchema),
   smsController.getSMSLogsByDelivery
 );
@@ -288,13 +261,10 @@ router.get(
  *         description: SMS logs retrieved successfully
  *       401:
  *         description: Unauthorized
- *       403:
- *         description: Forbidden - Admin role required
  */
 router.get(
   '/logs',
   authenticateToken,
-  requireRole(ROLES.ADMIN),
   validate(getAllSMSLogsSchema),
   smsController.getAllSMSLogs
 );

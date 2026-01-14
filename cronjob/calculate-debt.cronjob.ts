@@ -3,12 +3,14 @@ import path from 'path';
 import mongoose from 'mongoose';
 import { CronjobService } from '../src/services/cron-job.service';
 import { CronLogService } from './../src/services/cron-log.service';
+import { DebtReportService } from '../src/services/debt-report.service';
 config({ path: path.resolve(__dirname, '../.env') });
 
 async function main() {
   const uri = process.env.MONGODB_URI;
 
   const cronjobService = new CronjobService();
+  const debtReportService = new DebtReportService();
 
   if (!uri) {
     console.error('Missing MONGODB_URI');
@@ -20,7 +22,10 @@ async function main() {
 
   try {
     await CronLogService.start(key, 'Caluculate debt cronjob');
+    // Step 1: Calculate and create debt records
     await cronjobService.cronjobCalculateDebt();
+    // Step 2: Generate debt report from the created debt records
+    await debtReportService.generateDebtReport();
     await CronLogService.success(key);
     await mongoose.disconnect();
   } catch (error) {

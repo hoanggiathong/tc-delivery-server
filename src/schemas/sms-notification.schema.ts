@@ -5,12 +5,11 @@ import { getEndOfDayUTC, getStartOfDayUTC } from '@/utils/date.utils';
 /**
  * Schema for getting eligible deliveries
  * Query params:
- * - routeId (required): Route ID to filter
  * - toDate (optional): End date for 7-day range filter (gets data from 7 days before to this date)
+ * Note: routeId is automatically determined from user's selected route
  */
 export const getEligibleDeliveriesSchema = z.object({
   query: z.object({
-    routeId: z.string().min(1, 'routeId is required'),
     toDate: z
       .string()
       .optional()
