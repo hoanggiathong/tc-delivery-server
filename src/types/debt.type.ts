@@ -22,3 +22,23 @@ export interface IDebtRow {
   updatedAt?: Date;
   __v?: number;
 }
+
+export interface IDebtTotal {
+  openingBalance: number;
+  costFromRoute: number;
+  feeCODToRoute: number;
+  costToRoute: number;
+  feeCODFromRoute: number;
+  accountPayable: number;
+  receivable: number;
+  homeDeliveryFromRoute: number;
+  homeDeliveryToRoute: number;
+  surchargeToRoute: number;
+  surchargeFromRoute: number;
+  totalDebt: number;
+}
+
+export interface IGetListDebtResponse {
+  data: IDebtRow[];
+  total: IDebtTotal;
+}

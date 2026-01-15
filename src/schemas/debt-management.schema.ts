@@ -45,11 +45,6 @@ export const getListReceiptDebtManagementSchema = z
         .string()
         .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid end date in ISO format')
         .transform(val => new Date(val)),
-      fromRouteId: z
-        .string()
-        .min(1, 'From route ID is required')
-        .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
-        .trim(),
       keySort: keySortOptionalSchema,
       typeSort: typeSortOptionalSchema,
       key: z.string().trim().max(120).optional(),
@@ -71,11 +66,6 @@ export const getListPaymentDebtManagementSchema = z
         .string()
         .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid end date in ISO format')
         .transform(val => new Date(val)),
-      toRouteId: z
-        .string()
-        .min(1, 'To route ID is required')
-        .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
-        .trim(),
       keySort: keySortOptionalSchema,
       typeSort: typeSortOptionalSchema,
       key: z.string().trim().max(120).optional(),
@@ -105,15 +95,10 @@ export const createDebtManagementSchema = z.object({
       .trim(),
     fromRoute: z
       .string()
-      .min(1, 'To route ID is required')
+      .min(1, 'From route ID is required')
       .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
       .trim(),
-    toRoute: z
-      .string()
-      .min(1, 'To route ID is required')
-      .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
-      .trim(),
-    cash: z.number().min(0, 'Send cost must be positive'),
+    cash: z.number().min(0, 'Cash amount must be positive'),
     type: z.enum([
       DEBT_MANAGEMENT_TYPE.COLLECTION,
       DEBT_MANAGEMENT_TYPE.PAYMENT,
