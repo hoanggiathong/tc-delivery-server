@@ -1,6 +1,10 @@
 import { DebtManagementService } from '@/services/deb-management.service';
 import { ApiResponse, AuthRequest } from '@/types';
-import { IDebtManagement } from '@/types/debt-management.type';
+import {
+  ICreateDebtManagementResponse,
+  IGetListPaymentDebtManagementResponse,
+  IGetListReceiptDebtManagementResponse,
+} from '@/types/debt-management.type';
 import logger from '@/utils/logger';
 import { Response } from 'express';
 
@@ -16,6 +20,7 @@ export class DebtManagementController {
    * /api/debt-management/get-list-payment:
    *   get:
    *     summary: Get list of payment debt management records
+   *     description: Returns payment debt management records filtered by user's selected route (fromRoute). The fromRouteId is automatically taken from the authenticated user's selected route.
    *     tags: [Debt Management]
    *     security:
    *       - bearerAuth: []
@@ -34,7 +39,7 @@ export class DebtManagementController {
    *         schema:
    *           type: string
    *           format: date
-   *         description: End date for filtering (ISO format).
+   *         description: End date for filtering (ISO format). Must be after or equal to startDate.
    *         example: "2024-01-31"
    *       - in: query
    *         name: keySort
@@ -52,6 +57,14 @@ export class DebtManagementController {
    *           enum: ["asc", "desc", "1", "-1"]
    *         description: Sort order (asc/desc or 1/-1)
    *         example: "desc"
+   *       - in: query
+   *         name: key
+   *         required: false
+   *         schema:
+   *           type: string
+   *           maxLength: 120
+   *         description: Search key for filtering (optional)
+   *         example: "search term"
    *     responses:
    *       200:
    *         description: Get list payment debt management successful
@@ -67,49 +80,67 @@ export class DebtManagementController {
    *                   type: string
    *                   example: "get list payment debt management successful"
    *                 data:
-   *                   type: array
-   *                   items:
-   *                     type: object
-   *                     properties:
-   *                       _id:
-   *                         type: string
-   *                         example: "507f1f77bcf86cd799439011"
-   *                       fromRoute:
+   *                   type: object
+   *                   properties:
+   *                     data:
+   *                       type: array
+   *                       description: List of payment debt management records
+   *                       items:
    *                         type: object
    *                         properties:
    *                           _id:
    *                             type: string
-   *                           name:
+   *                             example: "507f1f77bcf86cd799439011"
+   *                           fromRoute:
+   *                             type: object
+   *                             properties:
+   *                               _id:
+   *                                 type: string
+   *                               name:
+   *                                 type: string
+   *                           toRoute:
+   *                             type: object
+   *                             properties:
+   *                               _id:
+   *                                 type: string
+   *                               name:
+   *                                 type: string
+   *                           content:
    *                             type: string
-   *                       toRoute:
-   *                         type: object
-   *                         properties:
-   *                           _id:
+   *                             example: "TPHCM CK"
+   *                           type:
    *                             type: string
-   *                           name:
+   *                             enum: [PAYMENT, RECEIPT, COLLECTION]
+   *                             example: "PAYMENT"
+   *                           cash:
+   *                             type: number
+   *                             example: 50000
+   *                           cashDate:
    *                             type: string
-   *                       content:
-   *                         type: string
-   *                         example: "TPHCM CK"
-   *                       type:
-   *                         type: string
-   *                         enum: [PAYMENT, RECEIPT, COLLECTION]
-   *                         example: "PAYMENT"
-   *                       cash:
-   *                         type: number
-   *                         example: 50000
-   *                       cashDate:
-   *                         type: string
-   *                         format: date-time
-   *                         example: "2024-01-15T08:30:00.000Z"
-   *                       createdAt:
-   *                         type: string
-   *                         format: date-time
-   *                       updatedAt:
-   *                         type: string
-   *                         format: date-time
+   *                             format: date-time
+   *                             example: "2024-01-15T08:30:00.000Z"
+   *                           deleted:
+   *                             type: boolean
+   *                             example: false
+   *                           createdAt:
+   *                             type: string
+   *                             format: date-time
+   *                           updatedAt:
+   *                             type: string
+   *                             format: date-time
    *       400:
    *         description: Bad request (validation error)
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Validation error"
    *       401:
    *         description: Unauthorized
    *         content:
@@ -149,10 +180,10 @@ export class DebtManagementController {
       }
 
       const userId = request.user.userId;
-      const result: IDebtManagement[] =
+      const result: IGetListPaymentDebtManagementResponse =
         await this.debtManagementService.getListPaymentDebtMangement(request, userId);
 
-      const response: ApiResponse = {
+      const response: ApiResponse<IGetListPaymentDebtManagementResponse> = {
         success: true,
         message: 'get list payment debt management successful',
         data: result,
@@ -160,7 +191,7 @@ export class DebtManagementController {
 
       res.status(200).json(response);
     } catch (error) {
-      console.error('get list payment debt management error:', error);
+      logger.error('get list payment debt management error:', error);
 
       const message =
         error instanceof Error ? error.message : 'get list payment debt management failed';
@@ -178,7 +209,8 @@ export class DebtManagementController {
    * @swagger
    * /api/debt-management/get-list-receipt:
    *   get:
-   *     summary: api get list receipt debt management
+   *     summary: Get list of receipt debt management records
+   *     description: Returns receipt debt management records filtered by user's selected route (toRoute). The toRouteId is automatically taken from the authenticated user's selected route.
    *     tags: [Debt Management]
    *     security:
    *       - bearerAuth: []
@@ -197,32 +229,32 @@ export class DebtManagementController {
    *         schema:
    *           type: string
    *           format: date
-   *         description: End date for filtering (ISO format). Cannot be in the future.
+   *         description: End date for filtering (ISO format). Must be after or equal to startDate.
    *         example: "2024-01-31"
-   *       - in: query
-   *         name: fromRouteId
-   *         required: true
-   *         schema:
-   *           type: string
-   *           pattern: '^[0-9a-fA-F]{24}$'
-   *         description: ObjectId of the destination route
-   *         example: "68d136cea293c306f0d629f1"
    *       - in: query
    *         name: keySort
    *         required: false
    *         schema:
    *           type: string
-   *           enum: ["toRoute","cash", "cashDate"]
-   *         description: field to want to sort
+   *           enum: ["toRoute", "cash", "cashDate"]
+   *         description: Field to sort by
    *         example: "toRoute"
    *       - in: query
    *         name: typeSort
    *         required: false
    *         schema:
    *           type: string
-   *           enum: ["ASC","DESC", "asc", "desc"]
-   *         description: field to want to sort by asc or desc
-   *         example: "ASC"
+   *           enum: ["asc", "desc", "1", "-1"]
+   *         description: Sort order (asc/desc or 1/-1)
+   *         example: "asc"
+   *       - in: query
+   *         name: key
+   *         required: false
+   *         schema:
+   *           type: string
+   *           maxLength: 120
+   *         description: Search key for filtering (optional)
+   *         example: "search term"
    *     responses:
    *       200:
    *         description: Get list receipt debt management successful
@@ -238,49 +270,67 @@ export class DebtManagementController {
    *                   type: string
    *                   example: "get list receipt debt management successful"
    *                 data:
-   *                   type: array
-   *                   items:
-   *                     type: object
-   *                     properties:
-   *                       _id:
-   *                         type: string
-   *                         example: "507f1f77bcf86cd799439011"
-   *                       fromRoute:
+   *                   type: object
+   *                   properties:
+   *                     data:
+   *                       type: array
+   *                       description: List of receipt debt management records
+   *                       items:
    *                         type: object
    *                         properties:
    *                           _id:
    *                             type: string
-   *                           name:
+   *                             example: "507f1f77bcf86cd799439011"
+   *                           fromRoute:
+   *                             type: object
+   *                             properties:
+   *                               _id:
+   *                                 type: string
+   *                               name:
+   *                                 type: string
+   *                           toRoute:
+   *                             type: object
+   *                             properties:
+   *                               _id:
+   *                                 type: string
+   *                               name:
+   *                                 type: string
+   *                           content:
    *                             type: string
-   *                       toRoute:
-   *                         type: object
-   *                         properties:
-   *                           _id:
+   *                             example: "TPHCM CK"
+   *                           type:
    *                             type: string
-   *                           name:
+   *                             enum: [PAYMENT, RECEIPT, COLLECTION]
+   *                             example: "RECEIPT"
+   *                           cash:
+   *                             type: number
+   *                             example: 50000
+   *                           cashDate:
    *                             type: string
-   *                       content:
-   *                         type: string
-   *                         example: "TPHCM CK"
-   *                       type:
-   *                         type: string
-   *                         enum: [PAYMENT, RECEIPT, COLLECTION]
-   *                         example: "RECEIPT"
-   *                       cash:
-   *                         type: number
-   *                         example: 50000
-   *                       cashDate:
-   *                         type: string
-   *                         format: date-time
-   *                         example: "2024-01-15T08:30:00.000Z"
-   *                       createdAt:
-   *                         type: string
-   *                         format: date-time
-   *                       updatedAt:
-   *                         type: string
-   *                         format: date-time
+   *                             format: date-time
+   *                             example: "2024-01-15T08:30:00.000Z"
+   *                           deleted:
+   *                             type: boolean
+   *                             example: false
+   *                           createdAt:
+   *                             type: string
+   *                             format: date-time
+   *                           updatedAt:
+   *                             type: string
+   *                             format: date-time
    *       400:
    *         description: Bad request (validation error)
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Validation error"
    *       401:
    *         description: Unauthorized
    *         content:
@@ -320,10 +370,10 @@ export class DebtManagementController {
       }
 
       const userId = request.user.userId;
-      const result: IDebtManagement[] =
+      const result: IGetListReceiptDebtManagementResponse =
         await this.debtManagementService.getListReceiptDebtMangement(request, userId);
 
-      const response: ApiResponse = {
+      const response: ApiResponse<IGetListReceiptDebtManagementResponse> = {
         success: true,
         message: 'get list receipt debt management successful',
         data: result,
@@ -331,7 +381,7 @@ export class DebtManagementController {
 
       res.status(200).json(response);
     } catch (error) {
-      console.error('get list receipt debt management error:', error);
+      logger.error('get list receipt debt management error:', error);
 
       const message =
         error instanceof Error ? error.message : 'get list receipt debt management failed';
@@ -349,7 +399,8 @@ export class DebtManagementController {
    * @swagger
    * /api/debt-management/create:
    *   post:
-   *     summary: create debt management
+   *     summary: Create debt management
+   *     description: Creates a debt management record. The toRoute is automatically taken from the authenticated user's selected route. Only fromRoute needs to be provided in the request body.
    *     tags:
    *       - Debt Management
    *     security:
@@ -361,7 +412,6 @@ export class DebtManagementController {
    *           schema:
    *             type: object
    *             required:
-   *               - toRoute
    *               - fromRoute
    *               - cash
    *               - cashDate
@@ -370,12 +420,8 @@ export class DebtManagementController {
    *             properties:
    *               fromRoute:
    *                 type: string
-   *                 description: ObjectId of the from route (auto from user's selectedRouteId - optional)
+   *                 description: ObjectId of the source route
    *                 example: "507f1f77bcf86cd799439011"
-   *               toRoute:
-   *                 type: string
-   *                 description: ObjectId of the to route
-   *                 example: "507f1f77bcf86cd799439012"
    *               cash:
    *                 type: number
    *                 description: Amount of money to send
@@ -383,7 +429,7 @@ export class DebtManagementController {
    *               cashDate:
    *                 type: string
    *                 format: date-time
-   *                 example: "2025-09-23T08:30:00.000Z"
+   *                 example: "2024-12-17T08:30:00.000Z"
    *               type:
    *                 type: string
    *                 enum: [PAYMENT, COLLECTION, RECEIPT]
@@ -398,23 +444,29 @@ export class DebtManagementController {
    *               summary: PAYMENT debt management
    *               value:
    *                 fromRoute: "507f1f77bcf86cd799439011"
-   *                 toRoute: "507f1f77bcf86cd799439012"
    *                 cash: 50000
    *                 type: "PAYMENT"
-   *                 cashDate: "2025-09-23T08:30:00.000Z"
+   *                 cashDate: "2024-12-17T08:30:00.000Z"
    *                 content: "TPHCM CK"
    *             RECEIPT:
    *               summary: RECEIPT debt management
    *               value:
    *                 fromRoute: "507f1f77bcf86cd799439011"
-   *                 toRoute: "507f1f77bcf86cd799439012"
    *                 cash: 50000
    *                 type: "RECEIPT"
    *                 cashDate: "2024-12-17T08:30:00.000Z"
    *                 content: "TPHCM CK"
+   *             COLLECTION:
+   *               summary: COLLECTION debt management
+   *               value:
+   *                 fromRoute: "507f1f77bcf86cd799439011"
+   *                 cash: 50000
+   *                 type: "COLLECTION"
+   *                 cashDate: "2024-12-17T08:30:00.000Z"
+   *                 content: "TPHCM CK"
    *     responses:
    *       201:
-   *         description: created debt management successfully
+   *         description: Created debt management successfully
    *         content:
    *           application/json:
    *             schema:
@@ -425,67 +477,76 @@ export class DebtManagementController {
    *                   example: true
    *                 message:
    *                   type: string
-   *                   example: "Money delivery created successfully"
+   *                   example: "create debt management successful"
    *                 data:
    *                   type: object
    *                   properties:
-   *                     id:
+   *                     _id:
    *                       type: string
    *                       example: "507f1f77bcf86cd799439013"
    *                     fromRoute:
-   *                       type: string
-   *                       example: "507f1f77bcf86cd799439011"
+   *                       type: object
+   *                       properties:
+   *                         _id:
+   *                           type: string
+   *                           example: "507f1f77bcf86cd799439011"
+   *                         name:
+   *                           type: string
+   *                           example: "Route A"
    *                     toRoute:
-   *                       type: string
-   *                       example: "507f1f77bcf86cd799439012"
-   *                     transferType:
+   *                       type: object
+   *                       properties:
+   *                         _id:
+   *                           type: string
+   *                           example: "507f1f77bcf86cd799439012"
+   *                         name:
+   *                           type: string
+   *                           example: "Route B"
+   *                     type:
    *                       type: string
    *                       enum: [PAYMENT, COLLECTION, RECEIPT]
+   *                       example: "RECEIPT"
+   *                     cash:
+   *                       type: number
+   *                       description: Amount of money
+   *                       example: 50000
    *                     cashDate:
    *                       type: string
    *                       format: date-time
    *                       example: "2024-12-17T10:00:00.000Z"
-   *                     cash:
-   *                       type: number
-   *                       description: cash to transfers
    *                     content:
    *                       type: string
-   *                       example: "TPHCM ck"
+   *                       example: "TPHCM CK"
+   *                     deleted:
+   *                       type: boolean
+   *                       example: false
    *                     createdAt:
    *                       type: string
    *                       format: date-time
+   *                       example: "2024-12-17T10:00:00.000Z"
    *                     updatedAt:
    *                       type: string
    *                       format: date-time
+   *                       example: "2024-12-17T10:00:00.000Z"
    *             examples:
-   *               PAYMENT:
-   *                 summary: create debt management
-   *                 value:
-   *                   success: true
-   *                   message: "create debt management successful"
-   *                   data:
-   *                     id: "507f1f77bcf86cd799439013"
-   *                     fromRoute: "507f1f77bcf86cd799439011"
-   *                     toRoute: "507f1f77bcf86cd799439012"
-   *                     transferType: "PAYMENT"
-   *                     cash: 50000
-   *                     content: "TPHCM ck"
-   *                     cashDate: "2024-12-17T10:00:00.000Z"
-   *                     createdAt: "2024-12-17T10:00:00.000Z"
-   *                     updatedAt: "2024-12-17T10:00:00.000Z"
    *               RECEIPT:
-   *                 summary: create debt management
+   *                 summary: Create RECEIPT debt management
    *                 value:
    *                   success: true
    *                   message: "create debt management successful"
    *                   data:
-   *                     id: "507f1f77bcf86cd799439013"
-   *                     fromRoute: "507f1f77bcf86cd799439011"
-   *                     toRoute: "507f1f77bcf86cd799439012"
-   *                     transferType: "RECEIPT"
+   *                     _id: "507f1f77bcf86cd799439013"
+   *                     fromRoute:
+   *                       _id: "507f1f77bcf86cd799439011"
+   *                       name: "Route A"
+   *                     toRoute:
+   *                       _id: "507f1f77bcf86cd799439012"
+   *                       name: "Route B"
+   *                     type: "RECEIPT"
    *                     cash: 50000
-   *                     content: "TPHCM ck"
    *                     cashDate: "2024-12-17T10:00:00.000Z"
+   *                     content: "TPHCM CK"
+   *                     deleted: false
    *                     createdAt: "2024-12-17T10:00:00.000Z"
    *                     updatedAt: "2024-12-17T10:00:00.000Z"
    *       401:
@@ -524,8 +585,32 @@ export class DebtManagementController {
    *                 value:
    *                   success: false
    *                   message: "To route not found"
+   *       400:
+   *         description: Bad request (validation error)
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Validation error"
    *       500:
    *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "create debt management failed"
    */
 
   createDebtManagement = async (request: AuthRequest, res: Response): Promise<void> => {
@@ -539,12 +624,16 @@ export class DebtManagementController {
         return;
       }
 
-      const result: IDebtManagement = await this.debtManagementService.createDebtManagement(
+      const debtManagement = await this.debtManagementService.createDebtManagement(
         request.body,
         request.user.userId
       );
 
-      const response: ApiResponse = {
+      const result: ICreateDebtManagementResponse = {
+        data: debtManagement,
+      };
+
+      const response: ApiResponse<ICreateDebtManagementResponse> = {
         success: true,
         message: 'create debt management successful',
         data: result,

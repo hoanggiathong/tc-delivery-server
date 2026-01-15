@@ -2,7 +2,13 @@ import { DEBT_MANAGEMENT_TYPE, SORT_BY } from '@/const/debt-management.const';
 import { DebtManagement } from '@/models/debt-management.model';
 import { Debt } from '@/models/debt.model';
 import { Route } from '@/models/route.model';
-import { ICreateDebtManagementRequest } from '@/types/debt-management.type';
+import {
+  ICreateDebtManagementRequest,
+  IDebtManagement,
+  IGetListPaymentDebtManagementResponse,
+  IGetListReceiptDebtManagementResponse,
+} from '@/types/debt-management.type';
+import { Request } from 'express';
 import mongoose from 'mongoose';
 import { DebtReportService } from './debt-report.service';
 import { UserService } from './user.service';
@@ -15,10 +21,13 @@ export class DebtManagementService {
     this.debtReportService = new DebtReportService();
   }
 
-  async getListPaymentDebtMangement(req: any, userId: string): Promise<any[]> {
+  async getListPaymentDebtMangement(
+    req: Request,
+    userId: string
+  ): Promise<IGetListPaymentDebtManagementResponse> {
     const { startDate, endDate, keySort } = req.query;
 
-    let { typeSort } = req.query;
+    const { typeSort } = req.query;
 
     const start = new Date(String(startDate));
     start.setHours(0, 0, 0, 0);
@@ -27,24 +36,31 @@ export class DebtManagementService {
     endOfDay.setHours(23, 59, 59, 999);
 
     const fromRouteId = await this.userService.getUserSelectedRouteId(userId);
-    let sort = {};
+    let sort: Record<string, 1 | -1> = {};
 
-    console.log('typeSort :>> ', typeSort);
+    let typeSortValue: 1 | -1 | undefined = undefined;
+    if (typeSort) {
+      const numValue = Number(typeSort);
+      if (numValue === 1 || numValue === -1) {
+        typeSortValue = numValue;
+      }
+    }
+
     //handle sort
     if (keySort) {
-      if (!typeSort) {
-        typeSort = 1;
+      if (!typeSortValue) {
+        typeSortValue = 1;
       }
 
       switch (keySort) {
         case SORT_BY.CASH_DATE:
-          sort = { cashDate: typeSort };
+          sort = { cashDate: typeSortValue };
           break;
         case SORT_BY.CASH:
-          sort = { cash: typeSort };
+          sort = { cash: typeSortValue };
           break;
         case SORT_BY.TO_ROUTE:
-          sort = { 'toRoute.name': typeSort };
+          sort = { 'toRoute.name': typeSortValue };
           break;
         default:
           sort = { 'toRoute.name': 1, createdAt: 1 };
@@ -139,9 +155,11 @@ export class DebtManagementService {
         },
         { $sort: sort },
       ];
-      const result = await DebtManagement.aggregate(pipeline).exec();
-      console.log('result :>> ', result);
-      return result;
+      const result = (await DebtManagement.aggregate(pipeline).exec()) as IDebtManagement[];
+
+      return {
+        data: result,
+      };
     } catch (error) {
       if (error instanceof Error) {
         throw error;
@@ -150,7 +168,10 @@ export class DebtManagementService {
     }
   }
 
-  async getListReceiptDebtMangement(req: any, userId: string): Promise<any[]> {
+  async getListReceiptDebtMangement(
+    req: Request,
+    userId: string
+  ): Promise<IGetListReceiptDebtManagementResponse> {
     const { startDate, endDate, keySort, typeSort } = req.query;
 
     const start = new Date(String(startDate));
@@ -160,19 +181,31 @@ export class DebtManagementService {
     endOfDay.setHours(23, 59, 59, 999);
 
     const toRouteId = await this.userService.getUserSelectedRouteId(userId);
-    let sort = {};
+    let sort: Record<string, 1 | -1> = {};
+
+    let typeSortValue: 1 | -1 | undefined = undefined;
+    if (typeSort) {
+      const numValue = Number(typeSort);
+      if (numValue === 1 || numValue === -1) {
+        typeSortValue = numValue;
+      }
+    }
 
     //handle sort
     if (keySort) {
+      if (!typeSortValue) {
+        typeSortValue = 1;
+      }
+
       switch (keySort) {
         case SORT_BY.CASH_DATE:
-          sort = { cashDate: typeSort };
+          sort = { cashDate: typeSortValue };
           break;
         case SORT_BY.CASH:
-          sort = { cash: typeSort };
+          sort = { cash: typeSortValue };
           break;
         case SORT_BY.TO_ROUTE:
-          sort = { 'toRoute.name': typeSort };
+          sort = { 'toRoute.name': typeSortValue };
           break;
         default:
           sort = { 'toRoute.name': 1, createdAt: 1 };
@@ -181,8 +214,6 @@ export class DebtManagementService {
     } else {
       sort = { 'toRoute.name': 1, createdAt: 1 };
     }
-
-    console.log('sort :>> ', sort);
     try {
       const pipeline = [
         {
@@ -230,9 +261,11 @@ export class DebtManagementService {
         { $sort: sort },
       ];
 
-      const result = await DebtManagement.aggregate(pipeline).exec();
+      const result = (await DebtManagement.aggregate(pipeline).exec()) as IDebtManagement[];
 
-      return result;
+      return {
+        data: result,
+      };
     } catch (error) {
       if (error instanceof Error) {
         throw error;
@@ -241,7 +274,10 @@ export class DebtManagementService {
     }
   }
 
-  async createDebtManagement(data: ICreateDebtManagementRequest, userId: string): Promise<any> {
+  async createDebtManagement(
+    data: ICreateDebtManagementRequest,
+    userId: string
+  ): Promise<IDebtManagement> {
     const session = await mongoose.startSession();
     session.startTransaction();
 
@@ -442,7 +478,12 @@ export class DebtManagementService {
       await session.commitTransaction();
       session.endSession();
 
-      return result;
+      // Populate routes before returning
+      await result.populate('fromRoute', 'name');
+      await result.populate('toRoute', 'name');
+
+      const populatedResult = result.toObject();
+      return populatedResult as unknown as IDebtManagement;
     } catch (error) {
       await session.commitTransaction();
       session.endSession();

@@ -38,3 +38,15 @@ export interface ICreateDebtManagementRequest {
   cash: number;
   cashDate: Date;
 }
+
+export interface IGetListPaymentDebtManagementResponse {
+  data: IDebtManagement[];
+}
+
+export interface IGetListReceiptDebtManagementResponse {
+  data: IDebtManagement[];
+}
+
+export interface ICreateDebtManagementResponse {
+  data: IDebtManagement;
+}

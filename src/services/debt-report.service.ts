@@ -1,5 +1,6 @@
-import { Debt } from '@/models/debt.model';
 import { DebtReport, IDebtReport } from '@/models/debt-report.model';
+import { Debt } from '@/models/debt.model';
+import { IDebtTotal } from '@/types/debt.type';
 import mongoose from 'mongoose';
 
 export class DebtReportService {
@@ -207,6 +208,81 @@ export class DebtReportService {
         throw error;
       }
       throw new Error('Update debt report failed');
+    }
+  }
+
+  /**
+   * Get debt reports by toRoute and date range, then calculate total
+   * @param toRouteId - ObjectId or string of the toRoute
+   * @param startDate - Start date (will be set to start of day)
+   * @param endDate - End date (will be set to end of day)
+   * @returns Total of all debt report fields
+   */
+  async getDebtReportTotal(
+    toRouteId: mongoose.Types.ObjectId | string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<IDebtTotal> {
+    try {
+      // Convert toRouteId to ObjectId if it's a string
+      const toRouteObjId =
+        toRouteId instanceof mongoose.Types.ObjectId
+          ? toRouteId
+          : new mongoose.Types.ObjectId(String(toRouteId));
+
+      // Set start date to start of day
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+
+      // Set end date to end of day
+      const endOfDay = new Date(endDate);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      // Get debt reports for the date range and toRoute
+      // Debt reports already contain daily totals, so we just need to sum them up
+      const debtReports = await DebtReport.find({
+        toRoute: toRouteObjId,
+        createdAt: { $gte: start, $lte: endOfDay },
+      }).lean();
+
+      // Initialize total object
+      const total = {
+        openingBalance: 0,
+        costFromRoute: 0,
+        feeCODToRoute: 0,
+        costToRoute: 0,
+        feeCODFromRoute: 0,
+        accountPayable: 0,
+        receivable: 0,
+        homeDeliveryFromRoute: 0,
+        homeDeliveryToRoute: 0,
+        surchargeToRoute: 0,
+        surchargeFromRoute: 0,
+        totalDebt: 0,
+      };
+
+      // Sum all fields from debt reports (each report is already a daily total)
+      for (const debtReport of debtReports) {
+        total.openingBalance += debtReport.openingBalance ?? 0;
+        total.costFromRoute += debtReport.costFromRoute ?? 0;
+        total.feeCODToRoute += debtReport.feeCODToRoute ?? 0;
+        total.costToRoute += debtReport.costToRoute ?? 0;
+        total.feeCODFromRoute += debtReport.feeCODFromRoute ?? 0;
+        total.accountPayable += debtReport.accountPayable ?? 0;
+        total.receivable += debtReport.receivable ?? 0;
+        total.homeDeliveryFromRoute += debtReport.homeDeliveryFromRoute ?? 0;
+        total.homeDeliveryToRoute += debtReport.homeDeliveryToRoute ?? 0;
+        total.surchargeToRoute += debtReport.surchargeToRoute ?? 0;
+        total.surchargeFromRoute += debtReport.surchargeFromRoute ?? 0;
+        total.totalDebt += debtReport.totalDebt ?? 0;
+      }
+
+      return total;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Get debt report total failed');
     }
   }
 }
