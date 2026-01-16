@@ -139,3 +139,40 @@ export const isValidPhoneNumber = (phone: string): boolean => {
 export const isValidObjectId = (id: string): boolean => {
   return OBJECTID_PATTERN.test(id);
 };
+
+/**
+ * Helper function to convert phone number from international format (+84) to local format (0)
+ * Examples:
+ *   +84901234567 -> 0901234567
+ *   84901234567  -> 0901234567
+ *   0901234567   -> 0901234567 (unchanged)
+ */
+export const convertPhoneToLocalFormat = (phone: string): string => {
+  if (!phone) {
+    return phone;
+  }
+  // Remove +84 or 84 prefix and replace with 0
+  return phone.replace(/^(\+84|84)/, '0');
+};
+
+/**
+ * Helper function to convert phone number to Zalo API format (84...)
+ * Examples:
+ *   +84901234567 -> 84901234567
+ *   84901234567  -> 84901234567 (unchanged)
+ *   0901234567   -> 84901234567
+ */
+export const convertPhoneToZaloFormat = (phone: string): string => {
+  if (!phone) {
+    return phone;
+  }
+  // Remove + prefix if exists, then convert 0 prefix to 84
+  const cleaned = phone.replace(/^\+/, '');
+  if (cleaned.startsWith('0')) {
+    return '84' + cleaned.slice(1);
+  }
+  if (!cleaned.startsWith('84')) {
+    return '84' + cleaned;
+  }
+  return cleaned;
+};

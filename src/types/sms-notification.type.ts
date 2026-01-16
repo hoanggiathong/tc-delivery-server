@@ -58,7 +58,7 @@ export interface ISMSBulkSendResult {
  */
 export interface IYourSalesZNSParams {
   phone: string;
-  templateId: string;
+  templateId: number;
   templateData: {
     ten_khach_hang: string;
     chi_nhanh: string;
@@ -69,7 +69,7 @@ export interface IYourSalesZNSParams {
     gia: string;
     hinh_thuc: string;
     dia_chi: string;
-    link_toi_cta: string;
+    Link_toi_CTA: string;
   };
 }
 
@@ -147,6 +147,8 @@ export interface IDeliveryForSMSLean {
   fullCode: string;
   receiverName: string;
   senderName: string;
+  receiverPhone: string;
+  senderPhone: string;
   name: string;
   collectCost: number;
   homeDelivery?: string;
@@ -156,6 +158,11 @@ export interface IDeliveryForSMSLean {
   createdAt: Date;
   quantity: number;
   quantityReturn: number;
+  totalCost: number;
+  sender: {
+    _id: string;
+    phone: string;
+  };
   receiver: {
     _id: string;
     phone: string;

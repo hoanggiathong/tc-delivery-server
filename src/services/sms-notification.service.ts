@@ -17,6 +17,7 @@ import {
 } from '@/types/sms-notification.type';
 import Logger from '@/utils/logger';
 import { getStartOfDayVietnam, getEndOfDayVietnam, convertVietnamToUTC } from '@/utils/date.utils';
+import { convertPhoneToLocalFormat } from '@/utils/validation-patterns';
 import { UserService } from '@/services/user.service';
 
 /**
@@ -32,7 +33,7 @@ export class SMSNotificationService {
   private userService: UserService;
 
   constructor() {
-    this.apiUrl = process.env.YOURSALES_API_URL || 'https://api.yoursales.vn';
+    this.apiUrl = process.env.YOURSALES_API_URL || 'https://api.yoursales.vn/api';
     this.apiKey = process.env.YOURSALES_API_KEY || '';
     this.apiToken = process.env.YOURSALES_TOKEN || '';
     this.zaloTemplateId = process.env.ZALO_ZNS_TEMPLATE_ID || '';
@@ -58,7 +59,6 @@ export class SMSNotificationService {
     const query: Record<string, unknown> = {
       toRoute: selectedRouteId,
       isReturn: { $ne: true },
-      smsStatus: SMSStatus.NOT_SENT,
     };
 
     // Always apply 7-day filter (default to today if not provided)
@@ -82,8 +82,9 @@ export class SMSNotificationService {
       _id: delivery._id.toString(),
       fullCode: delivery.fullCode,
       receiverName: delivery.receiverName,
-      receiverPhone: delivery.receiver?.phone || '',
+      receiverPhone: delivery.receiverPhone || '',
       senderName: delivery.senderName,
+      senderPhone: delivery.senderPhone,
       name: delivery.name,
       collectCost: delivery.collectCost,
       toRoute: {
@@ -170,7 +171,7 @@ export class SMSNotificationService {
    */
   async sendNotification(deliveryId: string, userId: string): Promise<ISMSSendResult> {
     const delivery = await Delivery.findById(deliveryId)
-      .populate('receiver', 'phone')
+      .populate('sender', 'phone')
       .populate('toRoute', '_id code name address phone')
       .lean<IDeliveryForSMSLean>();
 
@@ -189,13 +190,13 @@ export class SMSNotificationService {
       return {
         success: false,
         deliveryId,
-        phone: delivery.receiver?.phone || '',
+        phone: delivery.sender?.phone || '',
         errorCode: 'ALREADY_SENT',
         errorMessage: 'Notification already sent for this delivery',
       };
     }
 
-    const phone = delivery.receiver?.phone;
+    const phone = delivery.sender?.phone;
     if (!phone) {
       // Update delivery status to phone error
       await Delivery.findByIdAndUpdate(deliveryId, { smsStatus: SMSStatus.PHONE_ERROR });
@@ -241,16 +242,16 @@ export class SMSNotificationService {
       nguoi_gui: delivery.senderName,
       buu_pham: delivery.name,
       trang_thai: 'Đã đến trạm phát',
-      gia: this.formatCurrency(delivery.collectCost),
+      gia: this.formatCurrency(delivery.totalCost),
       hinh_thuc: delivery.homeDelivery ? 'Giao tận nhà' : 'Giao dịch trực tiếp tại quầy',
       dia_chi: toRoute.address || '',
-      link_toi_cta: toRoute.phone || '',
+      Link_toi_CTA: convertPhoneToLocalFormat(toRoute.phone || ''),
     };
 
     // Try Zalo ZNS first
     const zaloResult = await this.sendZaloZNS({
       phone,
-      templateId: this.zaloTemplateId,
+      templateId: Number(this.zaloTemplateId),
       templateData,
     });
 
@@ -281,7 +282,7 @@ export class SMSNotificationService {
     if (zaloResult.errorCode === 'NOT_REGISTERED' || zaloResult.errorCode === 'ZALO_NOT_FOUND') {
       const smsResult = await this.sendSMS({
         phone,
-        templateId: this.smsTemplateId,
+        templateId: Number(this.smsTemplateId),
         templateData,
       });
 
@@ -478,23 +479,50 @@ export class SMSNotificationService {
    */
   private async sendZaloZNS(params: IYourSalesZNSParams): Promise<IYourSalesAPIResponse> {
     try {
-      // TODO: Implement actual API call to YourSales
-      // For now, return a mock response
       Logger.info('Sending Zalo ZNS', { phone: params.phone, templateId: params.templateId });
+      console.log('Body data:', {
+        template_id: params.templateId,
+        phone: convertPhoneToLocalFormat(params.phone),
+        data: params.templateData,
+        sms_failover: {
+          brand: 'VT.GiaPhuoc',
+          msg: 'VT.GiaPhuoc kinh moi quy khach den chi nhanh nhan buu pham tu voi so tien can thanh toan. Giao dich tai quay. Chi tiet vui long lien he.',
+        },
+      });
 
-      const response = await fetch(`${this.apiUrl}/zalo/zns/send`, {
+      const response = await fetch(`${this.apiUrl}/public/zns/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-API-Key': this.apiKey,
-          Authorization: `Bearer ${this.apiToken}`,
+          Accept: 'application/json',
+          Authorization: `Basic ${this.apiToken}`,
         },
         body: JSON.stringify({
-          phone: params.phone,
           template_id: params.templateId,
-          template_data: params.templateData,
+          phone: convertPhoneToLocalFormat(params.phone),
+          data: params.templateData,
+          sms_failover: {
+            brand: 'VT.GiaPhuoc',
+            msg: 'VT.GiaPhuoc kinh moi quy khach den chi nhanh nhan buu pham tu voi so tien can thanh toan. Giao dich tai quay. Chi tiet vui long lien he.',
+          },
         }),
       });
+
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const textResponse = await response.text();
+        Logger.error('Zalo ZNS API returned non-JSON response', {
+          status: response.status,
+          contentType,
+          body: textResponse.substring(0, 500),
+        });
+        return {
+          success: false,
+          errorCode: 'INVALID_RESPONSE',
+          errorMessage: `API returned non-JSON response (status: ${response.status}). Please check API URL and credentials.`,
+        };
+      }
 
       const data = (await response.json()) as IYourSalesAPIData;
 
@@ -535,9 +563,25 @@ export class SMSNotificationService {
         body: JSON.stringify({
           phone: params.phone,
           template_id: params.templateId,
-          template_data: params.templateData,
+          data: params.templateData,
         }),
       });
+
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const textResponse = await response.text();
+        Logger.error('SMS API returned non-JSON response', {
+          status: response.status,
+          contentType,
+          body: textResponse.substring(0, 500),
+        });
+        return {
+          success: false,
+          errorCode: 'INVALID_RESPONSE',
+          errorMessage: `API returned non-JSON response (status: ${response.status}). Please check API URL and credentials.`,
+        };
+      }
 
       const data = (await response.json()) as IYourSalesAPIData;
 

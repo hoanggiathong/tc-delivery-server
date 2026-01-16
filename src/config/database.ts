@@ -30,7 +30,7 @@ export const connectDB = async (): Promise<void> => {
 
     // Enable mongoose debugging in development
     if (process.env.NODE_ENV === 'development') {
-      mongoose.set('debug', true);
+      mongoose.set('debug', false);
     }
 
     const conn = await mongoose.connect(mongoURI);
