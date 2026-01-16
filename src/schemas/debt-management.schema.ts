@@ -1,4 +1,4 @@
-import { DEBT_MANAGEMENT_TYPE, SORT_BY } from '@/const/debt-management.const';
+import { SORT_BY } from '@/const/debt-management.const';
 import z from 'zod';
 import { OBJECTID_PATTERN, VALIDATION_MESSAGES } from '@/utils/validation-patterns';
 
@@ -76,12 +76,19 @@ export const getListPaymentDebtManagementSchema = z
     path: ['query', 'startDate'],
   });
 
-export const debtManagementParamsSchema = z.object({
+export const deleteDebtManagementSchema = z.object({
   params: z.object({
     id: z
       .string()
       .min(1, 'Debt Management ID is required')
       .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
+      .trim(),
+  }),
+  body: z.object({
+    reason: z
+      .string()
+      .min(1, 'Reason is required')
+      .max(500, 'Reason must not exceed 500 characters')
       .trim(),
   }),
 });
@@ -99,11 +106,6 @@ export const createDebtManagementSchema = z.object({
       .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
       .trim(),
     cash: z.number().min(0, 'Cash amount must be positive'),
-    type: z.enum([
-      DEBT_MANAGEMENT_TYPE.COLLECTION,
-      DEBT_MANAGEMENT_TYPE.PAYMENT,
-      DEBT_MANAGEMENT_TYPE.RECEIPT,
-    ]),
     cashDate: z
       .string()
       .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid cash date in ISO format')

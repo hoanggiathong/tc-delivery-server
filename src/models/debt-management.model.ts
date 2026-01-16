@@ -10,6 +10,7 @@ export interface IDebtManagement extends Document {
   cash: number; // so tien
   deleted: boolean;
   cashDate: Date; // ngay thu tien
+  reason?: string; // ly do xoa
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date;
@@ -50,6 +51,11 @@ const debtManagementSchema = new Schema<IDebtManagement>(
     },
     deletedAt: {
       type: Date,
+      default: null,
+    },
+    reason: {
+      type: String,
+      trim: true,
       default: null,
     },
   },

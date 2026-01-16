@@ -141,14 +141,15 @@ export class DebtManagementService {
         // project các field cần trả
         {
           $project: {
-            _id: 1,
-            fromRoute: { _id: '$fromRoute._id', name: '$fromRoute.name' },
-            toRoute: { _id: '$toRoute._id', name: '$toRoute.name' },
+            id: '$_id',
+            fromRoute: { id: '$fromRoute._id', name: '$fromRoute.name' },
+            toRoute: { id: '$toRoute._id', name: '$toRoute.name' },
             content: 1,
             type: 1,
             cash: 1,
             cashDate: 1,
             deleted: 1,
+            reason: 1,
             createdAt: 1,
             updatedAt: 1,
           },
@@ -246,14 +247,15 @@ export class DebtManagementService {
         { $unwind: { path: '$toRoute', preserveNullAndEmptyArrays: true } },
         {
           $project: {
-            _id: 1,
-            fromRoute: { _id: '$fromRoute._id', name: '$fromRoute.name' },
-            toRoute: { _id: '$toRoute._id', name: '$toRoute.name' },
+            id: '$_id',
+            fromRoute: { id: '$fromRoute._id', name: '$fromRoute.name' },
+            toRoute: { id: '$toRoute._id', name: '$toRoute.name' },
             content: 1,
             type: 1,
             cash: 1,
             cashDate: 1,
             deleted: 1,
+            reason: 1,
             createdAt: 1,
             updatedAt: 1,
           },
@@ -277,7 +279,7 @@ export class DebtManagementService {
   async createDebtManagement(
     data: ICreateDebtManagementRequest,
     userId: string
-  ): Promise<IDebtManagement> {
+  ): Promise<IDebtManagement[]> {
     const session = await mongoose.startSession();
     session.startTransaction();
 
@@ -291,36 +293,36 @@ export class DebtManagementService {
       ]);
 
       if (!fromRoute) {
-        throw new Error('User selected route not found');
+        throw new Error('From route not found');
       }
 
       if (!toRoute) {
         throw new Error('To route not found');
       }
 
-      const dataHistoryReceiptDebt = {
+      // Create 2 records: RECEIPT and PAYMENT
+      const receiptDebtManagement = new DebtManagement({
         fromRoute: data.fromRoute,
         toRoute: toRouteId,
         cash: data.cash,
         cashDate: data.cashDate,
         content: data.content,
         type: DEBT_MANAGEMENT_TYPE.RECEIPT,
-      };
+      });
 
-      const dataHistoryPaymentDebt = {
+      const paymentDebtManagement = new DebtManagement({
         fromRoute: data.fromRoute,
         toRoute: toRouteId,
         cash: data.cash,
         cashDate: data.cashDate,
         content: data.content,
         type: DEBT_MANAGEMENT_TYPE.PAYMENT,
-      };
-
-      const dataDebtManagement = new DebtManagement({
-        ...dataHistoryReceiptDebt,
-        ...dataHistoryPaymentDebt,
       });
-      const result = await dataDebtManagement.save({ session: session });
+
+      const [receiptResult, paymentResult] = await Promise.all([
+        receiptDebtManagement.save({ session: session }),
+        paymentDebtManagement.save({ session: session }),
+      ]);
 
       const today = new Date();
       const startOfDay = new Date(
@@ -479,23 +481,76 @@ export class DebtManagementService {
       session.endSession();
 
       // Populate routes before returning
-      await result.populate('fromRoute', 'name');
-      await result.populate('toRoute', 'name');
+      await Promise.all([
+        receiptResult.populate('fromRoute', 'name'),
+        receiptResult.populate('toRoute', 'name'),
+        paymentResult.populate('fromRoute', 'name'),
+        paymentResult.populate('toRoute', 'name'),
+      ]);
 
-      const populatedResult = result.toObject();
-      return populatedResult as unknown as IDebtManagement;
+      // Transform both results
+      const transformDebtManagement = (result: {
+        toObject: () => {
+          _id: unknown;
+          fromRoute: { _id?: unknown; name?: string } | unknown;
+          toRoute: { _id?: unknown; name?: string } | unknown;
+          content: string;
+          type: string;
+          cash: number;
+          cashDate: Date;
+          deleted: boolean;
+          createdAt: Date;
+          updatedAt: Date;
+          deletedAt?: Date;
+          __v?: number;
+        };
+      }): IDebtManagement => {
+        const populatedResult = result.toObject();
+        const fromRouteObj = populatedResult.fromRoute as
+          | { _id?: unknown; name?: string }
+          | unknown;
+        const fromRouteIdValue =
+          (fromRouteObj as { _id?: unknown })?._id || (fromRouteObj as unknown);
+        const fromRouteNameValue = (fromRouteObj as { name?: string })?.name || '';
+        const toRouteObj = populatedResult.toRoute as { _id?: unknown; name?: string } | unknown;
+        const toRouteIdValue = (toRouteObj as { _id?: unknown })?._id || (toRouteObj as unknown);
+        const toRouteNameValue = (toRouteObj as { name?: string })?.name || '';
+
+        return {
+          id: populatedResult._id,
+          fromRoute: {
+            id: fromRouteIdValue,
+            name: fromRouteNameValue,
+          },
+          toRoute: {
+            id: toRouteIdValue,
+            name: toRouteNameValue,
+          },
+          content: populatedResult.content,
+          type: populatedResult.type,
+          cash: populatedResult.cash,
+          cashDate: populatedResult.cashDate,
+          deleted: populatedResult.deleted,
+          createdAt: populatedResult.createdAt,
+          updatedAt: populatedResult.updatedAt,
+          deletedAt: populatedResult.deletedAt,
+          __v: populatedResult.__v,
+        } as IDebtManagement;
+      };
+
+      return [transformDebtManagement(receiptResult), transformDebtManagement(paymentResult)];
     } catch (error) {
-      await session.commitTransaction();
+      await session.abortTransaction();
       session.endSession();
 
       if (error instanceof Error) {
         throw error;
       }
-      throw new Error('get list receipt debt management failed');
+      throw new Error('create debt management failed');
     }
   }
 
-  async deleteDebtManagement(id: string): Promise<void> {
+  async deleteDebtManagement(id: string, reason: string): Promise<void> {
     const session = await mongoose.startSession();
     session.startTransaction();
 
@@ -571,6 +626,7 @@ export class DebtManagementService {
         {
           deleted: true,
           deletedAt: new Date(),
+          reason: reason,
         },
         {
           session: session,

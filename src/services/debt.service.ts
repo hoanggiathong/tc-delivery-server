@@ -105,9 +105,9 @@ export class DebtService {
       // Project return fields
       pipeline.push({
         $project: {
-          _id: 1,
-          fromRoute: { _id: '$fromRoute._id', name: '$fromRoute.name' },
-          toRoute: { _id: '$toRoute._id', name: '$toRoute.name' },
+          id: '$_id',
+          fromRoute: { id: '$fromRoute._id', name: '$fromRoute.name' },
+          toRoute: { id: '$toRoute._id', name: '$toRoute.name' },
           openingBalance: 1,
           costFromRoute: 1,
           feeCODToRoute: 1,

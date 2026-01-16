@@ -1,10 +1,14 @@
 import { Types } from 'mongoose';
 
-type RouteInfo = { _id: Types.ObjectId | string; name?: string };
+export interface IRouteInfo {
+  id: Types.ObjectId | string;
+  name?: string;
+}
+
 export interface IDebtRow {
-  _id: Types.ObjectId | string;
-  fromRoute: RouteInfo;
-  toRoute: RouteInfo;
+  id: Types.ObjectId | string;
+  fromRoute: IRouteInfo;
+  toRoute: IRouteInfo;
   openingBalance?: number;
   costFromRoute: number;
   feeCODToRoute: number;
