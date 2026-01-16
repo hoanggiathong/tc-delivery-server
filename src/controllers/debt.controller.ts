@@ -83,20 +83,20 @@ export class DebtController {
    *                       items:
    *                         type: object
    *                         properties:
-   *                           _id:
+   *                           id:
    *                             type: string
    *                             example: "507f1f77bcf86cd799439011"
    *                           fromRoute:
    *                             type: object
    *                             properties:
-   *                               _id:
+   *                               id:
    *                                 type: string
    *                               name:
    *                                 type: string
    *                           toRoute:
    *                             type: object
    *                             properties:
-   *                               _id:
+   *                               id:
    *                                 type: string
    *                               name:
    *                                 type: string
@@ -196,6 +196,48 @@ export class DebtController {
    *                           type: number
    *                           description: Total debt (can be negative)
    *                           example: 250000
+   *             examples:
+   *               success:
+   *                 summary: Successful response
+   *                 value:
+   *                   success: true
+   *                   message: "get list debt successful"
+   *                   data:
+   *                     data:
+   *                       - id: "507f1f77bcf86cd799439011"
+   *                         fromRoute:
+   *                           id: "507f1f77bcf86cd799439011"
+   *                           name: "Route A"
+   *                         toRoute:
+   *                           id: "507f1f77bcf86cd799439012"
+   *                           name: "Route B"
+   *                         openingBalance: 0
+   *                         costFromRoute: 100000
+   *                         feeCODToRoute: 50000
+   *                         costToRoute: 80000
+   *                         feeCODFromRoute: 30000
+   *                         accountPayable: 0
+   *                         receivable: 0
+   *                         homeDeliveryFromRoute: 20000
+   *                         homeDeliveryToRoute: 15000
+   *                         surchargeToRoute: 10000
+   *                         surchargeFromRoute: 5000
+   *                         totalDebt: 50000
+   *                         createdAt: "2024-01-01T00:00:00.000Z"
+   *                         updatedAt: "2024-01-01T00:00:00.000Z"
+   *                     total:
+   *                       openingBalance: 0
+   *                       costFromRoute: 500000
+   *                       feeCODToRoute: 250000
+   *                       costToRoute: 400000
+   *                       feeCODFromRoute: 150000
+   *                       accountPayable: 0
+   *                       receivable: 0
+   *                       homeDeliveryFromRoute: 100000
+   *                       homeDeliveryToRoute: 75000
+   *                       surchargeToRoute: 50000
+   *                       surchargeFromRoute: 25000
+   *                       totalDebt: 250000
    *       400:
    *         description: Bad request (validation error)
    *         content:
@@ -208,6 +250,13 @@ export class DebtController {
    *                   example: false
    *                 message:
    *                   type: string
+   *                   example: "Validation error"
+   *             examples:
+   *               validationError:
+   *                 summary: Validation error
+   *                 value:
+   *                   success: false
+   *                   message: "Start date must be before or equal to end date"
    *       401:
    *         description: Unauthorized
    *         content:
@@ -221,6 +270,12 @@ export class DebtController {
    *                 message:
    *                   type: string
    *                   example: "Unauthorized"
+   *             examples:
+   *               unauthorized:
+   *                 summary: Unauthorized access
+   *                 value:
+   *                   success: false
+   *                   message: "Unauthorized"
    *       500:
    *         description: Internal server error
    *         content:
@@ -234,6 +289,12 @@ export class DebtController {
    *                 message:
    *                   type: string
    *                   example: "get list debt failed"
+   *             examples:
+   *               serverError:
+   *                 summary: Server error
+   *                 value:
+   *                   success: false
+   *                   message: "get list debt failed"
    */
   getListDebt = async (request: AuthRequest, res: Response): Promise<void> => {
     try {

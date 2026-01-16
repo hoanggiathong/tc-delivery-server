@@ -188,4 +188,10 @@ const options = {
   apis: ['src/controllers/*.ts', 'src/routes/*.ts'],
 };
 
-export const swaggerSpec = swaggerJsdoc(options);
+// Function to generate swagger spec (not cached)
+export const getSwaggerSpec = () => {
+  return swaggerJsdoc(options);
+};
+
+// Export cached version for backward compatibility
+export const swaggerSpec = getSwaggerSpec();

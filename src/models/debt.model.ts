@@ -13,8 +13,8 @@ export interface IDebt extends Document {
   receivable: number; // thu tien (khoan phai thu)
   homeDeliveryFromRoute: number; // GTN di
   homeDeliveryToRoute: number; // GTN ve
-  surchargeToRoute: number; // phu phi di
-  surchargeFromRoute: number; // phu phi ve
+  surchargeToRoute: number; // phu phi ve
+  surchargeFromRoute: number; // phu phi di
   totalDebt: number; // cong no (co the am - bieu thi so du co hoac tra vuot)
   createdAt: Date;
   updatedAt: Date;

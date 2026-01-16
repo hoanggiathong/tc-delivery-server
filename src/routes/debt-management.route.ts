@@ -3,7 +3,7 @@ import { authenticateToken } from '@/middlewares/auth.middleware';
 import { validate } from '@/middlewares/validation.middleware';
 import {
   createDebtManagementSchema,
-  debtManagementParamsSchema,
+  deleteDebtManagementSchema,
   getListPaymentDebtManagementSchema,
   getListReceiptDebtManagementSchema,
 } from '@/schemas/debt-management.schema';
@@ -34,9 +34,9 @@ router.post(
   debtManagementController.createDebtManagement
 );
 
-router.delete(
+router.put(
   '/:id',
-  validate(debtManagementParamsSchema),
+  validate(deleteDebtManagementSchema),
   debtManagementController.deleteDebtManagement
 );
 
