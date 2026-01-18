@@ -1,28 +1,42 @@
 import { SORT_BY_DEBT } from '@/const/debt.const';
 import { Debt } from '@/models/debt.model';
+import { IDebtRow, IDebtTotal, IGetListDebtResponse } from '@/types/debt.type';
+import { Request } from 'express';
+import { PipelineStage } from 'mongoose';
+import { DebtReportService } from './debt-report.service';
 import { UserService } from './user.service';
 
 export class DebtService {
   private userService: UserService;
+  private debtReportService: DebtReportService;
   constructor() {
     this.userService = new UserService();
+    this.debtReportService = new DebtReportService();
   }
 
-  async getListDebt(req: any, userId: string): Promise<any[]> {
-    const { startDate, endDate, keySort } = req.query;
+  async getListDebt(req: Request, userId: string): Promise<IGetListDebtResponse> {
+    const { startDate, endDate, keySort, key } = req.query;
 
-    let { typeSort } = req.query;
+    let typeSort: 1 | -1 | undefined = undefined;
+    if (req.query.typeSort) {
+      const typeSortValue = Number(req.query.typeSort);
+      if (typeSortValue === 1 || typeSortValue === -1) {
+        typeSort = typeSortValue;
+      }
+    }
 
     const toRouteId = await this.userService.getUserSelectedRouteId(userId);
 
     const start = new Date(String(startDate));
+    start.setHours(0, 0, 0, 0);
+
     // Set end date to end of day
-    const endOfDay = new Date(endDate);
+    const endOfDay = new Date(String(endDate));
     endOfDay.setHours(23, 59, 59, 999);
 
-    let sort = {};
+    let sort: Record<string, 1 | -1> = {};
 
-    //handle sort
+    // Handle sort
     if (keySort) {
       if (!typeSort) {
         typeSort = 1;
@@ -42,15 +56,18 @@ export class DebtService {
     } else {
       sort = { 'toRoute.name': 1, createdAt: 1 };
     }
+
     try {
-      const pipeline = [
+      const matchStage: Record<string, unknown> = {
+        toRoute: toRouteId,
+        createdAt: { $gte: start, $lte: endOfDay },
+      };
+
+      const pipeline: PipelineStage[] = [
         {
-          $match: {
-            toRoute: toRouteId,
-            createdAt: { $gte: start, $lte: endOfDay },
-          },
+          $match: matchStage,
         },
-        // join fromRoute
+        // Join fromRoute
         {
           $lookup: {
             from: 'routes',
@@ -60,7 +77,7 @@ export class DebtService {
           },
         },
         { $unwind: { path: '$fromRoute', preserveNullAndEmptyArrays: true } },
-        // join toRoute
+        // Join toRoute
         {
           $lookup: {
             from: 'routes',
@@ -70,35 +87,63 @@ export class DebtService {
           },
         },
         { $unwind: { path: '$toRoute', preserveNullAndEmptyArrays: true } },
-        // project return fields need to select
-        {
-          $project: {
-            _id: 1,
-            fromRoute: { _id: '$fromRoute._id', name: '$fromRoute.name' },
-            toRoute: { _id: '$toRoute._id', name: '$toRoute.name' },
-            openingBalance: 1,
-            costFromRoute: 1,
-            feeCODToRoute: 1,
-            costToRoute: 1,
-            feeCODFromRoute: 1,
-            accountPayable: 1,
-            receivable: 1,
-            homeDeliveryFromRoute: 1,
-            homeDeliveryToRoute: 1,
-            surchargeToRoute: 1,
-            surchargeFromRoute: 1,
-            totalDebt: 1,
-            createdAt: 1,
-            updatedAt: 1,
-          },
-        },
-        {
-          $sort: sort,
-        },
       ];
 
-      const result = await Debt.aggregate(pipeline).exec();
-      return result;
+      // Add search filter if key is provided
+      if (key && typeof key === 'string' && key.trim()) {
+        const searchKey = key.trim();
+        pipeline.push({
+          $match: {
+            $or: [
+              { 'fromRoute.name': { $regex: searchKey, $options: 'i' } },
+              { 'toRoute.name': { $regex: searchKey, $options: 'i' } },
+            ],
+          },
+        } as PipelineStage);
+      }
+
+      // Project return fields
+      pipeline.push({
+        $project: {
+          id: '$_id',
+          fromRoute: { id: '$fromRoute._id', name: '$fromRoute.name' },
+          toRoute: { id: '$toRoute._id', name: '$toRoute.name' },
+          openingBalance: 1,
+          costFromRoute: 1,
+          feeCODToRoute: 1,
+          costToRoute: 1,
+          feeCODFromRoute: 1,
+          accountPayable: 1,
+          receivable: 1,
+          homeDeliveryFromRoute: 1,
+          homeDeliveryToRoute: 1,
+          surchargeToRoute: 1,
+          surchargeFromRoute: 1,
+          totalDebt: 1,
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      } as PipelineStage);
+
+      // Add sort stage
+      pipeline.push({
+        $sort: sort,
+      } as PipelineStage);
+
+      const result = (await Debt.aggregate(pipeline).exec()) as IDebtRow[];
+
+      // Get debt report total from DebtReportService
+      // Debt reports already contain daily totals, so we just need to sum them up
+      const total: IDebtTotal = await this.debtReportService.getDebtReportTotal(
+        toRouteId,
+        start,
+        endOfDay
+      );
+
+      return {
+        data: result,
+        total,
+      };
     } catch (error) {
       if (error instanceof Error) {
         throw error;

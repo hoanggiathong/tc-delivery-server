@@ -262,11 +262,6 @@ router.get(
  *       401:
  *         description: Unauthorized
  */
-router.get(
-  '/logs',
-  authenticateToken,
-  validate(getAllSMSLogsSchema),
-  smsController.getAllSMSLogs
-);
+router.get('/logs', authenticateToken, validate(getAllSMSLogsSchema), smsController.getAllSMSLogs);
 
 export default router;

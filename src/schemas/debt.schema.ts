@@ -1,6 +1,5 @@
 import { SORT_BY_DEBT } from '@/const/debt.const';
 import z from 'zod';
-import { OBJECTID_PATTERN, VALIDATION_MESSAGES } from '@/utils/validation-patterns';
 
 const SortBySchema = z.union([
   z.literal(SORT_BY_DEBT.TO_ROUTE),
@@ -49,11 +48,6 @@ export const getListDebtSchema = z
         .string()
         .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid end date in ISO format')
         .transform(val => new Date(val)),
-      fromRouteId: z
-        .string()
-        .min(1, 'From route ID is required')
-        .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
-        .trim(),
       keySort: keySortOptionalSchema,
       typeSort: typeSortOptionalSchema,
       key: z.string().trim().max(120).optional(),

@@ -792,13 +792,12 @@ export class CustomerService {
   }
 
   async getListCustomer(userId: string): Promise<ICustomerFullInformationResponse[]> {
-    const userSelectedRouteId = await this.userService.getUserSelectedRouteId(userId);
+    const routeId = await this.userService.getUserSelectedRouteId(userId);
+
     try {
       const customers = await Customer.find({
-        routeId: userSelectedRouteId,
-        bankId: {
-          $ne: null,
-        },
+        routeId,
+        bankId: { $exists: true, $ne: null },
       })
         .populate([
           { path: 'bankId', select: '_id bankName bankAccount name' },
@@ -807,55 +806,54 @@ export class CustomerService {
         ])
         .lean();
 
-      const customersFullInformation: ICustomerFullInformationResponse[] = customers.map(
-        (customer: any) => ({
-          id: customer._id.toString(),
-          name: customer.name,
-          phone: customer.phone,
-          route: customer.routeId
-            ? {
-                id: customer.routeId._id.toString(),
-                code: customer.routeId.code,
-                name: customer.routeId.name,
-                address: customer.routeId.address,
-              }
-            : undefined,
-          bank: customer.bankId
-            ? {
-                id: customer.bankId._id.toString(),
-                name: customer.bankId.name,
-                bankName: customer.bankId.bankName,
-                bankAccount: customer.bankId.bankAccount,
-              }
-            : null,
-          createdBy: customer.createdBy
-            ? {
-                id: customer.createdBy._id.toString(),
-                username: customer.createdBy.username,
-                name: customer.createdBy.name,
-                createdAt: customer.createdBy.createdAt,
-                updatedAt: customer.createdBy.updatedAt,
-              }
-            : null,
-          images: customer.images,
-          address: customer.address,
-          identityCardName: customer.identityCardName,
-          identityCardIssuedDate: customer.identityCardIssuedDate,
-          identityCardNumber: customer.identityCardNumber,
-          isRoute: customer.isRoute || false,
-          createdAt: customer.createdAt,
-          updatedAt: customer.updatedAt,
-        })
+      return (
+        customers
+          // không lấy những customer chưa có thông tin bank
+          .filter(c => c.bankId)
+          .map(
+            (c: any): ICustomerFullInformationResponse => ({
+              id: c._id.toString(),
+              name: c.name,
+              phone: c.phone,
+
+              route: c.routeId && {
+                id: c.routeId._id.toString(),
+                code: c.routeId.code,
+                name: c.routeId.name,
+                address: c.routeId.address,
+              },
+
+              bank: {
+                id: c.bankId._id.toString(),
+                name: c.bankId.name,
+                bankName: c.bankId.bankName,
+                bankAccount: c.bankId.bankAccount,
+              },
+
+              createdBy: c.createdBy && {
+                id: c.createdBy._id.toString(),
+                username: c.createdBy.username,
+                name: c.createdBy.name,
+                createdAt: c.createdBy.createdAt,
+                updatedAt: c.createdBy.updatedAt,
+              },
+
+              images: c.images,
+              address: c.address,
+              identityCardName: c.identityCardName,
+              identityCardIssuedDate: c.identityCardIssuedDate,
+              identityCardNumber: c.identityCardNumber,
+              isRoute: !!c.isRoute,
+              createdAt: c.createdAt,
+              updatedAt: c.updatedAt,
+            })
+          )
       );
-      return customersFullInformation;
     } catch (error) {
-      Logger.error('Failed to delete images and bank info', {
-        error: error instanceof Error ? error.message : error,
+      Logger.error('Failed to get list customer', {
         userId,
+        error: error instanceof Error ? error.message : error,
       });
-      if (error instanceof Error) {
-        throw error;
-      }
       throw new Error('Failed to get list customer');
     }
   }

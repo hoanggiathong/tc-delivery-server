@@ -1,16 +1,20 @@
 import { Types } from 'mongoose';
 
-type RouteInfo = { _id: Types.ObjectId | string; name?: string };
+export interface IRouteInfo {
+  id: Types.ObjectId | string;
+  name?: string;
+}
 
 export interface IDebtManagement {
-  _id: Types.ObjectId | string;
-  fromRoute: RouteInfo;
-  toRoute: RouteInfo;
+  id: Types.ObjectId | string;
+  fromRoute: IRouteInfo;
+  toRoute: IRouteInfo;
   content: string;
   type: string;
   cash: number; // so tien
   cashDate: Date; // ngay thu tien
   deleted: boolean;
+  reason?: string; // ly do xoa
   createdAt: Date;
   updatedAt: Date;
   deletedAt?: Date;
@@ -37,4 +41,16 @@ export interface ICreateDebtManagementRequest {
   content: string;
   cash: number;
   cashDate: Date;
+}
+
+export interface IGetListPaymentDebtManagementResponse {
+  data: IDebtManagement[];
+}
+
+export interface IGetListReceiptDebtManagementResponse {
+  data: IDebtManagement[];
+}
+
+export interface ICreateDebtManagementResponse {
+  data: IDebtManagement[];
 }

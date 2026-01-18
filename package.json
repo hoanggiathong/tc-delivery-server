@@ -9,6 +9,7 @@
     "dev:debug": "cross-env NODE_ENV=development npx tsx watch --inspect src/index.ts",
     "debug": "cross-env NODE_ENV=development npx tsx --inspect-brk src/index.ts",
     "build": "tsc",
+    "build:clean": "rm -rf dist && npm run build",
     "build:prod": "npm run code-quality && npm run build",
     "build:uat": "npm run code-quality && npm run build",
     "start": "cross-env NODE_ENV=production node dist/src/index.js",

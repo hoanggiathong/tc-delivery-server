@@ -3,7 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import path from 'path';
 import swaggerUi from 'swagger-ui-express';
-import { swaggerSpec } from '@/config/swagger';
+import { getSwaggerSpec } from '@/config/swagger';
 import routes from '@/routes';
 import { debugMiddleware } from '@/middlewares/debug.middleware';
 import { globalErrorHandler } from '@/middlewares/error.middleware';
@@ -55,26 +55,36 @@ if (process.env.NODE_ENV === 'development') {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Swagger documentation
-app.use(
+// Swagger documentation - setup with dynamic spec to avoid cache
+app.use('/api-docs', swaggerUi.serve);
+app.get(
   '/api-docs',
-  swaggerUi.serve,
-  swaggerUi.setup(swaggerSpec, {
+  (_req, res, next) => {
+    // Set no-cache headers
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    next();
+  },
+  swaggerUi.setup(getSwaggerSpec(), {
     explorer: true,
     swaggerOptions: {
       docExpansion: 'list',
       filter: true,
       showRequestHeaders: true,
-      url: '/swagger.json',
+      url: '/swagger.json?v=' + Date.now(), // Add timestamp to force reload
       persistAuthorization: true,
     },
   })
 );
 
-// Debug endpoint for Swagger spec
+// Debug endpoint for Swagger spec - no cache
 app.get('/swagger.json', (_req, res) => {
   res.setHeader('Content-Type', 'application/json');
-  res.send(swaggerSpec);
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.send(getSwaggerSpec());
 });
 
 // Health check endpoint
