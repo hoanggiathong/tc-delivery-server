@@ -245,7 +245,7 @@ export class SMSNotificationService {
       gia: this.formatCurrency(delivery.totalCost),
       hinh_thuc: delivery.homeDelivery ? 'Giao tận nhà' : 'Giao dịch trực tiếp tại quầy',
       dia_chi: toRoute.address || '',
-      Link_toi_CTA: convertPhoneToLocalFormat(toRoute.phone || ''),
+      '0123456789': convertPhoneToLocalFormat(toRoute.phone || ''),
     };
 
     // Try Zalo ZNS first

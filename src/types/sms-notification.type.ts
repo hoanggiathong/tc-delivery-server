@@ -69,7 +69,7 @@ export interface IYourSalesZNSParams {
     gia: string;
     hinh_thuc: string;
     dia_chi: string;
-    Link_toi_CTA: string;
+    '0123456789': string;
   };
 }
 
