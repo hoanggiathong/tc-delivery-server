@@ -21,11 +21,11 @@ const router = Router();
 const customerController = new CustomerController();
 
 // Routes that allow USER role access - must be defined before global role middleware
-
+// All customer routes require authentication and manager/admin/superadmin roles
+router.use(authenticateToken);
 // Get customer by phone with bank info
 router.get(
   '/by-phone/:senderPhone',
-  authenticateToken,
   requireRole([UserRole.USER, UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]),
   validate(getCustomerByPhoneSchema),
   customerController.getCustomerBySenderPhone
@@ -227,7 +227,6 @@ router.get(
 // Update customer bank info and/or upload image(s)
 router.put(
   '/bank-info',
-  authenticateToken,
   requireRole([UserRole.USER, UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]),
   uploadMiddleware.fields([
     { name: 'images', maxCount: 5 }, // Multiple images
@@ -450,14 +449,9 @@ router.put(
  */
 router.get(
   '/get-list-customer',
-  authenticateToken,
   requireRole([UserRole.USER, UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]),
   customerController.getListCustomer
 );
-
-// All customer routes require authentication and manager/admin/superadmin roles
-router.use(authenticateToken);
-router.use(requireRole([UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]));
 
 // Customer routes
 router.post('/', validate(createCustomerSchema), customerController.createCustomer);
@@ -472,7 +466,6 @@ router.get('/:id', validate(customerParamsSchema), customerController.getCustome
 // Upload image with auto-create customer
 router.post(
   '/upload-image',
-  authenticateToken,
   requireRole([UserRole.USER, UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]),
   uploadMiddleware.single('image'),
   validate(uploadImageSchema),
@@ -482,7 +475,6 @@ router.post(
 // Upload image for existing customer by ID
 router.post(
   '/:id/upload-image',
-  authenticateToken,
   requireRole([UserRole.USER, UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]),
   uploadMiddleware.single('image'),
   validate(customerParamsSchema),
@@ -492,7 +484,6 @@ router.post(
 // Update image rotation
 router.patch(
   '/:id/image/:index/rotate',
-  authenticateToken,
   requireRole([UserRole.USER, UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]),
   validate(updateImageRotationSchema),
   customerController.updateImageRotation
@@ -501,7 +492,6 @@ router.patch(
 // Delete image
 router.delete(
   '/:id/image/:index',
-  authenticateToken,
   requireRole([UserRole.USER, UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]),
   validate(deleteImageSchema),
   customerController.deleteImage
@@ -539,7 +529,6 @@ router.delete(
  */
 router.delete(
   '/stop-using-images-and-bank-info/:id',
-  authenticateToken,
   requireRole([UserRole.USER, UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]),
   validate(customerParamsSchema),
   customerController.deleteImagesAndBankInfo
@@ -548,7 +537,6 @@ router.delete(
 // Update customer images data
 router.put(
   '/update-data-images-customer/:customerId',
-  authenticateToken,
   requireRole([UserRole.USER, UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]),
   validate(updateDataImageCustomerSchema),
   customerController.updateDataImageCustomer
