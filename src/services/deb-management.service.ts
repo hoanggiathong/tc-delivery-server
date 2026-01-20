@@ -9,7 +9,7 @@ import {
   IGetListReceiptDebtManagementResponse,
 } from '@/types/debt-management.type';
 import { Request } from 'express';
-import mongoose from 'mongoose';
+import mongoose, { Types } from 'mongoose';
 import { DebtReportService } from './debt-report.service';
 import { UserService } from './user.service';
 
@@ -25,7 +25,7 @@ export class DebtManagementService {
     req: Request,
     userId: string
   ): Promise<IGetListPaymentDebtManagementResponse> {
-    const { startDate, endDate, keySort } = req.query;
+    const { startDate, endDate, keySort, toRouteId } = req.query;
 
     const { typeSort } = req.query;
 
@@ -109,14 +109,20 @@ export class DebtManagementService {
       //   ])
       //   .lean();
 
+      const matchStage: Record<string, unknown> = {
+        fromRoute: new Types.ObjectId(fromRouteId),
+        type: DEBT_MANAGEMENT_TYPE.PAYMENT,
+        createdAt: { $gte: start, $lte: endOfDay },
+        deleted: false,
+      };
+
+      if (toRouteId) {
+        matchStage.toRoute = new Types.ObjectId(String(toRouteId));
+      }
+
       const pipeline = [
         {
-          $match: {
-            fromRoute: fromRouteId,
-            type: DEBT_MANAGEMENT_TYPE.PAYMENT,
-            createdAt: { $gte: start, $lte: endOfDay },
-            deleted: false,
-          },
+          $match: matchStage,
         },
         // join fromRoute
         {
@@ -173,7 +179,7 @@ export class DebtManagementService {
     req: Request,
     userId: string
   ): Promise<IGetListReceiptDebtManagementResponse> {
-    const { startDate, endDate, keySort, typeSort } = req.query;
+    const { startDate, endDate, keySort, typeSort, fromRouteId } = req.query;
 
     const start = new Date(String(startDate));
     start.setHours(0, 0, 0, 0);
@@ -216,14 +222,21 @@ export class DebtManagementService {
       sort = { 'toRoute.name': 1, createdAt: 1 };
     }
     try {
+      const matchStage: Record<string, unknown> = {
+        toRoute: toRouteId,
+        type: DEBT_MANAGEMENT_TYPE.RECEIPT,
+        cashDate: { $gte: start, $lte: endOfDay },
+        deleted: false,
+      };
+
+      // Add fromRoute filter if fromRouteId is provided
+      if (fromRouteId) {
+        matchStage.fromRoute = new Types.ObjectId(String(fromRouteId));
+      }
+
       const pipeline = [
         {
-          $match: {
-            toRoute: toRouteId,
-            type: DEBT_MANAGEMENT_TYPE.RECEIPT,
-            cashDate: { $gte: start, $lte: endOfDay },
-            deleted: false,
-          },
+          $match: matchStage,
         },
         // join fromRoute
         {
@@ -477,16 +490,16 @@ export class DebtManagementService {
         ),
       ]);
 
-      await session.commitTransaction();
-      session.endSession();
-
-      // Populate routes before returning
+      // Populate routes before committing transaction
       await Promise.all([
         receiptResult.populate('fromRoute', 'name'),
         receiptResult.populate('toRoute', 'name'),
         paymentResult.populate('fromRoute', 'name'),
         paymentResult.populate('toRoute', 'name'),
       ]);
+
+      await session.commitTransaction();
+      await session.endSession();
 
       // Transform both results
       const transformDebtManagement = (result: {
