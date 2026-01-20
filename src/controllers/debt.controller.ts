@@ -328,4 +328,264 @@ export class DebtController {
       res.status(500).json(response);
     }
   };
+
+  /**
+   * @swagger
+   * /api/debt/{id}:
+   *   get:
+   *     summary: Get debt detail by ID
+   *     description: Returns a single debt record by ID. The debt must belong to the authenticated user's selected route (toRoute).
+   *     tags: [Debt]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Debt ID (MongoDB ObjectId)
+   *         example: "507f1f77bcf86cd799439011"
+   *     responses:
+   *       200:
+   *         description: Get debt detail successful
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "get debt detail successful"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     id:
+   *                       type: string
+   *                       example: "507f1f77bcf86cd799439011"
+   *                     fromRoute:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                         name:
+   *                           type: string
+   *                     toRoute:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                         name:
+   *                           type: string
+   *                     openingBalance:
+   *                       type: number
+   *                       description: Opening balance (can be negative)
+   *                       example: 0
+   *                     costFromRoute:
+   *                       type: number
+   *                       example: 100000
+   *                     feeCODToRoute:
+   *                       type: number
+   *                       example: 50000
+   *                     costToRoute:
+   *                       type: number
+   *                       example: 80000
+   *                     feeCODFromRoute:
+   *                       type: number
+   *                       example: 30000
+   *                     accountPayable:
+   *                       type: number
+   *                       example: 0
+   *                     receivable:
+   *                       type: number
+   *                       example: 0
+   *                     homeDeliveryFromRoute:
+   *                       type: number
+   *                       example: 20000
+   *                     homeDeliveryToRoute:
+   *                       type: number
+   *                       example: 15000
+   *                     surchargeToRoute:
+   *                       type: number
+   *                       example: 10000
+   *                     surchargeFromRoute:
+   *                       type: number
+   *                       example: 5000
+   *                     totalDebt:
+   *                       type: number
+   *                       description: Total debt (can be negative)
+   *                       example: 50000
+   *                     createdAt:
+   *                       type: string
+   *                       format: date-time
+   *                     updatedAt:
+   *                       type: string
+   *                       format: date-time
+   *             examples:
+   *               success:
+   *                 summary: Successful response
+   *                 value:
+   *                   success: true
+   *                   message: "get debt detail successful"
+   *                   data:
+   *                     id: "507f1f77bcf86cd799439011"
+   *                     fromRoute:
+   *                       id: "507f1f77bcf86cd799439011"
+   *                       name: "Route A"
+   *                     toRoute:
+   *                       id: "507f1f77bcf86cd799439012"
+   *                       name: "Route B"
+   *                     openingBalance: 0
+   *                     costFromRoute: 100000
+   *                     feeCODToRoute: 50000
+   *                     costToRoute: 80000
+   *                     feeCODFromRoute: 30000
+   *                     accountPayable: 0
+   *                     receivable: 0
+   *                     homeDeliveryFromRoute: 20000
+   *                     homeDeliveryToRoute: 15000
+   *                     surchargeToRoute: 10000
+   *                     surchargeFromRoute: 5000
+   *                     totalDebt: 50000
+   *                     createdAt: "2024-01-01T00:00:00.000Z"
+   *                     updatedAt: "2024-01-01T00:00:00.000Z"
+   *       400:
+   *         description: Bad request (validation error or invalid ID format)
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Validation error: Invalid debt ID format"
+   *             examples:
+   *               validationError:
+   *                 summary: Validation error
+   *                 value:
+   *                   success: false
+   *                   message: "Validation error: Debt ID is required"
+   *               invalidId:
+   *                 summary: Invalid ID format
+   *                 value:
+   *                   success: false
+   *                   message: "Invalid debt ID format"
+   *       401:
+   *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Unauthorized"
+   *             examples:
+   *               unauthorized:
+   *                 summary: Unauthorized access
+   *                 value:
+   *                   success: false
+   *                   message: "Unauthorized"
+   *       404:
+   *         description: Debt not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Debt not found"
+   *             examples:
+   *               notFound:
+   *                 summary: Debt not found
+   *                 value:
+   *                   success: false
+   *                   message: "Debt not found"
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "get debt detail failed"
+   *             examples:
+   *               serverError:
+   *                 summary: Server error
+   *                 value:
+   *                   success: false
+   *                   message: "get debt detail failed"
+   */
+  getDebtById = async (request: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!request.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { id } = request.params;
+      const userId = request.user.userId;
+      const result = await this.debtService.getDebtById(id, userId);
+
+      if (!result) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Debt not found',
+        };
+        res.status(404).json(response);
+        return;
+      }
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'get debt detail successful',
+        data: result,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'get debt detail failed';
+
+      // Determine appropriate status code based on error message
+      let statusCode = 500;
+      if (message.includes('not found')) {
+        statusCode = 404;
+      } else if (
+        message.includes('validation') ||
+        message.includes('invalid') ||
+        message.includes('Invalid')
+      ) {
+        statusCode = 400;
+      }
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(statusCode).json(response);
+    }
+  };
 }

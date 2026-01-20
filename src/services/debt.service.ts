@@ -2,7 +2,7 @@ import { SORT_BY_DEBT } from '@/const/debt.const';
 import { Debt } from '@/models/debt.model';
 import { IDebtRow, IDebtTotal, IGetListDebtResponse } from '@/types/debt.type';
 import { Request } from 'express';
-import { PipelineStage } from 'mongoose';
+import { PipelineStage, Types } from 'mongoose';
 import { DebtReportService } from './debt-report.service';
 import { UserService } from './user.service';
 
@@ -149,6 +149,81 @@ export class DebtService {
         throw error;
       }
       throw new Error('get list debt failed');
+    }
+  }
+
+  async getDebtById(debtId: string, userId: string): Promise<IDebtRow | null> {
+    try {
+      const toRouteId = await this.userService.getUserSelectedRouteId(userId);
+
+      // Validate ObjectId format
+      if (!Types.ObjectId.isValid(debtId)) {
+        throw new Error('Invalid debt ID format');
+      }
+
+      const pipeline: PipelineStage[] = [
+        {
+          $match: {
+            _id: new Types.ObjectId(debtId),
+            toRoute: toRouteId,
+          },
+        },
+        // Join fromRoute
+        {
+          $lookup: {
+            from: 'routes',
+            localField: 'fromRoute',
+            foreignField: '_id',
+            as: 'fromRoute',
+          },
+        },
+        { $unwind: { path: '$fromRoute', preserveNullAndEmptyArrays: true } },
+        // Join toRoute
+        {
+          $lookup: {
+            from: 'routes',
+            localField: 'toRoute',
+            foreignField: '_id',
+            as: 'toRoute',
+          },
+        },
+        { $unwind: { path: '$toRoute', preserveNullAndEmptyArrays: true } },
+        // Project return fields
+        {
+          $project: {
+            id: '$_id',
+            fromRoute: { id: '$fromRoute._id', name: '$fromRoute.name' },
+            toRoute: { id: '$toRoute._id', name: '$toRoute.name' },
+            openingBalance: 1,
+            costFromRoute: 1,
+            feeCODToRoute: 1,
+            costToRoute: 1,
+            feeCODFromRoute: 1,
+            accountPayable: 1,
+            receivable: 1,
+            homeDeliveryFromRoute: 1,
+            homeDeliveryToRoute: 1,
+            surchargeToRoute: 1,
+            surchargeFromRoute: 1,
+            totalDebt: 1,
+            createdAt: 1,
+            updatedAt: 1,
+          },
+        } as PipelineStage,
+      ];
+
+      const result = (await Debt.aggregate(pipeline).exec()) as IDebtRow[];
+
+      if (result.length === 0) {
+        return null;
+      }
+
+      return result[0];
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('get debt by id failed');
     }
   }
 }
