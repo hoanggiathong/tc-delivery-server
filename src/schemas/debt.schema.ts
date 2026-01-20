@@ -32,6 +32,14 @@ const typeSortOptionalSchema = z.preprocess(
     .optional()
 );
 
+const fromRouteIdOptionalSchema = z.preprocess(
+  v => (v === null || String(v).trim() === '' ? undefined : String(v).trim()),
+  z
+    .string()
+    .regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format')
+    .optional()
+);
+
 // Schema for get list debt
 export const getListDebtSchema = z
   .object({
@@ -52,6 +60,7 @@ export const getListDebtSchema = z
       keySort: keySortOptionalSchema,
       typeSort: typeSortOptionalSchema,
       key: z.string().trim().max(120).optional(),
+      fromRouteId: fromRouteIdOptionalSchema,
     }),
   })
   .refine(data => data.query.startDate <= data.query.endDate, {

@@ -15,7 +15,7 @@ export class DebtService {
   }
 
   async getListDebt(req: Request, userId: string): Promise<IGetListDebtResponse> {
-    const { startDate, endDate, keySort, key } = req.query;
+    const { startDate, endDate, keySort, key, fromRouteId } = req.query;
 
     let typeSort: 1 | -1 | undefined = undefined;
     if (req.query.typeSort) {
@@ -62,6 +62,13 @@ export class DebtService {
         toRoute: toRouteId,
         createdAt: { $gte: start, $lte: endOfDay },
       };
+
+      if (fromRouteId) {
+        if (!Types.ObjectId.isValid(String(fromRouteId))) {
+          throw new Error('Invalid fromRouteId format');
+        }
+        matchStage.fromRoute = new Types.ObjectId(String(fromRouteId));
+      }
 
       const pipeline: PipelineStage[] = [
         {

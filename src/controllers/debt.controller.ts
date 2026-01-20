@@ -15,7 +15,7 @@ export class DebtController {
    * /api/debt/get-list-debt:
    *   get:
    *     summary: Get list of debt records
-   *     description: Returns debt records filtered by user's selected route (toRoute). The toRouteId is automatically taken from the authenticated user's selected route.
+   *     description: Returns debt records filtered by user's selected route (toRoute). The toRouteId is automatically taken from the authenticated user's selected route. Optionally filter by fromRouteId.
    *     tags: [Debt]
    *     security:
    *       - bearerAuth: []
@@ -60,6 +60,14 @@ export class DebtController {
    *           maxLength: 120
    *         description: Search key for filtering (optional)
    *         example: "search term"
+   *       - in: query
+   *         name: fromRouteId
+   *         required: false
+   *         schema:
+   *           type: string
+   *           pattern: ^[0-9a-fA-F]{24}$
+   *         description: Filter by from route ID (MongoDB ObjectId format). Optional.
+   *         example: "507f1f77bcf86cd799439011"
    *     responses:
    *       200:
    *         description: Get list debt successful
