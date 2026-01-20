@@ -1,4 +1,5 @@
 import { SORT_BY_DEBT } from '@/const/debt.const';
+import { OBJECTID_PATTERN, VALIDATION_MESSAGES } from '@/utils/validation-patterns';
 import z from 'zod';
 
 const SortBySchema = z.union([
@@ -57,3 +58,10 @@ export const getListDebtSchema = z
     message: 'Start date must be before or equal to end date',
     path: ['query', 'startDate'],
   });
+
+// Schema for get debt by ID
+export const getDebtByIdSchema = z.object({
+  params: z.object({
+    id: z.string().regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID),
+  }),
+});
