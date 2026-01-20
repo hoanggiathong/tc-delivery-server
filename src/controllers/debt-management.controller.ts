@@ -1,3 +1,4 @@
+import { DEBT_MANAGEMENT_TYPE_REPORT } from '@/const/debt-management.const';
 import { DebtManagementService } from '@/services/deb-management.service';
 import { ApiResponse, AuthRequest } from '@/types';
 import {
@@ -1007,6 +1008,252 @@ export class DebtManagementController {
       };
 
       res.status(statusCode).json(response);
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/debt-management/export-report-debt-and-debt-management:
+   *   get:
+   *     summary: Export report debt and debt management
+   *     description: |
+   *       Exports report data based on type parameter:
+   *       - PAYMENT: Returns payment debt management records (uses getListPaymentDebtMangement)
+   *       - RECEIPT: Returns receipt debt management records (uses getListReceiptDebtMangement)
+   *       - DEBT: Returns debt records (uses getListDebt)
+   *       - TOTAL: Will be handled later (currently returns empty data)
+   *       The routeId is optional and will be used as filter parameter (toRouteId for PAYMENT, fromRouteId for RECEIPT and DEBT).
+   *     tags: [Debt Management]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: startDate
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Start date for filtering (ISO format)
+   *         example: "2024-01-01"
+   *       - in: query
+   *         name: endDate
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: End date for filtering (ISO format). Must be after or equal to startDate.
+   *         example: "2024-01-31"
+   *       - in: query
+   *         name: routeId
+   *         required: false
+   *         schema:
+   *           type: string
+   *           pattern: ^[0-9a-fA-F]{24}$
+   *         description: Route ID for filtering (MongoDB ObjectId format). Optional. Used as toRouteId for PAYMENT, fromRouteId for RECEIPT and DEBT.
+   *         example: "507f1f77bcf86cd799439011"
+   *       - in: query
+   *         name: type
+   *         required: true
+   *         schema:
+   *           type: string
+   *           enum: [PAYMENT, RECEIPT, DEBT, TOTAL]
+   *         description: Type of report to export
+   *         example: "PAYMENT"
+   *     responses:
+   *       200:
+   *         description: Export report successful
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "export report debt and debt management successful"
+   *                 data:
+   *                   oneOf:
+   *                     - type: object
+   *                       description: Payment debt management response
+   *                       properties:
+   *                         data:
+   *                           type: array
+   *                           items:
+   *                             type: object
+   *                     - type: object
+   *                       description: Receipt debt management response
+   *                       properties:
+   *                         data:
+   *                           type: array
+   *                           items:
+   *                             type: object
+   *                     - type: object
+   *                       description: Debt response
+   *                       properties:
+   *                         data:
+   *                           type: array
+   *                           items:
+   *                             type: object
+   *                         total:
+   *                           type: object
+   *                     - type: object
+   *                       description: Total response (empty for now)
+   *                       properties:
+   *                         data:
+   *                           type: array
+   *                           items: []
+   *             examples:
+   *               payment:
+   *                 summary: Payment type response
+   *                 value:
+   *                   success: true
+   *                   message: "export report debt and debt management successful"
+   *                   data:
+   *                     data:
+   *                       - id: "507f1f77bcf86cd799439011"
+   *                         fromRoute:
+   *                           id: "507f1f77bcf86cd799439011"
+   *                           name: "Route A"
+   *                         toRoute:
+   *                           id: "507f1f77bcf86cd799439012"
+   *                           name: "Route B"
+   *                         type: "PAYMENT"
+   *                         cash: 50000
+   *               receipt:
+   *                 summary: Receipt type response
+   *                 value:
+   *                   success: true
+   *                   message: "export report debt and debt management successful"
+   *                   data:
+   *                     data:
+   *                       - id: "507f1f77bcf86cd799439011"
+   *                         type: "RECEIPT"
+   *                         cash: 50000
+   *               debt:
+   *                 summary: Debt type response
+   *                 value:
+   *                   success: true
+   *                   message: "export report debt and debt management successful"
+   *                   data:
+   *                     data:
+   *                       - id: "507f1f77bcf86cd799439011"
+   *                         totalDebt: 50000
+   *                     total:
+   *                       openingBalance: 0
+   *                       totalDebt: 250000
+   *       400:
+   *         description: Bad request (validation error)
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Validation error"
+   *       401:
+   *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Unauthorized"
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "export report debt and debt management failed"
+   */
+  exportReportDebtAndDebtManagement = async (
+    request: AuthRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      if (!request.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { startDate, endDate, routeId, type } = request.query;
+
+      if (!startDate || !endDate || !type) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'startDate, endDate, and type are required',
+        };
+        res.status(400).json(response);
+        return;
+      }
+
+      // Validate type
+      if (
+        type !== DEBT_MANAGEMENT_TYPE_REPORT.PAYMENT &&
+        type !== DEBT_MANAGEMENT_TYPE_REPORT.RECEIPT &&
+        type !== DEBT_MANAGEMENT_TYPE_REPORT.DEBT &&
+        type !== DEBT_MANAGEMENT_TYPE_REPORT.TOTAL
+      ) {
+        const response: ApiResponse = {
+          success: false,
+          message: `Invalid type. Must be one of: ${DEBT_MANAGEMENT_TYPE_REPORT.PAYMENT}, ${DEBT_MANAGEMENT_TYPE_REPORT.RECEIPT}, ${DEBT_MANAGEMENT_TYPE_REPORT.DEBT}, ${DEBT_MANAGEMENT_TYPE_REPORT.TOTAL}`,
+        };
+        res.status(400).json(response);
+        return;
+      }
+
+      const userId = request.user.userId;
+      const start = new Date(String(startDate));
+      const end = new Date(String(endDate));
+
+      const result = await this.debtManagementService.exportReportDebtAndDebtManagement(
+        start,
+        end,
+        String(type),
+        userId,
+        routeId ? String(routeId) : undefined
+      );
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'export report debt and debt management successful',
+        data: result,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      logger.error('export report debt and debt management error:', error);
+
+      const message =
+        error instanceof Error ? error.message : 'export report debt and debt management failed';
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(500).json(response);
     }
   };
 }

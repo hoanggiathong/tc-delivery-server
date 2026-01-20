@@ -1,4 +1,4 @@
-import { SORT_BY } from '@/const/debt-management.const';
+import { DEBT_MANAGEMENT_TYPE_REPORT, SORT_BY } from '@/const/debt-management.const';
 import z from 'zod';
 import { OBJECTID_PATTERN, VALIDATION_MESSAGES } from '@/utils/validation-patterns';
 
@@ -131,3 +131,32 @@ export const createDebtManagementSchema = z.object({
   }),
 });
 export type CreateDebtManagementRequest = z.infer<typeof createDebtManagementSchema>['body'];
+
+// Schema for export report debt and debt management
+export const exportReportDebtAndDebtManagementSchema = z
+  .object({
+    query: z.object({
+      startDate: z
+        .string()
+        .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid start date in ISO format')
+        .transform(val => new Date(val)),
+      endDate: z
+        .string()
+        .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid end date in ISO format')
+        .transform(val => new Date(val)),
+      routeId: z
+        .string()
+        .regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format')
+        .optional(),
+      type: z.enum([
+        DEBT_MANAGEMENT_TYPE_REPORT.PAYMENT,
+        DEBT_MANAGEMENT_TYPE_REPORT.RECEIPT,
+        DEBT_MANAGEMENT_TYPE_REPORT.DEBT,
+        DEBT_MANAGEMENT_TYPE_REPORT.TOTAL,
+      ]),
+    }),
+  })
+  .refine(data => data.query.startDate <= data.query.endDate, {
+    message: 'Start date must be before or equal to end date',
+    path: ['query', 'startDate'],
+  });
