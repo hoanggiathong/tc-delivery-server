@@ -5,14 +5,17 @@ import { omitBy, isUndefined } from 'lodash';
 import { IDraftDeliveryInput, IDraftDeliveryResponse } from '@/types/draft-delivery.type';
 import { DeliveryService } from './delivery.service';
 import { SettingsService } from './settings.service';
+import { UserService } from './user.service';
 
 export class DraftDeliveryService {
   private deliveryService: DeliveryService;
   private settingsService: SettingsService;
+  private userService: UserService;
 
   constructor() {
     this.deliveryService = new DeliveryService();
     this.settingsService = new SettingsService();
+    this.userService = new UserService();
   }
 
   /**
@@ -221,17 +224,17 @@ export class DraftDeliveryService {
    * Delete a draft
    */
   async deleteDraft(draftId: string, userId: string): Promise<void> {
-    const draft = await DraftDelivery.findById(draftId);
+    const selectedRouteId = await this.userService.getUserSelectedRouteObjectId(userId);
+
+    const draft = await DraftDelivery.findOneAndDelete({
+      _id: draftId,
+      createdByUser: userId,
+      fromRoute: selectedRouteId,
+    });
+
     if (!draft) {
-      throw new Error('Draft not found');
+      throw new Error('Draft not found or you do not have permission to delete it');
     }
-
-    // Check ownership
-    if (draft.createdByUser.toString() !== userId) {
-      throw new Error('You can only delete your own drafts');
-    }
-
-    await DraftDelivery.findByIdAndDelete(draftId);
   }
 
   /**

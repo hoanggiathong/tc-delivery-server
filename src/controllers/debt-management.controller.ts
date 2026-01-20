@@ -20,7 +20,7 @@ export class DebtManagementController {
    * /api/debt-management/get-list-payment:
    *   get:
    *     summary: Get list of payment debt management records
-   *     description: Returns payment debt management records filtered by user's selected route (fromRoute). The fromRouteId is automatically taken from the authenticated user's selected route.
+   *     description: Returns payment debt management records filtered by user's selected route (fromRoute). The fromRouteId is automatically taken from the authenticated user's selected route. Optionally filter by toRouteId query parameter.
    *     tags: [Debt Management]
    *     security:
    *       - bearerAuth: []
@@ -65,6 +65,14 @@ export class DebtManagementController {
    *           maxLength: 120
    *         description: Search key for filtering (optional)
    *         example: "search term"
+   *       - in: query
+   *         name: toRouteId
+   *         required: false
+   *         schema:
+   *           type: string
+   *           pattern: ^[0-9a-fA-F]{24}$
+   *         description: Filter by to route ID (MongoDB ObjectId format). Optional. If not provided, returns all records for user's selected fromRoute.
+   *         example: "507f1f77bcf86cd799439011"
    *     responses:
    *       200:
    *         description: Get list payment debt management successful
@@ -262,7 +270,7 @@ export class DebtManagementController {
    * /api/debt-management/get-list-receipt:
    *   get:
    *     summary: Get list of receipt debt management records
-   *     description: Returns receipt debt management records filtered by user's selected route (toRoute). The toRouteId is automatically taken from the authenticated user's selected route.
+   *     description: Returns receipt debt management records filtered by user's selected route (toRoute). The toRouteId is automatically taken from the authenticated user's selected route. Optionally filter by fromRouteId query parameter.
    *     tags: [Debt Management]
    *     security:
    *       - bearerAuth: []
@@ -307,6 +315,14 @@ export class DebtManagementController {
    *           maxLength: 120
    *         description: Search key for filtering (optional)
    *         example: "search term"
+   *       - in: query
+   *         name: fromRouteId
+   *         required: false
+   *         schema:
+   *           type: string
+   *           pattern: ^[0-9a-fA-F]{24}$
+   *         description: Filter by from route ID (MongoDB ObjectId format). Optional.
+   *         example: "507f1f77bcf86cd799439011"
    *     responses:
    *       200:
    *         description: Get list receipt debt management successful

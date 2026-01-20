@@ -33,6 +33,22 @@ const typeSortOptionalSchema = z.preprocess(
     .optional()
 );
 
+const fromRouteIdOptionalSchema = z.preprocess(
+  v => (v === null || String(v).trim() === '' ? undefined : String(v).trim()),
+  z
+    .string()
+    .regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format')
+    .optional()
+);
+
+const toRouteIdOptionalSchema = z.preprocess(
+  v => (v === null || String(v).trim() === '' ? undefined : String(v).trim()),
+  z
+    .string()
+    .regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format')
+    .optional()
+);
+
 // Schema for get list receipt debt management
 export const getListReceiptDebtManagementSchema = z
   .object({
@@ -48,6 +64,7 @@ export const getListReceiptDebtManagementSchema = z
       keySort: keySortOptionalSchema,
       typeSort: typeSortOptionalSchema,
       key: z.string().trim().max(120).optional(),
+      fromRouteId: fromRouteIdOptionalSchema,
     }),
   })
   .refine(data => data.query.startDate <= data.query.endDate, {
@@ -69,6 +86,7 @@ export const getListPaymentDebtManagementSchema = z
       keySort: keySortOptionalSchema,
       typeSort: typeSortOptionalSchema,
       key: z.string().trim().max(120).optional(),
+      toRouteId: toRouteIdOptionalSchema,
     }),
   })
   .refine(data => data.query.startDate <= data.query.endDate, {

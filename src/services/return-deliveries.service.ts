@@ -6,32 +6,32 @@ import {
   MoneyDeliveryType,
   TransferType,
 } from '@/models/money-delivery.model';
-import {
-  IReturnDeliveryLeanPopulated,
-  IReturnDeliveryListDebtOfReturnDeliveriesTodayRequest,
-  IReturnDeliveryListIsReturnRequest,
-  IReturnDeliveryListAllRequest,
-  IReturnDeliveryListRequest,
-  IReturnDeliveryResponse,
-  IReturnDeliveryUpdateRequest,
-  IReturnDeliveryListCollectCostOfReturnDeliveriesRequest,
-} from '@/types/return-delivery.type';
+import { ICustomerInformationResponse } from '@/types/customer.type';
 import {
   IDeliveryLeanPopulated,
   IGetListReportReturnDeliveryResponse,
 } from '@/types/delivery.type';
+import {
+  IReturnDeliveryLeanPopulated,
+  IReturnDeliveryListAllRequest,
+  IReturnDeliveryListCollectCostOfReturnDeliveriesRequest,
+  IReturnDeliveryListDebtOfReturnDeliveriesTodayRequest,
+  IReturnDeliveryListIsReturnRequest,
+  IReturnDeliveryListRequest,
+  IReturnDeliveryResponse,
+  IReturnDeliveryUpdateRequest,
+} from '@/types/return-delivery.type';
+import { IRouteResponse } from '@/types/route.type';
+import { extractBasePath, generateVersionedUrl } from '@/utils/image-url.utils';
+import Logger from '@/utils/logger';
+import fs from 'fs';
+import path from 'path';
 import { CustomerService } from './customer.service';
 import { DeliveryService } from './delivery.service';
-import { UserService } from './user.service';
-import { ICustomerInformationResponse } from '@/types/customer.type';
-import { IRouteResponse } from '@/types/route.type';
-import { RouteService } from './route.service';
 import { MoneyDeliveryService } from './money-delivery.service';
+import { RouteService } from './route.service';
 import { SettingsService } from './settings.service';
-import Logger from '@/utils/logger';
-import path from 'path';
-import fs from 'fs';
-import { generateVersionedUrl, extractBasePath } from '@/utils/image-url.utils';
+import { UserService } from './user.service';
 
 export class ReturnDeliveriesService {
   private customerService: CustomerService;
@@ -131,10 +131,7 @@ export class ReturnDeliveriesService {
           name: item.name,
           fullCode: item.fullCode,
           subCode: item.subCode,
-          sender: {
-            name: item.senderName,
-            phone: item.sender.phone,
-          },
+          sender: { name: item.senderName, phone: item.sender.phone },
           receiver: {
             name: item.receiverName,
             phone: item.receiver.phone,
@@ -778,6 +775,7 @@ export class ReturnDeliveriesService {
             username: item.createdByUser.username,
             name: item.createdByUser.name,
           },
+          nameProductAndAdditionalInformation: item.nameProductAndAdditionalInformation || '',
         })
       );
       return returnDeliveriesResponse;

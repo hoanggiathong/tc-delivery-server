@@ -172,12 +172,18 @@ export class DebtReportService {
         },
       };
 
+      const incFields: Record<string, number> = {};
+
       if (updateAccountPayable) {
-        (updateQuery.$inc as Record<string, number>).accountPayable = cash;
+        incFields.accountPayable = cash;
       }
 
       if (updateReceivable) {
-        (updateQuery.$inc as Record<string, number>).receivable = cash;
+        incFields.receivable = cash;
+      }
+
+      if (Object.keys(incFields).length > 0) {
+        updateQuery.$inc = incFields;
       }
 
       // Find and update debt report
