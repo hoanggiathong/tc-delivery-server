@@ -11,7 +11,7 @@ const envFile =
     : process.env.NODE_ENV === 'production'
       ? '.env.production'
       : '.env';
-config({ path: path.resolve(__dirname, '..', envFile) });
+config({ path: path.resolve(process.cwd(), envFile) });
 
 import mongoose from 'mongoose';
 import { CronjobService } from '../src/services/cron-job.service';
