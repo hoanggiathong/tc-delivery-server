@@ -9,13 +9,13 @@ const SortBySchema = z.union([
 ]);
 
 const keySortOptionalSchema = z.preprocess(
-  v => (v === null || String(v).trim() === '' ? undefined : String(v).trim()),
+  v => (v === null || v === undefined || String(v).trim() === '' ? undefined : String(v).trim()),
   SortBySchema.optional()
 );
 
 const typeSortOptionalSchema = z.preprocess(
   v => {
-    if (v === null || String(v).trim() === '') {
+    if (v === null || v === undefined || String(v).trim() === '') {
       return undefined;
     }
     const s = String(v).toLowerCase().trim();
@@ -34,7 +34,12 @@ const typeSortOptionalSchema = z.preprocess(
 );
 
 const fromRouteIdOptionalSchema = z.preprocess(
-  v => (v === null || String(v).trim() === '' ? undefined : String(v).trim()),
+  v => {
+    if (v === null || v === undefined || String(v).trim() === '') {
+      return undefined;
+    }
+    return String(v).trim();
+  },
   z
     .string()
     .regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format')
@@ -42,7 +47,12 @@ const fromRouteIdOptionalSchema = z.preprocess(
 );
 
 const toRouteIdOptionalSchema = z.preprocess(
-  v => (v === null || String(v).trim() === '' ? undefined : String(v).trim()),
+  v => {
+    if (v === null || v === undefined || String(v).trim() === '') {
+      return undefined;
+    }
+    return String(v).trim();
+  },
   z
     .string()
     .regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format')

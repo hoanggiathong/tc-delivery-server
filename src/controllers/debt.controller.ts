@@ -278,12 +278,6 @@ export class DebtController {
    *                 message:
    *                   type: string
    *                   example: "Unauthorized"
-   *             examples:
-   *               unauthorized:
-   *                 summary: Unauthorized access
-   *                 value:
-   *                   success: false
-   *                   message: "Unauthorized"
    *       500:
    *         description: Internal server error
    *         content:
@@ -297,12 +291,6 @@ export class DebtController {
    *                 message:
    *                   type: string
    *                   example: "get list debt failed"
-   *             examples:
-   *               serverError:
-   *                 summary: Server error
-   *                 value:
-   *                   success: false
-   *                   message: "get list debt failed"
    */
   getListDebt = async (request: AuthRequest, res: Response): Promise<void> => {
     try {
@@ -535,12 +523,6 @@ export class DebtController {
    *                 message:
    *                   type: string
    *                   example: "get debt detail failed"
-   *             examples:
-   *               serverError:
-   *                 summary: Server error
-   *                 value:
-   *                   success: false
-   *                   message: "get debt detail failed"
    */
   getDebtById = async (request: AuthRequest, res: Response): Promise<void> => {
     try {
@@ -887,8 +869,8 @@ export class DebtController {
    *                                 type: string
    *                                 example: "TPHCM CK"
    *                               money:
-   *                             type: number
-   *                             example: 300000
+   *                                 type: number
+   *                                 example: 300000
    *             examples:
    *               success:
    *                 summary: Successful response
