@@ -21,7 +21,7 @@ module.exports = {
       cron_restart: '0 */2 * * *', // Run every 2 hours
       watch: false,
       autorestart: false,
-      max_memory_restart: '1GB',
+      max_memory_restart: '1G',
       // Health check
       health_check_grace_period: 10000,
     },
