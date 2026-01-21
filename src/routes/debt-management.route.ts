@@ -4,6 +4,7 @@ import { validate } from '@/middlewares/validation.middleware';
 import {
   createDebtManagementSchema,
   deleteDebtManagementSchema,
+  exportReportDebtAndDebtManagementSchema,
   getListPaymentDebtManagementSchema,
   getListReceiptDebtManagementSchema,
 } from '@/schemas/debt-management.schema';
@@ -26,6 +27,12 @@ router.get(
   '/get-list-receipt',
   validate(getListReceiptDebtManagementSchema),
   debtManagementController.getListReceipt
+);
+
+router.get(
+  '/export-report-debt-and-debt-management',
+  validate(exportReportDebtAndDebtManagementSchema),
+  debtManagementController.exportReportDebtAndDebtManagement
 );
 
 router.post(
