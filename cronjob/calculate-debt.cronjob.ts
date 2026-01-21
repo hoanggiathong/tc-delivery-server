@@ -1,10 +1,16 @@
-import { config } from 'dotenv';
+import moduleAlias from 'module-alias';
 import path from 'path';
+moduleAlias.addAlias('@', path.resolve(__dirname, '../src'));
+
+import { config } from 'dotenv';
+if (process.env.NODE_ENV === 'development') {
+  config({ path: path.resolve(__dirname, '../.env') });
+}
+
 import mongoose from 'mongoose';
 import { CronjobService } from '../src/services/cron-job.service';
-import { CronLogService } from './../src/services/cron-log.service';
+import { CronLogService } from '../src/services/cron-log.service';
 import { DebtReportService } from '../src/services/debt-report.service';
-config({ path: path.resolve(__dirname, '../.env') });
 
 async function main() {
   const uri = process.env.MONGODB_URI;
