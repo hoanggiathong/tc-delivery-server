@@ -2,22 +2,28 @@ module.exports = {
   apps: [
     {
       name: 'tc-delivery-debt-calculator',
-      script: 'dist/src/services/test.service.js',
+      script: 'dist/cronjob/calculate-debt.cronjob.js',
       cwd: './',
       instances: 1,
       exec_mode: 'fork',
+      // Environment variables
       env: {
-        NODE_ENV: 'production',
+        NODE_ENV: 'uat',
       },
+      // Load environment variables from file
+      env_file: '.env.uat',
       // Logging
       log_file: './logs/debt-calculator-combined.log',
       out_file: './logs/debt-calculator-out.log',
       error_file: './logs/debt-calculator-error.log',
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
       // Cron settings
-      cron_restart: '0 0 * * *', // Run at midnight every day
+      cron_restart: '0 */2 * * *', // Run every 2 hours
       watch: false,
       autorestart: false,
+      max_memory_restart: '1GB',
+      // Health check
+      health_check_grace_period: 10000,
     },
     {
       name: 'tc-delivery-server-prod',
@@ -45,7 +51,7 @@ module.exports = {
       // Auto restart settings
       watch: false, // Disable watch in production
       ignore_watch: ['node_modules', 'logs', 'dist'],
-      max_memory_restart: '1G',
+      max_memory_restart: '2G',
 
       // Restart policies
       restart_delay: 1000,
@@ -85,7 +91,7 @@ module.exports = {
       // Auto restart settings
       watch: false, // Disable watch in UAT
       ignore_watch: ['node_modules', 'logs', 'dist'],
-      max_memory_restart: '2G', // Lower memory limit for UAT
+      max_memory_restart: '1G', // Lower memory limit for UAT
 
       // Restart policies
       restart_delay: 1000,
