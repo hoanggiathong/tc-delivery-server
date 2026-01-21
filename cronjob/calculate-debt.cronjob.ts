@@ -3,9 +3,15 @@ import path from 'path';
 moduleAlias.addAlias('@', path.resolve(__dirname, '../src'));
 
 import { config } from 'dotenv';
-if (process.env.NODE_ENV === 'development') {
-  config({ path: path.resolve(__dirname, '../.env') });
-}
+
+// Load env file based on NODE_ENV
+const envFile =
+  process.env.NODE_ENV === 'uat'
+    ? '.env.uat'
+    : process.env.NODE_ENV === 'production'
+      ? '.env.production'
+      : '.env';
+config({ path: path.resolve(__dirname, '..', envFile) });
 
 import mongoose from 'mongoose';
 import { CronjobService } from '../src/services/cron-job.service';
