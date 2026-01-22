@@ -1,6 +1,6 @@
 import { Debt } from '@/models/debt.model';
 import { Delivery, IDelivery } from '@/models/delivery.model';
-import { IMoneyDelivery, MoneyDelivery } from '@/models/money-delivery.model';
+import { IMoneyDelivery, MoneyDelivery, MoneyDeliveryStatus } from '@/models/money-delivery.model';
 import { IRoute, Route } from '@/models/route.model';
 import { IDebtRow } from '@/types/debt.type';
 import mongoose from 'mongoose';
@@ -9,26 +9,36 @@ export class CronjobService {
   async cronjobCalculateDebt(): Promise<void> {
     const listInsertDebt: IDebtRow[] = [];
 
-    // Set today's date range (from start of day to end of day)
+    // Set yesterday's date range (from start of day to end of day)
+    // Calculate yesterday: current date minus 1 day
     const today = new Date();
-    const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const startDate = new Date(
+      yesterday.getFullYear(),
+      yesterday.getMonth(),
+      yesterday.getDate(),
+      0,
+      0,
+      0,
+      0
+    );
+
     const endDate = new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate(),
+      yesterday.getFullYear(),
+      yesterday.getMonth(),
+      yesterday.getDate(),
       23,
       59,
       59,
       999
     );
-
     //get list route
     const listFromRoute: IRoute[] = await Route.find({}).lean();
 
     //example first element: sa dec
     for (const route of listFromRoute) {
-      console.log('route main checking:>> ', route);
-
       // other route: can tho, tphcm
       const arrayRoute: any = {};
 
@@ -59,8 +69,6 @@ export class CronjobService {
         _id: { $ne: route._id },
       }).lean();
 
-      console.log('listToRoute :>> ', listToRoute);
-
       for (const toRoute of listToRoute) {
         handleArrayRoute(toRoute._id.toString(), toRoute._id);
       }
@@ -68,16 +76,17 @@ export class CronjobService {
       //   await handleArrayRoute(toRoute._id.toString(), toRoute._id);
       // });
 
-      console.log('arrayRoute :>> ', arrayRoute);
-
       // get list delivery with route is fromRoute in one day
       const listDeliveryFromRoute: IDelivery[] = await Delivery.find({
         fromRoute: route._id,
-        createdAt: {
+        dateReturn: {
           $gte: startDate,
           $lt: endDate,
         },
+        isReturn: true,
       }).lean();
+
+      console.log('listDeliveryFromRoute :>> ', listDeliveryFromRoute);
 
       // handle listDeliveryFromRoute
       for (const delivery of listDeliveryFromRoute) {
@@ -105,10 +114,11 @@ export class CronjobService {
       // get list delivery with route is toRoute in one day
       const listDeliveriesToRoute: IDelivery[] = await Delivery.find({
         toRoute: route._id,
-        createdAt: {
+        dateReturn: {
           $gte: startDate,
           $lt: endDate,
         },
+        isReturn: true,
       }).lean();
 
       console.log('listDeliveriesToRoute :>> ', listDeliveriesToRoute);
@@ -138,11 +148,14 @@ export class CronjobService {
       // get list money delivery with route is fromRoute in one day
       const listMoneyDeliveriesFromRoute: IMoneyDelivery[] = await MoneyDelivery.find({
         fromRoute: route._id,
-        createdAt: {
+        dateReturn: {
           $gte: startDate,
           $lt: endDate,
         },
+        status: MoneyDeliveryStatus.DONE,
       }).lean();
+
+      console.log('listMoneyDeliveriesFromRoute :>> ', listMoneyDeliveriesFromRoute);
 
       // handle listMoneyDeliveriesFromRoute
       for (const moneyDelivery of listMoneyDeliveriesFromRoute) {
@@ -159,11 +172,14 @@ export class CronjobService {
       // get list money delivery with route is toRoute in one day
       const listMoneyDeliveriesToRoute: IMoneyDelivery[] = await MoneyDelivery.find({
         toRoute: route._id,
-        createdAt: {
+        dateReturn: {
           $gte: startDate,
           $lt: endDate,
         },
+        status: MoneyDeliveryStatus.DONE,
       }).lean();
+
+      console.log('listMoneyDeliveriesToRoute :>> ', listMoneyDeliveriesToRoute);
 
       // handle listMoneyDeliveriesToRoute
       for (const moneyDelivery of listMoneyDeliveriesToRoute) {
@@ -179,7 +195,7 @@ export class CronjobService {
       listInsertDebt.push(...(Object.values(arrayRoute).filter(Boolean) as IDebtRow[]));
     }
 
-    console.log('listInsertDebt:>> ', listInsertDebt);
+    // console.log('listInsertDebt:>> ', listInsertDebt);
 
     const ops: any[] = [];
     // insert to debt collection
