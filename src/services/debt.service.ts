@@ -38,14 +38,28 @@ export class DebtService {
     }
 
     const toRouteId = await this.userService.getUserSelectedRouteId(userId);
-
-    const start = new Date(String(startDate));
-    start.setHours(0, 0, 0, 0);
-
-    // Set end date to end of day
-    const endOfDay = new Date(String(endDate));
-    endOfDay.setHours(23, 59, 59, 999);
-
+    const startOfDate = new Date(String(startDate));
+    const endOfDate = new Date(String(endDate));
+    const start = new Date(
+      startOfDate.getFullYear(),
+      startOfDate.getMonth(),
+      startOfDate.getDate(),
+      0,
+      0,
+      0,
+      0
+    );
+    console.log('start :>> ', start);
+    const endOfDay = new Date(
+      endOfDate.getFullYear(),
+      endOfDate.getMonth(),
+      endOfDate.getDate(),
+      23,
+      59,
+      59,
+      999
+    );
+    console.log('endOfDay :>> ', endOfDay);
     let sort: Record<string, 1 | -1> = {};
 
     // Handle sort
