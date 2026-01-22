@@ -1,4 +1,8 @@
-import { DEBT_MANAGEMENT_TYPE, SORT_BY } from '@/const/debt-management.const';
+import {
+  DEBT_MANAGEMENT_TYPE,
+  DEBT_MANAGEMENT_TYPE_REPORT,
+  SORT_BY,
+} from '@/const/debt-management.const';
 import { DebtManagement } from '@/models/debt-management.model';
 import { Debt } from '@/models/debt.model';
 import { Route } from '@/models/route.model';
@@ -8,17 +12,21 @@ import {
   IGetListPaymentDebtManagementResponse,
   IGetListReceiptDebtManagementResponse,
 } from '@/types/debt-management.type';
+import { IGetListDebtResponse } from '@/types/debt.type';
 import { Request } from 'express';
 import mongoose, { Types } from 'mongoose';
 import { DebtReportService } from './debt-report.service';
+import { DebtService } from './debt.service';
 import { UserService } from './user.service';
 
 export class DebtManagementService {
   private userService: UserService;
   private debtReportService: DebtReportService;
+  private debtService: DebtService;
   constructor() {
     this.userService = new UserService();
     this.debtReportService = new DebtReportService();
+    this.debtService = new DebtService();
   }
 
   async getListPaymentDebtMangement(
@@ -790,6 +798,59 @@ export class DebtManagementService {
         throw error;
       }
       throw new Error('delete debt management failed');
+    }
+  }
+
+  async exportReportDebtAndDebtManagement(
+    startDate: Date,
+    endDate: Date,
+    type: string,
+    userId: string,
+    routeId?: string
+  ): Promise<
+    | IGetListPaymentDebtManagementResponse
+    | IGetListReceiptDebtManagementResponse
+    | IGetListDebtResponse
+    | { data: [] }
+  > {
+    try {
+      // Validate routeId format if provided
+      if (routeId && !Types.ObjectId.isValid(routeId)) {
+        throw new Error('Invalid routeId format');
+      }
+
+      const mockReq = {
+        query: {
+          startDate: startDate.toISOString().split('T')[0],
+          endDate: endDate.toISOString().split('T')[0],
+          ...(routeId && type === DEBT_MANAGEMENT_TYPE_REPORT.PAYMENT && { toRouteId: routeId }),
+          ...(routeId && type === DEBT_MANAGEMENT_TYPE_REPORT.RECEIPT && { fromRouteId: routeId }),
+          ...(routeId && type === DEBT_MANAGEMENT_TYPE_REPORT.DEBT && { fromRouteId: routeId }),
+        },
+      } as unknown as Request;
+
+      switch (type) {
+        case DEBT_MANAGEMENT_TYPE_REPORT.PAYMENT:
+          return await this.getListPaymentDebtMangement(mockReq, userId);
+
+        case DEBT_MANAGEMENT_TYPE_REPORT.RECEIPT:
+          return await this.getListReceiptDebtMangement(mockReq, userId);
+
+        case DEBT_MANAGEMENT_TYPE_REPORT.DEBT:
+          return await this.debtService.getListDebt(mockReq, userId);
+
+        case DEBT_MANAGEMENT_TYPE_REPORT.TOTAL:
+          // Will handle later
+          return { data: [] };
+
+        default:
+          throw new Error(`Invalid type: ${type}`);
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('export report debt and debt management failed');
     }
   }
 }

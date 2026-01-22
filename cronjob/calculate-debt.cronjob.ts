@@ -1,10 +1,22 @@
-import { config } from 'dotenv';
+import moduleAlias from 'module-alias';
 import path from 'path';
+moduleAlias.addAlias('@', path.resolve(__dirname, '../src'));
+
+import { config } from 'dotenv';
+
+// Load env file based on NODE_ENV
+const envFile =
+  process.env.NODE_ENV === 'uat'
+    ? '.env.uat'
+    : process.env.NODE_ENV === 'production'
+      ? '.env.production'
+      : '.env';
+config({ path: path.resolve(process.cwd(), envFile) });
+
 import mongoose from 'mongoose';
 import { CronjobService } from '../src/services/cron-job.service';
-import { CronLogService } from './../src/services/cron-log.service';
+import { CronLogService } from '../src/services/cron-log.service';
 import { DebtReportService } from '../src/services/debt-report.service';
-config({ path: path.resolve(__dirname, '../.env') });
 
 async function main() {
   const uri = process.env.MONGODB_URI;

@@ -12,6 +12,11 @@ router.use(authenticateToken);
 // router.use(requireRole([UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN, UserRole.USER]));
 
 router.get('/get-list-debt', validate(getListDebtSchema), debtController.getListDebt);
+router.get(
+  '/get-detail-debt-with-list-values/:id',
+  validate(getDebtByIdSchema),
+  debtController.getDebtDetailWithListValues
+);
 router.get('/:id', validate(getDebtByIdSchema), debtController.getDebtById);
 
 export default router;

@@ -1,4 +1,4 @@
-import { SORT_BY } from '@/const/debt-management.const';
+import { DEBT_MANAGEMENT_TYPE_REPORT, SORT_BY } from '@/const/debt-management.const';
 import z from 'zod';
 import { OBJECTID_PATTERN, VALIDATION_MESSAGES } from '@/utils/validation-patterns';
 
@@ -9,13 +9,13 @@ const SortBySchema = z.union([
 ]);
 
 const keySortOptionalSchema = z.preprocess(
-  v => (v === null || String(v).trim() === '' ? undefined : String(v).trim()),
+  v => (v === null || v === undefined || String(v).trim() === '' ? undefined : String(v).trim()),
   SortBySchema.optional()
 );
 
 const typeSortOptionalSchema = z.preprocess(
   v => {
-    if (v === null || String(v).trim() === '') {
+    if (v === null || v === undefined || String(v).trim() === '') {
       return undefined;
     }
     const s = String(v).toLowerCase().trim();
@@ -34,7 +34,12 @@ const typeSortOptionalSchema = z.preprocess(
 );
 
 const fromRouteIdOptionalSchema = z.preprocess(
-  v => (v === null || String(v).trim() === '' ? undefined : String(v).trim()),
+  v => {
+    if (v === null || v === undefined || String(v).trim() === '') {
+      return undefined;
+    }
+    return String(v).trim();
+  },
   z
     .string()
     .regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format')
@@ -42,7 +47,12 @@ const fromRouteIdOptionalSchema = z.preprocess(
 );
 
 const toRouteIdOptionalSchema = z.preprocess(
-  v => (v === null || String(v).trim() === '' ? undefined : String(v).trim()),
+  v => {
+    if (v === null || v === undefined || String(v).trim() === '') {
+      return undefined;
+    }
+    return String(v).trim();
+  },
   z
     .string()
     .regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format')
@@ -131,3 +141,32 @@ export const createDebtManagementSchema = z.object({
   }),
 });
 export type CreateDebtManagementRequest = z.infer<typeof createDebtManagementSchema>['body'];
+
+// Schema for export report debt and debt management
+export const exportReportDebtAndDebtManagementSchema = z
+  .object({
+    query: z.object({
+      startDate: z
+        .string()
+        .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid start date in ISO format')
+        .transform(val => new Date(val)),
+      endDate: z
+        .string()
+        .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid end date in ISO format')
+        .transform(val => new Date(val)),
+      routeId: z
+        .string()
+        .regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format')
+        .optional(),
+      type: z.enum([
+        DEBT_MANAGEMENT_TYPE_REPORT.PAYMENT,
+        DEBT_MANAGEMENT_TYPE_REPORT.RECEIPT,
+        DEBT_MANAGEMENT_TYPE_REPORT.DEBT,
+        DEBT_MANAGEMENT_TYPE_REPORT.TOTAL,
+      ]),
+    }),
+  })
+  .refine(data => data.query.startDate <= data.query.endDate, {
+    message: 'Start date must be before or equal to end date',
+    path: ['query', 'startDate'],
+  });
