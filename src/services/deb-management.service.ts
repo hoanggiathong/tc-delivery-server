@@ -230,8 +230,10 @@ export class DebtManagementService {
       sort = { 'toRoute.name': 1, createdAt: 1 };
     }
     try {
+      const toRouteIdObj = new Types.ObjectId(toRouteId);
+
       const matchStage: Record<string, unknown> = {
-        toRoute: toRouteId,
+        toRoute: toRouteIdObj,
         type: DEBT_MANAGEMENT_TYPE.RECEIPT,
         cashDate: { $gte: start, $lte: endOfDay },
         deleted: false,

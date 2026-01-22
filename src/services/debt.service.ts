@@ -59,6 +59,7 @@ export class DebtService {
       59,
       999
     );
+    endOfDay.setHours(endOfDay.getHours() + 8);
     console.log('endOfDay :>> ', endOfDay);
     let sort: Record<string, 1 | -1> = {};
 
@@ -84,8 +85,9 @@ export class DebtService {
     }
 
     try {
+      const toRouteIdObj = new Types.ObjectId(toRouteId);
       const matchStage: Record<string, unknown> = {
-        toRoute: toRouteId,
+        toRoute: toRouteIdObj,
         createdAt: { $gte: start, $lte: endOfDay },
       };
 
@@ -194,11 +196,13 @@ export class DebtService {
         throw new Error('Invalid debt ID format');
       }
 
+      const toRouteIdObj = new Types.ObjectId(toRouteId);
+
       const pipeline: PipelineStage[] = [
         {
           $match: {
             _id: new Types.ObjectId(debtId),
-            toRoute: toRouteId,
+            toRoute: toRouteIdObj,
           },
         },
         // Join fromRoute
@@ -272,12 +276,14 @@ export class DebtService {
         throw new Error('Invalid debt ID format');
       }
 
+      const toRouteIdObj = new Types.ObjectId(toRouteId);
+
       // Step 1: Find debt data
       const pipeline: PipelineStage[] = [
         {
           $match: {
             _id: new Types.ObjectId(debtId),
-            toRoute: toRouteId,
+            toRoute: toRouteIdObj,
           },
         },
         // Join fromRoute
@@ -354,28 +360,28 @@ export class DebtService {
       );
 
       const fromRouteId = new Types.ObjectId(String(debt.fromRoute.id));
-      const toRouteIdObj = new Types.ObjectId(String(debt.toRoute.id));
+      const toRouteIdFromDebt = new Types.ObjectId(String(debt.toRoute.id));
 
       // Step 2: Get deliveries and money deliveries (chiều thuận = chiều về: fromRoute -> toRoute)
       const [deliveriesForward, moneyDeliveriesForward, debtManagementsForward] = await Promise.all(
         [
           Delivery.find({
             fromRoute: fromRouteId,
-            toRoute: toRouteIdObj,
+            toRoute: toRouteIdFromDebt,
             createdAt: { $gte: startDate, $lte: endDate },
           })
             .select('code cost homeDeliveryCost collectForCustomerCost paymentType')
             .lean(),
           MoneyDelivery.find({
             fromRoute: fromRouteId,
-            toRoute: toRouteIdObj,
+            toRoute: toRouteIdFromDebt,
             createdAt: { $gte: startDate, $lte: endDate },
           })
             .select('code sendMoneyAmount')
             .lean(),
           DebtManagement.find({
             fromRoute: fromRouteId,
-            toRoute: toRouteIdObj,
+            toRoute: toRouteIdFromDebt,
             type: DEBT_MANAGEMENT_TYPE.RECEIPT,
             cashDate: { $gte: startDate, $lte: endDate },
             deleted: false,
@@ -389,21 +395,21 @@ export class DebtService {
       const [deliveriesReverse, moneyDeliveriesReverse, debtManagementsReverse] = await Promise.all(
         [
           Delivery.find({
-            fromRoute: toRouteIdObj,
+            fromRoute: toRouteIdFromDebt,
             toRoute: fromRouteId,
             createdAt: { $gte: startDate, $lte: endDate },
           })
             .select('code cost homeDeliveryCost collectForCustomerCost paymentType')
             .lean(),
           MoneyDelivery.find({
-            fromRoute: toRouteIdObj,
+            fromRoute: toRouteIdFromDebt,
             toRoute: fromRouteId,
             createdAt: { $gte: startDate, $lte: endDate },
           })
             .select('code sendMoneyAmount')
             .lean(),
           DebtManagement.find({
-            fromRoute: toRouteIdObj,
+            fromRoute: toRouteIdFromDebt,
             toRoute: fromRouteId,
             type: DEBT_MANAGEMENT_TYPE.PAYMENT,
             cashDate: { $gte: startDate, $lte: endDate },
