@@ -79,11 +79,10 @@ export class CronjobService {
       // get list delivery with route is fromRoute in one day
       const listDeliveryFromRoute: IDelivery[] = await Delivery.find({
         fromRoute: route._id,
-        dateReturn: {
+        createdAt: {
           $gte: startDate,
           $lt: endDate,
         },
-        isReturn: true,
       }).lean();
 
       console.log('listDeliveryFromRoute :>> ', listDeliveryFromRoute);
@@ -114,11 +113,10 @@ export class CronjobService {
       // get list delivery with route is toRoute in one day
       const listDeliveriesToRoute: IDelivery[] = await Delivery.find({
         toRoute: route._id,
-        dateReturn: {
+        createdAt: {
           $gte: startDate,
           $lt: endDate,
         },
-        isReturn: true,
       }).lean();
 
       console.log('listDeliveriesToRoute :>> ', listDeliveriesToRoute);
@@ -148,11 +146,10 @@ export class CronjobService {
       // get list money delivery with route is fromRoute in one day
       const listMoneyDeliveriesFromRoute: IMoneyDelivery[] = await MoneyDelivery.find({
         fromRoute: route._id,
-        dateReturn: {
+        createdAt: {
           $gte: startDate,
           $lt: endDate,
         },
-        status: MoneyDeliveryStatus.DONE,
       }).lean();
 
       console.log('listMoneyDeliveriesFromRoute :>> ', listMoneyDeliveriesFromRoute);
@@ -172,11 +169,10 @@ export class CronjobService {
       // get list money delivery with route is toRoute in one day
       const listMoneyDeliveriesToRoute: IMoneyDelivery[] = await MoneyDelivery.find({
         toRoute: route._id,
-        dateReturn: {
+        createdAt: {
           $gte: startDate,
           $lt: endDate,
         },
-        status: MoneyDeliveryStatus.DONE,
       }).lean();
 
       console.log('listMoneyDeliveriesToRoute :>> ', listMoneyDeliveriesToRoute);
