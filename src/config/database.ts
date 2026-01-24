@@ -28,9 +28,27 @@ export const connectDB = async (): Promise<void> => {
     // Indexes should be created manually using: npm run db:sync-indexes
     mongoose.set('autoIndex', false);
 
-    // Enable mongoose debugging in development
-    if (process.env.NODE_ENV === 'development') {
-      mongoose.set('debug', false);
+    // Enable mongoose debugging in development or when DB_LOG is enabled
+    const enableDbLog = process.env.NODE_ENV === 'development' || process.env.DB_LOG === 'true';
+    if (enableDbLog) {
+      mongoose.set(
+        'debug',
+        (collectionName: string, method: string, query: unknown, doc?: unknown) => {
+          try {
+            const queryStr = typeof query === 'string' ? query : JSON.stringify(query, null, 2);
+            const docStr = doc
+              ? typeof doc === 'string'
+                ? doc
+                : JSON.stringify(doc, null, 2)
+              : undefined;
+            Logger.debug(
+              `MongoDB Query [${collectionName}.${method}]:\nQuery: ${queryStr}${docStr ? `\nDoc: ${docStr}` : ''}`
+            );
+          } catch (error) {
+            Logger.debug(`MongoDB Query [${collectionName}.${method}]: ${String(query)}`);
+          }
+        }
+      );
     }
 
     const conn = await mongoose.connect(mongoURI);
@@ -69,13 +87,6 @@ export const connectDB = async (): Promise<void> => {
     mongoose.connection.on('close', () => {
       Logger.warn('MongoDB connection closed');
     });
-
-    // Debug queries in development
-    if (process.env.NODE_ENV === 'development') {
-      mongoose.connection.on('query', query => {
-        Logger.debug(`MongoDB Query: ${JSON.stringify(query)}`);
-      });
-    }
   } catch (error) {
     Logger.error(`Error connecting to MongoDB: ${error}`);
     process.exit(1);

@@ -229,11 +229,19 @@ export class MoneyDeliveryService {
       throw new Error('To route not found');
     }
 
-    // Generate money delivery code with new system
-    const codeData = await CodeGeneratorService.generateNextMoneyDeliveryCode(
-      data.toRouteId,
-      fromRouteId
-    );
+    let codeData: { code: string; fullCode: string; subCode: string };
+    if (data.fullCode && data.code && data.subCode) {
+      codeData = {
+        code: data.code,
+        fullCode: data.fullCode,
+        subCode: data.subCode,
+      };
+    } else {
+      codeData = await CodeGeneratorService.generateNextMoneyDeliveryCode(
+        data.toRouteId,
+        fromRouteId
+      );
+    }
 
     // Get transfer type (default to 'regular' if not specified)
     const transferType = data.transferType || 'regular';

@@ -39,9 +39,9 @@ export class UserRouteService {
    */
   private async transformUserRouteToResponse(userRoute: IUserRoute): Promise<IUserRouteResponse> {
     const populated = await userRoute.populate([
-      { path: 'userId', select: '_id username name role' },
-      { path: 'routeId', select: '_id code name' },
-      { path: 'assignedBy', select: '_id username name role' },
+      { path: 'userId', select: '_id username name role createdAt updatedAt' },
+      { path: 'routeId', select: '_id code name createdAt updatedAt' },
+      { path: 'assignedBy', select: '_id username name role createdAt updatedAt' },
     ]);
 
     const populatedUserRoute = populated as any;
@@ -85,7 +85,9 @@ export class UserRouteService {
   private transformUserRouteLeanToResponse(userRoute: IUserRouteLeanPopulated): IUserRouteResponse {
     // Add null checks for populated fields
     if (!userRoute.userId || !userRoute.routeId || !userRoute.assignedBy) {
-      throw new Error('Invalid user route data: missing populated fields');
+      console.warn('Missing populated fields for user route:', userRoute._id);
+
+      return null as unknown as IUserRouteResponse;
     }
 
     return {
@@ -216,15 +218,17 @@ export class UserRouteService {
       const userRouteIds = createdUserRoutes.map(ur => ur._id);
       const populatedUserRoutes = await UserRoute.find({ _id: { $in: userRouteIds } })
         .populate([
-          { path: 'userId', select: '_id username role' },
-          { path: 'routeId', select: '_id code name' },
-          { path: 'assignedBy', select: '_id username role' },
+          { path: 'userId', select: '_id username name role createdAt updatedAt' },
+          { path: 'routeId', select: '_id code name address phone createdAt updatedAt' },
+          { path: 'assignedBy', select: '_id username name role createdAt updatedAt' },
         ])
         .lean();
 
-      return populatedUserRoutes.map(userRoute =>
-        this.transformUserRouteLeanToResponse(this.toPopulatedUserRoute(userRoute))
-      );
+      return populatedUserRoutes
+        .map(userRoute =>
+          this.transformUserRouteLeanToResponse(this.toPopulatedUserRoute(userRoute))
+        )
+        .filter(route => route !== null);
     } catch (error) {
       if (error instanceof Error) {
         throw error;
@@ -280,16 +284,18 @@ export class UserRouteService {
     try {
       const userRoutes = await UserRoute.find({ userId })
         .populate([
-          { path: 'userId', select: '_id username role' },
-          { path: 'routeId', select: '_id code name address phone' },
-          { path: 'assignedBy', select: '_id username role' },
+          { path: 'userId', select: '_id username name role createdAt updatedAt' },
+          { path: 'routeId', select: '_id code name address phone createdAt updatedAt' },
+          { path: 'assignedBy', select: '_id username name role createdAt updatedAt' },
         ])
         .sort({ createdAt: -1 })
         .lean();
 
-      return userRoutes.map(userRoute =>
-        this.transformUserRouteLeanToResponse(this.toPopulatedUserRoute(userRoute))
-      );
+      return userRoutes
+        .map(userRoute =>
+          this.transformUserRouteLeanToResponse(this.toPopulatedUserRoute(userRoute))
+        )
+        .filter(route => route !== null);
     } catch (error) {
       console.error('Error getting user routes:', error);
       throw new Error('Failed to get user routes');
@@ -330,16 +336,18 @@ export class UserRouteService {
     try {
       const userRoutes = await UserRoute.find({})
         .populate([
-          { path: 'userId', select: '_id username role' },
-          { path: 'routeId', select: '_id code name' },
-          { path: 'assignedBy', select: '_id username' },
+          { path: 'userId', select: '_id username name role createdAt updatedAt' },
+          { path: 'routeId', select: '_id code name address phone createdAt updatedAt' },
+          { path: 'assignedBy', select: '_id username name role createdAt updatedAt' },
         ])
         .sort({ createdAt: -1 })
         .lean();
 
-      return userRoutes.map(userRoute =>
-        this.transformUserRouteLeanToResponse(this.toPopulatedUserRoute(userRoute))
-      );
+      return userRoutes
+        .map(userRoute =>
+          this.transformUserRouteLeanToResponse(this.toPopulatedUserRoute(userRoute))
+        )
+        .filter(route => route !== null);
     } catch (error) {
       console.error('Error getting all user routes:', error);
       throw new Error('Failed to get all user routes');
@@ -353,16 +361,18 @@ export class UserRouteService {
     try {
       const userRoutes = await UserRoute.find({ routeId })
         .populate([
-          { path: 'userId', select: '_id username role' },
-          { path: 'routeId', select: '_id code name' },
-          { path: 'assignedBy', select: '_id username role' },
+          { path: 'userId', select: '_id username name role createdAt updatedAt' },
+          { path: 'routeId', select: '_id code name address phone createdAt updatedAt' },
+          { path: 'assignedBy', select: '_id username name role createdAt updatedAt' },
         ])
         .sort({ createdAt: -1 })
         .lean();
 
-      return userRoutes.map(userRoute =>
-        this.transformUserRouteLeanToResponse(this.toPopulatedUserRoute(userRoute))
-      );
+      return userRoutes
+        .map(userRoute =>
+          this.transformUserRouteLeanToResponse(this.toPopulatedUserRoute(userRoute))
+        )
+        .filter(route => route !== null);
     } catch (error) {
       console.error('Error getting users for route:', error);
       throw new Error('Failed to get users for route');
