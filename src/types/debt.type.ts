@@ -24,6 +24,7 @@ export interface IDebtRow {
   paymentDebt?: number;
   createdAt?: Date;
   updatedAt?: Date;
+  dateDebt?: Date;
   __v?: number;
 }
 
@@ -40,6 +41,7 @@ export interface IDebtTotal {
   surchargeToRoute: number;
   surchargeFromRoute: number;
   totalDebt: number;
+  dateDebt?: Date;
 }
 
 export interface IGetListDebtResponse {

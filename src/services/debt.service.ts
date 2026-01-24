@@ -59,7 +59,6 @@ export class DebtService {
       59,
       999
     );
-    endOfDay.setHours(endOfDay.getHours() + 8);
     console.log('endOfDay :>> ', endOfDay);
     let sort: Record<string, 1 | -1> = {};
 
@@ -77,18 +76,18 @@ export class DebtService {
           sort = { 'toRoute.name': typeSort };
           break;
         default:
-          sort = { 'toRoute.name': 1, createdAt: 1 };
+          sort = { 'toRoute.name': 1, dateDebt: 1 };
           break;
       }
     } else {
-      sort = { 'toRoute.name': 1, createdAt: 1 };
+      sort = { 'toRoute.name': 1, dateDebt: 1 };
     }
 
     try {
       const toRouteIdObj = new Types.ObjectId(toRouteId);
       const matchStage: Record<string, unknown> = {
         toRoute: toRouteIdObj,
-        createdAt: { $gte: start, $lte: endOfDay },
+        dateDebt: { $gte: start, $lte: endOfDay },
       };
 
       if (fromRouteId) {
@@ -157,6 +156,7 @@ export class DebtService {
           totalDebt: 1,
           createdAt: 1,
           updatedAt: 1,
+          dateDebt: 1,
         },
       } as PipelineStage);
 
@@ -245,6 +245,7 @@ export class DebtService {
             totalDebt: 1,
             createdAt: 1,
             updatedAt: 1,
+            dateDebt: 1,
           },
         } as PipelineStage,
       ];
@@ -326,6 +327,7 @@ export class DebtService {
             totalDebt: 1,
             createdAt: 1,
             updatedAt: 1,
+            dateDebt: 1,
           },
         } as PipelineStage,
       ];

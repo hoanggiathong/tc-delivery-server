@@ -31,6 +31,13 @@ async function main() {
 
   const key = `Calculate-debt-${new Date().toISOString().slice(0, 10)}`;
 
+  const isRun = await CronLogService.isSuccess(key);
+  if (isRun) {
+    console.log('Cronjob calculate debt already run success');
+    await mongoose.disconnect();
+    return;
+  }
+
   try {
     await CronLogService.start(key, 'Caluculate debt cronjob');
     // Step 1: Calculate and create debt records
