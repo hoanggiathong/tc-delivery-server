@@ -17,7 +17,7 @@ export enum SMSStatus {
  * SMSType - Loại tin nhắn đã gửi thành công
  */
 export enum SMSType {
-  ZALO_ZNS = 'zalo_zns', // Gửi qua Zalo ZNS
+  ZALO = 'zalo', // Gửi qua Zalo ZNS
   SMS = 'sms', // Gửi qua SMS
   APP = 'app', // Gửi qua App notification
 }
@@ -80,7 +80,10 @@ export interface IYourSalesAPIResponse {
   success: boolean;
   errorCode?: string;
   errorMessage?: string;
-  data?: Record<string, unknown>;
+  data?: {
+    msg_id?: string;
+    [key: string]: unknown;
+  };
 }
 
 /**
@@ -199,9 +202,12 @@ export interface IPopulatedRoute {
  * YourSales API data response structure
  */
 export interface IYourSalesAPIData {
+  message?: string;
+  data?: {
+    msg_id?: string;
+  };
   success?: boolean;
   error_code?: string;
-  error_message?: string;
   [key: string]: unknown;
 }
 

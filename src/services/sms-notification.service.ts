@@ -215,7 +215,7 @@ export class SMSNotificationService {
       await this.createSMSLog({
         deliveryId,
         phone,
-        messageType: SMSType.ZALO_ZNS,
+        messageType: SMSType.ZALO,
         status: SMSLogStatus.FAILED,
         errorCode: 'INVALID_PHONE',
         errorMessage: 'Invalid phone number format',
@@ -259,13 +259,14 @@ export class SMSNotificationService {
       // Success with Zalo ZNS
       await Delivery.findByIdAndUpdate(deliveryId, {
         smsStatus: SMSStatus.SENT,
-        smsType: SMSType.ZALO_ZNS,
+        smsType: SMSType.ZALO,
         timeToSendSMS: new Date(),
+        msgId: zaloResult.data?.msg_id,
       });
       await this.createSMSLog({
         deliveryId,
         phone,
-        messageType: SMSType.ZALO_ZNS,
+        messageType: SMSType.ZALO,
         status: SMSLogStatus.SUCCESS,
         apiResponse: zaloResult.data,
         userId,
@@ -274,7 +275,7 @@ export class SMSNotificationService {
         success: true,
         deliveryId,
         phone,
-        messageType: SMSType.ZALO_ZNS,
+        messageType: SMSType.ZALO,
       };
     }
 
@@ -291,6 +292,7 @@ export class SMSNotificationService {
           smsStatus: SMSStatus.SENT,
           smsType: SMSType.SMS,
           timeToSendSMS: new Date(),
+          msgId: smsResult.data?.msg_id,
         });
         await this.createSMSLog({
           deliveryId,
@@ -334,7 +336,7 @@ export class SMSNotificationService {
     await this.createSMSLog({
       deliveryId,
       phone,
-      messageType: SMSType.ZALO_ZNS,
+      messageType: SMSType.ZALO,
       status: SMSLogStatus.FAILED,
       errorCode: zaloResult.errorCode,
       errorMessage: zaloResult.errorMessage,
@@ -480,15 +482,6 @@ export class SMSNotificationService {
   private async sendZaloZNS(params: IYourSalesZNSParams): Promise<IYourSalesAPIResponse> {
     try {
       Logger.info('Sending Zalo ZNS', { phone: params.phone, templateId: params.templateId });
-      console.log('Body data:', {
-        template_id: params.templateId,
-        phone: convertPhoneToLocalFormat(params.phone),
-        data: params.templateData,
-        sms_failover: {
-          brand: 'VT.GiaPhuoc',
-          msg: 'VT.GiaPhuoc kinh moi quy khach den chi nhanh nhan buu pham tu voi so tien can thanh toan. Giao dich tai quay. Chi tiet vui long lien he.',
-        },
-      });
 
       const response = await fetch(`${this.apiUrl}/public/zns/send`, {
         method: 'POST',
@@ -508,32 +501,16 @@ export class SMSNotificationService {
         }),
       });
 
-      // Check if response is JSON
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const textResponse = await response.text();
-        Logger.error('Zalo ZNS API returned non-JSON response', {
-          status: response.status,
-          contentType,
-          body: textResponse.substring(0, 500),
-        });
-        return {
-          success: false,
-          errorCode: 'INVALID_RESPONSE',
-          errorMessage: `API returned non-JSON response (status: ${response.status}). Please check API URL and credentials.`,
-        };
-      }
-
       const data = (await response.json()) as IYourSalesAPIData;
 
-      if (response.ok && data.success) {
+      if (response.status === 201 && data.data?.msg_id) {
         return { success: true, data };
       }
 
       return {
         success: false,
         errorCode: data.error_code || 'ZALO_ERROR',
-        errorMessage: data.error_message || 'Failed to send Zalo ZNS',
+        errorMessage: data.message || 'Failed to send Zalo ZNS',
         data,
       };
     } catch (error) {
@@ -567,32 +544,16 @@ export class SMSNotificationService {
         }),
       });
 
-      // Check if response is JSON
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const textResponse = await response.text();
-        Logger.error('SMS API returned non-JSON response', {
-          status: response.status,
-          contentType,
-          body: textResponse.substring(0, 500),
-        });
-        return {
-          success: false,
-          errorCode: 'INVALID_RESPONSE',
-          errorMessage: `API returned non-JSON response (status: ${response.status}). Please check API URL and credentials.`,
-        };
-      }
-
       const data = (await response.json()) as IYourSalesAPIData;
 
-      if (response.ok && data.success) {
+      if (response.status === 201 && data.data?.msg_id) {
         return { success: true, data };
       }
 
       return {
         success: false,
         errorCode: data.error_code || 'SMS_ERROR',
-        errorMessage: data.error_message || 'Failed to send SMS',
+        errorMessage: data.message || 'Failed to send SMS',
         data,
       };
     } catch (error) {
@@ -623,8 +584,7 @@ export class SMSNotificationService {
         deliveryId: data.deliveryId,
         phone: data.phone,
         messageType: data.messageType,
-        templateId:
-          data.messageType === SMSType.ZALO_ZNS ? this.zaloTemplateId : this.smsTemplateId,
+        templateId: data.messageType === SMSType.ZALO ? this.zaloTemplateId : this.smsTemplateId,
         status: data.status,
         errorCode: data.errorCode,
         errorMessage: data.errorMessage,
