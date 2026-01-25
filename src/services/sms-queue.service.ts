@@ -1,12 +1,15 @@
 import { SMSQueue } from '@/models/sms-queue.model';
+import { Delivery } from '@/models/delivery.model';
 import {
   SMS_QUEUE_STATUS,
   SMS_QUEUE_CONFIG,
   ISMSQueue,
+  ISMSQueueLean,
   ISMSQueueCreateInput,
   ISMSQueueBatchResult,
   ISMSQueueStats,
 } from '@/types/sms-queue.type';
+import { SMSStatus } from '@/types/sms-notification.type';
 import { SMSNotificationService } from '@/services/sms-notification.service';
 import Logger from '@/utils/logger';
 
@@ -55,33 +58,51 @@ export class SMSQueueService {
     deliveryIds: string[],
     userId: string
   ): Promise<{ added: number; skipped: number }> {
-    let added = 0;
-    let skipped = 0;
+    // Step 1: Find deliveries that are eligible (smsStatus is null or NOT_SENT)
+    const eligibleDeliveries = await Delivery.find({
+      _id: { $in: deliveryIds },
+      $or: [{ smsStatus: null }, { smsStatus: SMSStatus.NOT_SENT }],
+    }).select('_id');
 
-    for (const deliveryId of deliveryIds) {
-      try {
-        const existing = await SMSQueue.findOne({
-          deliveryId,
-          status: { $in: [SMS_QUEUE_STATUS.PENDING, SMS_QUEUE_STATUS.PROCESSING] },
-        });
+    const eligibleIds = eligibleDeliveries.map(d => d._id.toString());
 
-        if (existing) {
-          skipped++;
-          continue;
-        }
-
-        await SMSQueue.create({
-          deliveryId,
-          userId,
-          status: SMS_QUEUE_STATUS.PENDING,
-          retryCount: 0,
-        });
-        added++;
-      } catch (error) {
-        Logger.error('Failed to add to queue', { deliveryId, error });
-        skipped++;
-      }
+    if (eligibleIds.length === 0) {
+      return { added: 0, skipped: deliveryIds.length };
     }
+
+    // Step 2: Find which ones are already in queue
+    const existingInQueue = await SMSQueue.find({
+      deliveryId: { $in: eligibleIds },
+      status: { $in: [SMS_QUEUE_STATUS.PENDING, SMS_QUEUE_STATUS.PROCESSING] },
+    }).select('deliveryId');
+
+    const existingIds = new Set(existingInQueue.map(q => q.deliveryId.toString()));
+
+    // Step 3: Filter out existing ones
+    const idsToAdd = eligibleIds.filter(id => !existingIds.has(id));
+
+    if (idsToAdd.length === 0) {
+      return { added: 0, skipped: deliveryIds.length };
+    }
+
+    // Step 4: Update deliveries status to WAITING_ZALO_SMS
+    await Delivery.updateMany(
+      { _id: { $in: idsToAdd } },
+      { $set: { smsStatus: SMSStatus.WAITING_ZALO_SMS } }
+    );
+
+    // Step 5: Bulk insert into queue
+    const queueItems = idsToAdd.map(deliveryId => ({
+      deliveryId,
+      userId,
+      status: SMS_QUEUE_STATUS.PENDING,
+      retryCount: 0,
+    }));
+
+    await SMSQueue.insertMany(queueItems);
+
+    const added = idsToAdd.length;
+    const skipped = deliveryIds.length - added;
 
     Logger.info('Bulk add to SMS queue completed', { added, skipped, total: deliveryIds.length });
     return { added, skipped };
@@ -90,11 +111,11 @@ export class SMSQueueService {
   /**
    * Get next batch of pending records for processing (FIFO)
    */
-  async getNextBatch(batchSize: number = SMS_QUEUE_CONFIG.BATCH_SIZE): Promise<ISMSQueue[]> {
+  async getNextBatch(batchSize: number = SMS_QUEUE_CONFIG.BATCH_SIZE): Promise<ISMSQueueLean[]> {
     return SMSQueue.find({ status: SMS_QUEUE_STATUS.PENDING })
       .sort({ createdAt: 1 }) // FIFO: oldest first
       .limit(batchSize)
-      .lean();
+      .lean<ISMSQueueLean[]>();
   }
 
   /**
@@ -114,17 +135,14 @@ export class SMSQueueService {
   }
 
   /**
-   * Mark as completed successfully
+   * Delete queue item after successful processing
    */
   async markAsCompleted(queueId: string): Promise<void> {
-    await SMSQueue.findByIdAndUpdate(queueId, {
-      status: SMS_QUEUE_STATUS.SUCCESS,
-      processedAt: new Date(),
-    });
+    await SMSQueue.findByIdAndDelete(queueId);
   }
 
   /**
-   * Mark as failed with error info
+   * Mark as failed with error info, delete if max retries reached
    */
   async markAsFailed(queueId: string, errorCode?: string, errorMessage?: string): Promise<void> {
     const queueItem = await SMSQueue.findById(queueId);
@@ -132,15 +150,16 @@ export class SMSQueueService {
 
     const newRetryCount = queueItem.retryCount + 1;
 
-    // If retry count exceeds max, mark as permanently failed
+    // If retry count exceeds max, delete the record
     if (newRetryCount >= SMS_QUEUE_CONFIG.MAX_RETRY_COUNT) {
-      await SMSQueue.findByIdAndUpdate(queueId, {
-        status: SMS_QUEUE_STATUS.FAILED,
+      Logger.warn('SMS Queue item reached max retries, deleting', {
+        queueId,
+        deliveryId: queueItem.deliveryId,
         retryCount: newRetryCount,
         errorCode,
         errorMessage,
-        processedAt: new Date(),
       });
+      await SMSQueue.findByIdAndDelete(queueId);
     } else {
       // Reset to pending for retry
       await SMSQueue.findByIdAndUpdate(queueId, {

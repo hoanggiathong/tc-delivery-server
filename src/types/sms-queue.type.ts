@@ -35,6 +35,22 @@ export interface ISMSQueue extends Document {
 }
 
 /**
+ * SMS Queue Lean Interface (for .lean() queries)
+ */
+export interface ISMSQueueLean {
+  _id: Types.ObjectId;
+  deliveryId: Types.ObjectId;
+  userId: Types.ObjectId;
+  status: SMS_QUEUE_STATUS;
+  retryCount: number;
+  errorCode?: string;
+  errorMessage?: string;
+  processedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
  * Input for creating queue item
  */
 export interface ISMSQueueCreateInput {

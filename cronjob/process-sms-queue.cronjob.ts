@@ -55,7 +55,9 @@ async function main() {
   }
 
   await mongoose.connect(uri, { dbName: process.env.MONGO_DB || undefined });
-  Logger.info('SMS Queue Processor started', { interval: `${SMS_QUEUE_CONFIG.PROCESS_INTERVAL}ms` });
+  Logger.info('SMS Queue Processor started', {
+    interval: `${SMS_QUEUE_CONFIG.PROCESS_INTERVAL}ms`,
+  });
 
   // Reset any stuck items on startup
   const smsQueueService = new SMSQueueService();

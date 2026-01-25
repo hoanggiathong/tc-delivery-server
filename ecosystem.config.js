@@ -45,7 +45,7 @@ module.exports = {
       // Process settings - Keep running (no cron_restart)
       watch: false,
       autorestart: true,
-      max_memory_restart: '512M',
+      max_memory_restart: '258M',
       // Restart policies
       restart_delay: 1000,
       max_restarts: 10,

@@ -119,7 +119,7 @@ export class SMSNotificationService {
     const query: Record<string, unknown> = {
       toRoute: selectedRouteId,
       isReturn: { $ne: true },
-      smsStatus: SMSStatus.NOT_SENT,
+      $or: [{ smsStatus: null }, { smsStatus: SMSStatus.NOT_SENT }],
       // Use $expr to compare two fields: quantityReturn < quantity
       $expr: { $lt: ['$quantityReturn', '$quantity'] },
     };
