@@ -146,7 +146,9 @@ export class SMSQueueService {
    */
   async markAsFailed(queueId: string, errorCode?: string, errorMessage?: string): Promise<void> {
     const queueItem = await SMSQueue.findById(queueId);
-    if (!queueItem) return;
+    if (!queueItem) {
+      return;
+    }
 
     const newRetryCount = queueItem.retryCount + 1;
 
