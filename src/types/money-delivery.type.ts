@@ -67,6 +67,9 @@ export interface IMoneyDeliveryCreateRequest {
   type?: MoneyDeliveryType;
   deliveryId?: string;
   fromRouteId?: string;
+  fullCode?: string;
+  code?: string;
+  subCode?: string;
 }
 
 export interface IMoneyDeliveryUpdateRequest {

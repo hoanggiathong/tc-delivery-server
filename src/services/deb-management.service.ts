@@ -37,11 +37,26 @@ export class DebtManagementService {
 
     const { typeSort } = req.query;
 
-    const start = new Date(String(startDate));
-    start.setHours(0, 0, 0, 0);
-
-    const endOfDay = new Date(String(endDate));
-    endOfDay.setHours(23, 59, 59, 999);
+    const startOfDate = new Date(String(startDate));
+    const endOfDate = new Date(String(endDate));
+    const start = new Date(
+      startOfDate.getFullYear(),
+      startOfDate.getMonth(),
+      startOfDate.getDate(),
+      0,
+      0,
+      0,
+      0
+    );
+    const endOfDay = new Date(
+      endOfDate.getFullYear(),
+      endOfDate.getMonth(),
+      endOfDate.getDate(),
+      23,
+      59,
+      59,
+      999
+    );
 
     const fromRouteId = await this.userService.getUserSelectedRouteId(userId);
     let sort: Record<string, 1 | -1> = {};
@@ -189,11 +204,26 @@ export class DebtManagementService {
   ): Promise<IGetListReceiptDebtManagementResponse> {
     const { startDate, endDate, keySort, typeSort, fromRouteId } = req.query;
 
-    const start = new Date(String(startDate));
-    start.setHours(0, 0, 0, 0);
-
-    const endOfDay = new Date(String(endDate));
-    endOfDay.setHours(23, 59, 59, 999);
+    const startOfDate = new Date(String(startDate));
+    const endOfDate = new Date(String(endDate));
+    const start = new Date(
+      startOfDate.getFullYear(),
+      startOfDate.getMonth(),
+      startOfDate.getDate(),
+      0,
+      0,
+      0,
+      0
+    );
+    const endOfDay = new Date(
+      endOfDate.getFullYear(),
+      endOfDate.getMonth(),
+      endOfDate.getDate(),
+      23,
+      59,
+      59,
+      999
+    );
 
     const toRouteId = await this.userService.getUserSelectedRouteId(userId);
     let sort: Record<string, 1 | -1> = {};
@@ -230,8 +260,10 @@ export class DebtManagementService {
       sort = { 'toRoute.name': 1, createdAt: 1 };
     }
     try {
+      const toRouteIdObj = new Types.ObjectId(toRouteId);
+
       const matchStage: Record<string, unknown> = {
-        toRoute: toRouteId,
+        toRoute: toRouteIdObj,
         type: DEBT_MANAGEMENT_TYPE.RECEIPT,
         cashDate: { $gte: start, $lte: endOfDay },
         deleted: false,
@@ -321,6 +353,13 @@ export class DebtManagementService {
         throw new Error('To route not found');
       }
 
+      if (data.fromRoute.toString() === toRouteId.toString()) {
+        throw new Error('Cannot create debt management for the same route');
+      }
+
+      const fromRouteIdObj = new Types.ObjectId(String(data.fromRoute));
+      const toRouteIdObj = new Types.ObjectId(String(toRouteId));
+
       // Create 2 records: RECEIPT and PAYMENT
       const receiptDebtManagement = new DebtManagement({
         fromRoute: data.fromRoute,
@@ -340,10 +379,8 @@ export class DebtManagementService {
         type: DEBT_MANAGEMENT_TYPE.PAYMENT,
       });
 
-      const [receiptResult, paymentResult] = await Promise.all([
-        receiptDebtManagement.save({ session: session }),
-        paymentDebtManagement.save({ session: session }),
-      ]);
+      const receiptResult = await receiptDebtManagement.save({ session: session });
+      const paymentResult = await paymentDebtManagement.save({ session: session });
 
       const today = new Date();
       const startOfDay = new Date(
@@ -365,33 +402,34 @@ export class DebtManagementService {
         999
       );
 
-      const [currentDebt1, currentDebt2] = await Promise.all([
-        Debt.findOne({
-          fromRoute: data.fromRoute,
-          toRoute: toRouteId,
-          createdAt: {
-            $gte: startOfDay,
-            $lte: endOfDay,
-          },
-        })
-          .sort({ createdAt: -1 })
-          .session(session)
-          .lean(),
-        Debt.findOne({
-          fromRoute: toRouteId,
-          toRoute: data.fromRoute,
-          createdAt: {
-            $gte: startOfDay,
-            $lte: endOfDay,
-          },
-        })
-          .sort({ createdAt: -1 })
-          .session(session)
-          .lean(),
-      ]);
+      const currentDebt1 = await Debt.findOne({
+        fromRoute: fromRouteIdObj,
+        toRoute: toRouteIdObj,
+        dateDebt: {
+          $gte: startOfDay,
+          $lte: endOfDay,
+        },
+      })
+        .sort({ createdAt: -1 })
+        .session(session)
+        .lean();
+
+      const currentDebt2 = await Debt.findOne({
+        fromRoute: toRouteIdObj,
+        toRoute: fromRouteIdObj,
+        dateDebt: {
+          $gte: startOfDay,
+          $lte: endOfDay,
+        },
+      })
+        .sort({ createdAt: -1 })
+        .session(session)
+        .lean();
 
       if (!currentDebt1 || !currentDebt2) {
-        throw new Error('Debt record not found for the day. Please ensure cronjob has run.');
+        throw new Error(
+          `Debt record not found for the day. Please ensure cronjob has run for today (${today.toISOString().split('T')[0]}).`
+        );
       }
 
       // Calculate totalDebt for first debt record (fromRoute -> toRoute)
@@ -453,58 +491,60 @@ export class DebtManagementService {
       const totalDebt2 = A2 - B2 + openingBalance2;
 
       // Update debt records for the day (cronjob ensures they exist)
-      await Promise.all([
-        Debt.findOneAndUpdate(
-          {
-            _id: currentDebt1._id,
-          },
-          {
-            totalDebt: totalDebt1,
-            receivable: receivable1,
-          },
-          {
-            session: session,
-            new: true,
-            runValidators: true,
-          }
-        ),
-        Debt.findOneAndUpdate(
-          {
-            _id: currentDebt2._id,
-          },
-          {
-            totalDebt: totalDebt2,
-            accountPayable: accountPayable2,
-          },
-          {
-            session: session,
-            new: true,
-            runValidators: true,
-          }
-        ),
-      ]);
+      await Debt.findOneAndUpdate(
+        {
+          _id: currentDebt1._id,
+        },
+        {
+          totalDebt: totalDebt1,
+          receivable: receivable1,
+        },
+        {
+          session: session,
+          new: true,
+          runValidators: true,
+        }
+      );
+
+      await Debt.findOneAndUpdate(
+        {
+          _id: currentDebt2._id,
+        },
+        {
+          totalDebt: totalDebt2,
+          accountPayable: accountPayable2,
+        },
+        {
+          session: session,
+          new: true,
+          runValidators: true,
+        }
+      );
 
       // Update debt report service
       // Update both accountPayable and receivable
-      await Promise.all([
-        this.debtReportService.updateDebtReport(toRouteId, today, data.cash, session, false, true),
-        this.debtReportService.updateDebtReport(
-          data.fromRoute,
-          today,
-          data.cash,
-          session,
-          true,
-          false
-        ),
-      ]);
+      await this.debtReportService.updateDebtReport(
+        toRouteId,
+        today,
+        data.cash,
+        session,
+        false,
+        true
+      );
+      await this.debtReportService.updateDebtReport(
+        data.fromRoute,
+        today,
+        data.cash,
+        session,
+        true,
+        false
+      );
 
       // Populate routes before committing transaction
-      await Promise.all([
-        receiptResult.populate('fromRoute', 'name'),
-        receiptResult.populate('toRoute', 'name'),
-        paymentResult.populate('fromRoute', 'name'),
-        paymentResult.populate('toRoute', 'name'),
-      ]);
+      await receiptResult.populate('fromRoute', 'name');
+      await receiptResult.populate('toRoute', 'name');
+      await paymentResult.populate('fromRoute', 'name');
+      await paymentResult.populate('toRoute', 'name');
 
       await session.commitTransaction();
       await session.endSession();
@@ -655,33 +695,34 @@ export class DebtManagementService {
       );
 
       // Find the same two debt records as in createDebtManagement
-      const [currentDebt1, currentDebt2] = await Promise.all([
-        Debt.findOne({
-          fromRoute: fromRoute,
-          toRoute: toRoute,
-          createdAt: {
-            $gte: startOfToday,
-            $lte: endOfToday,
-          },
-        })
-          .sort({ createdAt: -1 })
-          .session(session)
-          .lean(),
-        Debt.findOne({
-          fromRoute: toRoute,
-          toRoute: fromRoute,
-          createdAt: {
-            $gte: startOfToday,
-            $lte: endOfToday,
-          },
-        })
-          .sort({ createdAt: -1 })
-          .session(session)
-          .lean(),
-      ]);
+      const currentDebt1 = await Debt.findOne({
+        fromRoute: fromRoute,
+        toRoute: toRoute,
+        dateDebt: {
+          $gte: startOfToday,
+          $lte: endOfToday,
+        },
+      })
+        .sort({ createdAt: -1 })
+        .session(session)
+        .lean();
+
+      const currentDebt2 = await Debt.findOne({
+        fromRoute: toRoute,
+        toRoute: fromRoute,
+        dateDebt: {
+          $gte: startOfToday,
+          $lte: endOfToday,
+        },
+      })
+        .sort({ createdAt: -1 })
+        .session(session)
+        .lean();
 
       if (!currentDebt1 || !currentDebt2) {
-        throw new Error('Debt record not found for the day. Please ensure cronjob has run.');
+        throw new Error(
+          `Debt record not found for the day. Please ensure cronjob has run for today (${today.toISOString().split('T')[0]}).`
+        );
       }
 
       const costFromRoute1 = currentDebt1.costFromRoute ?? 0;
@@ -737,56 +778,54 @@ export class DebtManagementService {
       const totalDebt2 = A2 - B2 + openingBalance2;
 
       // Update debt records (reverse the changes)
-      await Promise.all([
-        Debt.findOneAndUpdate(
-          {
-            _id: currentDebt1._id,
-          },
-          {
-            totalDebt: totalDebt1,
-            receivable: receivable1,
-          },
-          {
-            session: session,
-            new: true,
-            runValidators: true,
-          }
-        ),
-        Debt.findOneAndUpdate(
-          {
-            _id: currentDebt2._id,
-          },
-          {
-            totalDebt: totalDebt2,
-            accountPayable: accountPayable2,
-          },
-          {
-            session: session,
-            new: true,
-            runValidators: true,
-          }
-        ),
-      ]);
+      await Debt.findOneAndUpdate(
+        {
+          _id: currentDebt1._id,
+        },
+        {
+          totalDebt: totalDebt1,
+          receivable: receivable1,
+        },
+        {
+          session: session,
+          new: true,
+          runValidators: true,
+        }
+      );
+
+      await Debt.findOneAndUpdate(
+        {
+          _id: currentDebt2._id,
+        },
+        {
+          totalDebt: totalDebt2,
+          accountPayable: accountPayable2,
+        },
+        {
+          session: session,
+          new: true,
+          runValidators: true,
+        }
+      );
 
       // Reverse the debt report service updates (subtract instead of add)
-      await Promise.all([
-        this.debtReportService.updateDebtReport(
-          toRoute.toString(),
-          cashDate,
-          -cash,
-          session,
-          false,
-          true
-        ),
-        this.debtReportService.updateDebtReport(
-          fromRoute.toString(),
-          cashDate,
-          -cash,
-          session,
-          true,
-          false
-        ),
-      ]);
+      await this.debtReportService.updateDebtReport(
+        toRoute.toString(),
+        cashDate,
+        -cash,
+        session,
+        false,
+        true
+      );
+
+      await this.debtReportService.updateDebtReport(
+        fromRoute.toString(),
+        cashDate,
+        -cash,
+        session,
+        true,
+        false
+      );
 
       await session.commitTransaction();
       session.endSession();

@@ -17,6 +17,7 @@ export interface IDebtReport extends Document {
   totalDebt: number; // cong no (co the am - bieu thi so du co hoac tra vuot)
   createdAt: Date;
   updatedAt: Date;
+  dateDebtReport: Date;
 }
 
 const debtReportSchema = new Schema<IDebtReport>(
@@ -87,6 +88,10 @@ const debtReportSchema = new Schema<IDebtReport>(
       required: false,
       default: 0,
       // Note: Can be negative (represents credit balance or overpayment)
+    },
+    dateDebtReport: {
+      type: Date,
+      default: null,
     },
   },
   {

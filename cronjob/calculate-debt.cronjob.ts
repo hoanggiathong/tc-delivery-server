@@ -21,16 +21,22 @@ import { DebtReportService } from '../src/services/debt-report.service';
 async function main() {
   const uri = process.env.MONGODB_URI;
 
-  const cronjobService = new CronjobService();
-  const debtReportService = new DebtReportService();
-
   if (!uri) {
     console.error('Missing MONGODB_URI');
     process.exit(2);
   }
+  const cronjobService = new CronjobService();
+  const debtReportService = new DebtReportService();
   await mongoose.connect(uri, { dbName: process.env.MONGO_DB || undefined });
 
   const key = `Calculate-debt-${new Date().toISOString().slice(0, 10)}`;
+
+  const isRun = await CronLogService.isSuccess(key);
+  if (isRun) {
+    console.log('Cronjob calculate debt already run success');
+    await mongoose.disconnect();
+    return;
+  }
 
   try {
     await CronLogService.start(key, 'Caluculate debt cronjob');
@@ -44,6 +50,8 @@ async function main() {
     console.log('Error calculate debt cron-job', error);
     const errorMessage = error instanceof Error ? error.message : error;
     await CronLogService.fail(key, String(errorMessage));
+    await mongoose.disconnect();
+    throw error;
   }
 }
 

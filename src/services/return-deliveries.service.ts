@@ -1201,6 +1201,9 @@ export class ReturnDeliveriesService {
         type: MoneyDeliveryType.COLLECT,
         deliveryId: typedDelivery._id.toString(),
         fromRouteId: typedDelivery.fromRoute._id.toString(),
+        fullCode: typedDelivery.fullCode,
+        code: typedDelivery.code,
+        subCode: typedDelivery.subCode,
       },
       userId
     );

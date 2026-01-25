@@ -5,11 +5,23 @@ import mongoose from 'mongoose';
 
 export class DebtReportService {
   async generateDebtReport(targetDate?: Date): Promise<void> {
+    if (targetDate) {
+      await this.processDebtReport(targetDate);
+    } else {
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      await this.processDebtReport(yesterday);
+      await this.processDebtReport(today);
+    }
+  }
+
+  private async processDebtReport(date: Date): Promise<void> {
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
-      const date = targetDate || new Date();
       const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
       const endOfDay = new Date(
         date.getFullYear(),
@@ -22,7 +34,7 @@ export class DebtReportService {
       );
 
       const debts = await Debt.find({
-        createdAt: {
+        dateDebt: {
           $gte: startOfDay,
           $lte: endOfDay,
         },
@@ -31,6 +43,8 @@ export class DebtReportService {
         .lean();
 
       if (debts.length === 0) {
+        // If no debts, verify if we should delete existing reports?
+        // For safety, I'll stick to the original behavior of returning early if no debts found.
         await session.commitTransaction();
         session.endSession();
         return;
@@ -52,6 +66,7 @@ export class DebtReportService {
           surchargeToRoute: number;
           surchargeFromRoute: number;
           totalDebt: number;
+          dateDebtReport: Date;
         }
       >();
 
@@ -77,6 +92,7 @@ export class DebtReportService {
             surchargeToRoute: 0,
             surchargeFromRoute: 0,
             totalDebt: 0,
+            dateDebtReport: new Date(date.getFullYear(), date.getMonth(), date.getDate()),
           });
         }
 
@@ -103,6 +119,7 @@ export class DebtReportService {
         ...grouped,
         createdAt: startOfDay,
         updatedAt: startOfDay,
+        dateDebtReport: date,
       }));
 
       // Delete existing debt reports for the day (if any)
@@ -131,6 +148,16 @@ export class DebtReportService {
     }
   }
 
+  /**
+   * Update debt report by toRoute and date range
+   * @param toRoute - ObjectId or string of the toRoute
+   * @param createdAt - Created at date
+   * @param cash - Cash amount
+   * @param session - Session
+   * @param updateAccountPayable - Update account payable
+   * @param updateReceivable - Update receivable
+   * @returns Updated debt report
+   */
   async updateDebtReport(
     toRoute: mongoose.Types.ObjectId | string,
     createdAt: Date,
@@ -166,25 +193,55 @@ export class DebtReportService {
         999
       );
 
+      // Find the debt report first to calculate totalDebt correctly
+      const debtReport = await DebtReport.findOne({
+        toRoute: toRouteObjId,
+        dateDebtReport: {
+          $gte: startOfDay,
+          $lte: endOfDay,
+        },
+      })
+        .session(session || null)
+        .lean();
+
+      if (!debtReport) {
+        return null;
+      }
+
+      // Calculate new values
+      const newAccountPayable = updateAccountPayable
+        ? (debtReport.accountPayable ?? 0) + cash
+        : (debtReport.accountPayable ?? 0);
+      const newReceivable = updateReceivable
+        ? (debtReport.receivable ?? 0) + cash
+        : (debtReport.receivable ?? 0);
+
+      // Calculate totalDebt using the correct formula:
+      // totalDebt = (costFromRoute + feeCODToRoute + homeDeliveryFromRoute + surchargeToRoute + receivable)
+      //           - (costToRoute + feeCODFromRoute + homeDeliveryToRoute + surchargeFromRoute + accountPayable)
+      //           + openingBalance
+      const A =
+        (debtReport.costFromRoute ?? 0) +
+        (debtReport.feeCODToRoute ?? 0) +
+        (debtReport.homeDeliveryFromRoute ?? 0) +
+        (debtReport.surchargeToRoute ?? 0) +
+        newReceivable;
+      const B =
+        (debtReport.costToRoute ?? 0) +
+        (debtReport.feeCODFromRoute ?? 0) +
+        (debtReport.homeDeliveryToRoute ?? 0) +
+        (debtReport.surchargeFromRoute ?? 0) +
+        newAccountPayable;
+      const newTotalDebt = A - B + (debtReport.openingBalance ?? 0);
+
       const updateQuery: mongoose.UpdateQuery<IDebtReport> = {
         $set: {
           updatedAt: new Date(),
+          accountPayable: newAccountPayable,
+          receivable: newReceivable,
+          totalDebt: newTotalDebt,
         },
       };
-
-      const incFields: Record<string, number> = {};
-
-      if (updateAccountPayable) {
-        incFields.accountPayable = cash;
-      }
-
-      if (updateReceivable) {
-        incFields.receivable = cash;
-      }
-
-      if (Object.keys(incFields).length > 0) {
-        updateQuery.$inc = incFields;
-      }
 
       // Find and update debt report
       const options: mongoose.QueryOptions = {
@@ -199,7 +256,7 @@ export class DebtReportService {
       const updatedDebtReport = await DebtReport.findOneAndUpdate(
         {
           toRoute: toRouteObjId,
-          createdAt: {
+          dateDebtReport: {
             $gte: startOfDay,
             $lte: endOfDay,
           },
@@ -248,7 +305,7 @@ export class DebtReportService {
       // Debt reports already contain daily totals, so we just need to sum them up
       const debtReports = await DebtReport.find({
         toRoute: toRouteObjId,
-        createdAt: { $gte: start, $lte: endOfDay },
+        dateDebtReport: { $gte: start, $lte: endOfDay },
       }).lean();
 
       // Initialize total object
