@@ -210,8 +210,12 @@ export class CronjobService {
         item.totalDebt =
           item.costFromRoute +
           item.feeCODToRoute +
-          item.homeDeliveryFromRoute -
-          (item.costToRoute + item.feeCODFromRoute + item.homeDeliveryToRoute);
+          item.homeDeliveryFromRoute +
+          item.surchargeFromRoute -
+          (item.costToRoute +
+            item.feeCODFromRoute +
+            item.homeDeliveryToRoute +
+            item.surchargeToRoute);
 
         ops.push({ insertOne: { document: item } });
 
@@ -242,17 +246,22 @@ export class CronjobService {
           todayDebt.openingBalance = item.totalDebt;
         }
 
-        if (todayDebt.openingBalance > 0) {
-          todayDebt.accountPayable = Math.abs(todayDebt.openingBalance);
-        } else if (todayDebt.openingBalance < 0) {
-          todayDebt.receivable = Math.abs(todayDebt.openingBalance);
-        }
-
-        todayDebt.totalDebt =
+        const newAccountPayable =
           todayDebt.costFromRoute +
           todayDebt.feeCODToRoute +
-          todayDebt.homeDeliveryFromRoute -
-          (todayDebt.costToRoute + todayDebt.feeCODFromRoute + todayDebt.homeDeliveryToRoute);
+          todayDebt.homeDeliveryFromRoute +
+          todayDebt.surchargeFromRoute;
+
+        const newReceivable =
+          todayDebt.costToRoute +
+          todayDebt.feeCODFromRoute +
+          todayDebt.homeDeliveryToRoute +
+          todayDebt.surchargeToRoute;
+
+        todayDebt.accountPayable = Math.abs(newAccountPayable);
+        todayDebt.receivable = Math.abs(newReceivable);
+
+        todayDebt.totalDebt = newAccountPayable - newReceivable + (todayDebt.openingBalance ?? 0);
 
         ops.push({ insertOne: { document: todayDebt } });
       }
@@ -385,8 +394,13 @@ export class CronjobService {
       debt.totalDebt =
         debt.costFromRoute +
         debt.feeCODToRoute +
-        debt.homeDeliveryFromRoute -
-        (debt.costToRoute + debt.feeCODFromRoute + debt.homeDeliveryToRoute);
+        debt.homeDeliveryFromRoute +
+        debt.surchargeFromRoute -
+        (debt.costToRoute +
+          debt.feeCODFromRoute +
+          debt.homeDeliveryToRoute +
+          debt.surchargeToRoute) +
+        (debt.openingBalance ?? 0);
 
       // Add update operation
       ops.push({
@@ -434,17 +448,19 @@ export class CronjobService {
         todayDebt.openingBalance = debt.totalDebt;
       }
 
-      if (todayDebt.openingBalance > 0) {
-        todayDebt.accountPayable = Math.abs(todayDebt.openingBalance);
-      } else if (todayDebt.openingBalance < 0) {
-        todayDebt.receivable = Math.abs(todayDebt.openingBalance);
-      }
+      const newAccountPayable =
+        debt.costFromRoute +
+        debt.feeCODToRoute +
+        debt.homeDeliveryFromRoute +
+        debt.surchargeFromRoute;
 
-      todayDebt.totalDebt =
-        todayDebt.costFromRoute +
-        todayDebt.feeCODToRoute +
-        todayDebt.homeDeliveryFromRoute -
-        (todayDebt.costToRoute + todayDebt.feeCODFromRoute + todayDebt.homeDeliveryToRoute);
+      const newReceivable =
+        debt.costToRoute + debt.feeCODFromRoute + debt.homeDeliveryToRoute + debt.surchargeToRoute;
+
+      todayDebt.accountPayable = Math.abs(newAccountPayable);
+      todayDebt.receivable = Math.abs(newReceivable);
+
+      todayDebt.totalDebt = newAccountPayable - newReceivable + (todayDebt.openingBalance ?? 0);
 
       ops.push({ insertOne: { document: todayDebt } });
     }
