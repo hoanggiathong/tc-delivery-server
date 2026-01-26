@@ -243,9 +243,9 @@ export class CronjobService {
         }
 
         if (todayDebt.openingBalance > 0) {
-          todayDebt.accountPayable = todayDebt.openingBalance;
+          todayDebt.accountPayable = Math.abs(todayDebt.openingBalance);
         } else if (todayDebt.openingBalance < 0) {
-          todayDebt.receivable = todayDebt.openingBalance;
+          todayDebt.receivable = Math.abs(todayDebt.openingBalance);
         }
 
         todayDebt.totalDebt =
@@ -435,9 +435,9 @@ export class CronjobService {
       }
 
       if (todayDebt.openingBalance > 0) {
-        todayDebt.accountPayable = todayDebt.openingBalance;
+        todayDebt.accountPayable = Math.abs(todayDebt.openingBalance);
       } else if (todayDebt.openingBalance < 0) {
-        todayDebt.receivable = todayDebt.openingBalance;
+        todayDebt.receivable = Math.abs(todayDebt.openingBalance);
       }
 
       todayDebt.totalDebt =
