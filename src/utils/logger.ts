@@ -35,7 +35,7 @@ const customFormat = winston.format.printf(info => {
   }
 
   // Extract metadata (exclude standard winston fields)
-  const { timestamp, level, message: _msg, splat, ...metadata } = info;
+  const { _timestamp, _level, message: _msg, _splat, ...metadata } = info;
 
   // Format metadata if exists
   const metadataStr = Object.keys(metadata).length ? ` ${JSON.stringify(metadata)}` : '';

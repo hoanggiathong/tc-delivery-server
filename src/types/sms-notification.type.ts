@@ -69,7 +69,7 @@ export interface IYourSalesZNSParams {
     gia: string;
     hinh_thuc: string;
     dia_chi: string;
-    '0123456789': string;
+    link_cta: string;
   };
 }
 
@@ -159,6 +159,8 @@ export interface IDeliveryForSMSLean {
   quantity: number;
   quantityReturn: number;
   totalCost: number;
+  senderName: string;
+  receiverName: string;
   sender: {
     _id: string;
     name: string;

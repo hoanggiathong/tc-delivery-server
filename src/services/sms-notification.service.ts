@@ -16,7 +16,7 @@ import {
   IIncompleteQuantityDeliveryForSMS,
 } from '@/types/sms-notification.type';
 import Logger from '@/utils/logger';
-import { getStartOfDayVietnam, getEndOfDayVietnam, convertVietnamToUTC } from '@/utils/date.utils';
+import { getStartOfDayVietnam, getEndOfDayVietnam } from '@/utils/date.utils';
 import { convertPhoneToLocalFormat } from '@/utils/validation-patterns';
 import { UserService } from '@/services/user.service';
 
@@ -69,8 +69,8 @@ export class SMSNotificationService {
     const startDate = getStartOfDayVietnam(startDateCalc); // Set to 00:00:00
 
     query.createdAt = {
-      $gte: convertVietnamToUTC(startDate),
-      $lte: endDate, // Already UTC from schema transform or getEndOfDayVietnam
+      $gte: startDate,
+      $lte: endDate,
     };
 
     const deliveries = await Delivery.find(query)
@@ -133,21 +133,23 @@ export class SMSNotificationService {
     const startDate = getStartOfDayVietnam(startDateCalc); // Set to 00:00:00
 
     query.createdAt = {
-      $gte: convertVietnamToUTC(startDate),
-      $lte: endDate, // Already UTC from schema transform or getEndOfDayVietnam
+      $gte: startDate,
+      $lte: endDate,
     };
 
     const deliveries = await Delivery.find(query)
-      .populate('receiver', 'phone')
+      .populate('receiver', 'name phone')
+      .populate('sender', 'name phone')
       .populate('toRoute', '_id code name address phone')
       .lean<IDeliveryForSMSLean[]>();
 
     return deliveries.map(delivery => ({
       _id: delivery._id.toString(),
       fullCode: delivery.fullCode,
-      receiverName: delivery.receiverName,
+      receiverName: delivery.receiver.name,
       receiverPhone: delivery.receiver?.phone || '',
-      senderName: delivery.senderName,
+      senderName: delivery.sender.name,
+      senderPhone: delivery.sender.phone,
       name: delivery.name,
       collectCost: delivery.collectCost,
       quantity: delivery.quantity,
@@ -173,6 +175,7 @@ export class SMSNotificationService {
   async sendNotification(deliveryId: string, userId: string): Promise<ISMSSendResult> {
     const delivery = await Delivery.findById(deliveryId)
       .populate('sender', 'phone')
+      .populate('receiver', 'phone')
       .populate('toRoute', '_id code name address phone')
       .lean<IDeliveryForSMSLean>();
 
@@ -191,13 +194,13 @@ export class SMSNotificationService {
       return {
         success: false,
         deliveryId,
-        phone: delivery.sender?.phone || '',
+        phone: delivery.receiver?.phone || '',
         errorCode: 'ALREADY_SENT',
         errorMessage: 'Notification already sent for this delivery',
       };
     }
 
-    const phone = delivery.sender?.phone;
+    const phone = delivery.receiver?.phone;
     if (!phone) {
       // Update delivery status to phone error
       await Delivery.findByIdAndUpdate(deliveryId, { smsStatus: SMSStatus.PHONE_ERROR });
@@ -246,7 +249,7 @@ export class SMSNotificationService {
       gia: this.formatCurrency(delivery.totalCost),
       hinh_thuc: delivery.homeDelivery ? 'Giao tận nhà' : 'Giao dịch trực tiếp tại quầy',
       dia_chi: toRoute.address || '',
-      '0123456789': convertPhoneToLocalFormat(toRoute.phone || ''),
+      link_cta: convertPhoneToLocalFormat(toRoute.phone || ''),
     };
 
     // Try Zalo ZNS first
@@ -482,6 +485,10 @@ export class SMSNotificationService {
    */
   private async sendZaloZNS(params: IYourSalesZNSParams): Promise<IYourSalesAPIResponse> {
     try {
+      // Mask tracking code: first 6 chars and last 2 chars with asterisks
+      const code = params.templateData.ma_van_don;
+      const maskedCode = code.length > 8 ? '******' + code.slice(6, -2) + '**' : code;
+
       Logger.info('Sending Zalo ZNS', { phone: params.phone, templateId: params.templateId });
       Logger.info('Sending data:', {
         template_id: params.templateId,
@@ -489,7 +496,7 @@ export class SMSNotificationService {
         data: params.templateData,
         sms_failover: {
           brand: 'VT.GiaPhuoc',
-          msg: 'VT.GiaPhuoc kinh moi quy khach {30} den chi nhanh {30} nhan buu pham {20} tu {30} voi so tien can thanh toan {15}. Giao dich tai quay {100}. Chi tiet vui long lien he {15}.',
+          msg: `VT.GiaPhuoc kinh moi quy khach ${params.templateData.ten_khach_hang} den chi nhanh ${params.templateData.chi_nhanh} nhan buu pham ${maskedCode} tu ${params.templateData.nguoi_gui} voi so tien can thanh toan ${params.templateData.gia}. Giao dich tai quay ${params.templateData.dia_chi}. Chi tiet vui long lien he ${params.templateData.link_cta}.`,
         },
       });
       const response = await fetch(`${this.apiUrl}/public/zns/send`, {
@@ -505,7 +512,7 @@ export class SMSNotificationService {
           data: params.templateData,
           sms_failover: {
             brand: 'VT.GiaPhuoc',
-            msg: 'VT.GiaPhuoc kinh moi quy khach {30} den chi nhanh {30} nhan buu pham {20} tu {30} voi so tien can thanh toan {15}. Giao dich tai quay {100}. Chi tiet vui long lien he {15}.',
+            msg: `VT.GiaPhuoc kinh moi quy khach ${params.templateData.ten_khach_hang} den chi nhanh ${params.templateData.chi_nhanh} nhan buu pham ${maskedCode} tu ${params.templateData.nguoi_gui} voi so tien can thanh toan ${params.templateData.gia}. Giao dich tai quay ${params.templateData.dia_chi}. Chi tiet vui long lien he ${params.templateData.link_cta}.`,
           },
         }),
       });
