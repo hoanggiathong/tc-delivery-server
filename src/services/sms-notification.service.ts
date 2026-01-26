@@ -74,17 +74,18 @@ export class SMSNotificationService {
     };
 
     const deliveries = await Delivery.find(query)
-      .populate('receiver', 'phone')
+      .populate('sender', 'name phone')
+      .populate('receiver', 'name phone')
       .populate('toRoute', '_id code name address phone')
       .lean<IDeliveryForSMSLean[]>();
 
     return deliveries.map(delivery => ({
       _id: delivery._id.toString(),
       fullCode: delivery.fullCode,
-      receiverName: delivery.receiverName,
-      receiverPhone: delivery.receiverPhone || '',
-      senderName: delivery.senderName,
-      senderPhone: delivery.senderPhone,
+      receiverName: delivery.receiver?.name || '',
+      receiverPhone: delivery.receiver?.phone || '',
+      senderName: delivery.sender?.name || '',
+      senderPhone: delivery.sender?.phone || '',
       name: delivery.name,
       collectCost: delivery.collectCost,
       toRoute: {
@@ -482,7 +483,15 @@ export class SMSNotificationService {
   private async sendZaloZNS(params: IYourSalesZNSParams): Promise<IYourSalesAPIResponse> {
     try {
       Logger.info('Sending Zalo ZNS', { phone: params.phone, templateId: params.templateId });
-
+      Logger.info('Sending data:', {
+        template_id: params.templateId,
+        phone: convertPhoneToLocalFormat(params.phone),
+        data: params.templateData,
+        sms_failover: {
+          brand: 'VT.GiaPhuoc',
+          msg: 'VT.GiaPhuoc kinh moi quy khach {30} den chi nhanh {30} nhan buu pham {20} tu {30} voi so tien can thanh toan {15}. Giao dich tai quay {100}. Chi tiet vui long lien he {15}.',
+        },
+      });
       const response = await fetch(`${this.apiUrl}/public/zns/send`, {
         method: 'POST',
         headers: {
@@ -496,7 +505,7 @@ export class SMSNotificationService {
           data: params.templateData,
           sms_failover: {
             brand: 'VT.GiaPhuoc',
-            msg: 'VT.GiaPhuoc kinh moi quy khach den chi nhanh nhan buu pham tu voi so tien can thanh toan. Giao dich tai quay. Chi tiet vui long lien he.',
+            msg: 'VT.GiaPhuoc kinh moi quy khach {30} den chi nhanh {30} nhan buu pham {20} tu {30} voi so tien can thanh toan {15}. Giao dich tai quay {100}. Chi tiet vui long lien he {15}.',
           },
         }),
       });

@@ -61,7 +61,11 @@ export class SMSQueueService {
     // Step 1: Find deliveries that are eligible (smsStatus is null or NOT_SENT)
     const eligibleDeliveries = await Delivery.find({
       _id: { $in: deliveryIds },
-      $or: [{ smsStatus: null }, { smsStatus: SMSStatus.NOT_SENT }],
+      $or: [
+        { smsStatus: null },
+        { smsStatus: SMSStatus.NOT_SENT },
+        { smsStatus: SMSStatus.PHONE_ERROR },
+      ],
     }).select('_id');
 
     const eligibleIds = eligibleDeliveries.map(d => d._id.toString());
@@ -152,7 +156,7 @@ export class SMSQueueService {
 
     const newRetryCount = queueItem.retryCount + 1;
 
-    // If retry count exceeds max, delete the record
+    // If retry count exceeds max, update delivery status and delete the record
     if (newRetryCount >= SMS_QUEUE_CONFIG.MAX_RETRY_COUNT) {
       Logger.warn('SMS Queue item reached max retries, deleting', {
         queueId,
@@ -161,6 +165,12 @@ export class SMSQueueService {
         errorCode,
         errorMessage,
       });
+
+      // Update delivery smsStatus to PHONE_ERROR before deleting queue item
+      await Delivery.findByIdAndUpdate(queueItem.deliveryId, {
+        smsStatus: SMSStatus.PHONE_ERROR,
+      });
+
       await SMSQueue.findByIdAndDelete(queueId);
     } else {
       // Reset to pending for retry
@@ -226,6 +236,7 @@ export class SMSQueueService {
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        Logger.error(`SMS Queue processing error ${errorMessage}`);
         await this.markAsFailed(item._id.toString(), 'PROCESSING_ERROR', errorMessage);
         failedCount++;
         results.push({

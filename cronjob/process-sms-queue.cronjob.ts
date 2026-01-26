@@ -18,6 +18,11 @@ import { SMSQueueService } from '../src/services/sms-queue.service';
 import { SMS_QUEUE_CONFIG } from '../src/types/sms-queue.type';
 import Logger from '../src/utils/logger';
 
+// Import models required for Mongoose population
+import '@/models/customer.model';
+import '@/models/route.model';
+import '@/models/user.model';
+
 let isProcessing = false;
 
 async function processQueue() {
@@ -55,6 +60,10 @@ async function main() {
   }
 
   await mongoose.connect(uri, { dbName: process.env.MONGO_DB || undefined });
+
+  // Disable mongoose debug logs for cronjob
+  mongoose.set('debug', false);
+
   Logger.info('SMS Queue Processor started', {
     interval: `${SMS_QUEUE_CONFIG.PROCESS_INTERVAL}ms`,
   });

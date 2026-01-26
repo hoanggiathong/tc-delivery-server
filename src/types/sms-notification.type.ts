@@ -118,6 +118,7 @@ export interface IEligibleDeliveryForSMS {
   receiverName: string;
   receiverPhone: string;
   senderName: string;
+  senderPhone: string;
   name: string;
   collectCost: number;
   toRoute: {
@@ -148,10 +149,6 @@ export interface IIncompleteQuantityDeliveryForSMS extends IEligibleDeliveryForS
 export interface IDeliveryForSMSLean {
   _id: string;
   fullCode: string;
-  receiverName: string;
-  senderName: string;
-  receiverPhone: string;
-  senderPhone: string;
   name: string;
   collectCost: number;
   homeDelivery?: string;
@@ -164,10 +161,12 @@ export interface IDeliveryForSMSLean {
   totalCost: number;
   sender: {
     _id: string;
+    name: string;
     phone: string;
   };
   receiver: {
     _id: string;
+    name: string;
     phone: string;
   };
   toRoute: {

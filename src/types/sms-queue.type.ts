@@ -14,7 +14,7 @@ export enum SMS_QUEUE_STATUS {
  * SMS Queue Configuration
  */
 export const SMS_QUEUE_CONFIG = {
-  MAX_RETRY_COUNT: 3,
+  MAX_RETRY_COUNT: 2,
   BATCH_SIZE: 10,
   PROCESS_INTERVAL: 5000, // 5 seconds
 };
