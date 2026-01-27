@@ -17,8 +17,11 @@ import mongoose from 'mongoose';
 import { CronjobService } from '../src/services/cron-job.service';
 import { CronLogService } from '../src/services/cron-log.service';
 import { DebtReportService } from '../src/services/debt-report.service';
+import { APP_VERSION, BUILD_TIME } from '../src/version';
 
 async function main() {
+  console.log(`[Debt Cronjob] Version: ${APP_VERSION} | Build: ${BUILD_TIME}`);
+
   const uri = process.env.MONGODB_URI;
 
   if (!uri) {

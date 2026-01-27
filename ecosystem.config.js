@@ -1,32 +1,32 @@
+const APP_VERSION = '1.0.1';
+
 module.exports = {
   apps: [
+    // ==================== CRONJOB UAT ====================
     {
-      name: 'tc-delivery-debt-calculator',
+      name: 'tc-delivery-debt-calculator-uat',
+      version: APP_VERSION,
       script: 'dist/cronjob/calculate-debt.cronjob.js',
       cwd: './',
       instances: 1,
       exec_mode: 'fork',
-      // Environment variables
       env: {
         NODE_ENV: 'uat',
       },
-      // Load environment variables from file
       env_file: '.env.uat',
-      // Logging
-      log_file: './logs/debt-calculator-combined.log',
-      out_file: './logs/debt-calculator-out.log',
-      error_file: './logs/debt-calculator-error.log',
+      log_file: './logs/debt-calculator-uat-combined.log',
+      out_file: './logs/debt-calculator-uat-out.log',
+      error_file: './logs/debt-calculator-uat-error.log',
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
-      // Cron settings
-      cron_restart: '0 */2 * * *', // Run every 2 hours
+      cron_restart: '0 0,2 * * *', // Run at 0:00 and 2:00 AM
       watch: false,
       autorestart: false,
       max_memory_restart: '1G',
-      // Health check
       health_check_grace_period: 10000,
     },
     {
       name: 'tc-delivery-sms-queue-uat',
+      version: APP_VERSION,
       script: 'dist/cronjob/process-sms-queue.cronjob.js',
       cwd: './',
       instances: 1,
@@ -53,8 +53,55 @@ module.exports = {
       // Health check
       health_check_grace_period: 10000,
     },
+    // ==================== CRONJOB PROD ====================
+    {
+      name: 'tc-delivery-debt-calculator-prod',
+      version: APP_VERSION,
+      script: 'dist/cronjob/calculate-debt.cronjob.js',
+      cwd: './',
+      instances: 1,
+      exec_mode: 'fork',
+      env: {
+        NODE_ENV: 'production',
+      },
+      env_file: '.env.production',
+      log_file: './logs/debt-calculator-prod-combined.log',
+      out_file: './logs/debt-calculator-prod-out.log',
+      error_file: './logs/debt-calculator-prod-error.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      cron_restart: '0 0,2 * * *',
+      watch: false,
+      autorestart: false,
+      max_memory_restart: '1G',
+      health_check_grace_period: 10000,
+    },
+    {
+      name: 'tc-delivery-sms-queue-prod',
+      version: APP_VERSION,
+      script: 'dist/cronjob/process-sms-queue.cronjob.js',
+      cwd: './',
+      instances: 1,
+      exec_mode: 'fork',
+      env: {
+        NODE_ENV: 'production',
+      },
+      env_file: '.env.production',
+      log_file: './logs/sms-queue-prod-combined.log',
+      out_file: './logs/sms-queue-prod-out.log',
+      error_file: './logs/sms-queue-prod-error.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      watch: false,
+      autorestart: true,
+      max_memory_restart: '512M',
+      restart_delay: 1000,
+      max_restarts: 10,
+      min_uptime: '10s',
+      health_check_grace_period: 10000,
+    },
+    // ==================== SERVER ====================
     {
       name: 'tc-delivery-server-prod',
+      version: APP_VERSION,
       script: 'dist/src/index.js',
       cwd: './',
       instances: 1, // Number of instances (can increase to 'max' or specific number)
@@ -95,6 +142,7 @@ module.exports = {
     },
     {
       name: 'tc-delivery-server-uat',
+      version: APP_VERSION,
       script: 'dist/src/index.js',
       cwd: './',
       instances: 1, // Number of instances for UAT
