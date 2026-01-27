@@ -336,6 +336,7 @@ export const mockMoneyDeliveryCostReportForIntegration = {
     {
       id: 'moneyDelivery1',
       code: '2401150001',
+      fullCode: 'T1-2401150001',
       date: new Date('2024-01-15'),
       sender: {
         name: 'Nguyen Van A',
@@ -363,6 +364,7 @@ export const mockMoneyDeliveryCostReportForIntegration = {
     {
       id: 'moneyDelivery2',
       code: '2401150002',
+      fullCode: 'T1-2401150002',
       date: new Date('2024-01-15'),
       sender: {
         name: 'Le Van C',
@@ -391,6 +393,7 @@ export const mockMoneyDeliveryCostReportForIntegration = {
     {
       id: 'moneyDelivery3',
       code: '2401150003',
+      fullCode: 'T1-2401150003',
       date: new Date('2024-01-15'),
       sender: {
         name: 'Hoang Van E',

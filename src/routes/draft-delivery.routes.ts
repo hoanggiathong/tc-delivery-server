@@ -93,6 +93,77 @@ router.get('/:id', validate(getDraftDeliveryByIdSchema), draftDeliveryController
 // Update a draft
 router.put('/:id', validate(updateDraftDeliverySchema), draftDeliveryController.updateDraft);
 
+/**
+ * @swagger
+ * /api/draft-deliveries/{id}:
+ *   delete:
+ *     summary: Delete a draft delivery
+ *     description: Delete a draft delivery by ID. Only the owner can delete their own drafts.
+ *     tags: [Draft Deliveries]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Draft delivery ID (MongoDB ObjectId)
+ *         example: "507f1f77bcf86cd799439011"
+ *     responses:
+ *       200:
+ *         description: Draft deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Draft deleted successfully"
+ *       400:
+ *         description: Bad request - Invalid ID format
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Invalid ObjectId format"
+ *       401:
+ *         description: Unauthorized - Missing or invalid token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Unauthorized"
+ *       404:
+ *         description: Draft not found or no permission
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Draft not found or you do not have permission to delete it"
+ */
 // Delete a draft
 router.delete('/:id', validate(deleteDraftDeliverySchema), draftDeliveryController.deleteDraft);
 

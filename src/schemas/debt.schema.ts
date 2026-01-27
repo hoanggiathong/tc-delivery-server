@@ -1,6 +1,6 @@
 import { SORT_BY_DEBT } from '@/const/debt.const';
-import z from 'zod';
 import { OBJECTID_PATTERN, VALIDATION_MESSAGES } from '@/utils/validation-patterns';
+import z from 'zod';
 
 const SortBySchema = z.union([
   z.literal(SORT_BY_DEBT.TO_ROUTE),
@@ -8,13 +8,13 @@ const SortBySchema = z.union([
 ]);
 
 const keySortOptionalSchema = z.preprocess(
-  v => (v === null || String(v).trim() === '' ? undefined : String(v).trim()),
+  v => (v === null || v === undefined || String(v).trim() === '' ? undefined : String(v).trim()),
   SortBySchema.optional()
 );
 
 const typeSortOptionalSchema = z.preprocess(
   v => {
-    if (v === null || String(v).trim() === '') {
+    if (v === null || v === undefined || String(v).trim() === '') {
       return undefined;
     }
     const s = String(v).toLowerCase().trim();
@@ -29,6 +29,19 @@ const typeSortOptionalSchema = z.preprocess(
   z
     .number()
     .refine(n => n === 1 || n === -1, 'typeSort must be one of asc, desc, 1, -1')
+    .optional()
+);
+
+const fromRouteIdOptionalSchema = z.preprocess(
+  v => {
+    if (v === null || v === undefined || String(v).trim() === '') {
+      return undefined;
+    }
+    return String(v).trim();
+  },
+  z
+    .string()
+    .regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format')
     .optional()
 );
 
@@ -49,17 +62,20 @@ export const getListDebtSchema = z
         .string()
         .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid end date in ISO format')
         .transform(val => new Date(val)),
-      fromRouteId: z
-        .string()
-        .min(1, 'From route ID is required')
-        .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
-        .trim(),
       keySort: keySortOptionalSchema,
       typeSort: typeSortOptionalSchema,
       key: z.string().trim().max(120).optional(),
+      fromRouteId: fromRouteIdOptionalSchema,
     }),
   })
   .refine(data => data.query.startDate <= data.query.endDate, {
     message: 'Start date must be before or equal to end date',
     path: ['query', 'startDate'],
   });
+
+// Schema for get debt by ID
+export const getDebtByIdSchema = z.object({
+  params: z.object({
+    id: z.string().regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID),
+  }),
+});

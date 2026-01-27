@@ -67,6 +67,9 @@ export interface IMoneyDeliveryCreateRequest {
   type?: MoneyDeliveryType;
   deliveryId?: string;
   fromRouteId?: string;
+  fullCode?: string;
+  code?: string;
+  subCode?: string;
 }
 
 export interface IMoneyDeliveryUpdateRequest {
@@ -198,10 +201,10 @@ export interface IMoneyDeliveryLeanPopulated {
   status: MoneyDeliveryStatus;
   type: MoneyDeliveryType;
   deliveryId?: string;
-  createdByUser: {
+  createdByUser?: {
     _id: string;
     username: string;
-  };
+  } | null;
   createdAt: Date;
   updatedAt: Date;
   dateReturn?: Date;
@@ -316,6 +319,7 @@ export interface IMoneyDeliveryCostReportSummary {
 export interface IMoneyDeliveryReportItem {
   id: string;
   code: string;
+  fullCode: string;
   date: Date;
   sender: {
     name: string;

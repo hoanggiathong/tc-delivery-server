@@ -1,14 +1,13 @@
 import { DebtManagementController } from '@/controllers/debt-management.controller';
 import { authenticateToken } from '@/middlewares/auth.middleware';
-import { requireRole } from '@/middlewares/role.middleware';
 import { validate } from '@/middlewares/validation.middleware';
 import {
   createDebtManagementSchema,
-  debtManagementParamsSchema,
+  deleteDebtManagementSchema,
+  exportReportDebtAndDebtManagementSchema,
   getListPaymentDebtManagementSchema,
   getListReceiptDebtManagementSchema,
 } from '@/schemas/debt-management.schema';
-import { UserRole } from '@/types/user.type';
 import { Router } from 'express';
 
 const router = Router();
@@ -16,7 +15,7 @@ const debtManagementController = new DebtManagementController();
 
 // All debt routes require authentication (any role)
 router.use(authenticateToken);
-router.use(requireRole([UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN]));
+// router.use(requireRole([UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN, UserRole.USER]));
 
 router.get(
   '/get-list-payment',
@@ -30,15 +29,21 @@ router.get(
   debtManagementController.getListReceipt
 );
 
+router.get(
+  '/export-report-debt-and-debt-management',
+  validate(exportReportDebtAndDebtManagementSchema),
+  debtManagementController.exportReportDebtAndDebtManagement
+);
+
 router.post(
   '/create',
   validate(createDebtManagementSchema),
   debtManagementController.createDebtManagement
 );
 
-router.delete(
+router.put(
   '/:id',
-  validate(debtManagementParamsSchema),
+  validate(deleteDebtManagementSchema),
   debtManagementController.deleteDebtManagement
 );
 

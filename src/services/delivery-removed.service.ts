@@ -77,6 +77,7 @@ export class RemovedDeliveryService {
         isReturn: delivery.isReturn,
         inventory: delivery.inventory,
         smsType: delivery.smsType,
+        smsStatus: delivery.smsStatus,
         timeToSendSMS: delivery.timeToSendSMS,
         upItems: delivery.upItems,
         downItems: delivery.downItems,

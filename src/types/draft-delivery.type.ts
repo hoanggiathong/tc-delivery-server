@@ -28,6 +28,7 @@ export interface IDraftDeliveryInput {
     height?: number;
     isOverweight?: boolean;
     convertedWeight?: number;
+    goodsType?: string;
   };
   notes?: string;
   paymentType?: PaymentType;
@@ -73,6 +74,7 @@ export interface IDraftDeliveryResponse {
     height?: number;
     isOverweight?: boolean;
     convertedWeight?: number;
+    goodsType?: string;
   };
   notes?: string;
   totalCost: number;

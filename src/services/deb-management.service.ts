@@ -1,41 +1,89 @@
-import { DEBT_MANAGEMENT_TYPE, SORT_BY } from '@/const/debt-management.const';
+import {
+  DEBT_MANAGEMENT_TYPE,
+  DEBT_MANAGEMENT_TYPE_REPORT,
+  SORT_BY,
+} from '@/const/debt-management.const';
 import { DebtManagement } from '@/models/debt-management.model';
 import { Debt } from '@/models/debt.model';
 import { Route } from '@/models/route.model';
-import { ICreateDebtManagementRequest } from '@/types/debt-management.type';
+import {
+  ICreateDebtManagementRequest,
+  IDebtManagement,
+  IGetListPaymentDebtManagementResponse,
+  IGetListReceiptDebtManagementResponse,
+} from '@/types/debt-management.type';
+import { IDebtTotal, IGetListDebtResponse } from '@/types/debt.type';
+import { Request } from 'express';
 import mongoose, { Types } from 'mongoose';
+import { DebtReportService } from './debt-report.service';
+import { DebtService } from './debt.service';
+import { UserService } from './user.service';
 
 export class DebtManagementService {
-  async getListPaymentDebtMangement(req: any): Promise<any[]> {
-    const { startDate, endDate, toRouteId, keySort } = req.query;
+  private userService: UserService;
+  private debtReportService: DebtReportService;
+  private debtService: DebtService;
+  constructor() {
+    this.userService = new UserService();
+    this.debtReportService = new DebtReportService();
+    this.debtService = new DebtService();
+  }
 
-    let { typeSort } = req.query;
+  async getListPaymentDebtMangement(
+    req: Request,
+    userId: string
+  ): Promise<IGetListPaymentDebtManagementResponse> {
+    const { startDate, endDate, keySort, toRouteId } = req.query;
 
-    const start = new Date(String(startDate));
+    const { typeSort } = req.query;
 
-    // Set end date to end of day
-    const endOfDay = new Date(endDate);
-    endOfDay.setHours(23, 59, 59, 999);
+    const startOfDate = new Date(String(startDate));
+    const endOfDate = new Date(String(endDate));
+    const start = new Date(
+      startOfDate.getFullYear(),
+      startOfDate.getMonth(),
+      startOfDate.getDate(),
+      0,
+      0,
+      0,
+      0
+    );
+    const endOfDay = new Date(
+      endOfDate.getFullYear(),
+      endOfDate.getMonth(),
+      endOfDate.getDate(),
+      23,
+      59,
+      59,
+      999
+    );
 
-    const toId = new Types.ObjectId(String(toRouteId));
-    let sort = {};
+    const fromRouteId = await this.userService.getUserSelectedRouteId(userId);
+    let sort: Record<string, 1 | -1> = {};
 
-    console.log('typeSort :>> ', typeSort);
+    let typeSortValue: 1 | -1 | undefined = undefined;
+    if (typeSort) {
+      const numValue = Number(typeSort);
+      if (numValue === 1 || numValue === -1) {
+        typeSortValue = numValue;
+      }
+    }
+
     //handle sort
     if (keySort) {
-      if (!typeSort) {
-        typeSort = 1;
+      if (!typeSortValue) {
+        typeSortValue = 1;
       }
 
       switch (keySort) {
         case SORT_BY.CASH_DATE:
-          sort = { cashDate: typeSort };
+          sort = { cashDate: typeSortValue };
           break;
         case SORT_BY.CASH:
-          sort = { cash: typeSort };
+          sort = { cash: typeSortValue };
           break;
         case SORT_BY.TO_ROUTE:
-          sort = { 'toRoute.name': typeSort };
+          sort = { 'toRoute.name': typeSortValue };
           break;
         default:
           sort = { 'toRoute.name': 1, createdAt: 1 };
@@ -84,14 +132,20 @@ export class DebtManagementService {
       //   ])
       //   .lean();
 
+      const matchStage: Record<string, unknown> = {
+        fromRoute: new Types.ObjectId(fromRouteId),
+        type: DEBT_MANAGEMENT_TYPE.PAYMENT,
+        createdAt: { $gte: start, $lte: endOfDay },
+        deleted: false,
+      };
+
+      if (toRouteId) {
+        matchStage.toRoute = new Types.ObjectId(String(toRouteId));
+      }
+
       const pipeline = [
         {
-          $match: {
-            toRoute: toId,
-            type: DEBT_MANAGEMENT_TYPE.RECEIPT,
-            cashDate: { $gte: start, $lte: endOfDay },
-            deleted: false,
-          },
+          $match: matchStage,
         },
         // join fromRoute
         {
@@ -116,23 +170,26 @@ export class DebtManagementService {
         // project các field cần trả
         {
           $project: {
-            _id: 1,
-            fromRoute: { _id: '$fromRoute._id', name: '$fromRoute.name' },
-            toRoute: { _id: '$toRoute._id', name: '$toRoute.name' },
+            id: '$_id',
+            fromRoute: { id: '$fromRoute._id', name: '$fromRoute.name' },
+            toRoute: { id: '$toRoute._id', name: '$toRoute.name' },
             content: 1,
             type: 1,
             cash: 1,
             cashDate: 1,
             deleted: 1,
+            reason: 1,
             createdAt: 1,
             updatedAt: 1,
           },
         },
         { $sort: sort },
       ];
-      const result = await DebtManagement.aggregate(pipeline).exec();
-      console.log('result :>> ', result);
-      return result;
+      const result = (await DebtManagement.aggregate(pipeline).exec()) as IDebtManagement[];
+
+      return {
+        data: result,
+      };
     } catch (error) {
       if (error instanceof Error) {
         throw error;
@@ -141,28 +198,59 @@ export class DebtManagementService {
     }
   }
 
-  async getListReceiptDebtMangement(req: any): Promise<any[]> {
-    const { startDate, endDate, fromRouteId, keySort, typeSort } = req.query;
+  async getListReceiptDebtMangement(
+    req: Request,
+    userId: string
+  ): Promise<IGetListReceiptDebtManagementResponse> {
+    const { startDate, endDate, keySort, typeSort, fromRouteId } = req.query;
 
-    const start = new Date(String(startDate));
-    // Set end date to end of day
-    const endOfDay = new Date(endDate);
-    endOfDay.setHours(23, 59, 59, 999);
+    const startOfDate = new Date(String(startDate));
+    const endOfDate = new Date(String(endDate));
+    const start = new Date(
+      startOfDate.getFullYear(),
+      startOfDate.getMonth(),
+      startOfDate.getDate(),
+      0,
+      0,
+      0,
+      0
+    );
+    const endOfDay = new Date(
+      endOfDate.getFullYear(),
+      endOfDate.getMonth(),
+      endOfDate.getDate(),
+      23,
+      59,
+      59,
+      999
+    );
 
-    const fromId = new Types.ObjectId(String(fromRouteId));
-    let sort = {};
+    const toRouteId = await this.userService.getUserSelectedRouteId(userId);
+    let sort: Record<string, 1 | -1> = {};
+
+    let typeSortValue: 1 | -1 | undefined = undefined;
+    if (typeSort) {
+      const numValue = Number(typeSort);
+      if (numValue === 1 || numValue === -1) {
+        typeSortValue = numValue;
+      }
+    }
 
     //handle sort
     if (keySort) {
+      if (!typeSortValue) {
+        typeSortValue = 1;
+      }
+
       switch (keySort) {
         case SORT_BY.CASH_DATE:
-          sort = { cashDate: typeSort };
+          sort = { cashDate: typeSortValue };
           break;
         case SORT_BY.CASH:
-          sort = { cash: typeSort };
+          sort = { cash: typeSortValue };
           break;
         case SORT_BY.TO_ROUTE:
-          sort = { 'toRoute.name': typeSort };
+          sort = { 'toRoute.name': typeSortValue };
           break;
         default:
           sort = { 'toRoute.name': 1, createdAt: 1 };
@@ -171,17 +259,24 @@ export class DebtManagementService {
     } else {
       sort = { 'toRoute.name': 1, createdAt: 1 };
     }
-
-    console.log('sort :>> ', sort);
     try {
+      const toRouteIdObj = new Types.ObjectId(toRouteId);
+
+      const matchStage: Record<string, unknown> = {
+        toRoute: toRouteIdObj,
+        type: DEBT_MANAGEMENT_TYPE.RECEIPT,
+        cashDate: { $gte: start, $lte: endOfDay },
+        deleted: false,
+      };
+
+      // Add fromRoute filter if fromRouteId is provided
+      if (fromRouteId) {
+        matchStage.fromRoute = new Types.ObjectId(String(fromRouteId));
+      }
+
       const pipeline = [
         {
-          $match: {
-            fromRoute: fromId,
-            type: DEBT_MANAGEMENT_TYPE.RECEIPT,
-            cashDate: { $gte: start, $lte: endOfDay },
-            deleted: false,
-          },
+          $match: matchStage,
         },
         // join fromRoute
         {
@@ -205,14 +300,15 @@ export class DebtManagementService {
         { $unwind: { path: '$toRoute', preserveNullAndEmptyArrays: true } },
         {
           $project: {
-            _id: 1,
-            fromRoute: { _id: '$fromRoute._id', name: '$fromRoute.name' },
-            toRoute: { _id: '$toRoute._id', name: '$toRoute.name' },
+            id: '$_id',
+            fromRoute: { id: '$fromRoute._id', name: '$fromRoute.name' },
+            toRoute: { id: '$toRoute._id', name: '$toRoute.name' },
             content: 1,
             type: 1,
             cash: 1,
             cashDate: 1,
             deleted: 1,
+            reason: 1,
             createdAt: 1,
             updatedAt: 1,
           },
@@ -220,9 +316,11 @@ export class DebtManagementService {
         { $sort: sort },
       ];
 
-      const result = await DebtManagement.aggregate(pipeline).exec();
+      const result = (await DebtManagement.aggregate(pipeline).exec()) as IDebtManagement[];
 
-      return result;
+      return {
+        data: result,
+      };
     } catch (error) {
       if (error instanceof Error) {
         throw error;
@@ -231,148 +329,503 @@ export class DebtManagementService {
     }
   }
 
-  async createDebtManagement(data: ICreateDebtManagementRequest): Promise<any> {
+  async createDebtManagement(
+    data: ICreateDebtManagementRequest,
+    userId: string
+  ): Promise<IDebtManagement[]> {
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
+      const toRouteId = await this.userService.getUserSelectedRouteId(userId);
+
       // Validate fromRoute and toRoute exist
       const [fromRoute, toRoute] = await Promise.all([
         Route.findById(data.fromRoute),
-        Route.findById(data.toRoute),
+        Route.findById(toRouteId),
       ]);
 
       if (!fromRoute) {
-        throw new Error('User selected route not found');
+        throw new Error('From route not found');
       }
+
       if (!toRoute) {
         throw new Error('To route not found');
       }
 
-      const dataDebtManagement = new DebtManagement(data);
-      const result = await dataDebtManagement.save({ session: session });
+      if (data.fromRoute.toString() === toRouteId.toString()) {
+        throw new Error('Cannot create debt management for the same route');
+      }
 
-      const paymentDebt = -data.cash;
-      const receiptDebt = data.cash;
+      const fromRouteIdObj = new Types.ObjectId(String(data.fromRoute));
+      const toRouteIdObj = new Types.ObjectId(String(toRouteId));
 
-      await Promise.all([
-        // logic handle debt table
-        // fromRoute o trong bang debt-management tuc la tram nay dang no tram toRoute
-        // suy ra cash se la so duong
-        // nghia la tram toRoute o bang debt-mangement se la fromRoute o bang debts
-        await Debt.findOneAndUpdate(
-          {
-            fromRoute: data.fromRoute,
-            toRoute: data.toRoute,
-          },
-          {
-            paymentDebt: paymentDebt,
-          },
-          {
-            session: session,
-            new: true,
-            upsert: true,
-            runValidators: true,
-            sort: {
-              createdAt: -1,
-            },
-          }
-        ),
-        await Debt.findOneAndUpdate(
-          {
-            fromRoute: data.toRoute,
-            toRoute: data.fromRoute,
-          },
-          {
-            paymentDebt: receiptDebt,
-          },
-          {
-            session: session,
-            new: true,
-            upsert: true,
-            runValidators: true,
-            sort: {
-              createdAt: -1,
-            },
-          }
-        ),
-      ]);
+      // Create 2 records: RECEIPT and PAYMENT
+      const receiptDebtManagement = new DebtManagement({
+        fromRoute: data.fromRoute,
+        toRoute: toRouteId,
+        cash: data.cash,
+        cashDate: data.cashDate,
+        content: data.content,
+        type: DEBT_MANAGEMENT_TYPE.RECEIPT,
+      });
+
+      const paymentDebtManagement = new DebtManagement({
+        fromRoute: data.fromRoute,
+        toRoute: toRouteId,
+        cash: data.cash,
+        cashDate: data.cashDate,
+        content: data.content,
+        type: DEBT_MANAGEMENT_TYPE.PAYMENT,
+      });
+
+      const receiptResult = await receiptDebtManagement.save({ session: session });
+      const paymentResult = await paymentDebtManagement.save({ session: session });
+
+      const today = new Date();
+      const startOfDay = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate(),
+        0,
+        0,
+        0,
+        0
+      );
+      const endOfDay = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate(),
+        23,
+        59,
+        59,
+        999
+      );
+
+      const currentDebt1 = await Debt.findOne({
+        fromRoute: fromRouteIdObj,
+        toRoute: toRouteIdObj,
+        dateDebt: {
+          $gte: startOfDay,
+          $lte: endOfDay,
+        },
+      })
+        .sort({ createdAt: -1 })
+        .session(session)
+        .lean();
+
+      const currentDebt2 = await Debt.findOne({
+        fromRoute: toRouteIdObj,
+        toRoute: fromRouteIdObj,
+        dateDebt: {
+          $gte: startOfDay,
+          $lte: endOfDay,
+        },
+      })
+        .sort({ createdAt: -1 })
+        .session(session)
+        .lean();
+
+      if (!currentDebt1 || !currentDebt2) {
+        throw new Error(
+          `Debt record not found for the day. Please ensure cronjob has run for today (${today.toISOString().split('T')[0]}).`
+        );
+      }
+
+      // Calculate totalDebt for first debt record (fromRoute -> toRoute)
+      // Formula: (A - B) + C
+      // A = Tiền đi + NC về + GTN đi + Phụ phí đi + Thu
+      // B = Tiền về + NC đi + GTN về + Phụ phí về + Chi
+      // C = Tồn đầu
+      const costFromRoute1 = currentDebt1.costFromRoute ?? 0;
+      const feeCODToRoute1 = currentDebt1.feeCODToRoute ?? 0;
+      const homeDeliveryFromRoute1 = currentDebt1.homeDeliveryFromRoute ?? 0;
+      const surchargeToRoute1 = currentDebt1.surchargeToRoute ?? 0;
+      const receivable1 = (currentDebt1.receivable ?? 0) + data.cash; // Thu increases
+      const costToRoute1 = currentDebt1.costToRoute ?? 0;
+      const feeCODFromRoute1 = currentDebt1.feeCODFromRoute ?? 0;
+      const homeDeliveryToRoute1 = currentDebt1.homeDeliveryToRoute ?? 0; // GTN về
+      const surchargeFromRoute1 = currentDebt1.surchargeFromRoute ?? 0;
+      const accountPayable1 = currentDebt1.accountPayable ?? 0;
+
+      const openingBalance1 =
+        currentDebt1.openingBalance !== null && currentDebt1.openingBalance !== undefined
+          ? currentDebt1.openingBalance
+          : 0;
+
+      const A1 =
+        costFromRoute1 + feeCODToRoute1 + homeDeliveryFromRoute1 + surchargeToRoute1 + receivable1;
+      const B1 =
+        costToRoute1 +
+        feeCODFromRoute1 +
+        homeDeliveryToRoute1 +
+        surchargeFromRoute1 +
+        accountPayable1;
+      const totalDebt1 = A1 - B1 + openingBalance1;
+
+      // Calculate totalDebt for second debt record (toRoute -> fromRoute)
+      const costFromRoute2 = currentDebt2.costFromRoute ?? 0;
+      const feeCODToRoute2 = currentDebt2.feeCODToRoute ?? 0;
+      const homeDeliveryFromRoute2 = currentDebt2.homeDeliveryFromRoute ?? 0;
+      const surchargeToRoute2 = currentDebt2.surchargeToRoute ?? 0;
+      const receivable2 = currentDebt2.receivable ?? 0;
+      const costToRoute2 = currentDebt2.costToRoute ?? 0;
+      const feeCODFromRoute2 = currentDebt2.feeCODFromRoute ?? 0;
+      const homeDeliveryToRoute2 = currentDebt2.homeDeliveryToRoute ?? 0; // GTN về
+      const surchargeFromRoute2 = currentDebt2.surchargeFromRoute ?? 0;
+      const accountPayable2 = (currentDebt2.accountPayable ?? 0) + data.cash; // Chi increases
+
+      const openingBalance2 =
+        currentDebt2.openingBalance !== null && currentDebt2.openingBalance !== undefined
+          ? currentDebt2.openingBalance
+          : 0;
+
+      const A2 =
+        costFromRoute2 + feeCODToRoute2 + homeDeliveryFromRoute2 + surchargeToRoute2 + receivable2;
+      const B2 =
+        costToRoute2 +
+        feeCODFromRoute2 +
+        homeDeliveryToRoute2 +
+        surchargeFromRoute2 +
+        accountPayable2;
+      const totalDebt2 = A2 - B2 + openingBalance2;
+
+      // Update debt records for the day (cronjob ensures they exist)
+      await Debt.findOneAndUpdate(
+        {
+          _id: currentDebt1._id,
+        },
+        {
+          totalDebt: totalDebt1,
+          receivable: receivable1,
+        },
+        {
+          session: session,
+          new: true,
+          runValidators: true,
+        }
+      );
+
+      await Debt.findOneAndUpdate(
+        {
+          _id: currentDebt2._id,
+        },
+        {
+          totalDebt: totalDebt2,
+          accountPayable: accountPayable2,
+        },
+        {
+          session: session,
+          new: true,
+          runValidators: true,
+        }
+      );
+
+      // Update debt report service
+      // Update both accountPayable and receivable
+      await this.debtReportService.updateDebtReport(
+        toRouteId,
+        today,
+        data.cash,
+        session,
+        false,
+        true
+      );
+      await this.debtReportService.updateDebtReport(
+        data.fromRoute,
+        today,
+        data.cash,
+        session,
+        true,
+        false
+      );
+
+      // Populate routes before committing transaction
+      await receiptResult.populate('fromRoute', 'name');
+      await receiptResult.populate('toRoute', 'name');
+      await paymentResult.populate('fromRoute', 'name');
+      await paymentResult.populate('toRoute', 'name');
 
       await session.commitTransaction();
-      session.endSession();
+      await session.endSession();
 
-      return result;
+      // Transform both results
+      const transformDebtManagement = (result: {
+        toObject: () => {
+          _id: unknown;
+          fromRoute: { _id?: unknown; name?: string } | unknown;
+          toRoute: { _id?: unknown; name?: string } | unknown;
+          content: string;
+          type: string;
+          cash: number;
+          cashDate: Date;
+          deleted: boolean;
+          createdAt: Date;
+          updatedAt: Date;
+          deletedAt?: Date;
+          __v?: number;
+        };
+      }): IDebtManagement => {
+        const populatedResult = result.toObject();
+        const fromRouteObj = populatedResult.fromRoute as
+          | { _id?: unknown; name?: string }
+          | unknown;
+        const fromRouteIdValue =
+          (fromRouteObj as { _id?: unknown })?._id || (fromRouteObj as unknown);
+        const fromRouteNameValue = (fromRouteObj as { name?: string })?.name || '';
+        const toRouteObj = populatedResult.toRoute as { _id?: unknown; name?: string } | unknown;
+        const toRouteIdValue = (toRouteObj as { _id?: unknown })?._id || (toRouteObj as unknown);
+        const toRouteNameValue = (toRouteObj as { name?: string })?.name || '';
+
+        return {
+          id: populatedResult._id,
+          fromRoute: {
+            id: fromRouteIdValue,
+            name: fromRouteNameValue,
+          },
+          toRoute: {
+            id: toRouteIdValue,
+            name: toRouteNameValue,
+          },
+          content: populatedResult.content,
+          type: populatedResult.type,
+          cash: populatedResult.cash,
+          cashDate: populatedResult.cashDate,
+          deleted: populatedResult.deleted,
+          createdAt: populatedResult.createdAt,
+          updatedAt: populatedResult.updatedAt,
+          deletedAt: populatedResult.deletedAt,
+          __v: populatedResult.__v,
+        } as IDebtManagement;
+      };
+
+      return [transformDebtManagement(receiptResult), transformDebtManagement(paymentResult)];
     } catch (error) {
-      await session.commitTransaction();
+      await session.abortTransaction();
       session.endSession();
 
       if (error instanceof Error) {
         throw error;
       }
-      throw new Error('get list receipt debt management failed');
+      throw new Error('create debt management failed');
     }
   }
 
-  /**
-   * Delete debt management by ID
-   */
-  async deleteDebtManagement(id: string): Promise<void> {
+  async deleteDebtManagement(id: string, reason: string): Promise<void> {
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
-      const debtManagement = await DebtManagement.findById(id);
+      const debtManagement = await DebtManagement.findById(id).session(session);
 
       if (!debtManagement) {
         throw new Error('Debt Management not found');
       }
 
-      await Promise.all([
-        await DebtManagement.updateOne(
-          {
-            _id: id,
-          },
-          {
-            deleted: true,
-            deletedAt: new Date(),
-          },
-          {
-            session: session,
-          }
-        ),
+      if (debtManagement.deleted) {
+        throw new Error('Debt Management already deleted');
+      }
 
-        await Debt.updateOne(
-          {
-            fromRoute: debtManagement.toRoute,
-            toRoute: debtManagement.fromRoute,
-          },
-          {
-            paymentDebt: 0,
-          },
-          {
-            session: session,
-            sort: {
-              createdAt: -1,
-            },
-          }
-        ),
+      const cash = debtManagement.cash;
+      const fromRoute = debtManagement.fromRoute;
+      const toRoute = debtManagement.toRoute;
+      const cashDate = debtManagement.cashDate;
 
-        await Debt.updateOne(
-          {
-            fromRoute: debtManagement.fromRoute,
-            toRoute: debtManagement.toRoute,
-          },
-          {
-            paymentDebt: 0,
-          },
-          {
-            session: session,
-            sort: {
-              createdAt: -1,
-            },
-          }
-        ),
-      ]);
+      // Check if createdAt is today - only allow deletion of today's records
+      const today = new Date();
+      const startOfToday = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate(),
+        0,
+        0,
+        0,
+        0
+      );
+      const endOfToday = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate(),
+        23,
+        59,
+        59,
+        999
+      );
+
+      const createdAt = new Date(debtManagement.createdAt);
+      if (createdAt < startOfToday || createdAt > endOfToday) {
+        throw new Error(
+          "Cannot delete debt management records from previous days. Only today's records can be deleted."
+        );
+      }
+
+      // Find all DebtManagement records with the same cash, fromRoute, toRoute, and cashDate
+      // This matches the logic where createDebtManagement creates 2 records (RECEIPT and PAYMENT)
+      const debtManagementRecords = await DebtManagement.find({
+        cash: cash,
+        fromRoute: fromRoute,
+        toRoute: toRoute,
+        cashDate: cashDate,
+        deleted: false,
+      })
+        .session(session)
+        .lean();
+
+      if (debtManagementRecords.length === 0) {
+        throw new Error('No matching Debt Management records found');
+      }
+
+      // Mark all matching records as deleted
+      await DebtManagement.updateMany(
+        {
+          cash: cash,
+          fromRoute: fromRoute,
+          toRoute: toRoute,
+          cashDate: cashDate,
+          deleted: false,
+        },
+        {
+          deleted: true,
+          deletedAt: new Date(),
+          reason: reason,
+        },
+        {
+          session: session,
+        }
+      );
+
+      // Find the same two debt records as in createDebtManagement
+      const currentDebt1 = await Debt.findOne({
+        fromRoute: fromRoute,
+        toRoute: toRoute,
+        dateDebt: {
+          $gte: startOfToday,
+          $lte: endOfToday,
+        },
+      })
+        .sort({ createdAt: -1 })
+        .session(session)
+        .lean();
+
+      const currentDebt2 = await Debt.findOne({
+        fromRoute: toRoute,
+        toRoute: fromRoute,
+        dateDebt: {
+          $gte: startOfToday,
+          $lte: endOfToday,
+        },
+      })
+        .sort({ createdAt: -1 })
+        .session(session)
+        .lean();
+
+      if (!currentDebt1 || !currentDebt2) {
+        throw new Error(
+          `Debt record not found for the day. Please ensure cronjob has run for today (${today.toISOString().split('T')[0]}).`
+        );
+      }
+
+      const costFromRoute1 = currentDebt1.costFromRoute ?? 0;
+      const feeCODToRoute1 = currentDebt1.feeCODToRoute ?? 0;
+      const homeDeliveryFromRoute1 = currentDebt1.homeDeliveryFromRoute ?? 0;
+      const surchargeToRoute1 = currentDebt1.surchargeToRoute ?? 0;
+      const receivable1 = Math.max(0, (currentDebt1.receivable ?? 0) - cash); // Decrease receivable
+      const costToRoute1 = currentDebt1.costToRoute ?? 0;
+      const feeCODFromRoute1 = currentDebt1.feeCODFromRoute ?? 0;
+      const homeDeliveryToRoute1 = currentDebt1.homeDeliveryToRoute ?? 0;
+      const surchargeFromRoute1 = currentDebt1.surchargeFromRoute ?? 0;
+      const accountPayable1 = currentDebt1.accountPayable ?? 0;
+
+      const openingBalance1 =
+        currentDebt1.openingBalance !== null && currentDebt1.openingBalance !== undefined
+          ? currentDebt1.openingBalance
+          : 0;
+
+      const A1 =
+        costFromRoute1 + feeCODToRoute1 + homeDeliveryFromRoute1 + surchargeToRoute1 + receivable1;
+      const B1 =
+        costToRoute1 +
+        feeCODFromRoute1 +
+        homeDeliveryToRoute1 +
+        surchargeFromRoute1 +
+        accountPayable1;
+      const totalDebt1 = A1 - B1 + openingBalance1;
+
+      const costFromRoute2 = currentDebt2.costFromRoute ?? 0;
+      const feeCODToRoute2 = currentDebt2.feeCODToRoute ?? 0;
+      const homeDeliveryFromRoute2 = currentDebt2.homeDeliveryFromRoute ?? 0;
+      const surchargeToRoute2 = currentDebt2.surchargeToRoute ?? 0;
+      const receivable2 = currentDebt2.receivable ?? 0;
+      const costToRoute2 = currentDebt2.costToRoute ?? 0;
+      const feeCODFromRoute2 = currentDebt2.feeCODFromRoute ?? 0;
+      const homeDeliveryToRoute2 = currentDebt2.homeDeliveryToRoute ?? 0;
+      const surchargeFromRoute2 = currentDebt2.surchargeFromRoute ?? 0;
+      const accountPayable2 = Math.max(0, (currentDebt2.accountPayable ?? 0) - cash); // Decrease accountPayable
+
+      const openingBalance2 =
+        currentDebt2.openingBalance !== null && currentDebt2.openingBalance !== undefined
+          ? currentDebt2.openingBalance
+          : 0;
+
+      const A2 =
+        costFromRoute2 + feeCODToRoute2 + homeDeliveryFromRoute2 + surchargeToRoute2 + receivable2;
+      const B2 =
+        costToRoute2 +
+        feeCODFromRoute2 +
+        homeDeliveryToRoute2 +
+        surchargeFromRoute2 +
+        accountPayable2;
+      const totalDebt2 = A2 - B2 + openingBalance2;
+
+      // Update debt records (reverse the changes)
+      await Debt.findOneAndUpdate(
+        {
+          _id: currentDebt1._id,
+        },
+        {
+          totalDebt: totalDebt1,
+          receivable: receivable1,
+        },
+        {
+          session: session,
+          new: true,
+          runValidators: true,
+        }
+      );
+
+      await Debt.findOneAndUpdate(
+        {
+          _id: currentDebt2._id,
+        },
+        {
+          totalDebt: totalDebt2,
+          accountPayable: accountPayable2,
+        },
+        {
+          session: session,
+          new: true,
+          runValidators: true,
+        }
+      );
+
+      // Reverse the debt report service updates (subtract instead of add)
+      await this.debtReportService.updateDebtReport(
+        toRoute.toString(),
+        cashDate,
+        -cash,
+        session,
+        false,
+        true
+      );
+
+      await this.debtReportService.updateDebtReport(
+        fromRoute.toString(),
+        cashDate,
+        -cash,
+        session,
+        true,
+        false
+      );
 
       await session.commitTransaction();
       session.endSession();
@@ -384,6 +837,60 @@ export class DebtManagementService {
         throw error;
       }
       throw new Error('delete debt management failed');
+    }
+  }
+
+  async exportReportDebtAndDebtManagement(
+    startDate: Date,
+    endDate: Date,
+    type: string,
+    userId: string,
+    routeId?: string
+  ): Promise<
+    | IGetListPaymentDebtManagementResponse
+    | IGetListReceiptDebtManagementResponse
+    | IGetListDebtResponse
+    | IDebtTotal
+  > {
+    try {
+      const toRouteId = await this.userService.getUserSelectedRouteId(userId);
+      const toRouteIdObj = new Types.ObjectId(toRouteId);
+      // Validate routeId format if provided
+      if (routeId && !Types.ObjectId.isValid(routeId)) {
+        throw new Error('Invalid routeId format');
+      }
+
+      const mockReq = {
+        query: {
+          startDate: startDate.toISOString().split('T')[0],
+          endDate: endDate.toISOString().split('T')[0],
+          ...(routeId && type === DEBT_MANAGEMENT_TYPE_REPORT.PAYMENT && { toRouteId: routeId }),
+          ...(routeId && type === DEBT_MANAGEMENT_TYPE_REPORT.RECEIPT && { fromRouteId: routeId }),
+          ...(routeId && type === DEBT_MANAGEMENT_TYPE_REPORT.DEBT && { fromRouteId: routeId }),
+        },
+      } as unknown as Request;
+
+      switch (type) {
+        case DEBT_MANAGEMENT_TYPE_REPORT.PAYMENT:
+          return await this.getListPaymentDebtMangement(mockReq, userId);
+
+        case DEBT_MANAGEMENT_TYPE_REPORT.RECEIPT:
+          return await this.getListReceiptDebtMangement(mockReq, userId);
+
+        case DEBT_MANAGEMENT_TYPE_REPORT.DEBT:
+          return await this.debtService.getListDebt(mockReq, userId);
+
+        case DEBT_MANAGEMENT_TYPE_REPORT.TOTAL:
+          return await this.debtReportService.getDebtReportTotal(toRouteIdObj, startDate, endDate);
+
+        default:
+          throw new Error(`Invalid type: ${type}`);
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('export report debt and debt management failed');
     }
   }
 }

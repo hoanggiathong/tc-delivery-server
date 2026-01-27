@@ -1,13 +1,14 @@
-import { Response } from 'express';
-import { DeliveryService } from '@/services/delivery.service';
-import { RemovedDeliveryService } from '@/services/delivery-removed.service';
 import {
   CreateDeliveryRequest,
-  UpdateDeliveryRequest,
   DeliveryCostReportQuery,
+  GetListDeliveryInventoryQuery,
+  UpdateDeliveryRequest,
 } from '@/schemas/delivery.schema';
-import { AuthRequest, ApiResponse } from '@/types';
+import { RemovedDeliveryService } from '@/services/delivery-removed.service';
+import { DeliveryService } from '@/services/delivery.service';
+import { ApiResponse, AuthRequest } from '@/types';
 import Logger from '@/utils/logger';
+import { Response } from 'express';
 
 export class DeliveryController {
   private deliveryService: DeliveryService;
@@ -1772,6 +1773,442 @@ export class DeliveryController {
       };
 
       res.status(statusCode).json(response);
+    }
+  };
+
+  /**
+   * Recovery delivery by fullCode
+   * PUT /api/delivery/recovery
+   * @swagger
+   * /api/delivery/recovery:
+   *   put:
+   *     summary: Recovery delivery by fullCode
+   *     description: Khôi phục đơn hàng trả về (isReturn = true) về trạng thái bình thường. Nếu đơn hàng có money delivery với status DONE thì không cho recovery. Nếu money delivery có status WAITING thì xóa money delivery đó.
+   *     tags: [Delivery]
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - fullCode
+   *               - note
+   *             properties:
+   *               fullCode:
+   *                 type: string
+   *                 description: Full code of the delivery (e.g., 0907250001T4T1)
+   *                 example: "0907250001T4T1"
+   *               note:
+   *                 type: string
+   *                 description: Ghi chú khôi phục (sẽ được append vào notes cũ)
+   *                 minLength: 1
+   *                 maxLength: 500
+   *                 example: "Khôi phục: mã đơn hàng 0907250001T4T1 bởi Nguyen Van A"
+   *           examples:
+   *             recovery:
+   *               summary: Recovery delivery
+   *               value:
+   *                 fullCode: "0907250001T4T1"
+   *                 note: "Khôi phục: mã đơn hàng 0907250001T4T1 bởi Nguyen Van A"
+   *     responses:
+   *       200:
+   *         description: Delivery recovered successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Delivery recovered successfully"
+   *       400:
+   *         description: Validation error or cannot recover
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *             examples:
+   *               invalidFullCode:
+   *                 summary: Invalid fullCode format
+   *                 value:
+   *                   success: false
+   *                   message: "Validation error: Delivery fullCode must match pattern"
+   *               cannotRecover:
+   *                 summary: Cannot recover because money delivery is DONE
+   *                 value:
+   *                   success: false
+   *                   message: "Cannot recover delivery 0907250001T4T1 because associated money delivery has status DONE"
+   *       401:
+   *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Unauthorized"
+   *       404:
+   *         description: Delivery not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *             examples:
+   *               notFound:
+   *                 summary: Delivery not found
+   *                 value:
+   *                   success: false
+   *                   message: "Delivery not found with fullCode: 0907250001T4T1 and isReturn: true"
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Failed to recover delivery by fullCode"
+   */
+  recoveryDeliveryByFullCode = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { fullCode, note } = req.body;
+
+      await this.deliveryService.recoveryDeliveryByFullCode(fullCode, note);
+
+      Logger.info(`Delivery recovered: ${fullCode}`, {
+        userId: req.user.userId,
+        fullCode,
+        note,
+      });
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Delivery recovered successfully',
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Failed to recover delivery by fullCode', {
+        error: error instanceof Error ? error.message : error,
+        userId: req.user?.userId,
+        fullCode: req.body?.fullCode,
+      });
+
+      let statusCode = 500;
+      const message =
+        error instanceof Error ? error.message : 'Failed to recover delivery by fullCode';
+
+      if (message.includes('not found')) {
+        statusCode = 404;
+      } else if (
+        message.includes('Validation error') ||
+        message.includes('required') ||
+        message.includes('Cannot recover')
+      ) {
+        statusCode = 400;
+      }
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(statusCode).json(response);
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/delivery/inventory:
+   *   get:
+   *     summary: Get list delivery inventory with various filter conditions
+   *     tags: [Delivery]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: inventoryType
+   *         required: true
+   *         schema:
+   *           type: string
+   *           enum: [fromRoute, toRoute]
+   *         description: Filter by inventory type - 'fromRoute' to filter by user's selected route for fromRoute, 'toRoute' to filter by user's selected route for toRoute
+   *         example: toRoute
+   *         examples:
+   *           fromRoute:
+   *             value: fromRoute
+   *             summary: Filter by fromRoute
+   *           toRoute:
+   *             value: toRoute
+   *             summary: Filter by toRoute
+   *       - in: query
+   *         name: collectCost
+   *         schema:
+   *           type: boolean
+   *         description: If true, filter by collectCost > 0
+   *         example: true
+   *       - in: query
+   *         name: homeDeliveryCost
+   *         schema:
+   *           type: boolean
+   *         description: If true, filter by homeDeliveryCost > 0
+   *         example: true
+   *       - in: query
+   *         name: collectForCustomer
+   *         schema:
+   *           type: boolean
+   *         description: If true, filter by collectForCustomer > 0
+   *         example: true
+   *       - in: query
+   *         name: paymentType
+   *         schema:
+   *           type: boolean
+   *         description: If true, filter by paymentType == 'debt'
+   *         example: true
+   *       - in: query
+   *         name: itemValue
+   *         schema:
+   *           type: boolean
+   *         description: If true, filter by itemValue > 0
+   *         example: true
+   *       - in: query
+   *         name: time
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 15
+   *         description: Number of days to look back (default 15). Finds orders older than X days based on createdAt
+   *         example: 15
+   *     responses:
+   *       200:
+   *         description: Delivery inventory list retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Delivery inventory list retrieved successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     deliveries:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/ReturnDeliveryResponse'
+   *                     total:
+   *                       type: number
+   *                       example: 10
+   *       401:
+   *         description: Unauthorized
+   *       500:
+   *         description: Internal server error
+   */
+  getListDeliveryInventory = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      // Get query parameters from validated request
+      const query = req.query as unknown as GetListDeliveryInventoryQuery;
+
+      // Call service to get delivery inventory list
+      const deliveries = await this.deliveryService.getListDeliveryInventory(
+        req.user.userId,
+        query
+      );
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Delivery inventory list retrieved successfully',
+        data: { deliveries, total: deliveries.length },
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Failed to get delivery inventory list', {
+        error: error instanceof Error ? error.message : error,
+        userId: req.user?.userId,
+        query: req.query,
+      });
+
+      const message =
+        error instanceof Error ? error.message : 'Failed to get delivery inventory list';
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(500).json(response);
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/delivery/inventory/home-delivery:
+   *   get:
+   *     summary: Get list delivery inventory about home delivery with summary calculations
+   *     description: Returns list of deliveries with homeDeliveryCost > 0 filtered by user's selected route (toRoute) and calculates summary totals by payment type
+   *     tags: [Delivery]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Delivery inventory about home delivery list retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Delivery inventory about home delivery list retrieved successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     data:
+   *                       type: array
+   *                       description: List of delivery items with homeDeliveryCost > 0
+   *                       items:
+   *                         $ref: '#/components/schemas/ReturnDeliveryResponse'
+   *                     sum:
+   *                       type: object
+   *                       description: Summary calculations grouped by payment type
+   *                       properties:
+   *                         totalAllCostWithPaymentTypePaid:
+   *                           type: number
+   *                           description: Tổng cước phí (đã thu) - bao gồm cost + itemCost + collectForCustomerCost
+   *                           example: 1000000
+   *                         totalHomeDeliveryCostWithPaymentTypePaid:
+   *                           type: number
+   *                           description: Tổng phí giao tận nhà (đã thu)
+   *                           example: 500000
+   *                         totalAllCostWithPaymentTypeDebt:
+   *                           type: number
+   *                           description: Tổng cước phí (nợ) - bao gồm cost + itemCost + collectForCustomerCost
+   *                           example: 500000
+   *                         totalHomeDeliveryCostWithPaymentTypeDebt:
+   *                           type: number
+   *                           description: Tổng phí giao tận nhà (nợ)
+   *                           example: 250000
+   *                         totalCost:
+   *                           type: number
+   *                           description: Tổng cước phí (tổng của đã thu + nợ)
+   *                           example: 1500000
+   *                         totalHomeDeliveryCost:
+   *                           type: number
+   *                           description: Tổng phí giao tận nhà (tổng của đã thu + nợ)
+   *                           example: 750000
+   *                         totalCollectForCustomer:
+   *                           type: number
+   *                           description: Tổng thu dùm
+   *                           example: 2000000
+   *                         totalCollectCost:
+   *                           type: number
+   *                           description: Tổng thu hộ
+   *                           example: 3000000
+   *                         totalActualCost:
+   *                           type: number
+   *                           description: Tổng thực thu (totalAllCostWithPaymentTypeDebt + totalHomeDeliveryCostWithPaymentTypeDebt + totalCollectCost + totalCollectForCustomer)
+   *                           example: 6500000
+   *       401:
+   *         description: Unauthorized
+   *       500:
+   *         description: Internal server error
+   */
+  getListDeliveryInventoryAboutHomeDelivery = async (
+    req: AuthRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      // Call service to get delivery inventory about home delivery list
+      const result = await this.deliveryService.getListDeliveryInventoryAboutHomeDelivery(
+        req.user.userId
+      );
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Delivery inventory about home delivery list retrieved successfully',
+        data: result,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Failed to get delivery inventory about home delivery list', {
+        error: error instanceof Error ? error.message : error,
+        userId: req.user?.userId,
+        query: req.query,
+      });
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Failed to get delivery inventory about home delivery list';
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(500).json(response);
     }
   };
 }

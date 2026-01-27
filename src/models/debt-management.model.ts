@@ -10,6 +10,7 @@ export interface IDebtManagement extends Document {
   cash: number; // so tien
   deleted: boolean;
   cashDate: Date; // ngay thu tien
+  reason?: string; // ly do xoa
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date;
@@ -52,6 +53,11 @@ const debtManagementSchema = new Schema<IDebtManagement>(
       type: Date,
       default: null,
     },
+    reason: {
+      type: String,
+      trim: true,
+      default: null,
+    },
   },
   {
     timestamps: true,
@@ -69,7 +75,9 @@ const debtManagementSchema = new Schema<IDebtManagement>(
 debtManagementSchema.index({ fromRoute: 1, toRoute: 1, type: 1, createdAt: -1 });
 debtManagementSchema.index({ fromRoute: 1, toRoute: 1, createdAt: -1 });
 debtManagementSchema.index({ fromRoute: 1, type: 1, createdAt: -1 });
+debtManagementSchema.index({ toRoute: 1, type: 1, createdAt: -1 });
 debtManagementSchema.index({ fromRoute: 1, type: 1 });
+debtManagementSchema.index({ toRoute: 1, type: 1 });
 debtManagementSchema.index({ createdAt: -1 });
 
 export const DebtManagement = mongoose.model<IDebtManagement>(

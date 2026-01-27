@@ -1,32 +1,60 @@
-import { config } from 'dotenv';
+import moduleAlias from 'module-alias';
 import path from 'path';
+moduleAlias.addAlias('@', path.resolve(__dirname, '../src'));
+
+import { config } from 'dotenv';
+
+// Load env file based on NODE_ENV
+const envFile =
+  process.env.NODE_ENV === 'uat'
+    ? '.env.uat'
+    : process.env.NODE_ENV === 'production'
+      ? '.env.production'
+      : '.env';
+config({ path: path.resolve(process.cwd(), envFile) });
+
 import mongoose from 'mongoose';
 import { CronjobService } from '../src/services/cron-job.service';
-import { CronLogService } from './../src/services/cron-log.service';
-config({ path: path.resolve(__dirname, '../.env') });
+import { CronLogService } from '../src/services/cron-log.service';
+import { DebtReportService } from '../src/services/debt-report.service';
+import { APP_VERSION, BUILD_TIME } from '../src/version';
 
 async function main() {
-  const uri = process.env.MONGODB_URI;
+  console.log(`[Debt Cronjob] Version: ${APP_VERSION} | Build: ${BUILD_TIME}`);
 
-  const cronjobService = new CronjobService();
+  const uri = process.env.MONGODB_URI;
 
   if (!uri) {
     console.error('Missing MONGODB_URI');
     process.exit(2);
   }
+  const cronjobService = new CronjobService();
+  const debtReportService = new DebtReportService();
   await mongoose.connect(uri, { dbName: process.env.MONGO_DB || undefined });
 
   const key = `Calculate-debt-${new Date().toISOString().slice(0, 10)}`;
 
+  const isRun = await CronLogService.isSuccess(key);
+  if (isRun) {
+    console.log('Cronjob calculate debt already run success');
+    await mongoose.disconnect();
+    return;
+  }
+
   try {
     await CronLogService.start(key, 'Caluculate debt cronjob');
+    // Step 1: Calculate and create debt records
     await cronjobService.cronjobCalculateDebt();
+    // Step 2: Generate debt report from the created debt records
+    await debtReportService.generateDebtReport();
     await CronLogService.success(key);
     await mongoose.disconnect();
   } catch (error) {
     console.log('Error calculate debt cron-job', error);
     const errorMessage = error instanceof Error ? error.message : error;
     await CronLogService.fail(key, String(errorMessage));
+    await mongoose.disconnect();
+    throw error;
   }
 }
 

@@ -119,7 +119,7 @@ export class MoneyDeliveryService {
       status: populated.status,
       type: populated.type,
       deliveryId: populated.deliveryId?.toString(),
-      createdByUser: populated.createdByUser.username,
+      createdByUser: populated.createdByUser?.username || '',
       createdAt: populated.createdAt,
       updatedAt: populated.updatedAt,
       dateReturn: populated.dateReturn,
@@ -183,7 +183,7 @@ export class MoneyDeliveryService {
       status: moneyDelivery.status,
       type: moneyDelivery.type,
       deliveryId: moneyDelivery.deliveryId?.toString(),
-      createdByUser: moneyDelivery.createdByUser.username,
+      createdByUser: moneyDelivery.createdByUser?.username || '',
       createdAt: moneyDelivery.createdAt,
       updatedAt: moneyDelivery.updatedAt,
       dateReturn: moneyDelivery.dateReturn,
@@ -229,11 +229,19 @@ export class MoneyDeliveryService {
       throw new Error('To route not found');
     }
 
-    // Generate money delivery code with new system
-    const codeData = await CodeGeneratorService.generateNextMoneyDeliveryCode(
-      data.toRouteId,
-      fromRouteId
-    );
+    let codeData: { code: string; fullCode: string; subCode: string };
+    if (data.fullCode && data.code && data.subCode) {
+      codeData = {
+        code: data.code,
+        fullCode: data.fullCode,
+        subCode: data.subCode,
+      };
+    } else {
+      codeData = await CodeGeneratorService.generateNextMoneyDeliveryCode(
+        data.toRouteId,
+        fromRouteId
+      );
+    }
 
     // Get transfer type (default to 'regular' if not specified)
     const transferType = data.transferType || 'regular';
@@ -559,10 +567,9 @@ export class MoneyDeliveryService {
       // Get user's selected route
       const userSelectedRouteId = await this.userService.getUserSelectedRouteId(userId);
 
-      // Find sender by phone and selected route
+      // Find sender by phone only
       const sender = await Customer.findOne({
         phone: senderIdentifier,
-        routeId: userSelectedRouteId,
       }).lean();
 
       if (!sender) {
@@ -579,7 +586,7 @@ export class MoneyDeliveryService {
         {
           $match: {
             sender: sender._id,
-            fromRoute: userSelectedRouteId,
+            fromRoute: new Types.ObjectId(userSelectedRouteId),
           },
         },
         // Sort by most recent first
@@ -1011,6 +1018,7 @@ export class MoneyDeliveryService {
       const moneyDeliveries: IMoneyDeliveryReportItem[] = dataItems.map((item: any) => ({
         id: item._id.toString(),
         code: item.code,
+        fullCode: item.fullCode,
         date: item.createdAt,
         sender: item.sender,
         receiver: item.receiver,
@@ -1275,7 +1283,7 @@ export class MoneyDeliveryService {
             status: moneyDelivery.status,
             type: moneyDelivery.type,
             deliveryId: moneyDelivery.deliveryId?._id?.toString(),
-            createdByUser: moneyDelivery.createdByUser.username,
+            createdByUser: moneyDelivery.createdByUser?.username || '',
             createdAt: moneyDelivery.createdAt,
             updatedAt: moneyDelivery.updatedAt,
             contentReturn: moneyDelivery.contentReturn,
@@ -1846,22 +1854,28 @@ export class MoneyDeliveryService {
   }
 
   async getListMoneyDeliveryByTypeNormalAndStatusDone(
+    userId: string,
     startDate: Date,
     endDate: Date,
     routeId?: string
   ): Promise<IMoneyDeliveryResponse[]> {
     try {
+      const fromRouteId = await this.userService.getUserSelectedRouteId(userId);
       const where: Record<string, unknown> = {
-        status: MoneyDeliveryStatus.DONE,
         type: MoneyDeliveryType.NORMAL,
-        dateReturn: {
+        fromRoute: fromRouteId,
+        createdAt: {
           $gte: startDate,
           $lte: endDate,
         },
       };
 
       if (routeId) {
-        where.fromRoute = routeId;
+        where.toRoute = routeId;
+      } else {
+        where.toRoute = {
+          $ne: fromRouteId,
+        };
       }
 
       const moneyDeliveries = await MoneyDelivery.find(where)
@@ -1888,14 +1902,18 @@ export class MoneyDeliveryService {
   }
 
   async getListMoneyDeliveryByTypeCollectAndStatusDone(
+    userId: string,
     startDate: Date,
     endDate: Date,
     routeId?: string
   ): Promise<IMoneyDeliveryResponse[]> {
     try {
+      const toRouteId = await this.userService.getUserSelectedRouteId(userId);
+
       const where: Record<string, unknown> = {
         status: MoneyDeliveryStatus.DONE,
         type: MoneyDeliveryType.COLLECT,
+        toRoute: toRouteId,
         dateReturn: {
           $gte: startDate,
           $lte: endDate,
@@ -1903,7 +1921,11 @@ export class MoneyDeliveryService {
       };
 
       if (routeId) {
-        where.toRoute = routeId;
+        where.fromRoute = routeId;
+      } else {
+        where.fromRoute = {
+          $ne: toRouteId,
+        };
       }
 
       const moneyDeliveries = await MoneyDelivery.find(where)
@@ -1926,6 +1948,110 @@ export class MoneyDeliveryService {
         throw error;
       }
       throw new Error('Failed to get list money delivery type collect with status done');
+    }
+  }
+
+  async recoveryMoneyDeliveryWithTypeCollectByFullCodeAndStaffNameRecoveryMoney(
+    fullCode: string,
+    staffNameRecoveryMoney: string
+  ): Promise<void> {
+    try {
+      const moneyDelivery = await MoneyDelivery.findOne({
+        fullCode: fullCode,
+        status: MoneyDeliveryStatus.DONE,
+        type: MoneyDeliveryType.COLLECT,
+      });
+
+      if (!moneyDelivery) {
+        throw new Error(`Money delivery not found with fullCode: ${fullCode} and type: COLLECT`);
+      }
+
+      const note = `Khôi phục: mã thu hộ ${fullCode} bởi ${staffNameRecoveryMoney}`;
+      const existingNotes = typeof moneyDelivery.notes === 'string' ? moneyDelivery.notes : '';
+      const newNote = existingNotes ? `${note}, ${existingNotes}` : note;
+
+      await MoneyDelivery.updateOne(
+        { _id: moneyDelivery._id },
+        {
+          $set: {
+            status: MoneyDeliveryStatus.WAITING,
+            staffNameRecoveryMoney: staffNameRecoveryMoney,
+            notes: newNote,
+            dateReturn: null,
+            contentReturn: null,
+          },
+        },
+        { runValidators: false }
+      );
+
+      Logger.info(`Money delivery recovered: ${fullCode} by ${staffNameRecoveryMoney}`, {
+        moneyDeliveryId: moneyDelivery._id.toString(),
+        fullCode,
+        staffNameRecoveryMoney,
+        type: MoneyDeliveryType.COLLECT,
+      });
+    } catch (error) {
+      Logger.error('Error recovering money delivery with type COLLECT', {
+        error: error instanceof Error ? error.message : error,
+        fullCode,
+        staffNameRecoveryMoney,
+      });
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to recover money delivery with type COLLECT');
+    }
+  }
+
+  async recoveryMoneyDeliveryWithTypeNormalByFullCodeAndStaffNameRecoveryMoney(
+    fullCode: string,
+    staffNameRecoveryMoney: string
+  ): Promise<void> {
+    try {
+      const moneyDelivery = await MoneyDelivery.findOne({
+        fullCode: fullCode,
+        status: MoneyDeliveryStatus.DONE,
+        type: MoneyDeliveryType.NORMAL,
+      });
+
+      if (!moneyDelivery) {
+        throw new Error(`Money delivery not found with fullCode: ${fullCode} and type: NORMAL`);
+      }
+
+      const note = `Khôi phục: mã chuyển tiền ${fullCode} bởi ${staffNameRecoveryMoney}`;
+      const existingNotes = typeof moneyDelivery.notes === 'string' ? moneyDelivery.notes : '';
+      const newNote = existingNotes ? `${note}, ${existingNotes}` : note;
+
+      await MoneyDelivery.updateOne(
+        { _id: moneyDelivery._id },
+        {
+          $set: {
+            status: MoneyDeliveryStatus.WAITING,
+            staffNameRecoveryMoney: staffNameRecoveryMoney,
+            notes: newNote,
+            dateReturn: null,
+            contentReturn: null,
+          },
+        },
+        { runValidators: false }
+      );
+
+      Logger.info(`Money delivery recovered: ${fullCode} by ${staffNameRecoveryMoney}`, {
+        moneyDeliveryId: moneyDelivery._id.toString(),
+        fullCode,
+        staffNameRecoveryMoney,
+        type: MoneyDeliveryType.NORMAL,
+      });
+    } catch (error) {
+      Logger.error('Error recovering money delivery with type NORMAL', {
+        error: error instanceof Error ? error.message : error,
+        fullCode,
+        staffNameRecoveryMoney,
+      });
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to recover money delivery with type NORMAL');
     }
   }
 }

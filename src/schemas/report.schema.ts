@@ -1,4 +1,5 @@
 import z from 'zod';
+import { DATE_YYYY_MM_DD_PATTERN, VALIDATION_MESSAGES } from '@/utils/validation-patterns';
 
 // Schema for get report return money delivery and return delivery
 export const getReportReturnMoneyDeliveryAndReturnDeliverySchema = z
@@ -6,38 +7,30 @@ export const getReportReturnMoneyDeliveryAndReturnDeliverySchema = z
     query: z.object({
       startDate: z
         .string()
-        .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid start date in ISO format'),
+        .regex(DATE_YYYY_MM_DD_PATTERN, VALIDATION_MESSAGES.DATE_YYYY_MM_DD)
+        .transform(val => new Date(val)),
       endDate: z
         .string()
-        .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid end date in ISO format'),
+        .regex(DATE_YYYY_MM_DD_PATTERN, VALIDATION_MESSAGES.DATE_YYYY_MM_DD)
+        .transform(val => new Date(val)),
       routeId: z
         .string()
         .regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format')
         .optional(),
     }),
   })
+  .refine(data => data.query.startDate <= data.query.endDate, {
+    message: 'Start date must be before or equal to end date',
+    path: ['query', 'startDate'],
+  })
   .refine(
     data => {
-      const startDate = new Date(data.query.startDate);
-      const endDate = new Date(data.query.endDate);
-      return startDate <= endDate;
-    },
-    {
-      message: 'Start date must be before or equal to end date',
-      path: ['query', 'startDate'],
-    }
-  )
-  .refine(
-    data => {
-      const startDate = new Date(data.query.startDate);
-      const endDate = new Date(data.query.endDate);
-      const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+      const diffTime = Math.abs(data.query.endDate.getTime() - data.query.startDate.getTime());
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       return diffDays <= 45;
     },
     {
-      message:
-        'The difference between start date and end date must be less than or equal to 45 days',
-      path: ['query', 'startDate'],
+      message: 'Date range cannot exceed 45 days',
+      path: ['query', 'endDate'],
     }
   );

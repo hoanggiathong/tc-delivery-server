@@ -142,7 +142,7 @@ export class ReportController {
    *                 summary: Invalid date format
    *                 value:
    *                   success: false
-   *                   message: "Please provide a valid start date in ISO format"
+   *                   message: "Date must be in YYYY-MM-DD format"
    *               invalidRouteId:
    *                 summary: Invalid route ID format
    *                 value:
@@ -212,7 +212,10 @@ export class ReportController {
         originalUrl: req.originalUrl,
       });
 
-      const result = await this.reportService.getReportReturnMoneyDeliveryAndReturnDelivery(query);
+      const result = await this.reportService.getReportReturnMoneyDeliveryAndReturnDelivery(
+        query,
+        req.user.userId
+      );
 
       const response: ApiResponse = {
         success: true,

@@ -16,11 +16,13 @@ export interface ICustomer extends Document {
   bankId: Types.ObjectId;
   images: ICustomerImage[];
   address: string;
+  identityCardName: string;
   identityCardIssuedDate: Date;
   identityCardNumber: string;
   createdBy: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
+  isRoute: boolean;
 }
 
 const customerSchema = new Schema<ICustomer>(
@@ -79,6 +81,10 @@ const customerSchema = new Schema<ICustomer>(
       type: String,
       default: null,
     },
+    identityCardName: {
+      type: String,
+      default: null,
+    },
     identityCardIssuedDate: {
       type: Date,
       default: null,
@@ -91,6 +97,10 @@ const customerSchema = new Schema<ICustomer>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       default: null,
+    },
+    isRoute: {
+      type: Boolean,
+      default: false,
     },
   },
   {

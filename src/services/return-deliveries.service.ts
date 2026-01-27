@@ -6,32 +6,32 @@ import {
   MoneyDeliveryType,
   TransferType,
 } from '@/models/money-delivery.model';
-import {
-  IReturnDeliveryLeanPopulated,
-  IReturnDeliveryListDebtOfReturnDeliveriesTodayRequest,
-  IReturnDeliveryListIsReturnRequest,
-  IReturnDeliveryListAllRequest,
-  IReturnDeliveryListRequest,
-  IReturnDeliveryResponse,
-  IReturnDeliveryUpdateRequest,
-  IReturnDeliveryListCollectCostOfReturnDeliveriesRequest,
-} from '@/types/return-delivery.type';
+import { ICustomerInformationResponse } from '@/types/customer.type';
 import {
   IDeliveryLeanPopulated,
   IGetListReportReturnDeliveryResponse,
 } from '@/types/delivery.type';
+import {
+  IReturnDeliveryLeanPopulated,
+  IReturnDeliveryListAllRequest,
+  IReturnDeliveryListCollectCostOfReturnDeliveriesRequest,
+  IReturnDeliveryListDebtOfReturnDeliveriesTodayRequest,
+  IReturnDeliveryListIsReturnRequest,
+  IReturnDeliveryListRequest,
+  IReturnDeliveryResponse,
+  IReturnDeliveryUpdateRequest,
+} from '@/types/return-delivery.type';
+import { IRouteResponse } from '@/types/route.type';
+import { extractBasePath, generateVersionedUrl } from '@/utils/image-url.utils';
+import Logger from '@/utils/logger';
+import fs from 'fs';
+import path from 'path';
 import { CustomerService } from './customer.service';
 import { DeliveryService } from './delivery.service';
-import { UserService } from './user.service';
-import { ICustomerInformationResponse } from '@/types/customer.type';
-import { IRouteResponse } from '@/types/route.type';
-import { RouteService } from './route.service';
 import { MoneyDeliveryService } from './money-delivery.service';
+import { RouteService } from './route.service';
 import { SettingsService } from './settings.service';
-import Logger from '@/utils/logger';
-import path from 'path';
-import fs from 'fs';
-import { generateVersionedUrl, extractBasePath } from '@/utils/image-url.utils';
+import { UserService } from './user.service';
 
 export class ReturnDeliveriesService {
   private customerService: CustomerService;
@@ -131,10 +131,7 @@ export class ReturnDeliveriesService {
           name: item.name,
           fullCode: item.fullCode,
           subCode: item.subCode,
-          sender: {
-            name: item.senderName,
-            phone: item.sender.phone,
-          },
+          sender: { name: item.senderName, phone: item.sender.phone },
           receiver: {
             name: item.receiverName,
             phone: item.receiver.phone,
@@ -143,6 +140,11 @@ export class ReturnDeliveriesService {
             id: item.toRoute._id.toString(),
             code: item.toRoute.code,
             name: item.toRoute.name,
+          },
+          fromRoute: {
+            id: item.fromRoute._id.toString(),
+            code: item.fromRoute.code,
+            name: item.fromRoute.name,
           },
           cost: item.cost,
           homeDelivery: item.homeDelivery,
@@ -161,7 +163,8 @@ export class ReturnDeliveriesService {
           upItems: item.upItems || '',
           downItems: item.downItems || '',
           inventory: item.inventory || '',
-          smsType: item.smsType || '',
+          smsType: item.smsType,
+          smsStatus: item.smsStatus,
           timeToSendSMS: item.timeToSendSMS,
           quantityReturn: item.quantityReturn || 0,
           dateReturn: item.dateReturn,
@@ -213,9 +216,11 @@ export class ReturnDeliveriesService {
           name: route?.name,
         },
         address: receiver.address,
+        identityCardName: receiver.identityCardName,
         identityCardIssuedDate: receiver.identityCardIssuedDate,
         identityCardNumber: receiver.identityCardNumber,
         images: receiver.images,
+        isRoute: receiver.isRoute || false,
         createdAt: receiver.createdAt,
         updatedAt: receiver.updatedAt,
       } as ICustomerInformationResponse;
@@ -281,6 +286,11 @@ export class ReturnDeliveriesService {
             code: item.toRoute.code,
             name: item.toRoute.name,
           },
+          fromRoute: {
+            id: item.fromRoute._id.toString(),
+            code: item.fromRoute.code,
+            name: item.fromRoute.name,
+          },
           cost: item.cost,
           homeDelivery: item.homeDelivery,
           homeDeliveryCost: item.homeDeliveryCost,
@@ -299,7 +309,8 @@ export class ReturnDeliveriesService {
           upItems: item.upItems || '',
           downItems: item.downItems || '',
           inventory: item.inventory || '',
-          smsType: item.smsType || '',
+          smsType: item.smsType,
+          smsStatus: item.smsStatus,
           timeToSendSMS: item.timeToSendSMS,
           quantityReturn: item.quantityReturn || 0,
           dateReturn: item.dateReturn,
@@ -378,6 +389,11 @@ export class ReturnDeliveriesService {
               code: item.toRoute.code,
               name: item.toRoute.name,
             },
+            fromRoute: {
+              id: item.fromRoute._id.toString(),
+              code: item.fromRoute.code,
+              name: item.fromRoute.name,
+            },
             cost: item.cost,
             homeDelivery: item.homeDelivery,
             homeDeliveryCost: item.homeDeliveryCost,
@@ -396,7 +412,8 @@ export class ReturnDeliveriesService {
             upItems: item.upItems || '',
             downItems: item.downItems || '',
             inventory: item.inventory || '',
-            smsType: item.smsType || '',
+            smsType: item.smsType,
+            smsStatus: item.smsStatus,
             timeToSendSMS: item.timeToSendSMS,
             quantityReturn: item.quantityReturn || 0,
             dateReturn: item.dateReturn,
@@ -486,6 +503,11 @@ export class ReturnDeliveriesService {
               code: item.toRoute.code,
               name: item.toRoute.name,
             },
+            fromRoute: {
+              id: item.fromRoute._id.toString(),
+              code: item.fromRoute.code,
+              name: item.fromRoute.name,
+            },
             cost: item.cost,
             homeDelivery: item.homeDelivery,
             homeDeliveryCost: item.homeDeliveryCost,
@@ -504,7 +526,8 @@ export class ReturnDeliveriesService {
             upItems: item.upItems || '',
             downItems: item.downItems || '',
             inventory: item.inventory || '',
-            smsType: item.smsType || '',
+            smsType: item.smsType,
+            smsStatus: item.smsStatus,
             timeToSendSMS: item.timeToSendSMS,
             quantityReturn: item.quantityReturn || 0,
             dateReturn: item.dateReturn,
@@ -606,6 +629,11 @@ export class ReturnDeliveriesService {
               code: item.toRoute.code,
               name: item.toRoute.name,
             },
+            fromRoute: {
+              id: item.fromRoute._id.toString(),
+              code: item.fromRoute.code,
+              name: item.fromRoute.name,
+            },
             cost: item.cost,
             homeDelivery: item.homeDelivery,
             homeDeliveryCost: item.homeDeliveryCost,
@@ -624,7 +652,8 @@ export class ReturnDeliveriesService {
             upItems: item.upItems || '',
             downItems: item.downItems || '',
             inventory: item.inventory || '',
-            smsType: item.smsType || '',
+            smsType: item.smsType,
+            smsStatus: item.smsStatus,
             timeToSendSMS: item.timeToSendSMS,
             quantityReturn: item.quantityReturn || 0,
             dateReturn: item.dateReturn,
@@ -713,6 +742,11 @@ export class ReturnDeliveriesService {
             code: item.toRoute.code,
             name: item.toRoute.name,
           },
+          fromRoute: {
+            id: item.fromRoute._id.toString(),
+            code: item.fromRoute.code,
+            name: item.fromRoute.name,
+          },
           cost: item.cost,
           homeDelivery: item.homeDelivery,
           homeDeliveryCost: item.homeDeliveryCost,
@@ -731,7 +765,8 @@ export class ReturnDeliveriesService {
           upItems: item.upItems || '',
           downItems: item.downItems || '',
           inventory: item.inventory || '',
-          smsType: item.smsType || '',
+          smsType: item.smsType,
+          smsStatus: item.smsStatus,
           timeToSendSMS: item.timeToSendSMS,
           quantityReturn: item.quantityReturn || 0,
           dateReturn: item.dateReturn,
@@ -740,6 +775,7 @@ export class ReturnDeliveriesService {
             username: item.createdByUser.username,
             name: item.createdByUser.name,
           },
+          nameProductAndAdditionalInformation: item.nameProductAndAdditionalInformation || '',
         })
       );
       return returnDeliveriesResponse;
@@ -810,6 +846,11 @@ export class ReturnDeliveriesService {
             code: item.toRoute.code,
             name: item.toRoute.name,
           },
+          fromRoute: {
+            id: item.fromRoute._id.toString(),
+            code: item.fromRoute.code,
+            name: item.fromRoute.name,
+          },
           cost: item.cost,
           homeDelivery: item.homeDelivery,
           homeDeliveryCost: item.homeDeliveryCost,
@@ -828,7 +869,8 @@ export class ReturnDeliveriesService {
           upItems: item.upItems || '',
           downItems: item.downItems || '',
           inventory: item.inventory || '',
-          smsType: item.smsType || '',
+          smsType: item.smsType,
+          smsStatus: item.smsStatus,
           timeToSendSMS: item.timeToSendSMS,
           quantityReturn: item.quantityReturn || 0,
           dateReturn: item.dateReturn,
@@ -837,6 +879,7 @@ export class ReturnDeliveriesService {
             username: item.createdByUser.username,
             name: item.createdByUser.name,
           },
+          nameProductAndAdditionalInformation: item.nameProductAndAdditionalInformation || '',
         })
       );
       return returnDeliveriesResponse;
@@ -897,15 +940,13 @@ export class ReturnDeliveriesService {
     return uploadedImages;
   }
 
-  /**
-   * Update status with images (new formData format)
-   */
   async updateStatusWithImages(
     userId: string,
     updateData: {
       deliveryId: string;
       customerId: string;
       address?: string;
+      identityCardName?: string;
       identityCardIssuedDate?: string;
       identityCardNumber?: string;
     },
@@ -923,8 +964,14 @@ export class ReturnDeliveriesService {
     }>
   ): Promise<IDelivery> {
     try {
-      const { deliveryId, customerId, address, identityCardIssuedDate, identityCardNumber } =
-        updateData;
+      const {
+        deliveryId,
+        customerId,
+        address,
+        identityCardName,
+        identityCardIssuedDate,
+        identityCardNumber,
+      } = updateData;
 
       // Get delivery by ID
       const delivery = await Delivery.findById(deliveryId).populate([
@@ -967,11 +1014,14 @@ export class ReturnDeliveriesService {
       }
 
       // Update customer information if provided
-      if (address || identityCardIssuedDate || identityCardNumber) {
+      if (address || identityCardName || identityCardIssuedDate || identityCardNumber) {
         const updateCustomerData: Record<string, unknown> = {};
 
         if (address) {
           updateCustomerData.address = address;
+        }
+        if (identityCardName) {
+          updateCustomerData.identityCardName = identityCardName;
         }
         if (identityCardIssuedDate) {
           updateCustomerData.identityCardIssuedDate = identityCardIssuedDate;
@@ -996,62 +1046,20 @@ export class ReturnDeliveriesService {
       if (populatedDeliveryData) {
         const typedDelivery = populatedDeliveryData;
 
-        // Check field collectCost > 0 (thu hộ)
-        if (typedDelivery.collectCost > 0) {
-          const feeMoney = await this.settingsService.calculateShippingFee(
-            typedDelivery.collectCost,
-            false,
-            false
-          );
-          await this.moneyDeliveryService.createMoneyDelivery(
-            {
-              senderName: typedDelivery.receiverName,
-              senderPhone: typedDelivery.receiver.phone,
-              receiverName: typedDelivery.senderName,
-              receiverPhone: typedDelivery.sender.phone,
-              toRouteId: typedDelivery.toRoute._id.toString(),
-              sendMoneyAmount: typedDelivery.collectCost - feeMoney,
-              sendCost: feeMoney,
-              transferType: TransferType.REGULAR,
-              isFree: false,
-              notes: `Thu hộ từ giao hàng ${typedDelivery.fullCode}`,
-              status: MoneyDeliveryStatus.WAITING,
-              type: MoneyDeliveryType.COLLECT,
-              deliveryId: typedDelivery._id.toString(),
-              fromRouteId: typedDelivery.fromRoute._id.toString(),
-            },
-            userId
-          );
-        }
+        // Tạo money delivery cho thu hộ (collectCost)
+        await this.createMoneyDeliveryForCollect(typedDelivery, userId);
 
-        // Check field collectForCustomer > 0 (thu dùm)
-        if (typedDelivery.collectForCustomer > 0) {
-          await this.moneyDeliveryService.createMoneyDelivery(
-            {
-              senderName: typedDelivery.receiverName,
-              senderPhone: typedDelivery.receiver.phone,
-              receiverName: typedDelivery.senderName,
-              receiverPhone: typedDelivery.sender.phone,
-              toRouteId: typedDelivery.fromRoute._id.toString(),
-              sendMoneyAmount: typedDelivery.collectForCustomer,
-              sendCost: 0,
-              transferType: TransferType.REGULAR,
-              isFree: false,
-              notes: `Thu dùm từ giao hàng ${typedDelivery.fullCode}`,
-              status: MoneyDeliveryStatus.WAITING,
-              type: MoneyDeliveryType.COLLECT_FOR_CUSTOMER,
-              deliveryId: typedDelivery._id.toString(),
-            },
-            userId
-          );
-        }
+        // Tạo money delivery cho thu dùm (collectForCustomer)
+        await this.createMoneyDeliveryForCollectForCustomer(typedDelivery, userId);
       }
 
       // Then update status return delivery with field isReturn = true
       delivery.isReturn = true;
       // Update field note with string 'Đã trả hàng + now date' + old value of note
       const now = new Date();
-      const returnDateString = `Đã trả hàng ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const returnDateString = `Đã trả hàng ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} ${hours}:${minutes}`;
       const existingNotes = typeof delivery.notes === 'string' ? delivery.notes : '';
       delivery.notes = existingNotes ? `${returnDateString}, ${existingNotes}` : returnDateString;
       delivery.updatedAt = now;
@@ -1083,9 +1091,6 @@ export class ReturnDeliveriesService {
     }
   }
 
-  /**
-   * Update status return delivery without images (case update data only)
-   */
   async updateStatusReturnDeliveryWithoutImages(
     userId: string,
     updateData: IReturnDeliveryUpdateRequest
@@ -1098,9 +1103,11 @@ export class ReturnDeliveriesService {
         throw new Error('Array list return delivery is empty');
       }
 
-      // format now with format dd/mm/yyyy
+      // format now with format dd/mm/yyyy hh:mm
       const now = new Date();
-      const returnDateString = `Đã trả hàng ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const returnDateString = `Đã trả hàng ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} ${hours}:${minutes}`;
 
       // Handle multiple return deliveries (without images)
       for (const item of arrayListReturnDelivery) {
@@ -1128,56 +1135,11 @@ export class ReturnDeliveriesService {
         if (populatedDeliveryData) {
           const typedDelivery = populatedDeliveryData;
 
-          // Check field collectCost > 0 (thu hộ)
-          if (typedDelivery.collectCost > 0) {
-            const feeMoney = await this.settingsService.calculateShippingFee(
-              typedDelivery.collectCost,
-              false,
-              false
-            );
+          // Tạo money delivery cho thu hộ (collectCost)
+          await this.createMoneyDeliveryForCollect(typedDelivery, userId);
 
-            await this.moneyDeliveryService.createMoneyDelivery(
-              {
-                senderName: typedDelivery.receiverName,
-                senderPhone: typedDelivery.receiver.phone,
-                receiverName: typedDelivery.senderName,
-                receiverPhone: typedDelivery.sender.phone,
-                toRouteId: typedDelivery.toRoute._id.toString(),
-                sendMoneyAmount: typedDelivery.collectCost - feeMoney,
-                sendCost: feeMoney,
-                transferType: TransferType.REGULAR,
-                isFree: false,
-                notes: `Thu hộ từ giao hàng ${typedDelivery.fullCode}`,
-                status: MoneyDeliveryStatus.WAITING,
-                type: MoneyDeliveryType.COLLECT,
-                deliveryId: typedDelivery._id.toString(),
-                fromRouteId: typedDelivery.fromRoute._id.toString(),
-              },
-              userId
-            );
-          }
-
-          // Check field collectForCustomer > 0 (thu dùm)
-          if (typedDelivery.collectForCustomer > 0) {
-            await this.moneyDeliveryService.createMoneyDelivery(
-              {
-                senderName: typedDelivery.receiverName,
-                senderPhone: typedDelivery.receiver.phone,
-                receiverName: typedDelivery.senderName,
-                receiverPhone: typedDelivery.sender.phone,
-                toRouteId: typedDelivery.fromRoute._id.toString(),
-                sendMoneyAmount: typedDelivery.collectForCustomer,
-                sendCost: 0,
-                transferType: TransferType.REGULAR,
-                isFree: false,
-                notes: `Thu dùm từ giao hàng ${typedDelivery.fullCode}`,
-                status: MoneyDeliveryStatus.WAITING,
-                type: MoneyDeliveryType.COLLECT_FOR_CUSTOMER,
-                deliveryId: typedDelivery._id.toString(),
-              },
-              userId
-            );
-          }
+          // Tạo money delivery cho thu dùm (collectForCustomer) với useRouteCustomer = true
+          await this.createMoneyDeliveryForCollectForCustomer(typedDelivery, userId);
         }
 
         // Then update status return delivery with field isReturn = true
@@ -1196,9 +1158,106 @@ export class ReturnDeliveriesService {
     } catch (error) {
       Logger.error('Failed to update return delivery status without images', {
         error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined,
       });
+      // Re-throw the original error with its message for better debugging
+      if (error instanceof Error) {
+        throw error;
+      }
       throw new Error('update status return delivery without images failed');
     }
+  }
+
+  /**
+   * Tạo money delivery cho thu hộ (collectCost)
+   */
+  private async createMoneyDeliveryForCollect(
+    typedDelivery: IDeliveryLeanPopulated,
+    userId: string
+  ): Promise<void> {
+    if (typedDelivery.collectCost <= 0) {
+      return;
+    }
+
+    const feeMoney = await this.settingsService.calculateShippingFee(
+      typedDelivery.collectCost,
+      false,
+      false
+    );
+
+    await this.moneyDeliveryService.createMoneyDelivery(
+      {
+        senderName: typedDelivery.receiverName,
+        senderPhone: typedDelivery.receiver.phone,
+        receiverName: typedDelivery.senderName,
+        receiverPhone: typedDelivery.sender.phone,
+        toRouteId: typedDelivery.toRoute._id.toString(),
+        sendMoneyAmount: typedDelivery.collectCost - feeMoney,
+        sendCost: feeMoney,
+        transferType: TransferType.REGULAR,
+        isFree: false,
+        notes: `Thu hộ từ giao hàng ${typedDelivery.fullCode}`,
+        status: MoneyDeliveryStatus.WAITING,
+        type: MoneyDeliveryType.COLLECT,
+        deliveryId: typedDelivery._id.toString(),
+        fromRouteId: typedDelivery.fromRoute._id.toString(),
+        fullCode: typedDelivery.fullCode,
+        code: typedDelivery.code,
+        subCode: typedDelivery.subCode,
+      },
+      userId
+    );
+  }
+
+  /**
+   * Tạo money delivery cho thu dùm (collectForCustomer)
+   */
+  private async createMoneyDeliveryForCollectForCustomer(
+    typedDelivery: IDeliveryLeanPopulated,
+    userId: string
+  ): Promise<void> {
+    if (typedDelivery.collectForCustomer <= 0) {
+      return;
+    }
+
+    const customerToRoute = await this.customerService.getInformationRouteCustomer(
+      typedDelivery.toRoute._id.toString()
+    );
+
+    if (!customerToRoute) {
+      throw new Error(
+        `Customer to route with ID ${typedDelivery.toRoute._id.toString()} not found`
+      );
+    }
+
+    const customerFromRoute = await this.customerService.getInformationRouteCustomer(
+      typedDelivery.fromRoute._id.toString()
+    );
+
+    if (!customerFromRoute) {
+      throw new Error(
+        `Customer from route with ID ${typedDelivery.fromRoute._id.toString()} not found`
+      );
+    }
+
+    await this.moneyDeliveryService.createMoneyDelivery(
+      {
+        senderName: customerToRoute.name,
+        senderPhone: customerToRoute.phone,
+        receiverName: customerFromRoute.name,
+        receiverPhone: customerFromRoute.phone,
+        toRouteId: typedDelivery.fromRoute._id.toString(),
+        sendMoneyAmount: typedDelivery.collectForCustomer,
+        sendCost: 0,
+        transferType: TransferType.REGULAR,
+        isFree: false,
+        notes: `Thu dùm từ giao hàng ${typedDelivery.fullCode}`,
+        status: MoneyDeliveryStatus.WAITING,
+        type: MoneyDeliveryType.COLLECT_FOR_CUSTOMER,
+        deliveryId: typedDelivery._id.toString(),
+      },
+      userId
+    );
   }
 
   async handleUploadImagesReturnDelivery(
@@ -1289,10 +1348,6 @@ export class ReturnDeliveriesService {
     return uploadedImages;
   }
 
-  /**
-   * Get report for return delivery with status done
-   * Returns count of today's returns and old returns (7 days ago until today)
-   */
   async getListReportReturnDeliveryWithStatusDone(
     userId: string
   ): Promise<IGetListReportReturnDeliveryResponse> {

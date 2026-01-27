@@ -84,33 +84,29 @@ export class CustomerService {
    */
   async findOrCreateCustomer(phone: string, name: string, routeId: string): Promise<ICustomer> {
     try {
-      // Try to find existing customer first
+      // Try to find existing customer by phone only
       let customer = await Customer.findOne({ phone });
 
       if (customer) {
-        // Customer exists - DON'T update name, only update routeId if needed
-        if (customer.routeId.toString() !== routeId) {
-          customer.routeId = new Types.ObjectId(routeId);
-          await customer.save();
-        }
-        Logger.debug('Existing customer found, name NOT updated', {
+        // Customer exists - keep as is, don't update anything
+        Logger.debug('Existing customer found, keeping as is', {
           phone,
           existingName: customer.name,
           requestedName: name,
           customerId: customer._id,
         });
       } else {
-        // Customer doesn't exist - create new with provided name
+        // Customer doesn't exist - create new with provided name and routeId
         customer = new Customer({
           phone,
-          name, // Use provided name for new customer
+          name,
           routeId: new Types.ObjectId(routeId),
-          relativeReceiver: [],
         });
         await customer.save();
         Logger.debug('New customer created', {
           phone,
           name,
+          routeId,
           customerId: customer._id,
         });
       }
@@ -588,7 +584,8 @@ export class CustomerService {
       buffer: Buffer;
       originalName: string;
       rotate: number;
-    }>
+    }>,
+    deleteIndexes?: number[]
   ): Promise<ICustomer> {
     try {
       // Try to find existing customer
@@ -653,6 +650,32 @@ export class CustomerService {
         }
       }
 
+      // Handle deleting images at specified indexes (1-based)
+      if (deleteIndexes && deleteIndexes.length > 0 && customer.images) {
+        for (const index of deleteIndexes) {
+          const arrayIndex = index - 1; // Convert 1-based to 0-based
+          if (customer.images[arrayIndex]) {
+            // Delete physical file
+            const oldImageUrl = customer.images[arrayIndex].url;
+            // Remove version query string if present
+            const cleanUrl = oldImageUrl.split('?')[0];
+            const oldImagePath = path.join('public', cleanUrl);
+            if (fs.existsSync(oldImagePath)) {
+              fs.unlinkSync(oldImagePath);
+              Logger.debug('Image deleted at index', {
+                customerId: customer._id,
+                imageIndex: index,
+                path: oldImagePath,
+              });
+            }
+            // Set to null to mark for removal
+            (customer.images as (ICustomerImage | null)[])[arrayIndex] = null;
+          }
+        }
+        // Filter out null values
+        customer.images = customer.images.filter((img): img is ICustomerImage => img !== null);
+      }
+
       // Handle multiple images upload if provided
       if (imagesData && imagesData.length > 0) {
         // Create customer folder if not exists
@@ -710,6 +733,7 @@ export class CustomerService {
         hasBankInfo: !!bankInfo,
         hasImages: !!(imagesData && imagesData.length > 0),
         imagesCount: imagesData?.length || 0,
+        deletedIndexes: deleteIndexes || [],
       });
 
       return updatedCustomer;
@@ -768,13 +792,12 @@ export class CustomerService {
   }
 
   async getListCustomer(userId: string): Promise<ICustomerFullInformationResponse[]> {
-    const userSelectedRouteId = await this.userService.getUserSelectedRouteId(userId);
+    const routeId = await this.userService.getUserSelectedRouteId(userId);
+
     try {
       const customers = await Customer.find({
-        routeId: userSelectedRouteId,
-        bankId: {
-          $ne: null,
-        },
+        routeId,
+        bankId: { $exists: true, $ne: null },
       })
         .populate([
           { path: 'bankId', select: '_id bankName bankAccount name' },
@@ -783,60 +806,58 @@ export class CustomerService {
         ])
         .lean();
 
-      const customersFullInformation: ICustomerFullInformationResponse[] = customers.map(
-        (customer: any) => ({
-          id: customer._id.toString(),
-          name: customer.name,
-          phone: customer.phone,
-          route: customer.routeId
-            ? {
-                id: customer.routeId._id.toString(),
-                code: customer.routeId.code,
-                name: customer.routeId.name,
-                address: customer.routeId.address,
-              }
-            : undefined,
-          bank: customer.bankId
-            ? {
-                id: customer.bankId._id.toString(),
-                name: customer.bankId.name,
-                bankName: customer.bankId.bankName,
-                bankAccount: customer.bankId.bankAccount,
-              }
-            : null,
-          createdBy: customer.createdBy
-            ? {
-                id: customer.createdBy._id.toString(),
-                username: customer.createdBy.username,
-                name: customer.createdBy.name,
-                createdAt: customer.createdBy.createdAt,
-                updatedAt: customer.createdBy.updatedAt,
-              }
-            : null,
-          images: customer.images,
-          address: customer.address,
-          identityCardIssuedDate: customer.identityCardIssuedDate,
-          identityCardNumber: customer.identityCardNumber,
-          createdAt: customer.createdAt,
-          updatedAt: customer.updatedAt,
-        })
+      return (
+        customers
+          // không lấy những customer chưa có thông tin bank
+          .filter(c => c.bankId)
+          .map(
+            (c: any): ICustomerFullInformationResponse => ({
+              id: c._id.toString(),
+              name: c.name,
+              phone: c.phone,
+
+              route: c.routeId && {
+                id: c.routeId._id.toString(),
+                code: c.routeId.code,
+                name: c.routeId.name,
+                address: c.routeId.address,
+              },
+
+              bank: {
+                id: c.bankId._id.toString(),
+                name: c.bankId.name,
+                bankName: c.bankId.bankName,
+                bankAccount: c.bankId.bankAccount,
+              },
+
+              createdBy: c.createdBy && {
+                id: c.createdBy._id.toString(),
+                username: c.createdBy.username,
+                name: c.createdBy.name,
+                createdAt: c.createdBy.createdAt,
+                updatedAt: c.createdBy.updatedAt,
+              },
+
+              images: c.images,
+              address: c.address,
+              identityCardName: c.identityCardName,
+              identityCardIssuedDate: c.identityCardIssuedDate,
+              identityCardNumber: c.identityCardNumber,
+              isRoute: !!c.isRoute,
+              createdAt: c.createdAt,
+              updatedAt: c.updatedAt,
+            })
+          )
       );
-      return customersFullInformation;
     } catch (error) {
-      Logger.error('Failed to delete images and bank info', {
-        error: error instanceof Error ? error.message : error,
+      Logger.error('Failed to get list customer', {
         userId,
+        error: error instanceof Error ? error.message : error,
       });
-      if (error instanceof Error) {
-        throw error;
-      }
       throw new Error('Failed to get list customer');
     }
   }
 
-  /**
-   * Update customer images data
-   */
   async updateDataImageCustomer(
     customerId: string,
     images: ICustomerImage[]
@@ -852,5 +873,17 @@ export class CustomerService {
     await customer.save();
 
     return customer.images;
+  }
+
+  async getInformationRouteCustomer(routeId: string): Promise<ICustomer | null> {
+    const customer = await Customer.findOne({
+      routeId: routeId,
+    });
+
+    if (!customer) {
+      return null;
+    }
+
+    return customer;
   }
 }

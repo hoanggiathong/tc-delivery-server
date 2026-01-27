@@ -2382,4 +2382,364 @@ export class MoneyDeliveryController {
       res.status(statusCode).json(response);
     }
   };
+
+  /**
+   * Recovery money delivery with type COLLECT by fullCode and staff name
+   * PUT /api/money-deliveries/recovery/collect
+   * @swagger
+   * /api/money-deliveries/recovery/collect:
+   *   put:
+   *     summary: Recovery money delivery with type COLLECT
+   *     description: Khôi phục tiền thu hộ (COLLECT) từ trạng thái DONE về WAITING. Chỉ áp dụng cho money delivery có type COLLECT và status DONE.
+   *     tags: [Money Delivery]
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - fullCode
+   *               - staffNameRecoveryMoney
+   *             properties:
+   *               fullCode:
+   *                 type: string
+   *                 pattern: '^\d{10}[A-Z]([A-Z]|\d+)[A-Z]([A-Z]|\d+)-T$'
+   *                 description: Full code of the money delivery (e.g., 0907250001T4T1-T)
+   *                 example: "0907250001T4T1-T"
+   *               staffNameRecoveryMoney:
+   *                 type: string
+   *                 description: Tên nhân viên thực hiện khôi phục
+   *                 minLength: 1
+   *                 maxLength: 100
+   *                 example: "Nguyen Van A"
+   *           examples:
+   *             recovery:
+   *               summary: Recovery money delivery
+   *               value:
+   *                 fullCode: "0907250001T4T1-T"
+   *                 staffNameRecoveryMoney: "Nguyen Van A"
+   *     responses:
+   *       200:
+   *         description: Money delivery recovered successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Money delivery recovered successfully"
+   *             examples:
+   *               success:
+   *                 summary: Recovery successful
+   *                 value:
+   *                   success: true
+   *                   message: "Money delivery recovered successfully"
+   *       400:
+   *         description: Validation error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *             examples:
+   *               invalidFullCode:
+   *                 summary: Invalid fullCode format
+   *                 value:
+   *                   success: false
+   *                   message: "Validation error: Money delivery fullCode must match pattern"
+   *               missingStaffName:
+   *                 summary: Missing staff name
+   *                 value:
+   *                   success: false
+   *                   message: "Validation error: Staff name recovery money is required"
+   *       401:
+   *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "User not authenticated"
+   *       404:
+   *         description: Money delivery not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *             examples:
+   *               notFound:
+   *                 summary: Money delivery not found
+   *                 value:
+   *                   success: false
+   *                   message: "Money delivery not found with fullCode: 0907250001T4T1-T and type: COLLECT"
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Failed to recover money delivery with type COLLECT"
+   */
+  recoveryMoneyDeliveryWithTypeCollect = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'User not authenticated',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { fullCode, staffNameRecoveryMoney } = req.body;
+
+      await this.moneyDeliveryService.recoveryMoneyDeliveryWithTypeCollectByFullCodeAndStaffNameRecoveryMoney(
+        fullCode,
+        staffNameRecoveryMoney
+      );
+
+      logger.info(`Money delivery recovered (COLLECT): ${fullCode} by ${staffNameRecoveryMoney}`, {
+        userId: req.user.userId,
+        fullCode,
+        staffNameRecoveryMoney,
+      });
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Money delivery recovered successfully',
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      logger.error('Error recovering money delivery with type COLLECT:', error);
+
+      let statusCode = 500;
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Failed to recover money delivery with type COLLECT';
+
+      if (message.includes('not found')) {
+        statusCode = 404;
+      } else if (message.includes('Validation error') || message.includes('required')) {
+        statusCode = 400;
+      }
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(statusCode).json(response);
+    }
+  };
+
+  /**
+   * Recovery money delivery with type NORMAL by fullCode and staff name
+   * PUT /api/money-deliveries/recovery/normal
+   * @swagger
+   * /api/money-deliveries/recovery/normal:
+   *   put:
+   *     summary: Recovery money delivery with type NORMAL
+   *     description: Khôi phục tiền chuyển thường (NORMAL) từ trạng thái DONE về WAITING. Chỉ áp dụng cho money delivery có type NORMAL và status DONE.
+   *     tags: [Money Delivery]
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - fullCode
+   *               - staffNameRecoveryMoney
+   *             properties:
+   *               fullCode:
+   *                 type: string
+   *                 pattern: '^\d{10}[A-Z]([A-Z]|\d+)[A-Z]([A-Z]|\d+)-T$'
+   *                 description: Full code of the money delivery (e.g., 0907250001T4T1-T)
+   *                 example: "0907250001T4T1-T"
+   *               staffNameRecoveryMoney:
+   *                 type: string
+   *                 description: Tên nhân viên thực hiện khôi phục
+   *                 minLength: 1
+   *                 maxLength: 100
+   *                 example: "Nguyen Van A"
+   *           examples:
+   *             recovery:
+   *               summary: Recovery money delivery
+   *               value:
+   *                 fullCode: "0907250001T4T1-T"
+   *                 staffNameRecoveryMoney: "Nguyen Van A"
+   *     responses:
+   *       200:
+   *         description: Money delivery recovered successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Money delivery recovered successfully"
+   *             examples:
+   *               success:
+   *                 summary: Recovery successful
+   *                 value:
+   *                   success: true
+   *                   message: "Money delivery recovered successfully"
+   *       400:
+   *         description: Validation error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *             examples:
+   *               invalidFullCode:
+   *                 summary: Invalid fullCode format
+   *                 value:
+   *                   success: false
+   *                   message: "Validation error: Money delivery fullCode must match pattern"
+   *               missingStaffName:
+   *                 summary: Missing staff name
+   *                 value:
+   *                   success: false
+   *                   message: "Validation error: Staff name recovery money is required"
+   *       401:
+   *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "User not authenticated"
+   *       404:
+   *         description: Money delivery not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *             examples:
+   *               notFound:
+   *                 summary: Money delivery not found
+   *                 value:
+   *                   success: false
+   *                   message: "Money delivery not found with fullCode: 0907250001T4T1-T and type: NORMAL"
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Failed to recover money delivery with type NORMAL"
+   */
+  recoveryMoneyDeliveryWithTypeNormal = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'User not authenticated',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { fullCode, staffNameRecoveryMoney } = req.body;
+
+      await this.moneyDeliveryService.recoveryMoneyDeliveryWithTypeNormalByFullCodeAndStaffNameRecoveryMoney(
+        fullCode,
+        staffNameRecoveryMoney
+      );
+
+      logger.info(`Money delivery recovered (NORMAL): ${fullCode} by ${staffNameRecoveryMoney}`, {
+        userId: req.user.userId,
+        fullCode,
+        staffNameRecoveryMoney,
+      });
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Money delivery recovered successfully',
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      logger.error('Error recovering money delivery with type NORMAL:', error);
+
+      let statusCode = 500;
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Failed to recover money delivery with type NORMAL';
+
+      if (message.includes('not found')) {
+        statusCode = 404;
+      } else if (message.includes('Validation error') || message.includes('required')) {
+        statusCode = 400;
+      }
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(statusCode).json(response);
+    }
+  };
 }

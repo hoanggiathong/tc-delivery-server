@@ -9,6 +9,7 @@ export interface ICustomerResponse extends BaseEntity {
   fromRouteId?: string;
   toRouteId?: string;
   bank?: ICustomerBankResponse;
+  isRoute?: boolean;
 }
 
 // Customer creation request interface
@@ -35,8 +36,10 @@ export interface ICustomerInformationResponse {
   route: IRouteResponse;
   images: ICustomerImage[];
   address: string;
+  identityCardName: string;
   identityCardIssuedDate: Date;
   identityCardNumber: string;
+  isRoute: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -51,8 +54,10 @@ export interface ICustomerFullInformationResponse {
   bank: ICustomerBankResponse | null;
   createdBy: IUserFullInformationResponse | null;
   address: string;
+  identityCardName: string;
   identityCardIssuedDate: Date;
   identityCardNumber: string;
+  isRoute: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

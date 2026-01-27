@@ -1,4 +1,5 @@
 import { PaymentType } from '@/types';
+import { SMSStatus, SMSType } from '@/types/sms-notification.type';
 import mongoose, { Document, Schema } from 'mongoose';
 import logger from '@/utils/logger';
 
@@ -28,8 +29,8 @@ export interface IDelivery extends Document {
   carryCost: number; // Phí bốc xếp
   homeDeliveryCostTotal?: number; // Tổng phí giao tận nhà (carryCost + homeDeliveryCost)
   vehicleType?: VehicleType | null; // Loại phương tiện (required when homeDeliveryCost > 0)
-  itemValue: number;
-  itemCost: number;
+  itemValue: number; // tri gia
+  itemCost: number; // phí gia tri
   collectCost: number; // Thu hộ
   collectForCustomer: number; // Thu dùm
   collectForCustomerCost: number; // Phụ phí
@@ -41,6 +42,7 @@ export interface IDelivery extends Document {
     height?: number; // Cao (cm)
     isOverweight?: boolean; // Quá tải
     convertedWeight?: number; // Khối lượng quy đổi
+    goodsType?: string; // Loại hàng hóa
   };
   notes?: string;
   totalCost: number;
@@ -52,13 +54,17 @@ export interface IDelivery extends Document {
   updatedAt: Date;
   isReturn: boolean; // tra hang
   inventory?: string; // kho
-  smsType?: string;
+  smsType?: SMSType; // Loại tin nhắn đã gửi thành công
+  smsStatus: SMSStatus; // Trạng thái gửi tin
   timeToSendSMS?: Date;
+  msgId?: string; // ID tin nhắn từ API
   upItems?: string; // len hang
   downItems?: string; //xuong hang
   quantityReturn: number; // so luong tra hang
   returnDeliveryImages?: IReturnDeliveryImage[];
   dateReturn?: Date; // ngay tra hang
+  isQuantityChecked: boolean;
+  quantityCheckedBy?: mongoose.Types.ObjectId;
 }
 
 export interface IReturnDeliveryImage {
@@ -228,6 +234,10 @@ const deliverySchema = new Schema<IDelivery>(
           type: Number,
           min: [0, 'Converted weight must be positive'],
         },
+        goodsType: {
+          type: String,
+          default: '',
+        },
       },
       required: false,
     },
@@ -262,12 +272,19 @@ const deliverySchema = new Schema<IDelivery>(
     },
     smsType: {
       type: String,
+      enum: Object.values(SMSType),
       default: null,
-      // enum: RETURN_DELIVERIES_SMS_TYPE,
-      // default: RETURN_DELIVERIES_SMS_TYPE.SMS,
+    },
+    smsStatus: {
+      type: Number,
+      enum: Object.values(SMSStatus).filter(v => typeof v === 'number'),
+      default: SMSStatus.NOT_SENT,
     },
     timeToSendSMS: {
       type: Date,
+    },
+    msgId: {
+      type: String,
     },
     inventory: {
       type: String,
@@ -318,6 +335,15 @@ const deliverySchema = new Schema<IDelivery>(
         message: 'Maximum 5 images allowed',
       },
     },
+    isQuantityChecked: {
+      type: Boolean,
+      default: false,
+    },
+    quantityCheckedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
   },
   {
     timestamps: true,
@@ -333,9 +359,7 @@ const deliverySchema = new Schema<IDelivery>(
 // Pre-save middleware for totalCost calculation and business logic validation
 deliverySchema.pre('save', function (next) {
   // Business logic validation
-  if (this.sender.toString() === this.receiver.toString()) {
-    return next(new Error('Sender and receiver cannot be the same'));
-  }
+  // Note: sender and receiver can be the same (same phone number is allowed)
   if (this.fromRoute.toString() === this.toRoute.toString()) {
     return next(new Error('From route and to route cannot be the same'));
   }
@@ -445,13 +469,7 @@ deliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next) {
   const updateFields = rawUpdate.$set || rawUpdate;
 
   // Business logic validation for updates
-  if (
-    updateFields.sender &&
-    updateFields.receiver &&
-    updateFields.sender.toString() === updateFields.receiver.toString()
-  ) {
-    return next(new Error('Sender and receiver cannot be the same'));
-  }
+  // Note: sender and receiver can be the same (same phone number is allowed)
   if (
     updateFields.fromRoute &&
     updateFields.toRoute &&

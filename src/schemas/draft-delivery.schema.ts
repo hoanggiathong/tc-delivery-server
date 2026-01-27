@@ -50,6 +50,7 @@ export const createDraftDeliverySchema = z.object({
         height: z.number().min(0, 'Height must be positive').optional(),
         isOverweight: z.boolean().default(false).optional(),
         convertedWeight: z.number().min(0, 'Converted weight must be positive').optional(),
+        goodsType: z.string().optional(),
       })
       .optional(),
     notes: z.string().max(1000, 'Notes are too long').optional(),
@@ -96,6 +97,7 @@ export const updateDraftDeliverySchema = z.object({
         height: z.number().min(0, 'Height must be positive').optional(),
         isOverweight: z.boolean().optional(),
         convertedWeight: z.number().min(0, 'Converted weight must be positive').optional(),
+        goodsType: z.string().optional(),
       })
       .optional(),
     notes: z.string().max(1000).optional(),

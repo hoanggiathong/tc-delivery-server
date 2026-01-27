@@ -27,11 +27,13 @@ export function getStartOfDayVietnam(date: Date): Date {
 
 /**
  * Get the end of day (23:59:59.999) for a given date in Vietnam timezone
- * @param date - Input date
+ * @param date - Input date (Date object or YYYY-MM-DD string)
  * @returns Date object set to 23:59:59.999 in Vietnam timezone
  */
-export function getEndOfDayVietnam(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+export function getEndOfDayVietnam(date: Date | string): Date {
+  const d = typeof date === 'string' ? parseVietnameseDate(date) : new Date(date);
+  d.setHours(23, 59, 59, 999);
+  return d;
 }
 
 /**

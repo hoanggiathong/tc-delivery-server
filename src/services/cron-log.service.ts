@@ -47,4 +47,9 @@ export class CronLogService {
       }
     ).exec();
   }
+
+  static async isSuccess(value: string): Promise<boolean> {
+    const log = await CronLogModel.findOne({ value }).lean();
+    return log?.status === CRON_LOG_STATUS.SUCCESS;
+  }
 }

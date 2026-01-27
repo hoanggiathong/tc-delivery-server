@@ -1,6 +1,7 @@
 import { IReturnDeliveryImage } from '@/models/delivery.model';
 import { PaymentType } from '.';
 import { IReturnDeliveryAndMoneyDeliveryResponse } from './money-delivery.type';
+import { SMSStatus, SMSType } from './sms-notification.type';
 
 export interface IReturnDeliveryListRequest {
   startDate: string;
@@ -50,6 +51,11 @@ export interface IReturnDeliveryResponse {
     code: string;
     name: string;
   };
+  fromRoute: {
+    id: string;
+    code: string;
+    name: string;
+  };
   cost: number;
   homeDelivery?: string;
   homeDeliveryCost?: number;
@@ -69,7 +75,8 @@ export interface IReturnDeliveryResponse {
   downItems?: string;
   isReturn: boolean;
   inventory: string;
-  smsType?: string;
+  smsType?: SMSType;
+  smsStatus: SMSStatus;
   timeToSendSMS?: Date;
   quantityReturn?: number;
   dateReturn?: Date;
@@ -103,6 +110,11 @@ export interface IReturnDeliveryLeanPopulated {
     code: string;
     name: string;
   };
+  fromRoute: {
+    _id: string;
+    code: string;
+    name: string;
+  };
   cost: number;
   homeDelivery: string;
   homeDeliveryCost: number;
@@ -121,7 +133,8 @@ export interface IReturnDeliveryLeanPopulated {
   upItems?: string;
   downItems?: string;
   inventory?: string;
-  smsType?: string;
+  smsType?: SMSType;
+  smsStatus: SMSStatus;
   timeToSendSMS?: Date;
   quantityReturn?: number;
   nameProductAndAdditionalInformation?: string;

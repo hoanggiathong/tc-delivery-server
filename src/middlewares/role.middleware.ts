@@ -2,6 +2,19 @@ import { Response, NextFunction } from 'express';
 import { AuthRequest, UserRole, canViewRole, canCreateRole } from '@/types';
 
 /**
+ * Role constants for easy access
+ */
+export const ROLES = {
+  USER: [UserRole.USER] as UserRole[],
+  MANAGER: [UserRole.MANAGER] as UserRole[],
+  ADMIN: [UserRole.ADMIN] as UserRole[],
+  SUPERADMIN: [UserRole.SUPERADMIN] as UserRole[],
+  MANAGER_ABOVE: [UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN] as UserRole[],
+  ADMIN_ABOVE: [UserRole.ADMIN, UserRole.SUPERADMIN] as UserRole[],
+  ALL: [UserRole.USER, UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPERADMIN] as UserRole[],
+};
+
+/**
  * Middleware to check if user has required role
  */
 export const requireRole = (requiredRoles: UserRole[]) => {
