@@ -63,6 +63,8 @@ export interface IDelivery extends Document {
   quantityReturn: number; // so luong tra hang
   returnDeliveryImages?: IReturnDeliveryImage[];
   dateReturn?: Date; // ngay tra hang
+  isQuantityChecked: boolean;
+  quantityCheckedBy?: mongoose.Types.ObjectId;
 }
 
 export interface IReturnDeliveryImage {
@@ -332,6 +334,15 @@ const deliverySchema = new Schema<IDelivery>(
         },
         message: 'Maximum 5 images allowed',
       },
+    },
+    isQuantityChecked: {
+      type: Boolean,
+      default: false,
+    },
+    quantityCheckedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
     },
   },
   {

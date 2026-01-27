@@ -43,7 +43,7 @@ export class SMSNotificationService {
 
   /**
    * Get deliveries eligible for SMS notification
-   * Condition: isReturn=true AND smsStatus=0 (NOT_SENT)
+   * Condition: isReturn=false AND smsStatus=0 (NOT_SENT)
    * Optional: filter by date (toDate) - gets results from 7 days before that date up to that date
    * Automatically filters by user's selected route
    */
@@ -59,6 +59,7 @@ export class SMSNotificationService {
     const query: Record<string, unknown> = {
       toRoute: selectedRouteId,
       isReturn: { $ne: true },
+      $or: [{ $expr: { $eq: ['$quantityReturn', '$quantity'] } }, { isQuantityChecked: true }],
     };
 
     // Always apply 7-day filter (default to today if not provided)
@@ -120,8 +121,8 @@ export class SMSNotificationService {
     const query: Record<string, unknown> = {
       toRoute: selectedRouteId,
       isReturn: { $ne: true },
+      isQuantityChecked: { $ne: true },
       $or: [{ smsStatus: null }, { smsStatus: SMSStatus.NOT_SENT }],
-      // Use $expr to compare two fields: quantityReturn < quantity
       $expr: { $lt: ['$quantityReturn', '$quantity'] },
     };
 
@@ -419,6 +420,20 @@ export class SMSNotificationService {
    */
   async updateSMSStatus(deliveryId: string, smsStatus: SMSStatus): Promise<boolean> {
     const result = await Delivery.findByIdAndUpdate(deliveryId, { smsStatus });
+    return !!result;
+  }
+
+  /**
+   * Mark delivery as quantity checked
+   */
+  async markQuantityChecked(deliveryId: string, userId: string): Promise<boolean> {
+    const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
+
+    const result = await Delivery.findOneAndUpdate(
+      { _id: deliveryId, toRoute: selectedRouteId },
+      { isQuantityChecked: true, quantityCheckedBy: userId }
+    );
+
     return !!result;
   }
 

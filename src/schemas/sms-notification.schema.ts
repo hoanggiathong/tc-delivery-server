@@ -75,6 +75,15 @@ export const getAllSMSLogsSchema = z.object({
   }),
 });
 
+/**
+ * Schema for marking delivery as quantity checked
+ */
+export const markQuantityCheckedSchema = z.object({
+  params: z.object({
+    deliveryId: z.string().min(1, 'deliveryId is required'),
+  }),
+});
+
 // Export types inferred from schemas
 export type GetEligibleDeliveriesRequest = z.infer<typeof getEligibleDeliveriesSchema>;
 export type SendNotificationsRequest = z.infer<typeof sendNotificationsSchema>;
@@ -82,3 +91,4 @@ export type RetryNotificationRequest = z.infer<typeof retryNotificationSchema>;
 export type UpdateSMSStatusRequest = z.infer<typeof updateSMSStatusSchema>;
 export type GetSMSLogsByDeliveryRequest = z.infer<typeof getSMSLogsByDeliverySchema>;
 export type GetAllSMSLogsRequest = z.infer<typeof getAllSMSLogsSchema>;
+export type MarkQuantityCheckedRequest = z.infer<typeof markQuantityCheckedSchema>;
