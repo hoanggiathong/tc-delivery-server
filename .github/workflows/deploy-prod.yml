@@ -79,11 +79,18 @@ jobs:
             # Clean typescript build cache
             rm -rf dist/
 
-            # Build and deploy Production environment
-            npm run deploy:prod
+            # Build and deploy Production environment (force restart to reload config)
+            npm run deploy:force:prod
+
+            # Deploy cronjobs (force restart to reload config)
+            pm2 delete tc-delivery-debt-calculator-prod || true
+            pm2 start ecosystem.config.js --only tc-delivery-debt-calculator-prod
+
+            pm2 delete tc-delivery-sms-queue-prod || true
+            pm2 start ecosystem.config.js --only tc-delivery-sms-queue-prod
 
             # Show PM2 status
-            pm2 status tc-delivery-server-prod
+            pm2 status
 
             # Show logs (last 20 lines)
             pm2 logs tc-delivery-server-prod --lines 20 --nostream
