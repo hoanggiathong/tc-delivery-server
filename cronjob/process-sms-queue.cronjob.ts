@@ -17,6 +17,7 @@ import mongoose from 'mongoose';
 import { SMSQueueService } from '../src/services/sms-queue.service';
 import { SMS_QUEUE_CONFIG } from '../src/types/sms-queue.type';
 import Logger from '../src/utils/logger';
+import { APP_VERSION, BUILD_TIME } from '../src/version';
 
 // Import models required for Mongoose population
 import '@/models/customer.model';
@@ -65,6 +66,8 @@ async function main() {
   mongoose.set('debug', false);
 
   Logger.info('SMS Queue Processor started', {
+    version: APP_VERSION,
+    buildTime: BUILD_TIME,
     interval: `${SMS_QUEUE_CONFIG.PROCESS_INTERVAL}ms`,
   });
 

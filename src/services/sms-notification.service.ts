@@ -243,7 +243,7 @@ export class SMSNotificationService {
     const templateData = {
       ten_khach_hang: delivery.receiverName,
       chi_nhanh: toRoute.name,
-      ma_van_don: delivery.fullCode,
+      ma_van_don: this.maskCode(delivery.fullCode),
       nguoi_gui: delivery.senderName,
       buu_pham: delivery.name,
       trang_thai: 'Đã đến trạm phát',
@@ -668,5 +668,16 @@ export class SMSNotificationService {
    */
   private formatCurrency(amount: number): string {
     return new Intl.NumberFormat('vi-VN').format(amount);
+  }
+
+  /**
+   * Mask tracking code - hide first 6 chars and last 2 chars with asterisks
+   * Example: "ABC123456TP89" -> "******3456TP**"
+   */
+  private maskCode(code: string): string {
+    if (!code || code.length <= 8) {
+      return code;
+    }
+    return '******' + code.slice(6, -2) + '**';
   }
 }
