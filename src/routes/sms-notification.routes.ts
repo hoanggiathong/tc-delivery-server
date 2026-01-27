@@ -9,6 +9,7 @@ import {
   updateSMSStatusSchema,
   getSMSLogsByDeliverySchema,
   getAllSMSLogsSchema,
+  markQuantityCheckedSchema,
 } from '@/schemas/sms-notification.schema';
 
 const router = Router();
@@ -193,6 +194,38 @@ router.put(
   authenticateToken,
   validate(updateSMSStatusSchema),
   smsController.updateSMSStatus
+);
+
+/**
+ * @swagger
+ * /api/sms/mark-quantity-checked/{deliveryId}:
+ *   put:
+ *     summary: Mark delivery as quantity checked
+ *     description: Mark a delivery as having its quantity verified. Only works for deliveries in the user's selected route.
+ *     tags: [SMS Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: deliveryId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Delivery marked as quantity checked successfully
+ *       400:
+ *         description: User must have a selected route
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Delivery not found or not in user's selected route
+ */
+router.put(
+  '/mark-quantity-checked/:deliveryId',
+  authenticateToken,
+  validate(markQuantityCheckedSchema),
+  smsController.markQuantityChecked
 );
 
 /**

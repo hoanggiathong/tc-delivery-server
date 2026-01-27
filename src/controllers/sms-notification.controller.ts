@@ -263,6 +263,60 @@ export class SMSNotificationController {
   };
 
   /**
+   * PUT /api/sms/mark-quantity-checked/:deliveryId
+   * Mark delivery as quantity checked
+   */
+  markQuantityChecked = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      const { deliveryId } = req.params;
+      const userId = req.user?.userId;
+
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'User not authenticated',
+        });
+        return;
+      }
+
+      if (!deliveryId) {
+        res.status(400).json({
+          success: false,
+          message: 'Validation error: deliveryId is required',
+        });
+        return;
+      }
+
+      const success = await this.smsNotificationService.markQuantityChecked(deliveryId, userId);
+
+      if (success) {
+        res.status(200).json({
+          success: true,
+          message: 'Delivery marked as quantity checked successfully',
+        });
+      } else {
+        res.status(404).json({
+          success: false,
+          message: 'Delivery not found or not in your selected route',
+        });
+      }
+    } catch (error) {
+      console.error('Mark quantity checked error:', error);
+
+      const message = error instanceof Error ? error.message : 'Failed to mark quantity checked';
+      let statusCode = 500;
+      if (message.includes('selected route')) {
+        statusCode = 400;
+      }
+
+      res.status(statusCode).json({
+        success: false,
+        message,
+      });
+    }
+  };
+
+  /**
    * GET /api/sms/logs/:deliveryId
    * Get SMS logs for a specific delivery
    */
