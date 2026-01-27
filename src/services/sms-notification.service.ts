@@ -16,7 +16,7 @@ import {
   IIncompleteQuantityDeliveryForSMS,
 } from '@/types/sms-notification.type';
 import Logger from '@/utils/logger';
-import { getStartOfDayVietnam, getEndOfDayVietnam, convertVietnamToUTC } from '@/utils/date.utils';
+import { getStartOfDayVietnam, getEndOfDayVietnam } from '@/utils/date.utils';
 import { convertPhoneToLocalFormat } from '@/utils/validation-patterns';
 import { UserService } from '@/services/user.service';
 
@@ -69,22 +69,23 @@ export class SMSNotificationService {
     const startDate = getStartOfDayVietnam(startDateCalc); // Set to 00:00:00
 
     query.createdAt = {
-      $gte: convertVietnamToUTC(startDate),
-      $lte: endDate, // Already UTC from schema transform or getEndOfDayVietnam
+      $gte: startDate,
+      $lte: endDate,
     };
 
     const deliveries = await Delivery.find(query)
-      .populate('receiver', 'phone')
+      .populate('sender', 'name phone')
+      .populate('receiver', 'name phone')
       .populate('toRoute', '_id code name address phone')
       .lean<IDeliveryForSMSLean[]>();
 
     return deliveries.map(delivery => ({
       _id: delivery._id.toString(),
       fullCode: delivery.fullCode,
-      receiverName: delivery.receiverName,
-      receiverPhone: delivery.receiverPhone || '',
-      senderName: delivery.senderName,
-      senderPhone: delivery.senderPhone,
+      receiverName: delivery.receiver?.name || '',
+      receiverPhone: delivery.receiver?.phone || '',
+      senderName: delivery.sender?.name || '',
+      senderPhone: delivery.sender?.phone || '',
       name: delivery.name,
       collectCost: delivery.collectCost,
       toRoute: {
@@ -119,7 +120,7 @@ export class SMSNotificationService {
     const query: Record<string, unknown> = {
       toRoute: selectedRouteId,
       isReturn: { $ne: true },
-      smsStatus: SMSStatus.NOT_SENT,
+      $or: [{ smsStatus: null }, { smsStatus: SMSStatus.NOT_SENT }],
       // Use $expr to compare two fields: quantityReturn < quantity
       $expr: { $lt: ['$quantityReturn', '$quantity'] },
     };
@@ -132,21 +133,23 @@ export class SMSNotificationService {
     const startDate = getStartOfDayVietnam(startDateCalc); // Set to 00:00:00
 
     query.createdAt = {
-      $gte: convertVietnamToUTC(startDate),
-      $lte: endDate, // Already UTC from schema transform or getEndOfDayVietnam
+      $gte: startDate,
+      $lte: endDate,
     };
 
     const deliveries = await Delivery.find(query)
-      .populate('receiver', 'phone')
+      .populate('receiver', 'name phone')
+      .populate('sender', 'name phone')
       .populate('toRoute', '_id code name address phone')
       .lean<IDeliveryForSMSLean[]>();
 
     return deliveries.map(delivery => ({
       _id: delivery._id.toString(),
       fullCode: delivery.fullCode,
-      receiverName: delivery.receiverName,
+      receiverName: delivery.receiver.name,
       receiverPhone: delivery.receiver?.phone || '',
-      senderName: delivery.senderName,
+      senderName: delivery.sender.name,
+      senderPhone: delivery.sender.phone,
       name: delivery.name,
       collectCost: delivery.collectCost,
       quantity: delivery.quantity,
@@ -172,6 +175,7 @@ export class SMSNotificationService {
   async sendNotification(deliveryId: string, userId: string): Promise<ISMSSendResult> {
     const delivery = await Delivery.findById(deliveryId)
       .populate('sender', 'phone')
+      .populate('receiver', 'phone')
       .populate('toRoute', '_id code name address phone')
       .lean<IDeliveryForSMSLean>();
 
@@ -190,13 +194,13 @@ export class SMSNotificationService {
       return {
         success: false,
         deliveryId,
-        phone: delivery.sender?.phone || '',
+        phone: delivery.receiver?.phone || '',
         errorCode: 'ALREADY_SENT',
         errorMessage: 'Notification already sent for this delivery',
       };
     }
 
-    const phone = delivery.sender?.phone;
+    const phone = delivery.receiver?.phone;
     if (!phone) {
       // Update delivery status to phone error
       await Delivery.findByIdAndUpdate(deliveryId, { smsStatus: SMSStatus.PHONE_ERROR });
@@ -215,7 +219,7 @@ export class SMSNotificationService {
       await this.createSMSLog({
         deliveryId,
         phone,
-        messageType: SMSType.ZALO_ZNS,
+        messageType: SMSType.ZALO,
         status: SMSLogStatus.FAILED,
         errorCode: 'INVALID_PHONE',
         errorMessage: 'Invalid phone number format',
@@ -245,7 +249,7 @@ export class SMSNotificationService {
       gia: this.formatCurrency(delivery.totalCost),
       hinh_thuc: delivery.homeDelivery ? 'Giao tận nhà' : 'Giao dịch trực tiếp tại quầy',
       dia_chi: toRoute.address || '',
-      '0123456789': convertPhoneToLocalFormat(toRoute.phone || ''),
+      link_cta: convertPhoneToLocalFormat(toRoute.phone || ''),
     };
 
     // Try Zalo ZNS first
@@ -259,13 +263,14 @@ export class SMSNotificationService {
       // Success with Zalo ZNS
       await Delivery.findByIdAndUpdate(deliveryId, {
         smsStatus: SMSStatus.SENT,
-        smsType: SMSType.ZALO_ZNS,
+        smsType: SMSType.ZALO,
         timeToSendSMS: new Date(),
+        msgId: zaloResult.data?.msg_id,
       });
       await this.createSMSLog({
         deliveryId,
         phone,
-        messageType: SMSType.ZALO_ZNS,
+        messageType: SMSType.ZALO,
         status: SMSLogStatus.SUCCESS,
         apiResponse: zaloResult.data,
         userId,
@@ -274,7 +279,7 @@ export class SMSNotificationService {
         success: true,
         deliveryId,
         phone,
-        messageType: SMSType.ZALO_ZNS,
+        messageType: SMSType.ZALO,
       };
     }
 
@@ -291,6 +296,7 @@ export class SMSNotificationService {
           smsStatus: SMSStatus.SENT,
           smsType: SMSType.SMS,
           timeToSendSMS: new Date(),
+          msgId: smsResult.data?.msg_id,
         });
         await this.createSMSLog({
           deliveryId,
@@ -334,7 +340,7 @@ export class SMSNotificationService {
     await this.createSMSLog({
       deliveryId,
       phone,
-      messageType: SMSType.ZALO_ZNS,
+      messageType: SMSType.ZALO,
       status: SMSLogStatus.FAILED,
       errorCode: zaloResult.errorCode,
       errorMessage: zaloResult.errorMessage,
@@ -479,17 +485,20 @@ export class SMSNotificationService {
    */
   private async sendZaloZNS(params: IYourSalesZNSParams): Promise<IYourSalesAPIResponse> {
     try {
+      // Mask tracking code: first 6 chars and last 2 chars with asterisks
+      const code = params.templateData.ma_van_don;
+      const maskedCode = code.length > 8 ? '******' + code.slice(6, -2) + '**' : code;
+
       Logger.info('Sending Zalo ZNS', { phone: params.phone, templateId: params.templateId });
-      console.log('Body data:', {
+      Logger.info('Sending data:', {
         template_id: params.templateId,
         phone: convertPhoneToLocalFormat(params.phone),
         data: params.templateData,
         sms_failover: {
           brand: 'VT.GiaPhuoc',
-          msg: 'VT.GiaPhuoc kinh moi quy khach den chi nhanh nhan buu pham tu voi so tien can thanh toan. Giao dich tai quay. Chi tiet vui long lien he.',
+          msg: `VT.GiaPhuoc kinh moi quy khach ${params.templateData.ten_khach_hang} den chi nhanh ${params.templateData.chi_nhanh} nhan buu pham ${maskedCode} tu ${params.templateData.nguoi_gui} voi so tien can thanh toan ${params.templateData.gia}. Giao dich tai quay ${params.templateData.dia_chi}. Chi tiet vui long lien he ${params.templateData.link_cta}.`,
         },
       });
-
       const response = await fetch(`${this.apiUrl}/public/zns/send`, {
         method: 'POST',
         headers: {
@@ -503,37 +512,21 @@ export class SMSNotificationService {
           data: params.templateData,
           sms_failover: {
             brand: 'VT.GiaPhuoc',
-            msg: 'VT.GiaPhuoc kinh moi quy khach den chi nhanh nhan buu pham tu voi so tien can thanh toan. Giao dich tai quay. Chi tiet vui long lien he.',
+            msg: `VT.GiaPhuoc kinh moi quy khach ${params.templateData.ten_khach_hang} den chi nhanh ${params.templateData.chi_nhanh} nhan buu pham ${maskedCode} tu ${params.templateData.nguoi_gui} voi so tien can thanh toan ${params.templateData.gia}. Giao dich tai quay ${params.templateData.dia_chi}. Chi tiet vui long lien he ${params.templateData.link_cta}.`,
           },
         }),
       });
 
-      // Check if response is JSON
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const textResponse = await response.text();
-        Logger.error('Zalo ZNS API returned non-JSON response', {
-          status: response.status,
-          contentType,
-          body: textResponse.substring(0, 500),
-        });
-        return {
-          success: false,
-          errorCode: 'INVALID_RESPONSE',
-          errorMessage: `API returned non-JSON response (status: ${response.status}). Please check API URL and credentials.`,
-        };
-      }
-
       const data = (await response.json()) as IYourSalesAPIData;
 
-      if (response.ok && data.success) {
+      if (response.status === 201 && data.data?.msg_id) {
         return { success: true, data };
       }
 
       return {
         success: false,
         errorCode: data.error_code || 'ZALO_ERROR',
-        errorMessage: data.error_message || 'Failed to send Zalo ZNS',
+        errorMessage: data.message || 'Failed to send Zalo ZNS',
         data,
       };
     } catch (error) {
@@ -567,32 +560,16 @@ export class SMSNotificationService {
         }),
       });
 
-      // Check if response is JSON
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const textResponse = await response.text();
-        Logger.error('SMS API returned non-JSON response', {
-          status: response.status,
-          contentType,
-          body: textResponse.substring(0, 500),
-        });
-        return {
-          success: false,
-          errorCode: 'INVALID_RESPONSE',
-          errorMessage: `API returned non-JSON response (status: ${response.status}). Please check API URL and credentials.`,
-        };
-      }
-
       const data = (await response.json()) as IYourSalesAPIData;
 
-      if (response.ok && data.success) {
+      if (response.status === 201 && data.data?.msg_id) {
         return { success: true, data };
       }
 
       return {
         success: false,
         errorCode: data.error_code || 'SMS_ERROR',
-        errorMessage: data.error_message || 'Failed to send SMS',
+        errorMessage: data.message || 'Failed to send SMS',
         data,
       };
     } catch (error) {
@@ -623,8 +600,7 @@ export class SMSNotificationService {
         deliveryId: data.deliveryId,
         phone: data.phone,
         messageType: data.messageType,
-        templateId:
-          data.messageType === SMSType.ZALO_ZNS ? this.zaloTemplateId : this.smsTemplateId,
+        templateId: data.messageType === SMSType.ZALO ? this.zaloTemplateId : this.smsTemplateId,
         status: data.status,
         errorCode: data.errorCode,
         errorMessage: data.errorMessage,

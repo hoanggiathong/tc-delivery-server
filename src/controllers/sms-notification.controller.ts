@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { SMSNotificationService } from '@/services/sms-notification.service';
+import { SMSQueueService } from '@/services/sms-queue.service';
 import { SMSLogStatus, SMSStatus } from '@/types/sms-notification.type';
 import { AuthRequest } from '@/types';
 
@@ -9,9 +10,11 @@ import { AuthRequest } from '@/types';
  */
 export class SMSNotificationController {
   private smsNotificationService: SMSNotificationService;
+  private smsQueueService: SMSQueueService;
 
   constructor() {
     this.smsNotificationService = new SMSNotificationService();
+    this.smsQueueService = new SMSQueueService();
   }
 
   /**
@@ -142,18 +145,23 @@ export class SMSNotificationController {
         return;
       }
 
-      const result = await this.smsNotificationService.sendBulkNotifications(deliveryIds, userId);
+      // Add to queue instead of sending directly
+      const result = await this.smsQueueService.addBulkToQueue(deliveryIds, userId);
 
       res.status(200).json({
         success: true,
-        message: `Sent ${result.successCount}/${result.totalCount} notifications successfully`,
-        data: result,
+        message: `Added ${result.added} deliveries to SMS queue, skipped ${result.skipped}`,
+        data: {
+          added: result.added,
+          skipped: result.skipped,
+          total: deliveryIds.length,
+        },
       });
     } catch (error) {
       console.error('Send notifications error:', error);
       res.status(500).json({
         success: false,
-        message: error instanceof Error ? error.message : 'Failed to send notifications',
+        message: error instanceof Error ? error.message : 'Failed to add to SMS queue',
       });
     }
   };

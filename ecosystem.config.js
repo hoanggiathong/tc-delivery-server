@@ -26,6 +26,34 @@ module.exports = {
       health_check_grace_period: 10000,
     },
     {
+      name: 'tc-delivery-sms-queue-uat',
+      script: 'dist/cronjob/process-sms-queue.cronjob.js',
+      cwd: './',
+      instances: 1,
+      exec_mode: 'fork',
+      // Environment variables
+      env: {
+        NODE_ENV: 'uat',
+      },
+      // Load environment variables from file
+      env_file: '.env.uat',
+      // Logging
+      log_file: './logs/sms-queue-uat-combined.log',
+      out_file: './logs/sms-queue-uat-out.log',
+      error_file: './logs/sms-queue-uat-error.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      // Process settings - Keep running (no cron_restart)
+      watch: false,
+      autorestart: true,
+      max_memory_restart: '258M',
+      // Restart policies
+      restart_delay: 1000,
+      max_restarts: 10,
+      min_uptime: '10s',
+      // Health check
+      health_check_grace_period: 10000,
+    },
+    {
       name: 'tc-delivery-server-prod',
       script: 'dist/src/index.js',
       cwd: './',

@@ -34,7 +34,13 @@ const customFormat = winston.format.printf(info => {
     // Don't remove quotes from JSON strings or quotes in the middle
   }
 
-  return `${info.timestamp} ${info.level}: ${message}`;
+  // Extract metadata (exclude standard winston fields)
+  const { _timestamp, _level, message: _msg, _splat, ...metadata } = info;
+
+  // Format metadata if exists
+  const metadataStr = Object.keys(metadata).length ? ` ${JSON.stringify(metadata)}` : '';
+
+  return `${info.timestamp} ${info.level}: ${message}${metadataStr}`;
 });
 
 // Console format (with colors)

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { SMSLogStatus, SMSStatus } from '@/types/sms-notification.type';
-import { getEndOfDayUTC, getStartOfDayUTC } from '@/utils/date.utils';
+import { getEndOfDayUTC, getEndOfDayVietnam, getStartOfDayUTC } from '@/utils/date.utils';
 
 /**
  * Schema for getting eligible deliveries
@@ -13,7 +13,7 @@ export const getEligibleDeliveriesSchema = z.object({
     toDate: z
       .string()
       .optional()
-      .transform(val => (val ? getEndOfDayUTC(val) : undefined)),
+      .transform(val => (val ? getEndOfDayVietnam(val) : undefined)),
   }),
 });
 

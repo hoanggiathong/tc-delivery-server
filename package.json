@@ -16,6 +16,8 @@
     "start:debug": "cross-env NODE_ENV=production node --inspect dist/src/index.js",
     "cronjob:debt:dev": "cross-env NODE_ENV=development npx tsx cronjob/calculate-debt.cronjob.ts",
     "cronjob:debt": "cross-env NODE_ENV=production node dist/cronjob/calculate-debt.cronjob.js",
+    "cronjob:sms-queue:dev": "cross-env NODE_ENV=development npx tsx cronjob/process-sms-queue.cronjob.ts",
+    "cronjob:sms-queue": "cross-env NODE_ENV=production node dist/cronjob/process-sms-queue.cronjob.js",
     "db:sync-indexes": "cross-env NODE_ENV=development npx tsx src/scripts/sync-indexes.ts",
     "db:sync-indexes:prod": "cross-env NODE_ENV=production node dist/src/scripts/sync-indexes.js",
     "db:sync-indexes:uat": "cross-env NODE_ENV=uat node dist/src/scripts/sync-indexes.js",

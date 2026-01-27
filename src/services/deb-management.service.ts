@@ -12,7 +12,7 @@ import {
   IGetListPaymentDebtManagementResponse,
   IGetListReceiptDebtManagementResponse,
 } from '@/types/debt-management.type';
-import { IGetListDebtResponse } from '@/types/debt.type';
+import { IDebtTotal, IGetListDebtResponse } from '@/types/debt.type';
 import { Request } from 'express';
 import mongoose, { Types } from 'mongoose';
 import { DebtReportService } from './debt-report.service';
@@ -850,9 +850,11 @@ export class DebtManagementService {
     | IGetListPaymentDebtManagementResponse
     | IGetListReceiptDebtManagementResponse
     | IGetListDebtResponse
-    | { data: [] }
+    | IDebtTotal
   > {
     try {
+      const toRouteId = await this.userService.getUserSelectedRouteId(userId);
+      const toRouteIdObj = new Types.ObjectId(toRouteId);
       // Validate routeId format if provided
       if (routeId && !Types.ObjectId.isValid(routeId)) {
         throw new Error('Invalid routeId format');
@@ -879,8 +881,7 @@ export class DebtManagementService {
           return await this.debtService.getListDebt(mockReq, userId);
 
         case DEBT_MANAGEMENT_TYPE_REPORT.TOTAL:
-          // Will handle later
-          return { data: [] };
+          return await this.debtReportService.getDebtReportTotal(toRouteIdObj, startDate, endDate);
 
         default:
           throw new Error(`Invalid type: ${type}`);

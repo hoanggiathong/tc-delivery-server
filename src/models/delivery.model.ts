@@ -57,6 +57,7 @@ export interface IDelivery extends Document {
   smsType?: SMSType; // Loại tin nhắn đã gửi thành công
   smsStatus: SMSStatus; // Trạng thái gửi tin
   timeToSendSMS?: Date;
+  msgId?: string; // ID tin nhắn từ API
   upItems?: string; // len hang
   downItems?: string; //xuong hang
   quantityReturn: number; // so luong tra hang
@@ -279,6 +280,9 @@ const deliverySchema = new Schema<IDelivery>(
     },
     timeToSendSMS: {
       type: Date,
+    },
+    msgId: {
+      type: String,
     },
     inventory: {
       type: String,

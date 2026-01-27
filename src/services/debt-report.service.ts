@@ -217,20 +217,20 @@ export class DebtReportService {
         : (debtReport.receivable ?? 0);
 
       // Calculate totalDebt using the correct formula:
-      // totalDebt = (costFromRoute + feeCODToRoute + homeDeliveryFromRoute + surchargeToRoute + receivable)
-      //           - (costToRoute + feeCODFromRoute + homeDeliveryToRoute + surchargeFromRoute + accountPayable)
+      // totalDebt = (costFromRoute + feeCODToRoute + homeDeliveryFromRoute + surchargeFromRoute + receivable)
+      //           - (costToRoute + feeCODFromRoute + homeDeliveryToRoute +  surchargeToRoute + accountPayable)
       //           + openingBalance
       const A =
         (debtReport.costFromRoute ?? 0) +
         (debtReport.feeCODToRoute ?? 0) +
         (debtReport.homeDeliveryFromRoute ?? 0) +
-        (debtReport.surchargeToRoute ?? 0) +
+        (debtReport.surchargeFromRoute ?? 0) +
         newReceivable;
       const B =
         (debtReport.costToRoute ?? 0) +
         (debtReport.feeCODFromRoute ?? 0) +
         (debtReport.homeDeliveryToRoute ?? 0) +
-        (debtReport.surchargeFromRoute ?? 0) +
+        (debtReport.surchargeToRoute ?? 0) +
         newAccountPayable;
       const newTotalDebt = A - B + (debtReport.openingBalance ?? 0);
 
@@ -301,12 +301,12 @@ export class DebtReportService {
       const endOfDay = new Date(endDate);
       endOfDay.setHours(23, 59, 59, 999);
 
-      // Get debt reports for the date range and toRoute
-      // Debt reports already contain daily totals, so we just need to sum them up
-      const debtReports = await DebtReport.find({
+      const where = {
         toRoute: toRouteObjId,
         dateDebtReport: { $gte: start, $lte: endOfDay },
-      }).lean();
+      };
+
+      const debtReports = await DebtReport.find(where).lean();
 
       // Initialize total object
       const total = {
