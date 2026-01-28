@@ -87,6 +87,7 @@ export class ReportService {
       let totalCostDelivery: number = 0;
       let homeDeliveryCostWithPaymentTypePaidDelivery: number = 0;
       let totalCollectForCustomerCostWithPaymentTypePaidDelivery: number = 0;
+      let totalCollectForCustomerCostWithPaymentTypeDebtDelivery: number = 0;
 
       const moneyDeliveryList = [...moneyDeliveriesTypeNormal, ...moneyDeliveriesTypeCollect];
 
@@ -121,6 +122,18 @@ export class ReportService {
         totalSendCostWithTypeCollectMoneyDelivery +
         totalSendCostWithTypeNormalMoneyDelivery;
 
+      const getListReturnDeliveriesIsReturnTrueOfToRouteForCalculateCollectForCustomerCost =
+        await this.deliveryService.getListReturnDeliveriesIsReturnTrueOfToRouteForCalculateCollectForCustomerCost(
+          userId,
+          start,
+          end,
+          routeId
+        );
+
+      getListReturnDeliveriesIsReturnTrueOfToRouteForCalculateCollectForCustomerCost.map(item => {
+        totalCollectForCustomerCostWithPaymentTypeDebtDelivery += item.collectForCustomerCost || 0;
+      });
+
       const sum = {
         totalSendMoneyAmountTypeNormalMoneyDelivery: totalSendMoneyAmountTypeNormalMoneyDelivery,
         totalSendMoneyAmountTypeCollectMoneyDelivery: totalSendMoneyAmountTypeCollectMoneyDelivery,
@@ -134,6 +147,8 @@ export class ReportService {
         totalCostPaid: totalCostPaid,
         totalCostNotHomeDeliveryCostAndCollectForCustomerCost:
           totalCostNotHomeDeliveryCostAndCollectForCustomerCost,
+        totalCollectForCustomerCostWithPaymentTypeDebtDelivery:
+          totalCollectForCustomerCostWithPaymentTypeDebtDelivery,
       };
 
       const data: IReportReturnMoneyDeliveryAndReturnDeliveryResponse = {

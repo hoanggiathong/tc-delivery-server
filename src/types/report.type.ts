@@ -25,4 +25,5 @@ export interface ITotalReportReturnMoneyDeliveryAndReturnDeliveryResponse {
   totalCollectForCustomerCostWithPaymentTypePaidDelivery: number; //Phụ phí đi (đã thu)
   totalCostPaid: number;
   totalCostNotHomeDeliveryCostAndCollectForCustomerCost: number;
+  totalCollectForCustomerCostWithPaymentTypeDebtDelivery: number; //Phụ phí về (nợ)
 }
