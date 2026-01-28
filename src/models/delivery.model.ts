@@ -568,6 +568,7 @@ deliverySchema.index({ toRoute: 1 });
 deliverySchema.index({ createdByUser: 1 });
 deliverySchema.index({ createdAt: -1 }); // Recent first
 deliverySchema.index({ fromRoute: 1, toRoute: 1, createdAt: -1 }); // Route analysis
+deliverySchema.index({ fromRoute: 1, toRoute: 1, createdAt: 1 }); // Route analysis
 deliverySchema.index({ sender: 1, createdAt: -1 }); // Sender history
 deliverySchema.index({ receiver: 1, createdAt: -1 }); // Receiver history
 deliverySchema.index({ code: 1, fromRoute: 1, toRoute: 1 });

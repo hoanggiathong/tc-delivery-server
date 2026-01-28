@@ -6,12 +6,18 @@ import { IDebtRow } from '@/types/debt.type';
 import mongoose from 'mongoose';
 
 export class CronjobService {
-  async cronjobCalculateDebt(): Promise<void> {
+  async cronjobCalculateDebt(isNextDay: boolean = false): Promise<void> {
     // Set yesterday's date range (from start of day to end of day)
     // Calculate yesterday: current date minus 1 day
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
+
+    // if (isNextDay) {
+    //   console.log('isNextDay cronjobCalculateDebt:>> ', isNextDay);
+    //   today.setDate(today.getDate() + 1);
+    //   yesterday.setDate(yesterday.getDate() + 1);
+    // }
 
     const startDate = new Date(
       yesterday.getFullYear(),
@@ -35,7 +41,7 @@ export class CronjobService {
 
     // Check if debt table has data for yesterday
     const count = await Debt.countDocuments({
-      createdAt: {
+      dateDebt: {
         $gte: startDate,
         $lte: endDate,
       },
@@ -44,7 +50,7 @@ export class CronjobService {
     if (count === 0) {
       await this.cronjobFirstCalculateDebt(startDate, endDate);
     } else {
-      await this.cronjobCalculateDebtEveryDay(startDate, endDate);
+      await this.cronjobCalculateDebtEveryDay(isNextDay);
     }
   }
 
@@ -298,17 +304,52 @@ export class CronjobService {
     }
   }
 
-  async cronjobCalculateDebtEveryDay(startDate: Date, endDate: Date): Promise<void> {
+  async cronjobCalculateDebtEveryDay(isNextDay: boolean = false): Promise<void> {
+    console.log('cronjobCalculateDebtEveryDay');
     const today = new Date();
-    const yesterdayDateOnly = new Date(
-      startDate.getFullYear(),
-      startDate.getMonth(),
-      startDate.getDate()
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    // testing increase date
+    if (isNextDay) {
+      console.log('isNextDay:>> ', isNextDay);
+      today.setDate(today.getDate() + 1);
+      yesterday.setDate(yesterday.getDate() + 1);
+    }
+
+    const startDate = new Date(
+      yesterday.getFullYear(),
+      yesterday.getMonth(),
+      yesterday.getDate(),
+      0,
+      0,
+      0,
+      0
     );
 
+    const endDate = new Date(
+      yesterday.getFullYear(),
+      yesterday.getMonth(),
+      yesterday.getDate(),
+      23,
+      59,
+      59,
+      999
+    );
+
+    console.log('startDate:>> ', startDate);
+    console.log('endDate:>> ', endDate);
+    console.log('today:>> ', today);
+
     const listDebt = await Debt.find({
-      dateDebt: yesterdayDateOnly,
+      dateDebt: {
+        $gte: startDate,
+        $lte: endDate,
+      },
     });
+
+    // console.log('listDebt:>> ', listDebt);
+    console.log('listDebt.length:>> ', listDebt.length);
 
     const ops: mongoose.AnyBulkWriteOperation<IDebtRow>[] = [];
 
@@ -436,55 +477,50 @@ export class CronjobService {
         },
       });
 
-      // Logic for today debt
-      const todayDebt: IDebtRow = {
-        id: new mongoose.Types.ObjectId(),
-        fromRoute: fromRoute as unknown as any,
-        toRoute: toRoute as unknown as any,
-        openingBalance: 0,
-        costFromRoute: 0,
-        feeCODToRoute: 0,
-        costToRoute: 0,
-        feeCODFromRoute: 0,
-        accountPayable: 0,
-        receivable: 0,
-        homeDeliveryFromRoute: 0,
-        homeDeliveryToRoute: 0,
-        surchargeToRoute: 0,
-        surchargeFromRoute: 0,
-        totalDebt: 0,
-        dateDebt: new Date(today.getFullYear(), today.getMonth(), today.getDate()),
-      };
+      // Calculate today's dateDebt (midnight of today)
+      const todayDebtDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
-      if (debt.totalDebt === 0) {
-        todayDebt.openingBalance = 0;
-      } else {
-        todayDebt.openingBalance = debt.totalDebt;
-      }
-
+      // Calculate values for today's debt
+      const openingBalance = debt.totalDebt === 0 ? 0 : debt.totalDebt;
       const newReceivable =
         debt.costFromRoute +
         debt.feeCODToRoute +
         debt.homeDeliveryFromRoute +
         debt.surchargeFromRoute;
-
       const newAccountPayable =
         debt.costToRoute + debt.feeCODFromRoute + debt.homeDeliveryToRoute + debt.surchargeToRoute;
 
-      todayDebt.accountPayable = Math.abs(newAccountPayable);
-      todayDebt.receivable = Math.abs(newReceivable);
+      let accountPayable = Math.abs(newAccountPayable);
+      let receivable = Math.abs(newReceivable);
 
-      if (todayDebt.openingBalance > 0) {
-        const totalAccountPayableAndOpeningBalance = newAccountPayable + todayDebt.openingBalance;
-        todayDebt.accountPayable = totalAccountPayableAndOpeningBalance;
-      } else if (todayDebt.openingBalance < 0) {
-        const totalReceivableAndOpeningBalance = newReceivable + Math.abs(todayDebt.openingBalance);
-        todayDebt.receivable = totalReceivableAndOpeningBalance;
+      if (openingBalance > 0) {
+        const totalAccountPayableAndOpeningBalance = newAccountPayable + openingBalance;
+        accountPayable = totalAccountPayableAndOpeningBalance;
+      } else if (openingBalance < 0) {
+        const totalReceivableAndOpeningBalance = newReceivable + Math.abs(openingBalance);
+        receivable = totalReceivableAndOpeningBalance;
       }
 
-      todayDebt.totalDebt =
-        todayDebt.receivable - todayDebt.accountPayable + (todayDebt.openingBalance ?? 0);
+      const totalDebt = receivable - accountPayable + (openingBalance ?? 0);
 
+      const todayDebt: IDebtRow = {
+        id: new mongoose.Types.ObjectId(),
+        fromRoute: fromRoute as unknown as any,
+        toRoute: toRoute as unknown as any,
+        openingBalance: openingBalance,
+        costFromRoute: 0,
+        feeCODToRoute: 0,
+        costToRoute: 0,
+        feeCODFromRoute: 0,
+        accountPayable: accountPayable,
+        receivable: receivable,
+        homeDeliveryFromRoute: 0,
+        homeDeliveryToRoute: 0,
+        surchargeToRoute: 0,
+        surchargeFromRoute: 0,
+        totalDebt: totalDebt,
+        dateDebt: todayDebtDate,
+      };
       ops.push({ insertOne: { document: todayDebt } });
     }
 

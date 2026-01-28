@@ -167,6 +167,16 @@ export class DebtManagementService {
           },
         },
         { $unwind: { path: '$toRoute', preserveNullAndEmptyArrays: true } },
+        // join createdBy
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'createdBy',
+            foreignField: '_id',
+            as: 'createdBy',
+          },
+        },
+        { $unwind: { path: '$createdBy', preserveNullAndEmptyArrays: true } },
         // project các field cần trả
         {
           $project: {
@@ -181,6 +191,11 @@ export class DebtManagementService {
             reason: 1,
             createdAt: 1,
             updatedAt: 1,
+            createdBy: {
+              id: '$createdBy._id',
+              username: '$createdBy.username',
+              name: '$createdBy.name',
+            },
           },
         },
         { $sort: sort },
@@ -298,6 +313,16 @@ export class DebtManagementService {
           },
         },
         { $unwind: { path: '$toRoute', preserveNullAndEmptyArrays: true } },
+        // join createdBy
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'createdBy',
+            foreignField: '_id',
+            as: 'createdBy',
+          },
+        },
+        { $unwind: { path: '$createdBy', preserveNullAndEmptyArrays: true } },
         {
           $project: {
             id: '$_id',
@@ -311,6 +336,11 @@ export class DebtManagementService {
             reason: 1,
             createdAt: 1,
             updatedAt: 1,
+            createdBy: {
+              id: '$createdBy._id',
+              username: '$createdBy.username',
+              name: '$createdBy.name',
+            },
           },
         },
         { $sort: sort },
@@ -368,6 +398,7 @@ export class DebtManagementService {
         cashDate: data.cashDate,
         content: data.content,
         type: DEBT_MANAGEMENT_TYPE.RECEIPT,
+        createdBy: userId,
       });
 
       const paymentDebtManagement = new DebtManagement({
@@ -377,6 +408,7 @@ export class DebtManagementService {
         cashDate: data.cashDate,
         content: data.content,
         type: DEBT_MANAGEMENT_TYPE.PAYMENT,
+        createdBy: userId,
       });
 
       const receiptResult = await receiptDebtManagement.save({ session: session });
@@ -662,9 +694,9 @@ export class DebtManagementService {
       // Find all DebtManagement records with the same cash, fromRoute, toRoute, and cashDate
       // This matches the logic where createDebtManagement creates 2 records (RECEIPT and PAYMENT)
       const debtManagementRecords = await DebtManagement.find({
-        cash: cash,
         fromRoute: fromRoute,
         toRoute: toRoute,
+        cash: cash,
         cashDate: cashDate,
         deleted: false,
       })
@@ -678,9 +710,9 @@ export class DebtManagementService {
       // Mark all matching records as deleted
       await DebtManagement.updateMany(
         {
-          cash: cash,
           fromRoute: fromRoute,
           toRoute: toRoute,
+          cash: cash,
           cashDate: cashDate,
           deleted: false,
         },
@@ -811,7 +843,7 @@ export class DebtManagementService {
       // Reverse the debt report service updates (subtract instead of add)
       await this.debtReportService.updateDebtReport(
         toRoute.toString(),
-        cashDate,
+        today,
         -cash,
         session,
         false,
@@ -820,7 +852,7 @@ export class DebtManagementService {
 
       await this.debtReportService.updateDebtReport(
         fromRoute.toString(),
-        cashDate,
+        today,
         -cash,
         session,
         true,
