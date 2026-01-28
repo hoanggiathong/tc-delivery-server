@@ -1396,6 +1396,58 @@ export class DeliveryService {
     }
   }
 
+  async getListReturnDeliveriesIsReturnTrueOfToRouteForCalculateCollectForCustomerCost(
+    userId: string,
+    startDate: Date,
+    endDate: Date,
+    routeId?: string
+  ): Promise<IDeliveryResponse[]> {
+    try {
+      const toRouteId = await this.userService.getUserSelectedRouteId(userId);
+
+      const where: Record<string, unknown> = {
+        toRoute: toRouteId,
+        isReturn: true,
+        paymentType: PAYMENT_TYPE.DEBT,
+        createdAt: {
+          $gte: startDate,
+          $lte: endDate,
+        },
+      };
+
+      if (routeId) {
+        where.fromRoute = routeId;
+      } else {
+        where.toRoute = {
+          $ne: toRouteId,
+        };
+      }
+
+      const returnDeliveries = await Delivery.find(where)
+        .populate([
+          {
+            path: 'sender',
+            select: '_id phone routeId createdAt updatedAt',
+            populate: {
+              path: 'bankId',
+              select: '_id name bankName bankAccount bankBranch bankAddress',
+            },
+          },
+          { path: 'receiver', select: '_id phone routeId createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address phone' },
+          { path: 'toRoute', select: '_id code name address phone' },
+          { path: 'createdByUser', select: '_id username name' },
+        ])
+        .lean();
+
+      return returnDeliveries.map(delivery =>
+        this.transformDeliveryToResponseOptimized(this.toPopulatedDeliveryLean(delivery))
+      );
+    } catch (error) {
+      throw new Error('Failed to get list return deliveries by to route id');
+    }
+  }
+
   async recoveryDeliveryByFullCode(fullCode: string, note: string): Promise<void> {
     try {
       const delivery = await Delivery.findOne({

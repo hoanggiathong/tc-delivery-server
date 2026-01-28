@@ -33,7 +33,6 @@ async function main() {
   await mongoose.connect(uri, { dbName: process.env.MONGO_DB || undefined });
 
   const key = `Calculate-debt-${new Date().toISOString().slice(0, 10)}`;
-
   const isRun = await CronLogService.isSuccess(key);
   if (isRun) {
     console.log('Cronjob calculate debt already run success');
@@ -41,12 +40,25 @@ async function main() {
     return;
   }
 
+  // testing increase date
+  // let key = `Calculate-debt-${new Date().toISOString().slice(0, 10)}`;
+  // const isRun = await CronLogService.isSuccess(key);
+  // if (isRun) {
+  //   const date = new Date();
+  //   date.setDate(date.getDate() + 1);
+  //   key = `Calculate-debt-${date.toISOString().slice(0, 10)}`;
+  // }
+
   try {
     await CronLogService.start(key, 'Caluculate debt cronjob');
     // Step 1: Calculate and create debt records
     await cronjobService.cronjobCalculateDebt();
     // Step 2: Generate debt report from the created debt records
     await debtReportService.generateDebtReport();
+
+    // testing increase date
+    // await cronjobService.cronjobCalculateDebt(true);
+    // await debtReportService.generateDebtReport(true);
     await CronLogService.success(key);
     await mongoose.disconnect();
   } catch (error) {
