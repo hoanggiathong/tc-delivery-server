@@ -713,7 +713,7 @@ export class MoneyDeliveryService {
             },
             // Only apply for Collect and collect for customer (Flow trả hàng)
             $or: [
-              { type: MoneyDeliveryType.COLLECT },
+              { type: MoneyDeliveryType.NORMAL },
               { type: MoneyDeliveryType.COLLECT_FOR_CUSTOMER },
             ], // Không lấy thu hộ
           },
@@ -857,6 +857,11 @@ export class MoneyDeliveryService {
               $gte: startDateUTC,
               $lte: endDateUTC,
             },
+            // Only apply for Collect and collect for customer (Flow trả hàng)
+            $or: [
+              { type: MoneyDeliveryType.NORMAL },
+              { type: MoneyDeliveryType.COLLECT_FOR_CUSTOMER },
+            ], // Không lấy thu hộ
           },
         },
         {
