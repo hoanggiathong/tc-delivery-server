@@ -1,4 +1,5 @@
 import { Types } from 'mongoose';
+import { IUserFullInformationResponse } from './user.type';
 
 export interface IRouteInfo {
   id: Types.ObjectId | string;
@@ -18,6 +19,7 @@ export interface IDebtManagement {
   createdAt: Date;
   updatedAt: Date;
   deletedAt?: Date;
+  createdBy: IUserFullInformationResponse;
   __v?: number;
 }
 
