@@ -198,31 +198,37 @@ router.put(
 
 /**
  * @swagger
- * /api/sms/mark-quantity-checked/{deliveryId}:
+ * /api/sms/mark-quantity-checked:
  *   put:
- *     summary: Mark delivery as quantity checked
- *     description: Mark a delivery as having its quantity verified. Only works for deliveries in the user's selected route.
+ *     summary: Mark deliveries as quantity checked
+ *     description: Mark multiple deliveries as having their quantity verified and add them to SMS queue. Only works for deliveries in the user's selected route.
  *     tags: [SMS Notifications]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: deliveryId
- *         required: true
- *         schema:
- *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - deliveryIds
+ *             properties:
+ *               deliveryIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["507f1f77bcf86cd799439011", "507f1f77bcf86cd799439012"]
  *     responses:
  *       200:
- *         description: Delivery marked as quantity checked successfully
+ *         description: Deliveries marked as quantity checked and added to SMS queue
  *       400:
- *         description: User must have a selected route
+ *         description: User must have a selected route or validation error
  *       401:
  *         description: Unauthorized
- *       404:
- *         description: Delivery not found or not in user's selected route
  */
 router.put(
-  '/mark-quantity-checked/:deliveryId',
+  '/mark-quantity-checked',
   authenticateToken,
   validate(markQuantityCheckedSchema),
   smsController.markQuantityChecked

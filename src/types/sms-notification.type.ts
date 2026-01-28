@@ -121,6 +121,8 @@ export interface IEligibleDeliveryForSMS {
   senderPhone: string;
   name: string;
   collectCost: number;
+  homeDeliveryCost: number;
+  downItems?: string;
   toRoute: {
     _id: string;
     code: string;
@@ -131,6 +133,7 @@ export interface IEligibleDeliveryForSMS {
   isReturn: boolean;
   smsStatus: SMSStatus;
   smsType?: SMSType;
+  messageTime?: Date;
   createdAt: Date;
 }
 
@@ -152,6 +155,8 @@ export interface IDeliveryForSMSLean {
   name: string;
   collectCost: number;
   homeDelivery?: string;
+  homeDeliveryCost: number;
+  downItems?: string;
   isReturn: boolean;
   smsStatus: SMSStatus;
   smsType?: SMSType;
