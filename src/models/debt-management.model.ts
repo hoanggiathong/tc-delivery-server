@@ -14,6 +14,7 @@ export interface IDebtManagement extends Document {
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date;
+  createdBy: ObjectId;
 }
 
 const debtManagementSchema = new Schema<IDebtManagement>(
@@ -58,6 +59,11 @@ const debtManagementSchema = new Schema<IDebtManagement>(
       trim: true,
       default: null,
     },
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: [true, 'Created by user is required'],
+    },
   },
   {
     timestamps: true,
@@ -79,6 +85,7 @@ debtManagementSchema.index({ toRoute: 1, type: 1, createdAt: -1 });
 debtManagementSchema.index({ fromRoute: 1, type: 1 });
 debtManagementSchema.index({ toRoute: 1, type: 1 });
 debtManagementSchema.index({ createdAt: -1 });
+debtManagementSchema.index({ fromRoute: 1, toRoute: 1, cash: 1, cashDate: 1, deleted: 1 });
 
 export const DebtManagement = mongoose.model<IDebtManagement>(
   'DebtManagement',

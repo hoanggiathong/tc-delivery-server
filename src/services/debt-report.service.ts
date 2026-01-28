@@ -4,17 +4,23 @@ import { IDebtTotal } from '@/types/debt.type';
 import mongoose from 'mongoose';
 
 export class DebtReportService {
-  async generateDebtReport(targetDate?: Date): Promise<void> {
-    if (targetDate) {
-      await this.processDebtReport(targetDate);
-    } else {
-      const today = new Date();
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
+  async generateDebtReport(isNextDay: boolean = false): Promise<void> {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
 
-      await this.processDebtReport(yesterday);
-      await this.processDebtReport(today);
+    // testing increase date
+    if (isNextDay) {
+      console.log('isNextDay generateDebtReport:>> ', isNextDay);
+      today.setDate(today.getDate() + 1);
+      yesterday.setDate(yesterday.getDate() + 1);
     }
+
+    console.log('today:>> ', today);
+    console.log('yesterday:>> ', yesterday);
+
+    await this.processDebtReport(yesterday);
+    await this.processDebtReport(today);
   }
 
   private async processDebtReport(date: Date): Promise<void> {
@@ -124,7 +130,7 @@ export class DebtReportService {
 
       // Delete existing debt reports for the day (if any)
       await DebtReport.deleteMany({
-        createdAt: {
+        dateDebtReport: {
           $gte: startOfDay,
           $lte: endOfDay,
         },
@@ -151,7 +157,7 @@ export class DebtReportService {
   /**
    * Update debt report by toRoute and date range
    * @param toRoute - ObjectId or string of the toRoute
-   * @param createdAt - Created at date
+   * @param dateDebtReport - dateDebtReport at date
    * @param cash - Cash amount
    * @param session - Session
    * @param updateAccountPayable - Update account payable
@@ -160,7 +166,7 @@ export class DebtReportService {
    */
   async updateDebtReport(
     toRoute: mongoose.Types.ObjectId | string,
-    createdAt: Date,
+    dateDebtReport: Date,
     cash: number,
     session?: mongoose.ClientSession,
     updateAccountPayable?: boolean,
@@ -175,18 +181,18 @@ export class DebtReportService {
 
       // Calculate start and end of day for createdAt
       const startOfDay = new Date(
-        createdAt.getFullYear(),
-        createdAt.getMonth(),
-        createdAt.getDate(),
+        dateDebtReport.getFullYear(),
+        dateDebtReport.getMonth(),
+        dateDebtReport.getDate(),
         0,
         0,
         0,
         0
       );
       const endOfDay = new Date(
-        createdAt.getFullYear(),
-        createdAt.getMonth(),
-        createdAt.getDate(),
+        dateDebtReport.getFullYear(),
+        dateDebtReport.getMonth(),
+        dateDebtReport.getDate(),
         23,
         59,
         59,
