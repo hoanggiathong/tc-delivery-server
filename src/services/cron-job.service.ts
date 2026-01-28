@@ -124,11 +124,13 @@ export class CronjobService {
           elementArrayRoute.feeCODFromRoute += costDeliveryFromRoute ?? 0;
         }
 
-        // handle homeDeliveryFromRoute(GTN di)
-        elementArrayRoute.homeDeliveryFromRoute += homeDeliveryCostFromRoute ?? 0;
+        if (delivery.paymentType === 'paid') {
+          // handle homeDeliveryFromRoute(GTN di)
+          elementArrayRoute.homeDeliveryFromRoute += homeDeliveryCostFromRoute ?? 0;
 
-        // handle surchargeToRoute(phu phi di)
-        elementArrayRoute.surchargeToRoute += collectForCustomerCostFromRoute ?? 0;
+          // handle surchargeToRoute(phu phi di)
+          elementArrayRoute.surchargeToRoute += collectForCustomerCostFromRoute ?? 0;
+        }
       }
 
       // get list delivery with route is toRoute in one day
@@ -156,11 +158,13 @@ export class CronjobService {
           elementArrayRoute.feeCODToRoute += costDelivery ?? 0;
         }
 
-        // handle homeDeliveryToRoute (GTN ve)
-        elementArrayRoute.homeDeliveryToRoute += homeDeliveryCost ?? 0;
+        if (delivery.paymentType === 'paid') {
+          // handle homeDeliveryToRoute (GTN ve)
+          elementArrayRoute.homeDeliveryToRoute += homeDeliveryCost ?? 0;
 
-        // handle surchargeFromRoute(phu phi ve)
-        elementArrayRoute.surchargeFromRoute += collectForCustomerCostToRoute ?? 0;
+          // handle surchargeFromRoute(phu phi ve)
+          elementArrayRoute.surchargeFromRoute += collectForCustomerCostToRoute ?? 0;
+        }
       }
 
       // get list money delivery with route is fromRoute in one day
@@ -386,8 +390,11 @@ export class CronjobService {
         if (delivery.paymentType === 'debt') {
           debt.feeCODFromRoute += costDeliveryFromRoute ?? 0;
         }
-        debt.homeDeliveryFromRoute += homeDeliveryCostFromRoute ?? 0;
-        debt.surchargeToRoute += collectForCustomerCostFromRoute ?? 0;
+
+        if (delivery.paymentType === 'paid') {
+          debt.homeDeliveryFromRoute += homeDeliveryCostFromRoute ?? 0;
+          debt.surchargeToRoute += collectForCustomerCostFromRoute ?? 0;
+        }
       }
 
       // 2. Get deliveries (To -> From)
@@ -409,8 +416,11 @@ export class CronjobService {
         if (delivery.paymentType === 'debt') {
           debt.feeCODToRoute += costDelivery ?? 0;
         }
-        debt.homeDeliveryToRoute += homeDeliveryCost ?? 0;
-        debt.surchargeFromRoute += collectForCustomerCostToRoute ?? 0;
+
+        if (delivery.paymentType === 'paid') {
+          debt.homeDeliveryToRoute += homeDeliveryCost ?? 0;
+          debt.surchargeFromRoute += collectForCustomerCostToRoute ?? 0;
+        }
       }
 
       // 3. Money Deliveries (From -> To)
