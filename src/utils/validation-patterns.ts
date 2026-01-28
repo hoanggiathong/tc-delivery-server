@@ -10,28 +10,32 @@ export const PHONE_NUMBER_PATTERN = /^\+?[1-9]\d{1,14}$/;
 export const OBJECTID_PATTERN = /^[0-9a-fA-F]{24}$/;
 
 // Route code validation patterns
-export const ROUTE_CODE_PATTERN = /^[A-Z]([A-Z]|\d+)$/;
+// Allows: AB, T1, T2, 3H (letter+letter, letter+digits, or digits+letter)
+export const ROUTE_CODE_PATTERN = /^([A-Z]([A-Z]|\d+)|\d+[A-Z])$/;
 
 // Delivery identifier validation patterns
-export const DELIVERY_IDENTIFIER_PATTERN = /^\d{10}[A-Z]([A-Z]|\d+)[A-Z]([A-Z]|\d+)$/;
+// Supports route codes like: AB, T1, 3H
+export const DELIVERY_IDENTIFIER_PATTERN = /^\d{10}([A-Z]([A-Z]|\d+)|\d+[A-Z])([A-Z]([A-Z]|\d+)|\d+[A-Z])$/;
 
 // Money delivery identifier validation patterns
-export const MONEY_DELIVERY_IDENTIFIER_PATTERN = /^\d{10}[A-Z]([A-Z]|\d+)[A-Z]([A-Z]|\d+)-T$/;
+// Supports route codes like: AB, T1, 3H
+export const MONEY_DELIVERY_IDENTIFIER_PATTERN = /^\d{10}([A-Z]([A-Z]|\d+)|\d+[A-Z])([A-Z]([A-Z]|\d+)|\d+[A-Z])-T$/;
 
 // Date validation pattern (YYYY-MM-DD format)
 export const DATE_YYYY_MM_DD_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 // Parsing patterns for delivery services
-export const DELIVERY_IDENTIFIER_PARSE_PATTERN = /^(\d{10})([A-Z]([A-Z]|\d+))([A-Z]([A-Z]|\d+))$/;
+// Supports route codes like: AB, T1, 3H
+export const DELIVERY_IDENTIFIER_PARSE_PATTERN = /^(\d{10})([A-Z]([A-Z]|\d+)|\d+[A-Z])([A-Z]([A-Z]|\d+)|\d+[A-Z])$/;
 export const MONEY_DELIVERY_IDENTIFIER_PARSE_PATTERN =
-  /^(\d{10})([A-Z]([A-Z]|\d+))([A-Z]([A-Z]|\d+))-T$/;
+  /^(\d{10})([A-Z]([A-Z]|\d+)|\d+[A-Z])([A-Z]([A-Z]|\d+)|\d+[A-Z])-T$/;
 
 // Error messages
 export const VALIDATION_MESSAGES = {
   PHONE_NUMBER: 'Please enter a valid phone number (international format, e.g., +84901234567)',
   OBJECTID: 'Invalid ID format',
   ROUTE_CODE:
-    'Code must start with a letter followed by another letter or numbers (e.g., T1, T2, AB, CD)',
+    'Code must be letter+letter, letter+numbers, or numbers+letter (e.g., T1, T2, AB, CD, 3H)',
   DELIVERY_IDENTIFIER:
     'Invalid delivery identifier format. Expected: codeFromRouteToRoute (e.g., 0907250001T4T1, 0907250001ABCD)',
   MONEY_DELIVERY_IDENTIFIER:
@@ -55,22 +59,22 @@ export const PATTERN_EXPLANATIONS = {
     invalidExamples: ['invalid-id', '507f1f77bcf86cd79943901', '507f1f77bcf86cd799439011Z'],
   },
   ROUTE_CODE: {
-    pattern: '^[A-Z]([A-Z]|\\d+)$',
+    pattern: '^([A-Z]([A-Z]|\\d+)|\\d+[A-Z])$',
     description:
-      'Route code: Single uppercase letter followed by either another uppercase letter or one or more digits',
-    examples: ['T1', 'T2', 'A1', 'AB', 'CD', 'TK'],
-    invalidExamples: ['t1', 'AB1', '1A', 'ABC'],
+      'Route code: Letter+letter, letter+digits, or digits+letter',
+    examples: ['T1', 'T2', 'A1', 'AB', 'CD', 'TK', '3H', '12A'],
+    invalidExamples: ['t1', 'AB1', '123', 'ABC'],
   },
   DELIVERY_IDENTIFIER: {
-    pattern: '^\\d{10}[A-Z]([A-Z]|\\d+)[A-Z]([A-Z]|\\d+)$',
+    pattern: '^\\d{10}([A-Z]([A-Z]|\\d+)|\\d+[A-Z])([A-Z]([A-Z]|\\d+)|\\d+[A-Z])$',
     description: 'Delivery identifier: 10 digits followed by two route codes',
-    examples: ['0907250001T4T1', '0907250001ABCD', '0907250001T1AB'],
+    examples: ['0907250001T4T1', '0907250001ABCD', '0907250001T1AB', '09072500013HT1'],
     invalidExamples: ['090725001T4T1', '0907250001t4T1', '0907250001T4'],
   },
   MONEY_DELIVERY_IDENTIFIER: {
-    pattern: '^\\d{10}[A-Z]([A-Z]|\\d+)[A-Z]([A-Z]|\\d+)-T$',
+    pattern: '^\\d{10}([A-Z]([A-Z]|\\d+)|\\d+[A-Z])([A-Z]([A-Z]|\\d+)|\\d+[A-Z])-T$',
     description: 'Money delivery identifier: 10 digits followed by two route codes and "-T" suffix',
-    examples: ['0907250001T4T1-T', '0907250001ABCD-T', '0907250001T1AB-T'],
+    examples: ['0907250001T4T1-T', '0907250001ABCD-T', '0907250001T1AB-T', '09072500013HT1-T'],
     invalidExamples: ['0907250001T4T1', '0907250001ABCD-t', '090725001T4T1-T'],
   },
 } as const;
