@@ -59,7 +59,6 @@ export class SMSNotificationService {
     const query: Record<string, unknown> = {
       toRoute: selectedRouteId,
       isReturn: { $ne: true },
-      $or: [{ $expr: { $eq: ['$quantityReturn', '$quantity'] } }, { isQuantityChecked: true }],
     };
 
     // Always apply 7-day filter (default to today if not provided)
@@ -121,9 +120,8 @@ export class SMSNotificationService {
     const query: Record<string, unknown> = {
       toRoute: selectedRouteId,
       isReturn: { $ne: true },
-      isQuantityChecked: { $ne: true },
+      isQuantityChecked: { $eq: false },
       $or: [{ smsStatus: null }, { smsStatus: SMSStatus.NOT_SENT }],
-      $expr: { $lt: ['$quantityReturn', '$quantity'] },
     };
 
     // Always apply 7-day filter (default to today if not provided)
@@ -424,17 +422,18 @@ export class SMSNotificationService {
   }
 
   /**
-   * Mark delivery as quantity checked
+   * Mark multiple deliveries as quantity checked
+   * Returns the number of deliveries updated
    */
-  async markQuantityChecked(deliveryId: string, userId: string): Promise<boolean> {
+  async markQuantityChecked(deliveryIds: string[], userId: string): Promise<number> {
     const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
 
-    const result = await Delivery.findOneAndUpdate(
-      { _id: deliveryId, toRoute: selectedRouteId },
+    const result = await Delivery.updateMany(
+      { _id: { $in: deliveryIds }, toRoute: selectedRouteId },
       { isQuantityChecked: true, quantityCheckedBy: userId }
     );
 
-    return !!result;
+    return result.modifiedCount;
   }
 
   /**

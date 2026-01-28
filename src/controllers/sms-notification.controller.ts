@@ -263,12 +263,12 @@ export class SMSNotificationController {
   };
 
   /**
-   * PUT /api/sms/mark-quantity-checked/:deliveryId
-   * Mark delivery as quantity checked
+   * PUT /api/sms/mark-quantity-checked
+   * Mark multiple deliveries as quantity checked and add to SMS queue
    */
   markQuantityChecked = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-      const { deliveryId } = req.params;
+      const { deliveryIds } = req.body;
       const userId = req.user?.userId;
 
       if (!userId) {
@@ -279,27 +279,33 @@ export class SMSNotificationController {
         return;
       }
 
-      if (!deliveryId) {
+      if (!deliveryIds || !Array.isArray(deliveryIds) || deliveryIds.length === 0) {
         res.status(400).json({
           success: false,
-          message: 'Validation error: deliveryId is required',
+          message: 'Validation error: deliveryIds array is required',
         });
         return;
       }
 
-      const success = await this.smsNotificationService.markQuantityChecked(deliveryId, userId);
+      // Mark deliveries as quantity checked
+      const markedCount = await this.smsNotificationService.markQuantityChecked(
+        deliveryIds,
+        userId
+      );
 
-      if (success) {
-        res.status(200).json({
-          success: true,
-          message: 'Delivery marked as quantity checked successfully',
-        });
-      } else {
-        res.status(404).json({
-          success: false,
-          message: 'Delivery not found or not in your selected route',
-        });
-      }
+      // Add deliveries to SMS queue
+      const queueResult = await this.smsQueueService.addBulkToQueue(deliveryIds, userId);
+
+      res.status(200).json({
+        success: true,
+        message: `Marked ${markedCount} deliveries as quantity checked and added to SMS queue`,
+        data: {
+          total: deliveryIds.length,
+          markedAsChecked: markedCount,
+          addedToQueue: queueResult.added,
+          skippedFromQueue: queueResult.skipped,
+        },
+      });
     } catch (error) {
       console.error('Mark quantity checked error:', error);
 
