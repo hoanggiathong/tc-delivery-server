@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { Delivery } from '@/models/delivery.model';
 import { SMSLog } from '@/models/sms-log.model';
 import {
@@ -59,7 +60,6 @@ export class SMSNotificationService {
     const query: Record<string, unknown> = {
       toRoute: selectedRouteId,
       isReturn: { $ne: true },
-      $or: [{ $expr: { $eq: ['$quantityReturn', '$quantity'] } }, { isQuantityChecked: true }],
     };
 
     // Always apply 7-day filter (default to today if not provided)
@@ -80,6 +80,26 @@ export class SMSNotificationService {
       .populate('toRoute', '_id code name address phone')
       .lean<IDeliveryForSMSLean[]>();
 
+    // Get messageTime (latest sentAt) from SMS logs for all deliveries
+    const deliveryIds = deliveries.map(d => d._id.toString());
+    const objectIds = deliveryIds.map(id => new mongoose.Types.ObjectId(id));
+    const smsLogs = await SMSLog.aggregate([
+      { $match: { deliveryId: { $in: objectIds } } },
+      { $sort: { createdAt: -1 } },
+      {
+        $group: {
+          _id: '$deliveryId',
+          latestSentAt: { $first: '$sentAt' },
+        },
+      },
+    ]);
+
+    // Create a map of deliveryId -> messageTime
+    const messageTimeMap = new Map<string, Date | undefined>();
+    for (const log of smsLogs) {
+      messageTimeMap.set(log._id.toString(), log.latestSentAt);
+    }
+
     return deliveries.map(delivery => ({
       _id: delivery._id.toString(),
       fullCode: delivery.fullCode,
@@ -89,6 +109,8 @@ export class SMSNotificationService {
       senderPhone: delivery.sender?.phone || '',
       name: delivery.name,
       collectCost: delivery.collectCost,
+      homeDeliveryCost: delivery.homeDeliveryCost,
+      downItems: delivery.downItems,
       toRoute: {
         _id: delivery.toRoute._id.toString(),
         code: delivery.toRoute.code,
@@ -99,6 +121,7 @@ export class SMSNotificationService {
       isReturn: delivery.isReturn,
       smsStatus: delivery.smsStatus,
       smsType: delivery.smsType,
+      messageTime: messageTimeMap.get(delivery._id.toString()),
       createdAt: delivery.createdAt,
     }));
   }
@@ -121,9 +144,8 @@ export class SMSNotificationService {
     const query: Record<string, unknown> = {
       toRoute: selectedRouteId,
       isReturn: { $ne: true },
-      isQuantityChecked: { $ne: true },
+      isQuantityChecked: { $eq: false },
       $or: [{ smsStatus: null }, { smsStatus: SMSStatus.NOT_SENT }],
-      $expr: { $lt: ['$quantityReturn', '$quantity'] },
     };
 
     // Always apply 7-day filter (default to today if not provided)
@@ -144,6 +166,26 @@ export class SMSNotificationService {
       .populate('toRoute', '_id code name address phone')
       .lean<IDeliveryForSMSLean[]>();
 
+    // Get messageTime (latest sentAt) from SMS logs for all deliveries
+    const deliveryIds = deliveries.map(d => d._id.toString());
+    const objectIds = deliveryIds.map(id => new mongoose.Types.ObjectId(id));
+    const smsLogs = await SMSLog.aggregate([
+      { $match: { deliveryId: { $in: objectIds } } },
+      { $sort: { createdAt: -1 } },
+      {
+        $group: {
+          _id: '$deliveryId',
+          latestSentAt: { $first: '$sentAt' },
+        },
+      },
+    ]);
+
+    // Create a map of deliveryId -> messageTime
+    const messageTimeMap = new Map<string, Date | undefined>();
+    for (const log of smsLogs) {
+      messageTimeMap.set(log._id.toString(), log.latestSentAt);
+    }
+
     return deliveries.map(delivery => ({
       _id: delivery._id.toString(),
       fullCode: delivery.fullCode,
@@ -153,6 +195,8 @@ export class SMSNotificationService {
       senderPhone: delivery.sender.phone,
       name: delivery.name,
       collectCost: delivery.collectCost,
+      homeDeliveryCost: delivery.homeDeliveryCost,
+      downItems: delivery.downItems,
       quantity: delivery.quantity,
       quantityReturn: delivery.quantityReturn,
       toRoute: {
@@ -165,6 +209,7 @@ export class SMSNotificationService {
       isReturn: delivery.isReturn,
       smsStatus: delivery.smsStatus,
       smsType: delivery.smsType,
+      messageTime: messageTimeMap.get(delivery._id.toString()),
       createdAt: delivery.createdAt,
     }));
   }
@@ -424,17 +469,18 @@ export class SMSNotificationService {
   }
 
   /**
-   * Mark delivery as quantity checked
+   * Mark multiple deliveries as quantity checked
+   * Returns the number of deliveries updated
    */
-  async markQuantityChecked(deliveryId: string, userId: string): Promise<boolean> {
+  async markQuantityChecked(deliveryIds: string[], userId: string): Promise<number> {
     const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
 
-    const result = await Delivery.findOneAndUpdate(
-      { _id: deliveryId, toRoute: selectedRouteId },
+    const result = await Delivery.updateMany(
+      { _id: { $in: deliveryIds }, toRoute: selectedRouteId },
       { isQuantityChecked: true, quantityCheckedBy: userId }
     );
 
-    return !!result;
+    return result.modifiedCount;
   }
 
   /**

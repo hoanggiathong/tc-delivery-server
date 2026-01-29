@@ -387,7 +387,7 @@ deliverySchema.pre('save', function (next) {
   }
 
   // Calculate totalCost (service fees only: cost + itemCost + collectForCustomerCost + homeDeliveryCost)
-  if (this.isFree) {
+  if (this.isFree || this.paymentType === 'paid') {
     this.totalCost = 0;
   } else {
     this.totalCost =
@@ -488,20 +488,21 @@ deliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next) {
     updateFields.homeDeliveryCost !== undefined ||
     updateFields.carryCost !== undefined ||
     updateFields.homeDelivery !== undefined ||
-    updateFields.isFree !== undefined
+    updateFields.isFree !== undefined ||
+    updateFields.paymentType !== undefined
   ) {
     // Get current document to merge with updates
     const currentDoc = await this.model.findOne(this.getQuery());
     if (currentDoc) {
-      const cost = updateFields.cost !== undefined ? updateFields.cost : currentDoc.cost;
-      const itemCost =
-        updateFields.itemCost !== undefined ? updateFields.itemCost : currentDoc.itemCost;
+      // const cost = updateFields.cost !== undefined ? updateFields.cost : currentDoc.cost;
+      // const itemCost =
+      //   updateFields.itemCost !== undefined ? updateFields.itemCost : currentDoc.itemCost;
       const collectCost =
         updateFields.collectCost !== undefined ? updateFields.collectCost : currentDoc.collectCost;
-      const collectForCustomerCost =
-        updateFields.collectForCustomerCost !== undefined
-          ? updateFields.collectForCustomerCost
-          : currentDoc.collectForCustomerCost;
+      // const collectForCustomerCost =
+      //   updateFields.collectForCustomerCost !== undefined
+      //     ? updateFields.collectForCustomerCost
+      //     : currentDoc.collectForCustomerCost;
       const collectForCustomer =
         updateFields.collectForCustomer !== undefined
           ? updateFields.collectForCustomer
@@ -519,6 +520,8 @@ deliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next) {
       const vehicleType =
         updateFields.vehicleType !== undefined ? updateFields.vehicleType : currentDoc.vehicleType;
       const isFree = updateFields.isFree !== undefined ? updateFields.isFree : currentDoc.isFree;
+      const paymentType =
+        updateFields.paymentType !== undefined ? updateFields.paymentType : currentDoc.paymentType;
 
       // Validation: homeDelivery is required when carryCost or homeDeliveryCost > 0
       if (
@@ -543,10 +546,14 @@ deliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next) {
       }
 
       // Calculate totalCost (service fees only: cost + itemCost + collectForCustomerCost + homeDeliveryCost)
-      if (isFree) {
+      if (isFree || paymentType === 'paid') {
         updateFields.totalCost = 0;
       } else {
-        updateFields.totalCost = cost + itemCost + collectForCustomerCost + homeDeliveryCost;
+        updateFields.totalCost =
+          updateFields.cost +
+          updateFields.itemCost +
+          updateFields.collectForCustomerCost +
+          updateFields.homeDeliveryCost;
       }
 
       // Calculate actualRevenue (totalCost + collectCost + collectForCustomer)

@@ -24,7 +24,6 @@ const CronLogSchema = new Schema<ICronLog>(
     },
   }
 );
-
 CronLogSchema.index({ status: 1, createdAt: -1 });
 
 export const CronLogModel = mongoose.model<ICronLog>('CronLog', CronLogSchema);

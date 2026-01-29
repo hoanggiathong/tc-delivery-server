@@ -76,11 +76,13 @@ export const getAllSMSLogsSchema = z.object({
 });
 
 /**
- * Schema for marking delivery as quantity checked
+ * Schema for marking deliveries as quantity checked (supports multiple)
  */
 export const markQuantityCheckedSchema = z.object({
-  params: z.object({
-    deliveryId: z.string().min(1, 'deliveryId is required'),
+  body: z.object({
+    deliveryIds: z
+      .array(z.string().min(1, 'deliveryId cannot be empty'))
+      .min(1, 'deliveryIds array is required and must have at least one item'),
   }),
 });
 

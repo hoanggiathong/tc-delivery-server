@@ -89,6 +89,15 @@ export class SMSQueueService {
       return { added: 0, skipped: deliveryIds.length };
     }
 
+    // Step 3.5: Update isQuantityChecked = false for deliveries with quantityReturn < quantity
+    await Delivery.updateMany(
+      {
+        _id: { $in: idsToAdd },
+        $expr: { $lt: ['$quantityReturn', '$quantity'] },
+      },
+      { $set: { isQuantityChecked: false } }
+    );
+
     // Step 4: Update deliveries status to WAITING_ZALO_SMS
     await Delivery.updateMany(
       { _id: { $in: idsToAdd } },
