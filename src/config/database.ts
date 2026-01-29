@@ -88,7 +88,7 @@ export const connectDB = async (): Promise<void> => {
       Logger.warn('MongoDB connection closed');
     });
   } catch (error) {
-    Logger.error(`Error connecting to MongoDB: ${error}`);
+    Logger.error(`Error connecting to MongoDB:`, error);
     process.exit(1);
   }
 };
