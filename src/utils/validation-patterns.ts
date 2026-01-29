@@ -15,18 +15,21 @@ export const ROUTE_CODE_PATTERN = /^([A-Z]([A-Z]|\d+)|\d+[A-Z])$/;
 
 // Delivery identifier validation patterns
 // Supports route codes like: AB, T1, 3H
-export const DELIVERY_IDENTIFIER_PATTERN = /^\d{10}([A-Z]([A-Z]|\d+)|\d+[A-Z])([A-Z]([A-Z]|\d+)|\d+[A-Z])$/;
+export const DELIVERY_IDENTIFIER_PATTERN =
+  /^\d{10}([A-Z]([A-Z]|\d+)|\d+[A-Z])([A-Z]([A-Z]|\d+)|\d+[A-Z])$/;
 
 // Money delivery identifier validation patterns
 // Supports route codes like: AB, T1, 3H
-export const MONEY_DELIVERY_IDENTIFIER_PATTERN = /^\d{10}([A-Z]([A-Z]|\d+)|\d+[A-Z])([A-Z]([A-Z]|\d+)|\d+[A-Z])-T$/;
+export const MONEY_DELIVERY_IDENTIFIER_PATTERN =
+  /^\d{10}([A-Z]([A-Z]|\d+)|\d+[A-Z])([A-Z]([A-Z]|\d+)|\d+[A-Z])-T$/;
 
 // Date validation pattern (YYYY-MM-DD format)
 export const DATE_YYYY_MM_DD_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 // Parsing patterns for delivery services
 // Supports route codes like: AB, T1, 3H
-export const DELIVERY_IDENTIFIER_PARSE_PATTERN = /^(\d{10})([A-Z]([A-Z]|\d+)|\d+[A-Z])([A-Z]([A-Z]|\d+)|\d+[A-Z])$/;
+export const DELIVERY_IDENTIFIER_PARSE_PATTERN =
+  /^(\d{10})([A-Z]([A-Z]|\d+)|\d+[A-Z])([A-Z]([A-Z]|\d+)|\d+[A-Z])$/;
 export const MONEY_DELIVERY_IDENTIFIER_PARSE_PATTERN =
   /^(\d{10})([A-Z]([A-Z]|\d+)|\d+[A-Z])([A-Z]([A-Z]|\d+)|\d+[A-Z])-T$/;
 
@@ -60,8 +63,7 @@ export const PATTERN_EXPLANATIONS = {
   },
   ROUTE_CODE: {
     pattern: '^([A-Z]([A-Z]|\\d+)|\\d+[A-Z])$',
-    description:
-      'Route code: Letter+letter, letter+digits, or digits+letter',
+    description: 'Route code: Letter+letter, letter+digits, or digits+letter',
     examples: ['T1', 'T2', 'A1', 'AB', 'CD', 'TK', '3H', '12A'],
     invalidExamples: ['t1', 'AB1', '123', 'ABC'],
   },
