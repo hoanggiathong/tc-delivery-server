@@ -5,25 +5,26 @@ import mongoose from 'mongoose';
 
 export class DebtReportService {
   async generateDebtReport(isNextDay: boolean = false): Promise<void> {
-    const today = new Date();
+    const today = new Date(); // 29
     const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
 
     // testing increase date
     if (isNextDay) {
       console.log('isNextDay generateDebtReport:>> ', isNextDay);
       today.setDate(today.getDate() + 1);
-      yesterday.setDate(yesterday.getDate() + 1);
+      // yesterday.setDate(yesterday.getDate() + 1);
     }
+    yesterday.setDate(yesterday.getDate() - 1);
 
     console.log('today:>> ', today);
     console.log('yesterday:>> ', yesterday);
 
-    await this.processDebtReport(yesterday);
     await this.processDebtReport(today);
+    await this.processDebtReport(yesterday);
   }
 
   private async processDebtReport(date: Date): Promise<void> {
+    console.log('date:>> ', date);
     const session = await mongoose.startSession();
     session.startTransaction();
 
@@ -98,7 +99,15 @@ export class DebtReportService {
             surchargeToRoute: 0,
             surchargeFromRoute: 0,
             totalDebt: 0,
-            dateDebtReport: new Date(date.getFullYear(), date.getMonth(), date.getDate()),
+            dateDebtReport: new Date(
+              date.getFullYear(),
+              date.getMonth(),
+              date.getDate(),
+              0,
+              0,
+              0,
+              0
+            ),
           });
         }
 
