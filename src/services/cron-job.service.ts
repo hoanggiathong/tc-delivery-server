@@ -10,8 +10,8 @@ export class CronjobService {
     // Set yesterday's date range (from start of day to end of day)
     // Calculate yesterday: current date minus 1 day
     const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
 
     // if (isNextDay) {
     //   console.log('isNextDay cronjobCalculateDebt:>> ', isNextDay);
@@ -19,20 +19,12 @@ export class CronjobService {
     //   yesterday.setDate(yesterday.getDate() + 1);
     // }
 
-    const startDate = new Date(
-      yesterday.getFullYear(),
-      yesterday.getMonth(),
-      yesterday.getDate(),
-      0,
-      0,
-      0,
-      0
-    );
+    const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
 
     const endDate = new Date(
-      yesterday.getFullYear(),
-      yesterday.getMonth(),
-      yesterday.getDate(),
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
       23,
       59,
       59,
@@ -55,6 +47,13 @@ export class CronjobService {
   }
 
   async cronjobFirstCalculateDebt(startDate: Date, endDate: Date): Promise<void> {
+    const today = new Date(); // => 29
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1); // => 30
+
+    startDate.setDate(startDate.getDate() - 1); //28
+    endDate.setDate(endDate.getDate() - 1); // 28
+
     const listInsertDebt: IDebtRow[] = [];
     //get list route
     const listFromRoute: IRoute[] = await Route.find({}).lean();
@@ -83,7 +82,15 @@ export class CronjobService {
             surchargeToRoute: 0,
             surchargeFromRoute: 0,
             totalDebt: 0,
-            dateDebt: new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()),
+            dateDebt: new Date(
+              endDate.getFullYear(),
+              endDate.getMonth(),
+              endDate.getDate(),
+              0,
+              0,
+              0,
+              0
+            ),
           };
         }
         return arrayRoute[key];
@@ -232,7 +239,6 @@ export class CronjobService {
         ops.push({ insertOne: { document: item } });
 
         // Logic for today debt
-        const today = new Date();
         const todayDebt: IDebtRow = {
           id: new mongoose.Types.ObjectId(),
           fromRoute: item.fromRoute as unknown as any,
@@ -248,7 +254,15 @@ export class CronjobService {
           surchargeToRoute: 0,
           surchargeFromRoute: 0,
           totalDebt: 0,
-          dateDebt: new Date(today.getFullYear(), today.getMonth(), today.getDate()),
+          dateDebt: new Date(
+            tomorrow.getFullYear(),
+            tomorrow.getMonth(),
+            tomorrow.getDate() - 1,
+            0,
+            0,
+            0,
+            0
+          ),
           openingBalance: 0,
         };
 
@@ -310,17 +324,16 @@ export class CronjobService {
 
   async cronjobCalculateDebtEveryDay(isNextDay: boolean = false): Promise<void> {
     console.log('cronjobCalculateDebtEveryDay');
-    const today = new Date();
+    const today = new Date(); // => 30
     const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
 
     // testing increase date
     if (isNextDay) {
       console.log('isNextDay:>> ', isNextDay);
       today.setDate(today.getDate() + 1);
-      yesterday.setDate(yesterday.getDate() + 1);
+      // yesterday.setDate(yesterday.getDate() + 1);
     }
-
+    yesterday.setDate(yesterday.getDate() - 1); // 29
     const startDate = new Date(
       yesterday.getFullYear(),
       yesterday.getMonth(),
@@ -329,7 +342,7 @@ export class CronjobService {
       0,
       0,
       0
-    );
+    ); // 29
 
     const endDate = new Date(
       yesterday.getFullYear(),
@@ -339,7 +352,7 @@ export class CronjobService {
       59,
       59,
       999
-    );
+    ); // 29
 
     console.log('startDate:>> ', startDate);
     console.log('endDate:>> ', endDate);
@@ -361,7 +374,6 @@ export class CronjobService {
       const fromRoute = debt.fromRoute;
       const toRoute = debt.toRoute;
 
-      // reset fields
       debt.costFromRoute = 0;
       debt.feeCODToRoute = 0;
       debt.costToRoute = 0;
@@ -488,17 +500,30 @@ export class CronjobService {
       });
 
       // Calculate today's dateDebt (midnight of today)
-      const todayDebtDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const todayDebtDate = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate(),
+        0,
+        0,
+        0,
+        0
+      );
 
       // Calculate values for today's debt
-      const openingBalance = debt.totalDebt === 0 ? 0 : debt.totalDebt;
+      const openingBalance = debt.totalDebt ?? 0;
       const newReceivable =
+        debt.receivable +
         debt.costFromRoute +
         debt.feeCODToRoute +
         debt.homeDeliveryFromRoute +
         debt.surchargeFromRoute;
       const newAccountPayable =
-        debt.costToRoute + debt.feeCODFromRoute + debt.homeDeliveryToRoute + debt.surchargeToRoute;
+        debt.accountPayable +
+        debt.costToRoute +
+        debt.feeCODFromRoute +
+        debt.homeDeliveryToRoute +
+        debt.surchargeToRoute;
 
       let accountPayable = Math.abs(newAccountPayable);
       let receivable = Math.abs(newReceivable);
@@ -511,7 +536,8 @@ export class CronjobService {
         receivable = totalReceivableAndOpeningBalance;
       }
 
-      const totalDebt = receivable - accountPayable + (openingBalance ?? 0);
+      const totalDebt =
+        receivable - accountPayable + (openingBalance ?? 0) + (debt.openingBalance ?? 0);
 
       const todayDebt: IDebtRow = {
         id: new mongoose.Types.ObjectId(),

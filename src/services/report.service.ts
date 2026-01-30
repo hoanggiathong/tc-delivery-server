@@ -24,11 +24,27 @@ export class ReportService {
   ): Promise<IReportReturnMoneyDeliveryAndReturnDeliveryResponse> {
     const { startDate, endDate, routeId } = query;
 
-    const start = new Date(String(startDate));
-    start.setHours(0, 0, 0, 0);
+    const startDateObj = new Date(startDate);
+    const start = new Date(
+      startDateObj.getFullYear(),
+      startDateObj.getMonth(),
+      startDateObj.getDate(),
+      0,
+      0,
+      0,
+      0
+    );
 
-    const end = new Date(String(endDate));
-    end.setHours(23, 59, 59, 999);
+    const endDateObj = new Date(endDate);
+    const end = new Date(
+      endDateObj.getFullYear(),
+      endDateObj.getMonth(),
+      endDateObj.getDate(),
+      23,
+      59,
+      59,
+      999
+    );
 
     try {
       let moneyDeliveriesTypeNormal: IMoneyDeliveryResponse[] = [];
