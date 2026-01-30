@@ -52,7 +52,7 @@ export class ReportService {
       let returnDeliveries: IDeliveryResponse[] = [];
       if (routeId) {
         moneyDeliveriesTypeNormal =
-          await this.moneyDeliveryService.getListMoneyDeliveryByTypeNormalAndStatusDone(
+          await this.moneyDeliveryService.getListMoneyDeliveryByTypeNormal(
             userId,
             start,
             end,
@@ -60,7 +60,7 @@ export class ReportService {
           );
 
         moneyDeliveriesTypeCollect =
-          await this.moneyDeliveryService.getListMoneyDeliveryByTypeCollectAndStatusDone(
+          await this.moneyDeliveryService.getListMoneyDeliveryByTypeCollect(
             userId,
             start,
             end,
@@ -75,18 +75,10 @@ export class ReportService {
         );
       } else {
         moneyDeliveriesTypeNormal =
-          await this.moneyDeliveryService.getListMoneyDeliveryByTypeNormalAndStatusDone(
-            userId,
-            start,
-            end
-          );
+          await this.moneyDeliveryService.getListMoneyDeliveryByTypeNormal(userId, start, end);
 
         moneyDeliveriesTypeCollect =
-          await this.moneyDeliveryService.getListMoneyDeliveryByTypeCollectAndStatusDone(
-            userId,
-            start,
-            end
-          );
+          await this.moneyDeliveryService.getListMoneyDeliveryByTypeCollect(userId, start, end);
 
         returnDeliveries = await this.deliveryService.getListReturnDeliveriesByToRouteId(
           userId,
