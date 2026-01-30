@@ -145,6 +145,7 @@ export interface IReturnDeliveryLeanPopulated {
     username: string;
     name: string;
   };
+  quantity?: number;
   moneyDelivery?: IReturnDeliveryAndMoneyDeliveryResponse;
 }
 

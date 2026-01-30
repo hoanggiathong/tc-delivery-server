@@ -511,7 +511,7 @@ export class CronjobService {
       );
 
       // Calculate values for today's debt
-      const openingBalance = debt.totalDebt === 0 ? 0 : debt.totalDebt;
+      const openingBalance = debt.totalDebt ?? 0;
       const newReceivable =
         debt.receivable +
         debt.costFromRoute +
