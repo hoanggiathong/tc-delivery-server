@@ -1863,7 +1863,7 @@ export class MoneyDeliveryService {
     }
   }
 
-  async getListMoneyDeliveryByTypeNormalAndStatusDone(
+  async getListMoneyDeliveryByTypeNormal(
     userId: string,
     startDate: Date,
     endDate: Date,
@@ -1911,7 +1911,7 @@ export class MoneyDeliveryService {
     }
   }
 
-  async getListMoneyDeliveryByTypeCollectAndStatusDone(
+  async getListMoneyDeliveryByTypeCollect(
     userId: string,
     startDate: Date,
     endDate: Date,
@@ -1921,7 +1921,7 @@ export class MoneyDeliveryService {
       const toRouteId = await this.userService.getUserSelectedRouteId(userId);
 
       const where: Record<string, unknown> = {
-        status: MoneyDeliveryStatus.DONE,
+        // status: MoneyDeliveryStatus.DONE,
         type: MoneyDeliveryType.COLLECT,
         toRoute: toRouteId,
         dateReturn: {
