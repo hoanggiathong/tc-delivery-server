@@ -1357,7 +1357,7 @@ export class DeliveryService {
 
       const where: Record<string, unknown> = {
         fromRoute: fromRouteId,
-        createdAt: {
+        dateReturn: {
           $gte: startDate,
           $lte: endDate,
         },
