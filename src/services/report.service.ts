@@ -24,11 +24,27 @@ export class ReportService {
   ): Promise<IReportReturnMoneyDeliveryAndReturnDeliveryResponse> {
     const { startDate, endDate, routeId } = query;
 
-    const start = new Date(String(startDate));
-    start.setHours(0, 0, 0, 0);
+    const startDateObj = new Date(startDate);
+    const start = new Date(
+      startDateObj.getFullYear(),
+      startDateObj.getMonth(),
+      startDateObj.getDate(),
+      0,
+      0,
+      0,
+      0
+    );
 
-    const end = new Date(String(endDate));
-    end.setHours(23, 59, 59, 999);
+    const endDateObj = new Date(endDate);
+    const end = new Date(
+      endDateObj.getFullYear(),
+      endDateObj.getMonth(),
+      endDateObj.getDate(),
+      23,
+      59,
+      59,
+      999
+    );
 
     try {
       let moneyDeliveriesTypeNormal: IMoneyDeliveryResponse[] = [];
@@ -36,7 +52,7 @@ export class ReportService {
       let returnDeliveries: IDeliveryResponse[] = [];
       if (routeId) {
         moneyDeliveriesTypeNormal =
-          await this.moneyDeliveryService.getListMoneyDeliveryByTypeNormalAndStatusDone(
+          await this.moneyDeliveryService.getListMoneyDeliveryByTypeNormal(
             userId,
             start,
             end,
@@ -44,7 +60,7 @@ export class ReportService {
           );
 
         moneyDeliveriesTypeCollect =
-          await this.moneyDeliveryService.getListMoneyDeliveryByTypeCollectAndStatusDone(
+          await this.moneyDeliveryService.getListMoneyDeliveryByTypeCollect(
             userId,
             start,
             end,
@@ -59,18 +75,10 @@ export class ReportService {
         );
       } else {
         moneyDeliveriesTypeNormal =
-          await this.moneyDeliveryService.getListMoneyDeliveryByTypeNormalAndStatusDone(
-            userId,
-            start,
-            end
-          );
+          await this.moneyDeliveryService.getListMoneyDeliveryByTypeNormal(userId, start, end);
 
         moneyDeliveriesTypeCollect =
-          await this.moneyDeliveryService.getListMoneyDeliveryByTypeCollectAndStatusDone(
-            userId,
-            start,
-            end
-          );
+          await this.moneyDeliveryService.getListMoneyDeliveryByTypeCollect(userId, start, end);
 
         returnDeliveries = await this.deliveryService.getListReturnDeliveriesByToRouteId(
           userId,
