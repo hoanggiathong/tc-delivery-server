@@ -1924,7 +1924,7 @@ export class MoneyDeliveryService {
         // status: MoneyDeliveryStatus.DONE,
         type: MoneyDeliveryType.COLLECT,
         toRoute: toRouteId,
-        dateReturn: {
+        createdAt: {
           $gte: startDate,
           $lte: endDate,
         },
