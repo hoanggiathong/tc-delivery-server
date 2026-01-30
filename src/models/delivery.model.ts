@@ -63,7 +63,7 @@ export interface IDelivery extends Document {
   quantityReturn: number; // so luong tra hang
   returnDeliveryImages?: IReturnDeliveryImage[];
   dateReturn?: Date; // ngay tra hang
-  isQuantityChecked: boolean;
+  isQuantityChecked: boolean | null;
   quantityCheckedBy?: mongoose.Types.ObjectId;
 }
 
@@ -337,7 +337,7 @@ const deliverySchema = new Schema<IDelivery>(
     },
     isQuantityChecked: {
       type: Boolean,
-      default: false,
+      default: null,
     },
     quantityCheckedBy: {
       type: Schema.Types.ObjectId,
@@ -550,10 +550,10 @@ deliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next) {
         updateFields.totalCost = 0;
       } else {
         updateFields.totalCost =
-          updateFields.cost +
-          updateFields.itemCost +
-          updateFields.collectForCustomerCost +
-          updateFields.homeDeliveryCost;
+          (updateFields.cost ?? 0) +
+          (updateFields.itemCost ?? 0) +
+          (updateFields.collectForCustomerCost ?? 0) +
+          (updateFields.homeDeliveryCost ?? 0);
       }
 
       // Calculate actualRevenue (totalCost + collectCost + collectForCustomer)

@@ -58,17 +58,45 @@ export class SMSQueueService {
     deliveryIds: string[],
     userId: string
   ): Promise<{ added: number; skipped: number }> {
-    // Step 1: Find deliveries that are eligible (smsStatus is null or NOT_SENT)
-    const eligibleDeliveries = await Delivery.find({
+    // Step 1: Find deliveries with valid smsStatus
+    const validStatusDeliveries = await Delivery.find({
       _id: { $in: deliveryIds },
       $or: [
         { smsStatus: null },
         { smsStatus: SMSStatus.NOT_SENT },
         { smsStatus: SMSStatus.PHONE_ERROR },
       ],
-    }).select('_id');
+    })
+      .select('_id quantity quantityReturn isQuantityChecked')
+      .lean();
 
-    const eligibleIds = eligibleDeliveries.map(d => d._id.toString());
+    if (validStatusDeliveries.length === 0) {
+      return { added: 0, skipped: deliveryIds.length };
+    }
+
+    // Step 1.1: Separate deliveries that need quantity check vs eligible
+    const needsQuantityCheck: string[] = [];
+    const eligibleIds: string[] = [];
+
+    for (const d of validStatusDeliveries) {
+      const hasQuantityMismatch = d.quantityReturn !== null && d.quantity !== d.quantityReturn;
+
+      if (hasQuantityMismatch && d.isQuantityChecked !== true) {
+        // Needs quantity check - don't add to queue
+        needsQuantityCheck.push(d._id.toString());
+      } else if (d.quantityReturn !== null) {
+        // Eligible for queue (quantity === quantityReturn OR isQuantityChecked === true)
+        eligibleIds.push(d._id.toString());
+      }
+    }
+
+    // Update isQuantityChecked = false for deliveries needing check (không add vào queue)
+    if (needsQuantityCheck.length > 0) {
+      await Delivery.updateMany(
+        { _id: { $in: needsQuantityCheck } },
+        { $set: { isQuantityChecked: false } }
+      );
+    }
 
     if (eligibleIds.length === 0) {
       return { added: 0, skipped: deliveryIds.length };
@@ -88,15 +116,6 @@ export class SMSQueueService {
     if (idsToAdd.length === 0) {
       return { added: 0, skipped: deliveryIds.length };
     }
-
-    // Step 3.5: Update isQuantityChecked = false for deliveries with quantityReturn < quantity
-    await Delivery.updateMany(
-      {
-        _id: { $in: idsToAdd },
-        $expr: { $lt: ['$quantityReturn', '$quantity'] },
-      },
-      { $set: { isQuantityChecked: false } }
-    );
 
     // Step 4: Update deliveries status to WAITING_ZALO_SMS
     await Delivery.updateMany(
