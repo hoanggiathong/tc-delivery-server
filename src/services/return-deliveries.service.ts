@@ -67,7 +67,7 @@ export class ReturnDeliveriesService {
       toRoute: selectedRouteId,
       createdAt: { $gte: start, $lte: endDate },
       isReturn: false,
-      paymentType: 'debt',
+      //paymentType: 'debt',
     };
 
     // Handle phone receiver filter by finding customer first
