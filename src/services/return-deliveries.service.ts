@@ -263,7 +263,7 @@ export class ReturnDeliveriesService {
 
     const where = {
       toRoute: selectedRouteId,
-      createdAt: { $gte: start, $lte: end },
+      dateReturn: { $gte: start, $lte: end },
       isReturn: true,
       paymentType: PAYMENT_TYPE.DEBT,
     };
