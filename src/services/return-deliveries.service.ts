@@ -32,6 +32,7 @@ import { MoneyDeliveryService } from './money-delivery.service';
 import { RouteService } from './route.service';
 import { SettingsService } from './settings.service';
 import { UserService } from './user.service';
+import { PAYMENT_TYPE } from '@/const/money-deliveries.const';
 
 export class ReturnDeliveriesService {
   private customerService: CustomerService;
@@ -237,17 +238,34 @@ export class ReturnDeliveriesService {
   ): Promise<IReturnDeliveryResponse[]> {
     const { startDate, endDate } = query;
 
-    const start = new Date(String(startDate));
-    start.setHours(0, 0, 0, 0);
+    const startDateObj = new Date(startDate);
+    const start = new Date(
+      startDateObj.getFullYear(),
+      startDateObj.getMonth(),
+      startDateObj.getDate(),
+      0,
+      0,
+      0,
+      0
+    );
 
-    const end = new Date(String(endDate));
-    end.setHours(23, 59, 59, 999);
+    const endDateObj = new Date(endDate);
+    const end = new Date(
+      endDateObj.getFullYear(),
+      endDateObj.getMonth(),
+      endDateObj.getDate(),
+      23,
+      59,
+      59,
+      999
+    );
     const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
 
     const where = {
       toRoute: selectedRouteId,
-      createdAt: { $gte: start, $lte: end },
+      dateReturn: { $gte: start, $lte: end },
       isReturn: true,
+      paymentType: PAYMENT_TYPE.DEBT,
     };
 
     try {
