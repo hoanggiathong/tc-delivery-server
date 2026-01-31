@@ -65,6 +65,7 @@ export interface IDelivery extends Document {
   dateReturn?: Date; // ngay tra hang
   isQuantityChecked: boolean | null;
   quantityCheckedBy?: mongoose.Types.ObjectId;
+  returnedByUser?: mongoose.Types.ObjectId;
 }
 
 export interface IReturnDeliveryImage {
@@ -340,6 +341,11 @@ const deliverySchema = new Schema<IDelivery>(
       default: null,
     },
     quantityCheckedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    returnedByUser: {
       type: Schema.Types.ObjectId,
       ref: 'User',
       default: null,

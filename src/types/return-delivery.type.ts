@@ -85,6 +85,11 @@ export interface IReturnDeliveryResponse {
     username: string;
     name: string;
   };
+  returnedByUser?: {
+    _id: string;
+    username: string;
+    name: string;
+  };
   nameProductAndAdditionalInformation?: string;
   moneyDelivery?: IReturnDeliveryAndMoneyDeliveryResponse;
 }
@@ -141,6 +146,11 @@ export interface IReturnDeliveryLeanPopulated {
   dateReturn?: Date;
   returnDeliveryImages?: IReturnDeliveryImage[];
   createdByUser: {
+    _id: string;
+    username: string;
+    name: string;
+  };
+  returnedByUser?: {
     _id: string;
     username: string;
     name: string;
