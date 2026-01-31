@@ -292,7 +292,7 @@ export class SMSNotificationService {
       nguoi_gui: delivery.senderName,
       buu_pham: delivery.name,
       trang_thai: 'Đã đến trạm phát',
-      gia: this.formatCurrency(delivery.totalCost),
+      gia: (delivery.totalCost ?? 0).toString(),
       hinh_thuc: delivery.homeDelivery ? 'Giao tận nhà' : 'Giao dịch trực tiếp tại quầy',
       dia_chi: toRoute.address || '',
       link_cta: convertPhoneToLocalFormat(toRoute.phone || ''),
