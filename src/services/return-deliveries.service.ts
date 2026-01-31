@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { SORT_BY_RETURN_DELIVERIES } from '@/const/return-deliveries.const';
 import { ICustomer } from '@/models/customer.model';
 import { Delivery, IDelivery, IReturnDeliveryImage } from '@/models/delivery.model';
@@ -279,6 +280,7 @@ export class ReturnDeliveriesService {
           { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
           { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
           { path: 'createdByUser', select: '_id username name' },
+          { path: 'returnedByUser', select: '_id username name' },
         ])
         .sort({ createdAt: -1 })
         .lean();
@@ -338,6 +340,13 @@ export class ReturnDeliveriesService {
             username: item.createdByUser.username,
             name: item.createdByUser.name,
           },
+          returnedByUser: item.returnedByUser
+            ? {
+                _id: item.returnedByUser._id.toString(),
+                username: item.returnedByUser.username,
+                name: item.returnedByUser.name,
+              }
+            : undefined,
         })
       );
       return returnDeliveriesResponse;
@@ -735,6 +744,7 @@ export class ReturnDeliveriesService {
           { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
           { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
           { path: 'createdByUser', select: '_id username name' },
+          { path: 'returnedByUser', select: '_id username name' },
         ])
         .sort({ createdAt: -1 })
         .lean();
@@ -794,6 +804,13 @@ export class ReturnDeliveriesService {
             username: item.createdByUser.username,
             name: item.createdByUser.name,
           },
+          returnedByUser: item.returnedByUser
+            ? {
+                _id: item.returnedByUser._id.toString(),
+                username: item.returnedByUser.username,
+                name: item.returnedByUser.name,
+              }
+            : undefined,
           nameProductAndAdditionalInformation: item.nameProductAndAdditionalInformation || '',
         })
       );
@@ -839,6 +856,7 @@ export class ReturnDeliveriesService {
           { path: 'fromRoute', select: '_id code name address createdAt updatedAt' },
           { path: 'toRoute', select: '_id code name address createdAt updatedAt' },
           { path: 'createdByUser', select: '_id username name' },
+          { path: 'returnedByUser', select: '_id username name' },
         ])
         .sort({ createdAt: -1 })
         .lean();
@@ -899,6 +917,13 @@ export class ReturnDeliveriesService {
             username: item.createdByUser.username,
             name: item.createdByUser.name,
           },
+          returnedByUser: item.returnedByUser
+            ? {
+                _id: item.returnedByUser._id.toString(),
+                username: item.returnedByUser.username,
+                name: item.returnedByUser.name,
+              }
+            : undefined,
           nameProductAndAdditionalInformation: item.nameProductAndAdditionalInformation || '',
         })
       );
@@ -1075,6 +1100,7 @@ export class ReturnDeliveriesService {
 
       // Then update status return delivery with field isReturn = true
       delivery.isReturn = true;
+      delivery.returnedByUser = new mongoose.Types.ObjectId(userId);
       // Update field note with string 'Đã trả hàng + now date' + old value of note
       const now = new Date();
       const hours = String(now.getHours()).padStart(2, '0');
@@ -1164,6 +1190,7 @@ export class ReturnDeliveriesService {
 
         // Then update status return delivery with field isReturn = true
         delivery.isReturn = true;
+        delivery.returnedByUser = new mongoose.Types.ObjectId(userId);
         // Update field note with string 'Đã trả hàng + now date' + old value of note
         delivery.notes = `${returnDateString}, ${delivery.notes}`;
         delivery.updatedAt = now;
