@@ -1418,7 +1418,7 @@ export class DeliveryService {
       if (routeId) {
         where.fromRoute = routeId;
       } else {
-        where.toRoute = {
+        where.fromRoute = {
           $ne: toRouteId,
         };
       }
