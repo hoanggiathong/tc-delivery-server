@@ -1,6 +1,6 @@
 import { Debt } from '@/models/debt.model';
 import { Delivery, IDelivery } from '@/models/delivery.model';
-import { IMoneyDelivery, MoneyDelivery } from '@/models/money-delivery.model';
+import { IMoneyDelivery, MoneyDelivery, MoneyDeliveryType } from '@/models/money-delivery.model';
 import { IRoute, Route } from '@/models/route.model';
 import { IDebtRow } from '@/types/debt.type';
 import mongoose from 'mongoose';
@@ -77,164 +77,172 @@ export class CronjobService {
     const oldDayVn = vnDatePrev(newDayVn.year, newDayVn.month, newDayVn.date);
 
     const oldDayDebtDate = vnDateToDebtDateUtc(oldDayVn.year, oldDayVn.month, oldDayVn.date);
+    const newDayDebtDate = vnDateToDebtDateUtc(newDayVn.year, newDayVn.month, newDayVn.date);
+
+    console.log('oldDayDebtDate', oldDayDebtDate);
+    console.log('newDayDebtDate', newDayDebtDate);
+    console.log('oldDayVn', oldDayVn);
+    console.log('newDayVn', newDayVn);
 
     const count = await Debt.countDocuments({
       dateDebt: oldDayDebtDate,
     });
 
     if (count === 0) {
-      await this.cronjobFirstCalculateDebt(oldDayVn, newDayVn);
+      await this.cronjobFirstCalculateDebt(oldDayVn, newDayVn, oldDayDebtDate, newDayDebtDate);
     } else {
-      await this.cronjobCalculateDebtEveryDay(oldDayVn, newDayVn);
+      await this.cronjobCalculateDebtEveryDay(oldDayVn, newDayVn, oldDayDebtDate, newDayDebtDate);
     }
   }
 
   /**
    * First run: no debt for old day. Step 1: create debt for old day (VN). Step 2: create debt for new day (VN) with openingBalance from old day.
+   * oldDayDebtDate/newDayDebtDate are pre-computed in cronjobCalculateDebt (no date - 1 again here).
    */
   async cronjobFirstCalculateDebt(
     oldDayVn: { year: number; month: number; date: number },
-    newDayVn: { year: number; month: number; date: number }
+    newDayVn: { year: number; month: number; date: number },
+    oldDayDebtDate: Date,
+    newDayDebtDate: Date
   ): Promise<void> {
-    const oldDayDebtDate = vnDateToDebtDateUtc(oldDayVn.year, oldDayVn.month, oldDayVn.date);
-    const newDayDebtDate = vnDateToDebtDateUtc(newDayVn.year, newDayVn.month, newDayVn.date);
+    console.log('cronjobFirstCalculateDebt');
     const oldRange = vnDateToUtcRange(oldDayVn.year, oldDayVn.month, oldDayVn.date);
 
-    const listInsertDebt: IDebtRow[] = [];
+    console.log('oldRange', oldRange);
+
     const listFromRoute: IRoute[] = await Route.find({}).lean();
 
-    for (const route of listFromRoute) {
-      const arrayRoute: Record<string, IDebtRow> = {};
+    /** Map key: "fromRouteId_toRouteId" -> debt row (fromRoute -> toRoute). Used so "deliveries TO route" add to row (sender -> route), not (route -> sender). */
+    const debtByPair: Record<string, IDebtRow> = {};
 
-      const handleArrayRoute = (key: string, toRoute: mongoose.Types.ObjectId) => {
-        if (!arrayRoute[key]) {
-          arrayRoute[key] = {
-            id: new mongoose.Types.ObjectId(),
-            fromRoute: route._id as unknown as any,
-            toRoute: toRoute as unknown as any,
-            openingBalance: 0,
-            costFromRoute: 0,
-            feeCODToRoute: 0,
-            costToRoute: 0,
-            feeCODFromRoute: 0,
-            accountPayable: 0,
-            receivable: 0,
-            homeDeliveryFromRoute: 0,
-            homeDeliveryToRoute: 0,
-            surchargeToRoute: 0,
-            surchargeFromRoute: 0,
-            totalDebt: 0,
-            dateDebt: new Date(oldDayDebtDate.getTime()),
-          };
-        }
-        return arrayRoute[key];
-      };
-
-      const listToRoute: IRoute[] = await Route.find({
-        _id: { $ne: route._id },
-      }).lean();
-
-      for (const toRoute of listToRoute) {
-        const toRouteObjId = new mongoose.Types.ObjectId(String(toRoute._id));
-        handleArrayRoute(toRoute._id.toString(), toRouteObjId);
+    const getOrCreateRow = (
+      fromRouteId: mongoose.Types.ObjectId,
+      toRouteId: mongoose.Types.ObjectId
+    ): IDebtRow => {
+      const key = `${fromRouteId.toString()}_${toRouteId.toString()}`;
+      if (!debtByPair[key]) {
+        debtByPair[key] = {
+          id: new mongoose.Types.ObjectId(),
+          fromRoute: fromRouteId as unknown as any,
+          toRoute: toRouteId as unknown as any,
+          openingBalance: 0,
+          costFromRoute: 0,
+          feeCODToRoute: 0,
+          costToRoute: 0,
+          feeCODFromRoute: 0,
+          accountPayable: 0,
+          receivable: 0,
+          homeDeliveryFromRoute: 0,
+          homeDeliveryToRoute: 0,
+          surchargeToRoute: 0,
+          surchargeFromRoute: 0,
+          totalDebt: 0,
+          dateDebt: new Date(oldDayDebtDate.getTime()),
+        };
       }
+      return debtByPair[key];
+    };
 
+    // Pre-create all (from, to) pairs so every row exists for aggregation
+    for (const fromRoute of listFromRoute) {
+      for (const toRoute of listFromRoute) {
+        const fromId = new mongoose.Types.ObjectId(String(fromRoute._id));
+        const toId = new mongoose.Types.ObjectId(String(toRoute._id));
+        if (fromId.toString() !== toId.toString()) {
+          getOrCreateRow(fromId, toId);
+        }
+      }
+    }
+
+    for (const route of listFromRoute) {
+      const routeId = new mongoose.Types.ObjectId(String(route._id));
+
+      // Deliveries FROM route -> add to row (route -> delivery.toRoute)
       const listDeliveryFromRoute: IDelivery[] = await Delivery.find({
         fromRoute: route._id,
-        createdAt: {
-          $gte: oldRange.start,
-          $lte: oldRange.end,
-        },
+        createdAt: { $gte: oldRange.start, $lte: oldRange.end },
       }).lean();
 
       for (const delivery of listDeliveryFromRoute) {
-        const toRoute: string = delivery.toRoute.toString();
         const toRouteId =
           delivery.toRoute instanceof mongoose.Types.ObjectId
             ? delivery.toRoute
             : new mongoose.Types.ObjectId(String(delivery.toRoute));
-        const elementArrayRoute = handleArrayRoute(toRoute, toRouteId);
+        const row = getOrCreateRow(routeId, toRouteId);
         const itemCost = delivery.itemCost ?? 0;
         const costDeliveryFromRoute = delivery.cost ? delivery.cost + itemCost : 0;
         const homeDeliveryCostFromRoute = delivery.homeDeliveryCost ?? 0;
         const collectForCustomerCostFromRoute = delivery.collectForCustomerCost ?? 0;
 
         if (delivery.paymentType === 'debt') {
-          elementArrayRoute.feeCODFromRoute += costDeliveryFromRoute ?? 0;
+          row.feeCODToRoute += costDeliveryFromRoute ?? 0;
         }
         if (delivery.paymentType === 'paid') {
-          elementArrayRoute.homeDeliveryFromRoute += homeDeliveryCostFromRoute ?? 0;
-          elementArrayRoute.surchargeToRoute += collectForCustomerCostFromRoute ?? 0;
+          row.homeDeliveryFromRoute += homeDeliveryCostFromRoute ?? 0;
+          row.surchargeFromRoute += collectForCustomerCostFromRoute ?? 0;
         }
       }
 
+      // Deliveries TO route -> add feeCODToRoute to ROW NGƯỢC (route -> fromRoute) để 1 trạm chỉ có feeCODToRoute, trạm kia chỉ có feeCODFromRoute
       const listDeliveriesToRoute: IDelivery[] = await Delivery.find({
         toRoute: route._id,
-        createdAt: {
-          $gte: oldRange.start,
-          $lte: oldRange.end,
-        },
+        createdAt: { $gte: oldRange.start, $lte: oldRange.end },
       }).lean();
 
       for (const delivery of listDeliveriesToRoute) {
-        const fromRoute: string = delivery.fromRoute.toString();
         const fromRouteId =
           delivery.fromRoute instanceof mongoose.Types.ObjectId
             ? delivery.fromRoute
             : new mongoose.Types.ObjectId(String(delivery.fromRoute));
-        const elementArrayRoute = handleArrayRoute(fromRoute, fromRouteId);
+        const row = getOrCreateRow(routeId, fromRouteId);
         const itemCost = delivery.itemCost ?? 0;
         const costDelivery = delivery.cost ? delivery.cost + itemCost : 0;
         const homeDeliveryCost = delivery.homeDeliveryCost ?? 0;
         const collectForCustomerCostToRoute = delivery.collectForCustomerCost ?? 0;
 
         if (delivery.paymentType === 'debt') {
-          elementArrayRoute.feeCODToRoute += costDelivery ?? 0;
+          row.feeCODFromRoute += costDelivery ?? 0;
         }
         if (delivery.paymentType === 'paid') {
-          elementArrayRoute.homeDeliveryToRoute += homeDeliveryCost ?? 0;
-          elementArrayRoute.surchargeFromRoute += collectForCustomerCostToRoute ?? 0;
+          row.homeDeliveryToRoute += homeDeliveryCost ?? 0;
+          row.surchargeToRoute += collectForCustomerCostToRoute ?? 0;
         }
       }
 
+      // Money FROM route -> add to row (route -> moneyDelivery.toRoute)
       const listMoneyDeliveriesFromRoute: IMoneyDelivery[] = await MoneyDelivery.find({
         fromRoute: route._id,
-        createdAt: {
-          $gte: oldRange.start,
-          $lte: oldRange.end,
-        },
+        createdAt: { $gte: oldRange.start, $lte: oldRange.end },
       }).lean();
 
       for (const moneyDelivery of listMoneyDeliveriesFromRoute) {
-        const toRoute: string = moneyDelivery.toRoute.toString();
         const toRouteId =
           moneyDelivery.toRoute instanceof mongoose.Types.ObjectId
             ? moneyDelivery.toRoute
             : new mongoose.Types.ObjectId(String(moneyDelivery.toRoute));
-        const elementArrayRoute = handleArrayRoute(toRoute, toRouteId);
-        elementArrayRoute.costFromRoute += moneyDelivery.sendMoneyAmount ?? 0;
+        const row = getOrCreateRow(routeId, toRouteId);
+        if (moneyDelivery.type === MoneyDeliveryType.NORMAL) {
+          row.costFromRoute += moneyDelivery.sendMoneyAmount ?? 0;
+        }
       }
 
+      // Money TO route -> add costToRoute to ROW NGƯỢC (route -> fromRoute)
       const listMoneyDeliveriesToRoute: IMoneyDelivery[] = await MoneyDelivery.find({
         toRoute: route._id,
-        createdAt: {
-          $gte: oldRange.start,
-          $lte: oldRange.end,
-        },
+        createdAt: { $gte: oldRange.start, $lte: oldRange.end },
       }).lean();
 
       for (const moneyDelivery of listMoneyDeliveriesToRoute) {
-        const fromRoute: string = moneyDelivery.fromRoute.toString();
         const fromRouteId =
           moneyDelivery.fromRoute instanceof mongoose.Types.ObjectId
             ? moneyDelivery.fromRoute
             : new mongoose.Types.ObjectId(String(moneyDelivery.fromRoute));
-        const elementArrayRoute = handleArrayRoute(fromRoute, fromRouteId);
-        elementArrayRoute.costToRoute += moneyDelivery.sendMoneyAmount ?? 0;
+        const row = getOrCreateRow(routeId, fromRouteId);
+        row.costToRoute += moneyDelivery.sendMoneyAmount ?? 0;
       }
-
-      listInsertDebt.push(...(Object.values(arrayRoute).filter(Boolean) as IDebtRow[]));
     }
+
+    const listInsertDebt = Object.values(debtByPair);
 
     const ops: mongoose.AnyBulkWriteOperation<IDebtRow>[] = [];
 
@@ -279,12 +287,14 @@ export class CronjobService {
           item.costFromRoute +
           item.feeCODToRoute +
           item.homeDeliveryFromRoute +
-          item.surchargeFromRoute;
+          item.surchargeFromRoute +
+          item.receivable;
         const newAccountPayable =
           item.costToRoute +
           item.feeCODFromRoute +
           item.homeDeliveryToRoute +
-          item.surchargeToRoute;
+          item.surchargeToRoute +
+          item.accountPayable;
 
         newDayDebt.accountPayable = Math.abs(newAccountPayable);
         newDayDebt.receivable = Math.abs(newReceivable);
@@ -296,7 +306,10 @@ export class CronjobService {
         }
 
         newDayDebt.totalDebt =
-          newDayDebt.receivable - newDayDebt.accountPayable + (newDayDebt.openingBalance ?? 0);
+          newDayDebt.receivable -
+          newDayDebt.accountPayable +
+          (newDayDebt.openingBalance ?? 0) +
+          (item.openingBalance ?? 0);
 
         ops.push({ insertOne: { document: newDayDebt } });
       }
@@ -323,14 +336,18 @@ export class CronjobService {
 
   /**
    * Daily run: debt for old day exists. Step 1: update debt for old day (VN). Step 2: create debt for new day (VN) with openingBalance from old day.
+   * oldDayDebtDate/newDayDebtDate are pre-computed in cronjobCalculateDebt (no date - 1 again here).
    */
   async cronjobCalculateDebtEveryDay(
     oldDayVn: { year: number; month: number; date: number },
-    newDayVn: { year: number; month: number; date: number }
+    newDayVn: { year: number; month: number; date: number },
+    oldDayDebtDate: Date,
+    newDayDebtDate: Date
   ): Promise<void> {
-    const oldDayDebtDate = vnDateToDebtDateUtc(oldDayVn.year, oldDayVn.month, oldDayVn.date);
-    const newDayDebtDate = vnDateToDebtDateUtc(newDayVn.year, newDayVn.month, newDayVn.date);
+    console.log('cronjobCalculateDebtEveryDay');
     const oldRange = vnDateToUtcRange(oldDayVn.year, oldDayVn.month, oldDayVn.date);
+
+    console.log('oldRange', oldRange);
 
     const listDebt = await Debt.find({
       dateDebt: oldDayDebtDate,
@@ -351,6 +368,7 @@ export class CronjobService {
       debt.surchargeToRoute = 0;
       debt.surchargeFromRoute = 0;
 
+      // Phía "đi": deliveries (fromRoute -> toRoute) -> feeCODFromRoute, homeDeliveryFromRoute, surchargeFromRoute
       const listDeliveryFromRoute: IDelivery[] = await Delivery.find({
         fromRoute,
         toRoute,
@@ -368,31 +386,46 @@ export class CronjobService {
         }
         if (delivery.paymentType === 'paid') {
           debt.homeDeliveryFromRoute += homeDeliveryCostFromRoute ?? 0;
-          debt.surchargeToRoute += collectForCustomerCostFromRoute ?? 0;
+          debt.surchargeFromRoute += collectForCustomerCostFromRoute ?? 0;
         }
       }
 
-      const listDeliveriesToRoute: IDelivery[] = await Delivery.find({
-        fromRoute: toRoute,
-        toRoute: fromRoute,
-        createdAt: { $gte: oldRange.start, $lte: oldRange.end },
-      }).lean();
+      // Phía "về": chỉ row (toRoute -> fromRoute) mới nhận feeCODToRoute; cùng 1 đơn thì 1 trạm feeCODFromRoute, trạm kia feeCODToRoute (dùng thứ tự ObjectId để mỗi cặp chỉ 1 row nhận feeCODToRoute)
+      const isReceiverRow = fromRoute.toString() > toRoute.toString();
+      if (isReceiverRow) {
+        const listDeliveriesToRoute: IDelivery[] = await Delivery.find({
+          fromRoute: toRoute,
+          toRoute: fromRoute,
+          createdAt: { $gte: oldRange.start, $lte: oldRange.end },
+        }).lean();
 
-      for (const delivery of listDeliveriesToRoute) {
-        const itemCost = delivery.itemCost ?? 0;
-        const costDelivery = delivery.cost ? delivery.cost + itemCost : 0;
-        const homeDeliveryCost = delivery.homeDeliveryCost ?? 0;
-        const collectForCustomerCostToRoute = delivery.collectForCustomerCost ?? 0;
+        for (const delivery of listDeliveriesToRoute) {
+          const itemCost = delivery.itemCost ?? 0;
+          const costDelivery = delivery.cost ? delivery.cost + itemCost : 0;
+          const homeDeliveryCost = delivery.homeDeliveryCost ?? 0;
+          const collectForCustomerCostToRoute = delivery.collectForCustomerCost ?? 0;
 
-        if (delivery.paymentType === 'debt') {
-          debt.feeCODToRoute += costDelivery ?? 0;
+          if (delivery.paymentType === 'debt') {
+            debt.feeCODToRoute += costDelivery ?? 0;
+          }
+          if (delivery.paymentType === 'paid') {
+            debt.homeDeliveryToRoute += homeDeliveryCost ?? 0;
+            debt.surchargeToRoute += collectForCustomerCostToRoute ?? 0;
+          }
         }
-        if (delivery.paymentType === 'paid') {
-          debt.homeDeliveryToRoute += homeDeliveryCost ?? 0;
-          debt.surchargeFromRoute += collectForCustomerCostToRoute ?? 0;
+
+        const listMoneyDeliveriesToRoute: IMoneyDelivery[] = await MoneyDelivery.find({
+          fromRoute: toRoute,
+          toRoute: fromRoute,
+          createdAt: { $gte: oldRange.start, $lte: oldRange.end },
+        }).lean();
+
+        for (const moneyDelivery of listMoneyDeliveriesToRoute) {
+          debt.costToRoute += moneyDelivery.sendMoneyAmount ?? 0;
         }
       }
 
+      // Money costFromRoute: chỉ từ (fromRoute -> toRoute)
       const listMoneyDeliveriesFromRoute: IMoneyDelivery[] = await MoneyDelivery.find({
         fromRoute,
         toRoute,
@@ -400,17 +433,9 @@ export class CronjobService {
       }).lean();
 
       for (const moneyDelivery of listMoneyDeliveriesFromRoute) {
-        debt.costFromRoute += moneyDelivery.sendMoneyAmount ?? 0;
-      }
-
-      const listMoneyDeliveriesToRoute: IMoneyDelivery[] = await MoneyDelivery.find({
-        fromRoute: toRoute,
-        toRoute: fromRoute,
-        createdAt: { $gte: oldRange.start, $lte: oldRange.end },
-      }).lean();
-
-      for (const moneyDelivery of listMoneyDeliveriesToRoute) {
-        debt.costToRoute += moneyDelivery.sendMoneyAmount ?? 0;
+        if (moneyDelivery.type === MoneyDeliveryType.NORMAL) {
+          debt.costFromRoute += moneyDelivery.sendMoneyAmount ?? 0;
+        }
       }
 
       debt.totalDebt =
@@ -468,7 +493,8 @@ export class CronjobService {
         receivable = newReceivable + Math.abs(openingBalance);
       }
 
-      const totalDebt = receivable - accountPayable + (openingBalance ?? 0);
+      const totalDebt =
+        receivable - accountPayable + (openingBalance ?? 0) + (debt.openingBalance ?? 0);
 
       const newDayDebt: IDebtRow = {
         id: new mongoose.Types.ObjectId(),
