@@ -23,7 +23,8 @@ export interface ITotalReportReturnMoneyDeliveryAndReturnDeliveryResponse {
   totalCostDelivery: number; //Cước gửi hàng
   homeDeliveryCostWithPaymentTypePaidDelivery: number; //Cước GTN đi (đã thu)
   totalCollectForCustomerCostWithPaymentTypePaidDelivery: number; //Phụ phí đi (đã thu)
-  totalCostPaid: number;
+  totalCostPaid: number; // cước thực thu
   totalCostNotHomeDeliveryCostAndCollectForCustomerCost: number;
   totalCollectForCustomerCostWithPaymentTypeDebtDelivery: number; //Phụ phí về (nợ)
+  totalCostWithPaymentTypePaidInTodayOfReturnDelivery: number; //Hàng nợ cước đã trả trong ngày
 }

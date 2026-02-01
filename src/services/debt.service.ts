@@ -18,6 +18,14 @@ import { PipelineStage, Types } from 'mongoose';
 import { DebtReportService } from './debt-report.service';
 import { UserService } from './user.service';
 
+/**
+ * For a VN calendar day (year, month, date), return the UTC dateDebt value.
+ * Same convention as cron-job: debt for VN day D has dateDebt = 17:00 UTC on previous UTC day.
+ */
+function vnDateToDebtDateUtc(year: number, month: number, date: number): Date {
+  return new Date(Date.UTC(year, month, date - 1, 17, 0, 0, 0));
+}
+
 export class DebtService {
   private userService: UserService;
   private debtReportService: DebtReportService;
@@ -40,26 +48,19 @@ export class DebtService {
     const toRouteId = await this.userService.getUserSelectedRouteId(userId);
     const startOfDate = new Date(String(startDate));
     const endOfDate = new Date(String(endDate));
-    const start = new Date(
-      startOfDate.getFullYear(),
-      startOfDate.getMonth(),
-      startOfDate.getDate(),
-      0,
-      0,
-      0,
-      0
+
+    // Interpret startDate/endDate as VN calendar days; query dateDebt (17:00 UTC previous day)
+    const startExact = vnDateToDebtDateUtc(
+      startOfDate.getUTCFullYear(),
+      startOfDate.getUTCMonth(),
+      startOfDate.getUTCDate()
     );
-    console.log('start :>> ', start);
-    const endOfDay = new Date(
-      endOfDate.getFullYear(),
-      endOfDate.getMonth(),
-      endOfDate.getDate(),
-      23,
-      59,
-      59,
-      999
+    const endExact = vnDateToDebtDateUtc(
+      endOfDate.getUTCFullYear(),
+      endOfDate.getUTCMonth(),
+      endOfDate.getUTCDate()
     );
-    console.log('endOfDay :>> ', endOfDay);
+
     let sort: Record<string, 1 | -1> = {};
 
     // Handle sort
@@ -87,7 +88,7 @@ export class DebtService {
       const toRouteIdObj = new Types.ObjectId(toRouteId);
       const matchStage: Record<string, unknown> = {
         toRoute: toRouteIdObj,
-        dateDebt: { $gte: start, $lte: endOfDay },
+        dateDebt: { $gte: startExact, $lte: endExact },
       };
 
       if (fromRouteId) {
@@ -167,12 +168,11 @@ export class DebtService {
 
       const result = (await Debt.aggregate(pipeline).exec()) as IDebtRow[];
 
-      // Get debt report total from DebtReportService
-      // Debt reports already contain daily totals, so we just need to sum them up
+      // Get debt report total from DebtReportService (same VN date range)
       const total: IDebtTotal = await this.debtReportService.getDebtReportTotal(
         toRouteId,
-        start,
-        endOfDay
+        startExact,
+        endExact
       );
 
       return {

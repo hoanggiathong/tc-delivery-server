@@ -32,33 +32,32 @@ async function main() {
   const debtReportService = new DebtReportService();
   await mongoose.connect(uri, { dbName: process.env.MONGO_DB || undefined });
 
+  // ========== CHỌN MỘT TRONG HAI CASE: BỎ COMMENT BLOCK CẦN CHẠY ==========
+
+  // ---------- CASE 1: Run ngày hiện tại (production / test run thật) ----------
   const key = `Calculate-debt-${new Date().toISOString().slice(0, 10)}`;
   const isRun = await CronLogService.isSuccess(key);
   if (isRun) {
-    console.log('Cronjob calculate debt already run success');
+    console.log('Cronjob calculate debt already run success for today');
     await mongoose.disconnect();
     return;
   }
+  const useNextDay = false; // ngày hiện tại
 
-  // testing increase date
+  // ---------- CASE 2: Run testing tăng 1 ngày (simulate ngày mai VN) ----------
   // let key = `Calculate-debt-${new Date().toISOString().slice(0, 10)}`;
-  // const isRun = await CronLogService.isSuccess(key);
+  // let isRun = await CronLogService.isSuccess(key);
   // if (isRun) {
   //   const date = new Date();
   //   date.setDate(date.getDate() + 1);
   //   key = `Calculate-debt-${date.toISOString().slice(0, 10)}`;
   // }
+  // const useNextDay = true; // simulate ngày mai VN
 
   try {
-    await CronLogService.start(key, 'Caluculate debt cronjob');
-    // Step 1: Calculate and create debt records
-    await cronjobService.cronjobCalculateDebt();
-    // Step 2: Generate debt report from the created debt records
-    await debtReportService.generateDebtReport();
-
-    // testing increase date
-    // await cronjobService.cronjobCalculateDebt(true);
-    // await debtReportService.generateDebtReport(true);
+    await CronLogService.start(key, 'Calculate debt cronjob');
+    await cronjobService.cronjobCalculateDebt(useNextDay);
+    await debtReportService.generateDebtReport(useNextDay);
     await CronLogService.success(key);
     await mongoose.disconnect();
   } catch (error) {
