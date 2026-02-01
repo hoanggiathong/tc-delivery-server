@@ -96,6 +96,7 @@ export class ReportService {
       let homeDeliveryCostWithPaymentTypePaidDelivery: number = 0;
       let totalCollectForCustomerCostWithPaymentTypePaidDelivery: number = 0;
       let totalCollectForCustomerCostWithPaymentTypeDebtDelivery: number = 0;
+      let totalCostWithPaymentTypePaidInTodayOfReturnDelivery: number = 0;
 
       const moneyDeliveryList = [...moneyDeliveriesTypeNormal, ...moneyDeliveriesTypeCollect];
 
@@ -140,6 +141,8 @@ export class ReportService {
 
       getListReturnDeliveriesIsReturnTrueOfToRouteForCalculateCollectForCustomerCost.map(item => {
         totalCollectForCustomerCostWithPaymentTypeDebtDelivery += item.collectForCustomerCost || 0;
+        totalCostWithPaymentTypePaidInTodayOfReturnDelivery +=
+          (item.cost || 0) + (item.itemCost || 0);
       });
 
       const sum = {
@@ -157,6 +160,8 @@ export class ReportService {
           totalCostNotHomeDeliveryCostAndCollectForCustomerCost,
         totalCollectForCustomerCostWithPaymentTypeDebtDelivery:
           totalCollectForCustomerCostWithPaymentTypeDebtDelivery,
+        totalCostWithPaymentTypePaidInTodayOfReturnDelivery:
+          totalCostWithPaymentTypePaidInTodayOfReturnDelivery,
       };
 
       const data: IReportReturnMoneyDeliveryAndReturnDeliveryResponse = {

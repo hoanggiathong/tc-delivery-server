@@ -1409,7 +1409,7 @@ export class DeliveryService {
         toRoute: toRouteId,
         isReturn: true,
         paymentType: PAYMENT_TYPE.DEBT,
-        createdAt: {
+        dateReturn: {
           $gte: startDate,
           $lte: endDate,
         },

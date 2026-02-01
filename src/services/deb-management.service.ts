@@ -19,6 +19,31 @@ import { DebtReportService } from './debt-report.service';
 import { DebtService } from './debt.service';
 import { UserService } from './user.service';
 
+/** Vietnam timezone: UTC+7. Same convention as cron-job (debt dateDebt = 17:00 UTC previous day). */
+const VN_UTC_OFFSET_HOURS = 7;
+
+function getTodayVn(): { year: number; month: number; date: number } {
+  const now = new Date();
+  const vnMs = now.getTime() + VN_UTC_OFFSET_HOURS * 60 * 60 * 1000;
+  const vnDate = new Date(vnMs);
+  return {
+    year: vnDate.getUTCFullYear(),
+    month: vnDate.getUTCMonth(),
+    date: vnDate.getUTCDate(),
+  };
+}
+
+function vnDateToDebtDateUtc(year: number, month: number, date: number): Date {
+  return new Date(Date.UTC(year, month, date - 1, 17, 0, 0, 0));
+}
+
+/** VN day D in UTC: from 00:00 D VN to 23:59:59 D VN = 17:00 (D-1) UTC to 16:59:59 D UTC. */
+function vnDateToUtcRange(year: number, month: number, date: number): { start: Date; end: Date } {
+  const start = new Date(Date.UTC(year, month, date - 1, 17, 0, 0, 0));
+  const end = new Date(Date.UTC(year, month, date, 16, 59, 59, 999));
+  return { start, end };
+}
+
 export class DebtManagementService {
   private userService: UserService;
   private debtReportService: DebtReportService;
@@ -414,33 +439,14 @@ export class DebtManagementService {
       const receiptResult = await receiptDebtManagement.save({ session: session });
       const paymentResult = await paymentDebtManagement.save({ session: session });
 
-      const today = new Date();
-      const startOfDay = new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        today.getDate(),
-        0,
-        0,
-        0,
-        0
-      );
-      const endOfDay = new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        today.getDate(),
-        23,
-        59,
-        59,
-        999
-      );
+      // Use "today" in VN timezone; debt for today VN has dateDebt = 17:00 UTC previous day
+      const todayVn = getTodayVn();
+      const dateDebtExact = vnDateToDebtDateUtc(todayVn.year, todayVn.month, todayVn.date);
 
       const currentDebt1 = await Debt.findOne({
         fromRoute: fromRouteIdObj,
         toRoute: toRouteIdObj,
-        dateDebt: {
-          $gte: startOfDay,
-          $lte: endOfDay,
-        },
+        dateDebt: dateDebtExact,
       })
         .sort({ createdAt: -1 })
         .session(session)
@@ -449,18 +455,16 @@ export class DebtManagementService {
       const currentDebt2 = await Debt.findOne({
         fromRoute: toRouteIdObj,
         toRoute: fromRouteIdObj,
-        dateDebt: {
-          $gte: startOfDay,
-          $lte: endOfDay,
-        },
+        dateDebt: dateDebtExact,
       })
         .sort({ createdAt: -1 })
         .session(session)
         .lean();
 
+      const todayVnLabel = `${todayVn.year}-${String(todayVn.month + 1).padStart(2, '0')}-${String(todayVn.date).padStart(2, '0')}`;
       if (!currentDebt1 || !currentDebt2) {
         throw new Error(
-          `Debt record not found for the day. Please ensure cronjob has run for today (${today.toISOString().split('T')[0]}).`
+          `Debt record not found for the day. Please ensure cronjob has run for today (${todayVnLabel} VN).`
         );
       }
 
@@ -553,11 +557,10 @@ export class DebtManagementService {
         }
       );
 
-      // Update debt report service
-      // Update both accountPayable and receivable
+      // Update debt report service (same VN day via dateDebtExact so report is found)
       await this.debtReportService.updateDebtReport(
         toRouteId,
-        today,
+        dateDebtExact,
         data.cash,
         session,
         false,
@@ -565,7 +568,7 @@ export class DebtManagementService {
       );
       await this.debtReportService.updateDebtReport(
         data.fromRoute,
-        today,
+        dateDebtExact,
         data.cash,
         session,
         true,
@@ -663,31 +666,15 @@ export class DebtManagementService {
       const toRoute = debtManagement.toRoute;
       const cashDate = debtManagement.cashDate;
 
-      // Check if createdAt is today - only allow deletion of today's records
-      const today = new Date();
-      const startOfToday = new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        today.getDate(),
-        0,
-        0,
-        0,
-        0
-      );
-      const endOfToday = new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        today.getDate(),
-        23,
-        59,
-        59,
-        999
-      );
+      // Check if createdAt is "today" in VN timezone - only allow deletion of today's records
+      const todayVn = getTodayVn();
+      const todayVnRange = vnDateToUtcRange(todayVn.year, todayVn.month, todayVn.date);
 
       const createdAt = new Date(debtManagement.createdAt);
-      if (createdAt < startOfToday || createdAt > endOfToday) {
+      if (createdAt < todayVnRange.start || createdAt > todayVnRange.end) {
+        const todayVnLabel = `${todayVn.year}-${String(todayVn.month + 1).padStart(2, '0')}-${String(todayVn.date).padStart(2, '0')}`;
         throw new Error(
-          "Cannot delete debt management records from previous days. Only today's records can be deleted."
+          `Cannot delete debt management records from previous days. Only today's records (${todayVnLabel} VN) can be deleted.`
         );
       }
 
@@ -726,14 +713,13 @@ export class DebtManagementService {
         }
       );
 
-      // Find the same two debt records as in createDebtManagement
+      // Find the same two debt records as in createDebtManagement (VN day = dateDebt 17:00 UTC previous day)
+      const dateDebtExact = vnDateToDebtDateUtc(todayVn.year, todayVn.month, todayVn.date);
+
       const currentDebt1 = await Debt.findOne({
         fromRoute: fromRoute,
         toRoute: toRoute,
-        dateDebt: {
-          $gte: startOfToday,
-          $lte: endOfToday,
-        },
+        dateDebt: dateDebtExact,
       })
         .sort({ createdAt: -1 })
         .session(session)
@@ -742,18 +728,16 @@ export class DebtManagementService {
       const currentDebt2 = await Debt.findOne({
         fromRoute: toRoute,
         toRoute: fromRoute,
-        dateDebt: {
-          $gte: startOfToday,
-          $lte: endOfToday,
-        },
+        dateDebt: dateDebtExact,
       })
         .sort({ createdAt: -1 })
         .session(session)
         .lean();
 
+      const todayVnLabel = `${todayVn.year}-${String(todayVn.month + 1).padStart(2, '0')}-${String(todayVn.date).padStart(2, '0')}`;
       if (!currentDebt1 || !currentDebt2) {
         throw new Error(
-          `Debt record not found for the day. Please ensure cronjob has run for today (${today.toISOString().split('T')[0]}).`
+          `Debt record not found for the day. Please ensure cronjob has run for today (${todayVnLabel} VN).`
         );
       }
 
@@ -840,10 +824,10 @@ export class DebtManagementService {
         }
       );
 
-      // Reverse the debt report service updates (subtract instead of add)
+      // Reverse the debt report service updates (same VN day via dateDebtExact)
       await this.debtReportService.updateDebtReport(
         toRoute.toString(),
-        today,
+        dateDebtExact,
         -cash,
         session,
         false,
@@ -852,7 +836,7 @@ export class DebtManagementService {
 
       await this.debtReportService.updateDebtReport(
         fromRoute.toString(),
-        today,
+        dateDebtExact,
         -cash,
         session,
         true,
