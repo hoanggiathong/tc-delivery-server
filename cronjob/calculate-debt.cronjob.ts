@@ -46,7 +46,7 @@ async function main() {
 
   // ---------- CASE 2: Run testing tăng 1 ngày (simulate ngày mai VN) ----------
   // let key = `Calculate-debt-${new Date().toISOString().slice(0, 10)}`;
-  // let isRun = await CronLogService.isSuccess(key);
+  // const isRun = await CronLogService.isSuccess(key);
   // if (isRun) {
   //   const date = new Date();
   //   date.setDate(date.getDate() + 1);
