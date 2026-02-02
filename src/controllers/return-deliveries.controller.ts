@@ -1340,6 +1340,7 @@ export class ReturnDeliveriesController {
    *                   type: string
    *                   example: "Failed to update status with images"
    */
+
   updateStatusWithImages = async (
     req: AuthRequestWithFileUploads,
     res: Response
@@ -1363,7 +1364,7 @@ export class ReturnDeliveriesController {
         customerImages,
         returnDeliveryImages,
         identityCardName,
-        note,
+        notes,
       } = req.body;
       const filesObject = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
 
@@ -1424,7 +1425,7 @@ export class ReturnDeliveriesController {
           identityCardName,
           identityCardIssuedDate,
           identityCardNumber,
-          note,
+          note: notes,
         },
         customerImagesData.length > 0 ? customerImagesData : undefined,
         returnDeliveryImagesData.length > 0 ? returnDeliveryImagesData : undefined
