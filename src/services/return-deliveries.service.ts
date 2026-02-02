@@ -994,6 +994,7 @@ export class ReturnDeliveriesService {
       identityCardName?: string;
       identityCardIssuedDate?: string;
       identityCardNumber?: string;
+      note?: string;
     },
     customerImagesData?: Array<{
       index: number;
@@ -1101,13 +1102,19 @@ export class ReturnDeliveriesService {
       // Then update status return delivery with field isReturn = true
       delivery.isReturn = true;
       delivery.returnedByUser = new mongoose.Types.ObjectId(userId);
-      // Update field note with string 'Đã trả hàng + now date' + old value of note
       const now = new Date();
       const hours = String(now.getHours()).padStart(2, '0');
       const minutes = String(now.getMinutes()).padStart(2, '0');
       const returnDateString = `Đã trả hàng ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} ${hours}:${minutes}`;
       const existingNotes = typeof delivery.notes === 'string' ? delivery.notes : '';
-      delivery.notes = existingNotes ? `${returnDateString}, ${existingNotes}` : returnDateString;
+      const userNote = updateData.note?.trim();
+      if (userNote) {
+        delivery.notes = existingNotes
+          ? `${returnDateString}, ${userNote}, ${existingNotes}`
+          : `${returnDateString}, ${userNote}`;
+      } else {
+        delivery.notes = existingNotes ? `${returnDateString}, ${existingNotes}` : returnDateString;
+      }
       delivery.updatedAt = now;
       delivery.dateReturn = now;
       await delivery.save();
