@@ -213,11 +213,6 @@ moneyDeliverySchema.pre('save', async function (next) {
 
 // Business logic validation
 moneyDeliverySchema.pre('save', function (next) {
-  // Validate sender and receiver
-  if (this.sender.toString() === this.receiver.toString()) {
-    return next(new Error('Sender and receiver cannot be the same'));
-  }
-
   // Validate routes
   if (this.fromRoute.toString() === this.toRoute.toString()) {
     return next(new Error('From route and to route cannot be the same'));

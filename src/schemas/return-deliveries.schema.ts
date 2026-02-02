@@ -209,6 +209,7 @@ export const updateStatusWithImagesSchema = z.object({
     identityCardName: z.string().optional(),
     identityCardIssuedDate: z.string().optional(),
     identityCardNumber: z.string().optional(),
+    notes: z.string().optional(),
     // Customer images
     customerImages: z
       .preprocess(

@@ -1201,6 +1201,9 @@ export class ReturnDeliveriesController {
    *                 type: string
    *                 example: "123456789"
    *                 description: Identity card number (optional)
+   *               note:
+   *                 type: string
+   *                 description: Optional note for the return delivery (saved to delivery.notes)
    *               # Customer images support (up to 5 images)
    *               customerImages:
    *                 type: array
@@ -1270,12 +1273,14 @@ export class ReturnDeliveriesController {
    *                 address: "123 ABC Street"
    *                 identityCardIssuedDate: "2024-01-01"
    *                 identityCardNumber: "123456789"
+   *                 note: "Optional note for return delivery"
    *             withoutImages:
    *               summary: Update without images
    *               value:
    *                 deliveryId: "507f1f77bcf86cd799439011"
    *                 customerId: "507f1f77bcf86cd799439012"
    *                 address: "123 ABC Street"
+   *                 note: "Optional note text"
    *     responses:
    *       200:
    *         description: Return delivery status updated with images successfully
@@ -1335,6 +1340,7 @@ export class ReturnDeliveriesController {
    *                   type: string
    *                   example: "Failed to update status with images"
    */
+
   updateStatusWithImages = async (
     req: AuthRequestWithFileUploads,
     res: Response
@@ -1358,6 +1364,7 @@ export class ReturnDeliveriesController {
         customerImages,
         returnDeliveryImages,
         identityCardName,
+        notes,
       } = req.body;
       const filesObject = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
 
@@ -1418,6 +1425,7 @@ export class ReturnDeliveriesController {
           identityCardName,
           identityCardIssuedDate,
           identityCardNumber,
+          note: notes,
         },
         customerImagesData.length > 0 ? customerImagesData : undefined,
         returnDeliveryImagesData.length > 0 ? returnDeliveryImagesData : undefined
@@ -1430,7 +1438,7 @@ export class ReturnDeliveriesController {
       };
       res.status(200).json(response);
     } catch (error) {
-      console.error('Update status with images error:', error);
+      logger.error('Update status with images error:', error);
 
       let statusCode = 400;
       const message =

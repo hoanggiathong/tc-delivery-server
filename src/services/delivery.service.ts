@@ -1409,7 +1409,7 @@ export class DeliveryService {
         toRoute: toRouteId,
         isReturn: true,
         paymentType: PAYMENT_TYPE.DEBT,
-        createdAt: {
+        dateReturn: {
           $gte: startDate,
           $lte: endDate,
         },
@@ -1418,7 +1418,7 @@ export class DeliveryService {
       if (routeId) {
         where.fromRoute = routeId;
       } else {
-        where.toRoute = {
+        where.fromRoute = {
           $ne: toRouteId,
         };
       }
