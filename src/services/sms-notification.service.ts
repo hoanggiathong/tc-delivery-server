@@ -287,14 +287,14 @@ export class SMSNotificationService {
     const toRoute = delivery.toRoute;
     const templateData = {
       ten_khach_hang: delivery.receiverName,
-      chi_nhanh: toRoute.name,
+      chi_nhanh: (toRoute.name || '').replace(/\./g, '-'),
       ma_van_don: this.maskCode(delivery.fullCode),
       nguoi_gui: delivery.senderName,
-      buu_pham: delivery.name,
+      buu_pham: (delivery.name || '').replace(/\./g, '-'),
       trang_thai: 'Đã đến trạm phát',
       gia: (delivery.totalCost ?? 0).toString(),
       hinh_thuc: delivery.homeDelivery ? 'Giao tận nhà' : 'Giao dịch trực tiếp tại quầy',
-      dia_chi: toRoute.address || '',
+      dia_chi: (toRoute.address || '').replace(/\./g, '-'),
       link_cta: convertPhoneToLocalFormat(toRoute.phone || ''),
     };
 
