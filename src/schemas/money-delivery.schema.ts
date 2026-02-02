@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  DELIVERY_IDENTIFIER_PATTERN,
   MONEY_DELIVERY_IDENTIFIER_PATTERN,
   PHONE_NUMBER_PATTERN,
   OBJECTID_PATTERN,
@@ -347,9 +348,9 @@ export const recoveryMoneyDeliveryWithTypeCollectSchema = z.object({
   body: z.object({
     fullCode: z
       .string()
-      .min(14, 'Money delivery fullCode must be at least 14 characters')
-      .max(22, 'Money delivery fullCode must not exceed 22 characters')
-      .regex(MONEY_DELIVERY_IDENTIFIER_PATTERN, VALIDATION_MESSAGES.MONEY_DELIVERY_IDENTIFIER)
+      .min(12, 'Delivery identifier must be at least 12 characters') // 10 digits code + 2 route codes minimum
+      .max(20, 'Delivery identifier must not exceed 20 characters')
+      .regex(DELIVERY_IDENTIFIER_PATTERN, VALIDATION_MESSAGES.DELIVERY_IDENTIFIER)
       .trim(),
     staffNameRecoveryMoney: z
       .string()
