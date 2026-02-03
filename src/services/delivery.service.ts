@@ -31,6 +31,7 @@ import { ICustomer, Customer } from '@/models/customer.model';
 import Logger from '@/utils/logger';
 import { PaymentType } from '@/types';
 import { PAYMENT_TYPE } from '@/const/money-deliveries.const';
+import { DELIVERY_IDENTIFIER_PARSE_PATTERN } from '@/utils/validation-patterns';
 
 export class DeliveryService {
   private customerService: CustomerService;
@@ -740,8 +741,7 @@ export class DeliveryService {
   private parseDeliveryIdentifier(
     deliveryIdentifier: string
   ): { code: string; fromRouteCode: string; toRouteCode: string } | null {
-    // Expected format: 10 digits + route codes (e.g., 0907250001T4T1, 0907250001ABCD)
-    const match = deliveryIdentifier.match(/^(\d{10})([A-Z]([A-Z]|\d+))([A-Z]([A-Z]|\d+))$/);
+    const match = deliveryIdentifier.match(DELIVERY_IDENTIFIER_PARSE_PATTERN);
 
     if (!match) {
       return null;
