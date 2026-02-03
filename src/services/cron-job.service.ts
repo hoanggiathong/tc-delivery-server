@@ -29,6 +29,19 @@ function vnDateToDebtDateUtc(year: number, month: number, date: number): Date {
 }
 
 /**
+ * Khoảng cả ngày UTC cho dateDebt: từ 17:00 (D-1) đến 16:59:59.999 D UTC.
+ * Tránh lệch so khớp do timezone/millisecond; query theo đầu ngày – cuối ngày.
+ */
+function dateDebtQueryRange(dateDebt: Date): { $gte: Date; $lte: Date } {
+  const startMs = dateDebt.getTime();
+  const endMs = startMs + 24 * 60 * 60 * 1000 - 1;
+  return {
+    $gte: new Date(startMs),
+    $lte: new Date(endMs),
+  };
+}
+
+/**
  * For a VN calendar day, return UTC range [start, end] for querying deliveries (createdAt).
  * VN day D: from 00:00 D VN to 23:59:59.999 D VN = 17:00 (D-1) UTC to 16:59:59.999 D UTC.
  */
@@ -53,27 +66,19 @@ function vnDatePrev(
   };
 }
 
-/** Add one calendar day in VN (for testing: simulate "tomorrow VN"). */
-function getTomorrowVn(): { year: number; month: number; date: number } {
-  const today = getTodayVn();
-  const d = new Date(Date.UTC(today.year, today.month, today.date));
-  d.setUTCDate(d.getUTCDate() + 1);
-  return {
-    year: d.getUTCFullYear(),
-    month: d.getUTCMonth(),
-    date: d.getUTCDate(),
-  };
-}
-
 export class CronjobService {
   /**
    * Cron runs at 00:00 VN (e.g. 00:00 02-Feb-2026 VN = 17:00 01-Feb-2026 UTC).
    * - New day = current VN date (02-Feb VN), old day = previous VN date (01-Feb VN).
    * - If no debt for old day: first run → create old day + new day.
    * - If debt exists for old day: daily run → update old day + create new day.
+   * @param runAsOfVnDate - Optional. Run as if "today VN" is this date. Convention: year, month 0-based (0=Jan, 11=Dec), date 1-31. Same as getTodayVn().
    */
-  async cronjobCalculateDebt(isNextDay: boolean = false): Promise<void> {
-    const newDayVn = isNextDay ? getTomorrowVn() : getTodayVn();
+  async cronjobCalculateDebt(
+    useTransaction: boolean = true,
+    runAsOfVnDate?: { year: number; month: number; date: number }
+  ): Promise<void> {
+    const newDayVn = runAsOfVnDate ?? getTodayVn();
     const oldDayVn = vnDatePrev(newDayVn.year, newDayVn.month, newDayVn.date);
 
     const oldDayDebtDate = vnDateToDebtDateUtc(oldDayVn.year, oldDayVn.month, oldDayVn.date);
@@ -84,26 +89,41 @@ export class CronjobService {
     console.log('oldDayVn', oldDayVn);
     console.log('newDayVn', newDayVn);
 
+    const dateDebtFilter = dateDebtQueryRange(oldDayDebtDate);
     const count = await Debt.countDocuments({
-      dateDebt: oldDayDebtDate,
+      dateDebt: dateDebtFilter,
     });
 
     if (count === 0) {
-      await this.cronjobFirstCalculateDebt(oldDayVn, newDayVn, oldDayDebtDate, newDayDebtDate);
+      await this.cronjobFirstCalculateDebt(
+        oldDayVn,
+        newDayVn,
+        oldDayDebtDate,
+        newDayDebtDate,
+        useTransaction
+      );
     } else {
-      await this.cronjobCalculateDebtEveryDay(oldDayVn, newDayVn, oldDayDebtDate, newDayDebtDate);
+      await this.cronjobCalculateDebtEveryDay(
+        oldDayVn,
+        newDayVn,
+        oldDayDebtDate,
+        newDayDebtDate,
+        useTransaction
+      );
     }
   }
 
   /**
    * First run: no debt for old day. Step 1: create debt for old day (VN). Step 2: create debt for new day (VN) with openingBalance from old day.
    * oldDayDebtDate/newDayDebtDate are pre-computed in cronjobCalculateDebt (no date - 1 again here).
+   * @param useTransaction - Default true. Set false for tests (standalone MongoDB).
    */
   async cronjobFirstCalculateDebt(
     oldDayVn: { year: number; month: number; date: number },
     newDayVn: { year: number; month: number; date: number },
     oldDayDebtDate: Date,
-    newDayDebtDate: Date
+    newDayDebtDate: Date,
+    useTransaction: boolean = true
   ): Promise<void> {
     console.log('cronjobFirstCalculateDebt');
     const oldRange = vnDateToUtcRange(oldDayVn.year, oldDayVn.month, oldDayVn.date);
@@ -315,34 +335,42 @@ export class CronjobService {
       }
     }
 
-    const session = await mongoose.startSession();
-    try {
-      await session.withTransaction(
-        async () => {
-          if (ops.length) {
-            await Debt.bulkWrite(ops, { session, ordered: false });
+    if (useTransaction) {
+      const session = await mongoose.startSession();
+      try {
+        await session.withTransaction(
+          async () => {
+            if (ops.length) {
+              await Debt.bulkWrite(ops, { session, ordered: false });
+            }
+          },
+          {
+            readPreference: 'primary',
+            readConcern: { level: 'snapshot' },
+            writeConcern: { w: 'majority' },
           }
-        },
-        {
-          readPreference: 'primary',
-          readConcern: { level: 'snapshot' },
-          writeConcern: { w: 'majority' },
-        }
-      );
-    } finally {
-      await session.endSession();
+        );
+      } finally {
+        await session.endSession();
+      }
+    } else {
+      if (ops.length) {
+        await Debt.bulkWrite(ops, { ordered: false });
+      }
     }
   }
 
   /**
    * Daily run: debt for old day exists. Step 1: update debt for old day (VN). Step 2: create debt for new day (VN) with openingBalance from old day.
    * oldDayDebtDate/newDayDebtDate are pre-computed in cronjobCalculateDebt (no date - 1 again here).
+   * @param useTransaction - Default true. Set false for tests (standalone MongoDB).
    */
   async cronjobCalculateDebtEveryDay(
     oldDayVn: { year: number; month: number; date: number },
     newDayVn: { year: number; month: number; date: number },
     oldDayDebtDate: Date,
-    newDayDebtDate: Date
+    newDayDebtDate: Date,
+    useTransaction: boolean = true
   ): Promise<void> {
     console.log('cronjobCalculateDebtEveryDay');
     const oldRange = vnDateToUtcRange(oldDayVn.year, oldDayVn.month, oldDayVn.date);
@@ -350,7 +378,7 @@ export class CronjobService {
     console.log('oldRange', oldRange);
 
     const listDebt = await Debt.find({
-      dateDebt: oldDayDebtDate,
+      dateDebt: dateDebtQueryRange(oldDayDebtDate),
     });
 
     const ops: mongoose.AnyBulkWriteOperation<IDebtRow>[] = [];
@@ -518,22 +546,28 @@ export class CronjobService {
       ops.push({ insertOne: { document: newDayDebt } });
     }
 
-    const session = await mongoose.startSession();
-    try {
-      await session.withTransaction(
-        async () => {
-          if (ops.length) {
-            await Debt.bulkWrite(ops, { session, ordered: false });
+    if (useTransaction) {
+      const session = await mongoose.startSession();
+      try {
+        await session.withTransaction(
+          async () => {
+            if (ops.length) {
+              await Debt.bulkWrite(ops, { session, ordered: false });
+            }
+          },
+          {
+            readPreference: 'primary',
+            readConcern: { level: 'snapshot' },
+            writeConcern: { w: 'majority' },
           }
-        },
-        {
-          readPreference: 'primary',
-          readConcern: { level: 'snapshot' },
-          writeConcern: { w: 'majority' },
-        }
-      );
-    } finally {
-      await session.endSession();
+        );
+      } finally {
+        await session.endSession();
+      }
+    } else {
+      if (ops.length) {
+        await Debt.bulkWrite(ops, { ordered: false });
+      }
     }
   }
 }

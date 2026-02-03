@@ -21,6 +21,13 @@ function vnDateToDebtDateUtc(year: number, month: number, date: number): Date {
   return new Date(Date.UTC(year, month, date - 1, 17, 0, 0, 0));
 }
 
+/** Khoảng cả ngày UTC (đầu ngày – cuối ngày) để query dateDebt/dateDebtReport, tránh lệch. */
+function dateDebtQueryRange(dateDebt: Date): { $gte: Date; $lte: Date } {
+  const startMs = dateDebt.getTime();
+  const endMs = startMs + 24 * 60 * 60 * 1000 - 1;
+  return { $gte: new Date(startMs), $lte: new Date(endMs) };
+}
+
 function vnDatePrev(
   year: number,
   month: number,
@@ -35,69 +42,52 @@ function vnDatePrev(
   };
 }
 
-/** Add one calendar day in VN (for testing: simulate "tomorrow VN"). */
-function getTomorrowVn(): { year: number; month: number; date: number } {
-  const today = getTodayVn();
-  const d = new Date(Date.UTC(today.year, today.month, today.date));
-  d.setUTCDate(d.getUTCDate() + 1);
-  return {
-    year: d.getUTCFullYear(),
-    month: d.getUTCMonth(),
-    date: d.getUTCDate(),
-  };
-}
-
 export class DebtReportService {
   /**
    * Generate debt report for "old day" and "new day" in VN timezone (same logic as debt cronjob).
    * - If DebtReport has no data for old day (first run): create report for old day, create report for new day.
    * - If DebtReport has data for old day (daily run): update report for old day, create report for new day.
    * When run at 00:00 VN (17:00 UTC previous day): old day = yesterday VN, new day = today VN.
+   * @param runAsOfVnDate - Optional. Run as if "today VN" is this date. Convention: year, month 0-based (0=Jan, 11=Dec), date 1-31. Same as getTodayVn().
+   * @param useTransaction - Optional. Default true. Set false for tests (standalone MongoDB).
    */
-  async generateDebtReport(isNextDay: boolean = false): Promise<void> {
-    const newDayVn = isNextDay ? getTomorrowVn() : getTodayVn();
+  async generateDebtReport(
+    useTransaction: boolean = true,
+    runAsOfVnDate?: { year: number; month: number; date: number }
+  ): Promise<void> {
+    const newDayVn = runAsOfVnDate ?? getTodayVn();
     const oldDayVn = vnDatePrev(newDayVn.year, newDayVn.month, newDayVn.date);
 
     const oldDayDebtDate = vnDateToDebtDateUtc(oldDayVn.year, oldDayVn.month, oldDayVn.date);
 
     const count = await DebtReport.countDocuments({
-      dateDebtReport: oldDayDebtDate,
+      dateDebtReport: dateDebtQueryRange(oldDayDebtDate),
     });
 
     if (count === 0) {
-      // First run: no report for old day → create old day + create new day
-      await this.processDebtReportForVnDay(oldDayVn);
-      await this.processDebtReportForVnDay(newDayVn);
+      await this.processDebtReportForVnDay(oldDayVn, useTransaction);
+      await this.processDebtReportForVnDay(newDayVn, useTransaction);
     } else {
-      // Daily run: has report for old day → update old day (do not change dateDebtReport) + create new day
       await this.updateDebtReportForVnDay(oldDayVn);
-      await this.processDebtReportForVnDay(newDayVn);
+      await this.processDebtReportForVnDay(newDayVn, useTransaction);
     }
   }
 
   /**
    * Process debt report for one VN calendar day. Queries Debt by dateDebt (17:00 UTC previous day).
+   * @param useTransaction - Default true. Set false for tests (standalone MongoDB).
    */
-  private async processDebtReportForVnDay(vnDay: {
-    year: number;
-    month: number;
-    date: number;
-  }): Promise<void> {
+  private async processDebtReportForVnDay(
+    vnDay: { year: number; month: number; date: number },
+    useTransaction: boolean = true
+  ): Promise<void> {
     const dateDebtExact = vnDateToDebtDateUtc(vnDay.year, vnDay.month, vnDay.date);
 
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
-    try {
-      const debts = await Debt.find({
-        dateDebt: dateDebtExact,
-      })
-        .session(session)
-        .lean();
+    const doWork = async (session?: mongoose.ClientSession) => {
+      const debtQuery = Debt.find({ dateDebt: dateDebtQueryRange(dateDebtExact) });
+      const debts = await (session ? debtQuery.session(session).lean() : debtQuery.lean());
 
       if (debts.length === 0) {
-        await session.commitTransaction();
-        session.endSession();
         return;
       }
 
@@ -172,24 +162,33 @@ export class DebtReportService {
         dateDebtReport: new Date(dateDebtExact.getTime()),
       }));
 
-      await DebtReport.deleteMany({
-        dateDebtReport: dateDebtExact,
-      }).session(session);
+      const deleteQuery = DebtReport.deleteMany({
+        dateDebtReport: dateDebtQueryRange(dateDebtExact),
+      });
+      await (session ? deleteQuery.session(session) : deleteQuery);
 
       if (debtReports.length > 0) {
-        await DebtReport.insertMany(debtReports, { session });
+        await DebtReport.insertMany(debtReports, session ? { session } : {});
       }
+    };
 
-      await session.commitTransaction();
-      session.endSession();
-    } catch (error) {
-      await session.abortTransaction();
-      session.endSession();
-
-      if (error instanceof Error) {
-        throw error;
+    if (useTransaction) {
+      const session = await mongoose.startSession();
+      try {
+        session.startTransaction();
+        await doWork(session);
+        await session.commitTransaction();
+      } catch (error) {
+        await session.abortTransaction();
+        if (error instanceof Error) {
+          throw error;
+        }
+        throw new Error('Generate debt report failed');
+      } finally {
+        session.endSession();
       }
-      throw new Error('Generate debt report failed');
+    } else {
+      await doWork();
     }
   }
 
@@ -205,7 +204,7 @@ export class DebtReportService {
     const dateDebtExact = vnDateToDebtDateUtc(vnDay.year, vnDay.month, vnDay.date);
 
     const debts = await Debt.find({
-      dateDebt: dateDebtExact,
+      dateDebt: dateDebtQueryRange(dateDebtExact),
     }).lean();
 
     if (debts.length === 0) {
@@ -276,11 +275,12 @@ export class DebtReportService {
 
     const now = new Date();
 
+    const reportFilter = dateDebtQueryRange(dateDebtExact);
     for (const grouped of groupedDebts.values()) {
       await DebtReport.updateOne(
         {
           toRoute: grouped.toRoute,
-          dateDebtReport: dateDebtExact,
+          dateDebtReport: reportFilter,
         },
         {
           $set: {
