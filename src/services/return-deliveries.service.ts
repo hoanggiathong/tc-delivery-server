@@ -797,6 +797,7 @@ export class ReturnDeliveriesService {
           smsType: item.smsType,
           smsStatus: item.smsStatus,
           timeToSendSMS: item.timeToSendSMS,
+          quantity: item.quantity || 0,
           quantityReturn: item.quantityReturn || 0,
           dateReturn: item.dateReturn,
           createdByUser: {
