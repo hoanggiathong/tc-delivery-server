@@ -183,10 +183,15 @@ debtSchema.index({ fromRoute: 1 });
 debtSchema.index({ toRoute: 1 });
 debtSchema.index({ toRoute: 1, createdAt: -1 });
 debtSchema.index({ toRoute: 1, createdAt: -1, fromRoute: 1 });
+debtSchema.index({ toRoute: 1, dateDebt: -1, fromRoute: 1 });
+debtSchema.index({ toRoute: 1, dateDebt: 1, fromRoute: 1 });
+debtSchema.index({ fromRoute: 1, dateDebt: 1 });
+debtSchema.index({ fromRoute: 1, dateDebt: -1 });
 debtSchema.index({ toRoute: 1, dateDebt: 1 });
 debtSchema.index({ toRoute: 1, dateDebt: -1 });
 debtSchema.index({ createdAt: -1 });
 debtSchema.index({ dateDebt: 1 });
+debtSchema.index({ dateDebt: -1 });
 
 // Index is already created by unique: true in the field definition
 export const Debt = mongoose.model<IDebt>('Debt', debtSchema);
