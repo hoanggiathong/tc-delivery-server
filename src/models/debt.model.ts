@@ -5,9 +5,9 @@ export interface IDebt extends Document {
   fromRoute: ObjectId; // tram account dang su dung
   toRoute: ObjectId;
   openingBalance: number; // ton dau (co the am - bieu thi so du co hoac tra vuot)
-  costFromRoute: number; // tien cuoc di
+  costFromRoute: number; // tien di
   feeCODToRoute: number; // no cuoc ve
-  costToRoute: number; // tien cuoc ve
+  costToRoute: number; // tien ve
   feeCODFromRoute: number; // no cuoc di
   accountPayable: number; // chuyen tien (khoan phai tra)
   receivable: number; // thu tien (khoan phai thu)
