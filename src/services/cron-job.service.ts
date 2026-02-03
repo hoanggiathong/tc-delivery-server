@@ -190,16 +190,16 @@ export class CronjobService {
             : new mongoose.Types.ObjectId(String(delivery.toRoute));
         const row = getOrCreateRow(routeId, toRouteId);
         const itemCost = delivery.itemCost ?? 0;
-        const costDeliveryFromRoute = delivery.cost ? delivery.cost + itemCost : 0;
-        const homeDeliveryCostFromRoute = delivery.homeDeliveryCost ?? 0;
-        const collectForCustomerCostFromRoute = delivery.collectForCustomerCost ?? 0;
+        const costDelivery = delivery.cost ? delivery.cost + itemCost : 0;
+        const homeDeliveryCost = delivery.homeDeliveryCost ?? 0;
+        const collectForCustomerCost = delivery.collectForCustomerCost ?? 0;
 
         if (delivery.paymentType === 'debt') {
-          row.feeCODToRoute += costDeliveryFromRoute ?? 0;
+          row.feeCODToRoute += costDelivery ?? 0;
         }
         if (delivery.paymentType === 'paid') {
-          row.homeDeliveryFromRoute += homeDeliveryCostFromRoute ?? 0;
-          row.surchargeFromRoute += collectForCustomerCostFromRoute ?? 0;
+          row.homeDeliveryToRoute += homeDeliveryCost ?? 0;
+          row.surchargeToRoute += collectForCustomerCost ?? 0;
         }
       }
 
@@ -218,14 +218,14 @@ export class CronjobService {
         const itemCost = delivery.itemCost ?? 0;
         const costDelivery = delivery.cost ? delivery.cost + itemCost : 0;
         const homeDeliveryCost = delivery.homeDeliveryCost ?? 0;
-        const collectForCustomerCostToRoute = delivery.collectForCustomerCost ?? 0;
+        const collectForCustomerCost = delivery.collectForCustomerCost ?? 0;
 
         if (delivery.paymentType === 'debt') {
           row.feeCODFromRoute += costDelivery ?? 0;
         }
         if (delivery.paymentType === 'paid') {
-          row.homeDeliveryToRoute += homeDeliveryCost ?? 0;
-          row.surchargeToRoute += collectForCustomerCostToRoute ?? 0;
+          row.homeDeliveryFromRoute += homeDeliveryCost ?? 0;
+          row.surchargeFromRoute += collectForCustomerCost ?? 0;
         }
       }
 
@@ -242,7 +242,7 @@ export class CronjobService {
             : new mongoose.Types.ObjectId(String(moneyDelivery.toRoute));
         const row = getOrCreateRow(routeId, toRouteId);
         if (moneyDelivery.type === MoneyDeliveryType.NORMAL) {
-          row.costFromRoute += moneyDelivery.sendMoneyAmount ?? 0;
+          row.costToRoute += moneyDelivery.sendMoneyAmount ?? 0;
         }
       }
 
@@ -258,7 +258,7 @@ export class CronjobService {
             ? moneyDelivery.fromRoute
             : new mongoose.Types.ObjectId(String(moneyDelivery.fromRoute));
         const row = getOrCreateRow(routeId, fromRouteId);
-        row.costToRoute += moneyDelivery.sendMoneyAmount ?? 0;
+        row.costFromRoute += moneyDelivery.sendMoneyAmount ?? 0;
       }
     }
 
@@ -405,16 +405,16 @@ export class CronjobService {
 
       for (const delivery of listDeliveryFromRoute) {
         const itemCost = delivery.itemCost ?? 0;
-        const costDeliveryFromRoute = delivery.cost ? delivery.cost + itemCost : 0;
-        const homeDeliveryCostFromRoute = delivery.homeDeliveryCost ?? 0;
-        const collectForCustomerCostFromRoute = delivery.collectForCustomerCost ?? 0;
+        const costDelivery = delivery.cost ? delivery.cost + itemCost : 0;
+        const homeDeliveryCost = delivery.homeDeliveryCost ?? 0;
+        const collectForCustomerCost = delivery.collectForCustomerCost ?? 0;
 
         if (delivery.paymentType === 'debt') {
-          debt.feeCODFromRoute += costDeliveryFromRoute ?? 0;
+          debt.feeCODToRoute += costDelivery ?? 0;
         }
         if (delivery.paymentType === 'paid') {
-          debt.homeDeliveryFromRoute += homeDeliveryCostFromRoute ?? 0;
-          debt.surchargeFromRoute += collectForCustomerCostFromRoute ?? 0;
+          debt.homeDeliveryToRoute += homeDeliveryCost ?? 0;
+          debt.surchargeToRoute += collectForCustomerCost ?? 0;
         }
       }
 
@@ -431,14 +431,16 @@ export class CronjobService {
           const itemCost = delivery.itemCost ?? 0;
           const costDelivery = delivery.cost ? delivery.cost + itemCost : 0;
           const homeDeliveryCost = delivery.homeDeliveryCost ?? 0;
-          const collectForCustomerCostToRoute = delivery.collectForCustomerCost ?? 0;
+          const collectForCustomerCost = delivery.collectForCustomerCost ?? 0;
 
           if (delivery.paymentType === 'debt') {
-            debt.feeCODToRoute += costDelivery ?? 0;
+            debt.feeCODFromRoute += costDelivery ?? 0;
           }
+
+          //đã thu cước thì mới tính GTN vs phụ phí
           if (delivery.paymentType === 'paid') {
-            debt.homeDeliveryToRoute += homeDeliveryCost ?? 0;
-            debt.surchargeToRoute += collectForCustomerCostToRoute ?? 0;
+            debt.homeDeliveryFromRoute += homeDeliveryCost ?? 0;
+            debt.surchargeFromRoute += collectForCustomerCost ?? 0;
           }
         }
 
@@ -449,7 +451,7 @@ export class CronjobService {
         }).lean();
 
         for (const moneyDelivery of listMoneyDeliveriesToRoute) {
-          debt.costToRoute += moneyDelivery.sendMoneyAmount ?? 0;
+          debt.costFromRoute += moneyDelivery.sendMoneyAmount ?? 0;
         }
       }
 
@@ -462,7 +464,7 @@ export class CronjobService {
 
       for (const moneyDelivery of listMoneyDeliveriesFromRoute) {
         if (moneyDelivery.type === MoneyDeliveryType.NORMAL) {
-          debt.costFromRoute += moneyDelivery.sendMoneyAmount ?? 0;
+          debt.costToRoute += moneyDelivery.sendMoneyAmount ?? 0;
         }
       }
 
