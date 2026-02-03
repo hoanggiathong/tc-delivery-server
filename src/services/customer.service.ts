@@ -629,13 +629,27 @@ export class CustomerService {
 
         if (bankId) {
           // Update existing bank
-          await this.customerBankService.updateBank(bankId.toString(), bankDataWithQR);
-          Logger.debug('Bank info updated with QR code', {
-            customerId: customer._id,
-            bankId,
-            bankAccount: bankInfo.bankAccount,
-            qrCodeUrl,
-          });
+          try {
+            await this.customerBankService.updateBank(bankId.toString(), bankDataWithQR);
+            Logger.debug('Bank info updated with QR code', {
+              customerId: customer._id,
+              bankId,
+              bankAccount: bankInfo.bankAccount,
+              qrCodeUrl,
+            });
+          } catch (error) {
+            Logger.error('BankId found but it have an error occured during update');
+            Logger.error(error);
+            try {
+              const newBank = await this.customerBankService.createBank(bankDataWithQR);
+              customer.bankId = new Types.ObjectId(newBank._id);
+              await customer.save();
+            } catch (error) {
+              Logger.error(
+                'An error occured while trying to create bank after updating bankId failed'
+              );
+            }
+          }
         } else {
           // Create new bank
           const newBank = await this.customerBankService.createBank(bankDataWithQR);
