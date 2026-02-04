@@ -422,46 +422,6 @@ export class CronjobService {
         }
       }
 
-      // Phía "về": chỉ row (toRoute -> fromRoute) mới nhận feeCODToRoute; cùng 1 đơn thì 1 trạm feeCODFromRoute, trạm kia feeCODToRoute (dùng thứ tự ObjectId để mỗi cặp chỉ 1 row nhận feeCODToRoute)
-      const isReceiverRow = fromRoute.toString() > toRoute.toString();
-      if (isReceiverRow) {
-        const listDeliveriesToRoute: IDelivery[] = await Delivery.find({
-          fromRoute: toRoute,
-          toRoute: fromRoute,
-          createdAt: { $gte: oldRange.start, $lte: oldRange.end },
-        }).lean();
-
-        for (const delivery of listDeliveriesToRoute) {
-          const itemCost = delivery.itemCost ?? 0;
-          const costDelivery = delivery.cost ? delivery.cost + itemCost : 0;
-          const homeDeliveryCost = delivery.homeDeliveryCost ?? 0;
-          const collectForCustomerCost = delivery.collectForCustomerCost ?? 0;
-
-          if (delivery.paymentType === 'debt') {
-            debt.feeCODFromRoute += costDelivery ?? 0;
-          }
-
-          //đã thu cước thì mới tính GTN vs phụ phí
-          if (delivery.paymentType === 'paid') {
-            debt.homeDeliveryFromRoute += homeDeliveryCost ?? 0;
-            debt.surchargeFromRoute += collectForCustomerCost ?? 0;
-          }
-        }
-
-        const listMoneyDeliveriesToRoute: IMoneyDelivery[] = await MoneyDelivery.find({
-          fromRoute: toRoute,
-          toRoute: fromRoute,
-          type: MoneyDeliveryType.NORMAL,
-          createdAt: { $gte: oldRange.start, $lte: oldRange.end },
-        }).lean();
-
-        for (const moneyDelivery of listMoneyDeliveriesToRoute) {
-          if (moneyDelivery.type === MoneyDeliveryType.NORMAL) {
-            debt.costFromRoute += moneyDelivery.sendMoneyAmount ?? 0;
-          }
-        }
-      }
-
       // Money costFromRoute: chỉ từ (fromRoute -> toRoute)
       const listMoneyDeliveriesFromRoute: IMoneyDelivery[] = await MoneyDelivery.find({
         fromRoute,
@@ -473,6 +433,42 @@ export class CronjobService {
       for (const moneyDelivery of listMoneyDeliveriesFromRoute) {
         if (moneyDelivery.type === MoneyDeliveryType.NORMAL) {
           debt.costToRoute += moneyDelivery.sendMoneyAmount ?? 0;
+        }
+      }
+
+      const listDeliveriesToRoute: IDelivery[] = await Delivery.find({
+        fromRoute: toRoute,
+        toRoute: fromRoute,
+        createdAt: { $gte: oldRange.start, $lte: oldRange.end },
+      }).lean();
+
+      for (const delivery of listDeliveriesToRoute) {
+        const itemCost = delivery.itemCost ?? 0;
+        const costDelivery = delivery.cost ? delivery.cost + itemCost : 0;
+        const homeDeliveryCost = delivery.homeDeliveryCost ?? 0;
+        const collectForCustomerCost = delivery.collectForCustomerCost ?? 0;
+
+        if (delivery.paymentType === 'debt') {
+          debt.feeCODFromRoute += costDelivery ?? 0;
+        }
+
+        //đã thu cước thì mới tính GTN vs phụ phí
+        if (delivery.paymentType === 'paid') {
+          debt.homeDeliveryFromRoute += homeDeliveryCost ?? 0;
+          debt.surchargeFromRoute += collectForCustomerCost ?? 0;
+        }
+      }
+
+      const listMoneyDeliveriesToRoute: IMoneyDelivery[] = await MoneyDelivery.find({
+        fromRoute: toRoute,
+        toRoute: fromRoute,
+        type: MoneyDeliveryType.NORMAL,
+        createdAt: { $gte: oldRange.start, $lte: oldRange.end },
+      }).lean();
+
+      for (const moneyDelivery of listMoneyDeliveriesToRoute) {
+        if (moneyDelivery.type === MoneyDeliveryType.NORMAL) {
+          debt.costFromRoute += moneyDelivery.sendMoneyAmount ?? 0;
         }
       }
 

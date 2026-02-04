@@ -68,7 +68,7 @@ export class DebtReportService {
       await this.processDebtReportForVnDay(oldDayVn, useTransaction);
       await this.processDebtReportForVnDay(newDayVn, useTransaction);
     } else {
-      await this.updateDebtReportForVnDay(oldDayVn);
+      await this.updateDebtReportForVnDay(oldDayVn, useTransaction);
       await this.processDebtReportForVnDay(newDayVn, useTransaction);
     }
   }
@@ -195,111 +195,134 @@ export class DebtReportService {
   /**
    * Update existing debt report for one VN day: re-aggregate from Debt and update in place.
    * Does NOT update field dateDebtReport (preserves existing value).
+   * @param useTransaction - Default true. Set false for tests (standalone MongoDB).
    */
-  private async updateDebtReportForVnDay(vnDay: {
-    year: number;
-    month: number;
-    date: number;
-  }): Promise<void> {
+  private async updateDebtReportForVnDay(
+    vnDay: { year: number; month: number; date: number },
+    useTransaction: boolean = true
+  ): Promise<void> {
     const dateDebtExact = vnDateToDebtDateUtc(vnDay.year, vnDay.month, vnDay.date);
 
-    const debts = await Debt.find({
-      dateDebt: dateDebtQueryRange(dateDebtExact),
-    }).lean();
+    const doWork = async (session?: mongoose.ClientSession) => {
+      const debtQuery = Debt.find({
+        dateDebt: dateDebtQueryRange(dateDebtExact),
+      });
+      const debts = await (session ? debtQuery.session(session).lean() : debtQuery.lean());
 
-    if (debts.length === 0) {
-      return;
-    }
-
-    const groupedDebts = new Map<
-      string,
-      {
-        toRoute: mongoose.Types.ObjectId;
-        openingBalance: number;
-        costFromRoute: number;
-        feeCODToRoute: number;
-        costToRoute: number;
-        feeCODFromRoute: number;
-        accountPayable: number;
-        receivable: number;
-        homeDeliveryFromRoute: number;
-        homeDeliveryToRoute: number;
-        surchargeToRoute: number;
-        surchargeFromRoute: number;
-        totalDebt: number;
-      }
-    >();
-
-    for (const debt of debts) {
-      const toRouteObjId =
-        debt.toRoute instanceof mongoose.Types.ObjectId
-          ? debt.toRoute
-          : new mongoose.Types.ObjectId(String(debt.toRoute));
-      const toRouteId = toRouteObjId.toString();
-
-      if (!groupedDebts.has(toRouteId)) {
-        groupedDebts.set(toRouteId, {
-          toRoute: toRouteObjId,
-          openingBalance: 0,
-          costFromRoute: 0,
-          feeCODToRoute: 0,
-          costToRoute: 0,
-          feeCODFromRoute: 0,
-          accountPayable: 0,
-          receivable: 0,
-          homeDeliveryFromRoute: 0,
-          homeDeliveryToRoute: 0,
-          surchargeToRoute: 0,
-          surchargeFromRoute: 0,
-          totalDebt: 0,
-        });
+      if (debts.length === 0) {
+        return;
       }
 
-      const grouped = groupedDebts.get(toRouteId);
-      if (!grouped) {
-        continue;
-      }
-      grouped.openingBalance += debt.openingBalance ?? 0;
-      grouped.costFromRoute += debt.costFromRoute ?? 0;
-      grouped.feeCODToRoute += debt.feeCODToRoute ?? 0;
-      grouped.costToRoute += debt.costToRoute ?? 0;
-      grouped.feeCODFromRoute += debt.feeCODFromRoute ?? 0;
-      grouped.accountPayable += debt.accountPayable ?? 0;
-      grouped.receivable += debt.receivable ?? 0;
-      grouped.homeDeliveryFromRoute += debt.homeDeliveryFromRoute ?? 0;
-      grouped.homeDeliveryToRoute += debt.homeDeliveryToRoute ?? 0;
-      grouped.surchargeToRoute += debt.surchargeToRoute ?? 0;
-      grouped.surchargeFromRoute += debt.surchargeFromRoute ?? 0;
-      grouped.totalDebt += debt.totalDebt ?? 0;
-    }
-
-    const now = new Date();
-
-    const reportFilter = dateDebtQueryRange(dateDebtExact);
-    for (const grouped of groupedDebts.values()) {
-      await DebtReport.updateOne(
+      const groupedDebts = new Map<
+        string,
         {
-          toRoute: grouped.toRoute,
-          dateDebtReport: reportFilter,
-        },
-        {
-          $set: {
-            openingBalance: grouped.openingBalance,
-            costFromRoute: grouped.costFromRoute,
-            feeCODToRoute: grouped.feeCODToRoute,
-            costToRoute: grouped.costToRoute,
-            feeCODFromRoute: grouped.feeCODFromRoute,
-            accountPayable: grouped.accountPayable,
-            receivable: grouped.receivable,
-            homeDeliveryFromRoute: grouped.homeDeliveryFromRoute,
-            homeDeliveryToRoute: grouped.homeDeliveryToRoute,
-            surchargeToRoute: grouped.surchargeToRoute,
-            surchargeFromRoute: grouped.surchargeFromRoute,
-            totalDebt: grouped.totalDebt,
-            updatedAt: now,
-          },
+          toRoute: mongoose.Types.ObjectId;
+          openingBalance: number;
+          costFromRoute: number;
+          feeCODToRoute: number;
+          costToRoute: number;
+          feeCODFromRoute: number;
+          accountPayable: number;
+          receivable: number;
+          homeDeliveryFromRoute: number;
+          homeDeliveryToRoute: number;
+          surchargeToRoute: number;
+          surchargeFromRoute: number;
+          totalDebt: number;
         }
-      );
+      >();
+
+      for (const debt of debts) {
+        const toRouteObjId =
+          debt.toRoute instanceof mongoose.Types.ObjectId
+            ? debt.toRoute
+            : new mongoose.Types.ObjectId(String(debt.toRoute));
+        const toRouteId = toRouteObjId.toString();
+
+        if (!groupedDebts.has(toRouteId)) {
+          groupedDebts.set(toRouteId, {
+            toRoute: toRouteObjId,
+            openingBalance: 0,
+            costFromRoute: 0,
+            feeCODToRoute: 0,
+            costToRoute: 0,
+            feeCODFromRoute: 0,
+            accountPayable: 0,
+            receivable: 0,
+            homeDeliveryFromRoute: 0,
+            homeDeliveryToRoute: 0,
+            surchargeToRoute: 0,
+            surchargeFromRoute: 0,
+            totalDebt: 0,
+          });
+        }
+
+        const grouped = groupedDebts.get(toRouteId);
+        if (!grouped) {
+          continue;
+        }
+        grouped.openingBalance += debt.openingBalance ?? 0;
+        grouped.costFromRoute += debt.costFromRoute ?? 0;
+        grouped.feeCODToRoute += debt.feeCODToRoute ?? 0;
+        grouped.costToRoute += debt.costToRoute ?? 0;
+        grouped.feeCODFromRoute += debt.feeCODFromRoute ?? 0;
+        grouped.accountPayable += debt.accountPayable ?? 0;
+        grouped.receivable += debt.receivable ?? 0;
+        grouped.homeDeliveryFromRoute += debt.homeDeliveryFromRoute ?? 0;
+        grouped.homeDeliveryToRoute += debt.homeDeliveryToRoute ?? 0;
+        grouped.surchargeToRoute += debt.surchargeToRoute ?? 0;
+        grouped.surchargeFromRoute += debt.surchargeFromRoute ?? 0;
+        grouped.totalDebt += debt.totalDebt ?? 0;
+      }
+
+      const now = new Date();
+      const reportFilter = dateDebtQueryRange(dateDebtExact);
+
+      for (const grouped of groupedDebts.values()) {
+        const updateOp = DebtReport.updateOne(
+          {
+            toRoute: grouped.toRoute,
+            dateDebtReport: reportFilter,
+          },
+          {
+            $set: {
+              openingBalance: grouped.openingBalance,
+              costFromRoute: grouped.costFromRoute,
+              feeCODToRoute: grouped.feeCODToRoute,
+              costToRoute: grouped.costToRoute,
+              feeCODFromRoute: grouped.feeCODFromRoute,
+              accountPayable: grouped.accountPayable,
+              receivable: grouped.receivable,
+              homeDeliveryFromRoute: grouped.homeDeliveryFromRoute,
+              homeDeliveryToRoute: grouped.homeDeliveryToRoute,
+              surchargeToRoute: grouped.surchargeToRoute,
+              surchargeFromRoute: grouped.surchargeFromRoute,
+              totalDebt: grouped.totalDebt,
+              updatedAt: now,
+            },
+          }
+        );
+        await (session ? updateOp.session(session) : updateOp);
+      }
+    };
+
+    if (useTransaction) {
+      const session = await mongoose.startSession();
+      try {
+        session.startTransaction();
+        await doWork(session);
+        await session.commitTransaction();
+      } catch (error) {
+        await session.abortTransaction();
+        if (error instanceof Error) {
+          throw error;
+        }
+        throw new Error('Update debt report for VN day failed');
+      } finally {
+        session.endSession();
+      }
+    } else {
+      await doWork();
     }
   }
 
