@@ -232,6 +232,7 @@ export class CronjobService {
       // Money FROM route -> add to row (route -> moneyDelivery.toRoute)
       const listMoneyDeliveriesFromRoute: IMoneyDelivery[] = await MoneyDelivery.find({
         fromRoute: route._id,
+        type: MoneyDeliveryType.NORMAL,
         createdAt: { $gte: oldRange.start, $lte: oldRange.end },
       }).lean();
 
@@ -249,6 +250,7 @@ export class CronjobService {
       // Money TO route -> add costToRoute to ROW NGƯỢC (route -> fromRoute)
       const listMoneyDeliveriesToRoute: IMoneyDelivery[] = await MoneyDelivery.find({
         toRoute: route._id,
+        type: MoneyDeliveryType.NORMAL,
         createdAt: { $gte: oldRange.start, $lte: oldRange.end },
       }).lean();
 
@@ -258,7 +260,9 @@ export class CronjobService {
             ? moneyDelivery.fromRoute
             : new mongoose.Types.ObjectId(String(moneyDelivery.fromRoute));
         const row = getOrCreateRow(routeId, fromRouteId);
-        row.costFromRoute += moneyDelivery.sendMoneyAmount ?? 0;
+        if (moneyDelivery.type === MoneyDeliveryType.NORMAL) {
+          row.costFromRoute += moneyDelivery.sendMoneyAmount ?? 0;
+        }
       }
     }
 
@@ -447,11 +451,14 @@ export class CronjobService {
         const listMoneyDeliveriesToRoute: IMoneyDelivery[] = await MoneyDelivery.find({
           fromRoute: toRoute,
           toRoute: fromRoute,
+          type: MoneyDeliveryType.NORMAL,
           createdAt: { $gte: oldRange.start, $lte: oldRange.end },
         }).lean();
 
         for (const moneyDelivery of listMoneyDeliveriesToRoute) {
-          debt.costFromRoute += moneyDelivery.sendMoneyAmount ?? 0;
+          if (moneyDelivery.type === MoneyDeliveryType.NORMAL) {
+            debt.costFromRoute += moneyDelivery.sendMoneyAmount ?? 0;
+          }
         }
       }
 
@@ -459,6 +466,7 @@ export class CronjobService {
       const listMoneyDeliveriesFromRoute: IMoneyDelivery[] = await MoneyDelivery.find({
         fromRoute,
         toRoute,
+        type: MoneyDeliveryType.NORMAL,
         createdAt: { $gte: oldRange.start, $lte: oldRange.end },
       }).lean();
 

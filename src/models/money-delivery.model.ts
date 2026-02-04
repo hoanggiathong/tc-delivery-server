@@ -408,6 +408,9 @@ moneyDeliverySchema.index({ fullCode: 1 }, { unique: true });
 // Text search indexes for sender and receiver names
 moneyDeliverySchema.index({ senderName: 'text' });
 moneyDeliverySchema.index({ receiverName: 'text' });
+moneyDeliverySchema.index({ fromRoute: 1, toRoute: 1, type: 1, createdAt: -1 });
+moneyDeliverySchema.index({ fromRoute: 1, type: 1, createdAt: -1 });
+moneyDeliverySchema.index({ toRoute: 1, type: 1, createdAt: -1 });
 
 export const MoneyDelivery = mongoose.model<IMoneyDelivery>(
   'MoneyDelivery',
