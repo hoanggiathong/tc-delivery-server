@@ -427,13 +427,13 @@ export class DebtService {
       const homeDeliveryFromRouteList: IDebtDetailItem[] = [];
       const surchargeToRouteList: IDebtDetailItem[] = [];
       const costFromRouteList: IDebtDetailItem[] = [];
-      const accountPayableList: IDebtDetailExpense[] = [];
+      const paymentManagementList: IDebtDetailExpense[] = [];
 
       const feeCODToRouteList: IDebtDetailItem[] = [];
       const homeDeliveryToRouteList: IDebtDetailItem[] = [];
       const surchargeFromRouteList: IDebtDetailItem[] = [];
       const costToRouteList: IDebtDetailItem[] = [];
-      const receivableList: IDebtDetailExpense[] = [];
+      const receivableManagementList: IDebtDetailExpense[] = [];
 
       // Process deliveries forward (chiều thuận = chiều về: fromRoute -> toRoute)
       for (const delivery of deliveriesForward) {
@@ -455,7 +455,7 @@ export class DebtService {
 
         // surchargeFromRoute (PHỤ PHÍ VỀ)
         if (delivery.collectForCustomerCost && delivery.collectForCustomerCost > 0) {
-          surchargeFromRouteList.push({
+          surchargeToRouteList.push({
             code: delivery.code,
             money: delivery.collectForCustomerCost,
           });
@@ -476,7 +476,7 @@ export class DebtService {
       // Process debt managements forward (RECEIPT - TIỀN VỀ)
       for (const debtManagement of debtManagementsForward) {
         if (debtManagement.cash && debtManagement.cash > 0) {
-          receivableList.push({
+          receivableManagementList.push({
             content: debtManagement.content || '',
             money: debtManagement.cash,
           });
@@ -503,7 +503,7 @@ export class DebtService {
 
         // surchargeToRoute (PHỤ PHÍ ĐI)
         if (delivery.collectForCustomerCost && delivery.collectForCustomerCost > 0) {
-          surchargeToRouteList.push({
+          surchargeFromRouteList.push({
             code: delivery.code,
             money: delivery.collectForCustomerCost,
           });
@@ -524,7 +524,7 @@ export class DebtService {
       // Process debt managements reverse (PAYMENT - TIỀN ĐI)
       for (const debtManagement of debtManagementsReverse) {
         if (debtManagement.cash && debtManagement.cash > 0) {
-          accountPayableList.push({
+          paymentManagementList.push({
             content: debtManagement.content || '',
             money: debtManagement.cash,
           });
@@ -538,12 +538,12 @@ export class DebtService {
         homeDeliveryFromRouteList,
         surchargeToRouteList,
         costFromRouteList,
-        accountPayableList,
+        paymentManagementList,
         feeCODToRouteList,
         homeDeliveryToRouteList,
         surchargeFromRouteList,
         costToRouteList,
-        receivableList,
+        receivableManagementList,
       };
 
       const result: IDebtReportDetailWithListValues = {

@@ -30,7 +30,10 @@ async function main() {
   }
   const cronjobService = new CronjobService();
   const debtReportService = new DebtReportService();
-  await mongoose.connect(uri, { dbName: process.env.MONGO_DB || undefined });
+  await mongoose.connect(uri, {
+    dbName: process.env.MONGO_DB || undefined,
+    readPreference: 'primary',
+  });
 
   /** Key theo ngày VN (tránh lệch dateDebt do dùng UTC). */
   function getTodayKeyVn(): string {

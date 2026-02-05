@@ -106,8 +106,11 @@ const debtReportSchema = new Schema<IDebtReport>(
   }
 );
 
-debtReportSchema.index({ toRoute: 1, createdAt: -1 });
-debtReportSchema.index({ toRoute: 1 });
+// Optimized indexes (removed redundant ones)
 debtReportSchema.index({ createdAt: -1 });
+debtReportSchema.index({ dateDebtReport: 1 });
+
+// UNIQUE constraint to prevent duplicate (toRoute, dateDebtReport)
+debtReportSchema.index({ toRoute: 1, dateDebtReport: 1 }, { unique: true });
 
 export const DebtReport = mongoose.model<IDebtReport>('DebtReport', debtReportSchema);
