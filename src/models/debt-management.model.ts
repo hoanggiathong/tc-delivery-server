@@ -77,15 +77,17 @@ const debtManagementSchema = new Schema<IDebtManagement>(
   }
 );
 
-// Index is already created by unique: true in the field definition
+// Optimized indexes
 debtManagementSchema.index({ fromRoute: 1, toRoute: 1, type: 1, createdAt: -1 });
 debtManagementSchema.index({ fromRoute: 1, toRoute: 1, createdAt: -1 });
 debtManagementSchema.index({ fromRoute: 1, type: 1, createdAt: -1 });
 debtManagementSchema.index({ toRoute: 1, type: 1, createdAt: -1 });
-debtManagementSchema.index({ fromRoute: 1, type: 1 });
-debtManagementSchema.index({ toRoute: 1, type: 1 });
 debtManagementSchema.index({ createdAt: -1 });
 debtManagementSchema.index({ fromRoute: 1, toRoute: 1, cash: 1, cashDate: 1, deleted: 1 });
+
+// Added indexes for queries with cashDate (getListReceipt, debt.service queries)
+debtManagementSchema.index({ fromRoute: 1, toRoute: 1, type: 1, cashDate: 1, deleted: 1 });
+debtManagementSchema.index({ toRoute: 1, type: 1, cashDate: 1, deleted: 1 });
 
 export const DebtManagement = mongoose.model<IDebtManagement>(
   'DebtManagement',

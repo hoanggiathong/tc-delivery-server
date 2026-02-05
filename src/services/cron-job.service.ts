@@ -130,7 +130,10 @@ export class CronjobService {
 
     console.log('oldRange', oldRange);
 
-    const listFromRoute: IRoute[] = await Route.find({}).lean();
+    const listFromRoute: IRoute[] = await Route.find({})
+      .read('primary')
+      .setOptions({ readConcern: { level: 'majority' } })
+      .lean();
 
     /** Map key: "fromRouteId_toRouteId" -> debt row (fromRoute -> toRoute). Used so "deliveries TO route" add to row (sender -> route), not (route -> sender). */
     const debtByPair: Record<string, IDebtRow> = {};
@@ -181,7 +184,10 @@ export class CronjobService {
       const listDeliveryFromRoute: IDelivery[] = await Delivery.find({
         fromRoute: route._id,
         createdAt: { $gte: oldRange.start, $lte: oldRange.end },
-      }).lean();
+      })
+        .read('primary')
+        .setOptions({ readConcern: { level: 'majority' } })
+        .lean();
 
       for (const delivery of listDeliveryFromRoute) {
         const toRouteId =
@@ -203,11 +209,13 @@ export class CronjobService {
         }
       }
 
-      // Deliveries TO route -> add feeCODToRoute to ROW NGƯỢC (route -> fromRoute) để 1 trạm chỉ có feeCODToRoute, trạm kia chỉ có feeCODFromRoute
       const listDeliveriesToRoute: IDelivery[] = await Delivery.find({
         toRoute: route._id,
         createdAt: { $gte: oldRange.start, $lte: oldRange.end },
-      }).lean();
+      })
+        .read('primary')
+        .setOptions({ readConcern: { level: 'majority' } })
+        .lean();
 
       for (const delivery of listDeliveriesToRoute) {
         const fromRouteId =
@@ -234,7 +242,10 @@ export class CronjobService {
         fromRoute: route._id,
         type: MoneyDeliveryType.NORMAL,
         createdAt: { $gte: oldRange.start, $lte: oldRange.end },
-      }).lean();
+      })
+        .read('primary')
+        .setOptions({ readConcern: { level: 'majority' } })
+        .lean();
 
       for (const moneyDelivery of listMoneyDeliveriesFromRoute) {
         const toRouteId =
@@ -252,7 +263,10 @@ export class CronjobService {
         toRoute: route._id,
         type: MoneyDeliveryType.NORMAL,
         createdAt: { $gte: oldRange.start, $lte: oldRange.end },
-      }).lean();
+      })
+        .read('primary')
+        .setOptions({ readConcern: { level: 'majority' } })
+        .lean();
 
       for (const moneyDelivery of listMoneyDeliveriesToRoute) {
         const fromRouteId =
@@ -284,7 +298,18 @@ export class CronjobService {
             item.surchargeToRoute +
             item.accountPayable);
 
-        ops.push({ insertOne: { document: item } });
+        // Upsert: insert if not exists (atomic, no duplicate)
+        ops.push({
+          updateOne: {
+            filter: {
+              fromRoute: item.fromRoute,
+              toRoute: item.toRoute,
+              dateDebt: item.dateDebt,
+            },
+            update: { $setOnInsert: item },
+            upsert: true,
+          },
+        });
 
         const newDayDebt: IDebtRow = {
           id: new mongoose.Types.ObjectId(),
@@ -335,7 +360,18 @@ export class CronjobService {
           (newDayDebt.openingBalance ?? 0) +
           (item.openingBalance ?? 0);
 
-        ops.push({ insertOne: { document: newDayDebt } });
+        // Upsert: insert if not exists (atomic, no duplicate)
+        ops.push({
+          updateOne: {
+            filter: {
+              fromRoute: newDayDebt.fromRoute,
+              toRoute: newDayDebt.toRoute,
+              dateDebt: newDayDebt.dateDebt,
+            },
+            update: { $setOnInsert: newDayDebt },
+            upsert: true,
+          },
+        });
       }
     }
 
@@ -383,7 +419,9 @@ export class CronjobService {
 
     const listDebt = await Debt.find({
       dateDebt: dateDebtQueryRange(oldDayDebtDate),
-    });
+    })
+      .read('primary')
+      .setOptions({ readConcern: { level: 'majority' } });
 
     const ops: mongoose.AnyBulkWriteOperation<IDebtRow>[] = [];
 
@@ -405,7 +443,10 @@ export class CronjobService {
         fromRoute,
         toRoute,
         createdAt: { $gte: oldRange.start, $lte: oldRange.end },
-      }).lean();
+      })
+        .read('primary')
+        .setOptions({ readConcern: { level: 'majority' } })
+        .lean();
 
       for (const delivery of listDeliveryFromRoute) {
         const itemCost = delivery.itemCost ?? 0;
@@ -428,7 +469,10 @@ export class CronjobService {
         toRoute,
         type: MoneyDeliveryType.NORMAL,
         createdAt: { $gte: oldRange.start, $lte: oldRange.end },
-      }).lean();
+      })
+        .read('primary')
+        .setOptions({ readConcern: { level: 'majority' } })
+        .lean();
 
       for (const moneyDelivery of listMoneyDeliveriesFromRoute) {
         if (moneyDelivery.type === MoneyDeliveryType.NORMAL) {
@@ -440,7 +484,10 @@ export class CronjobService {
         fromRoute: toRoute,
         toRoute: fromRoute,
         createdAt: { $gte: oldRange.start, $lte: oldRange.end },
-      }).lean();
+      })
+        .read('primary')
+        .setOptions({ readConcern: { level: 'majority' } })
+        .lean();
 
       for (const delivery of listDeliveriesToRoute) {
         const itemCost = delivery.itemCost ?? 0;
@@ -464,7 +511,10 @@ export class CronjobService {
         toRoute: fromRoute,
         type: MoneyDeliveryType.NORMAL,
         createdAt: { $gte: oldRange.start, $lte: oldRange.end },
-      }).lean();
+      })
+        .read('primary')
+        .setOptions({ readConcern: { level: 'majority' } })
+        .lean();
 
       for (const moneyDelivery of listMoneyDeliveriesToRoute) {
         if (moneyDelivery.type === MoneyDeliveryType.NORMAL) {
@@ -549,7 +599,18 @@ export class CronjobService {
         dateDebt: new Date(newDayDebtDate.getTime()),
       };
 
-      ops.push({ insertOne: { document: newDayDebt } });
+      // Upsert: insert if not exists (atomic, no duplicate)
+      ops.push({
+        updateOne: {
+          filter: {
+            fromRoute: newDayDebt.fromRoute,
+            toRoute: newDayDebt.toRoute,
+            dateDebt: newDayDebt.dateDebt,
+          },
+          update: { $setOnInsert: newDayDebt },
+          upsert: true,
+        },
+      });
     }
 
     if (useTransaction) {

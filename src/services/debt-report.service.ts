@@ -62,7 +62,9 @@ export class DebtReportService {
 
     const count = await DebtReport.countDocuments({
       dateDebtReport: dateDebtQueryRange(oldDayDebtDate),
-    });
+    })
+      .read('primary')
+      .setOptions({ readConcern: { level: 'majority' } });
 
     if (count === 0) {
       await this.processDebtReportForVnDay(oldDayVn, useTransaction);
@@ -84,7 +86,9 @@ export class DebtReportService {
     const dateDebtExact = vnDateToDebtDateUtc(vnDay.year, vnDay.month, vnDay.date);
 
     const doWork = async (session?: mongoose.ClientSession) => {
-      const debtQuery = Debt.find({ dateDebt: dateDebtQueryRange(dateDebtExact) });
+      const debtQuery = Debt.find({ dateDebt: dateDebtQueryRange(dateDebtExact) })
+        .read('primary')
+        .setOptions({ readConcern: { level: 'majority' } });
       const debts = await (session ? debtQuery.session(session).lean() : debtQuery.lean());
 
       if (debts.length === 0) {
@@ -206,7 +210,9 @@ export class DebtReportService {
     const doWork = async (session?: mongoose.ClientSession) => {
       const debtQuery = Debt.find({
         dateDebt: dateDebtQueryRange(dateDebtExact),
-      });
+      })
+        .read('primary')
+        .setOptions({ readConcern: { level: 'majority' } });
       const debts = await (session ? debtQuery.session(session).lean() : debtQuery.lean());
 
       if (debts.length === 0) {
