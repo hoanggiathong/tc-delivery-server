@@ -176,22 +176,18 @@ const debtSchema = new Schema<IDebt>(
 //   }
 // });
 
+// Optimized indexes (removed redundant ones)
 debtSchema.index({ fromRoute: 1, toRoute: 1, createdAt: -1 });
-debtSchema.index({ fromRoute: 1, toRoute: 1 });
 debtSchema.index({ fromRoute: 1, createdAt: -1 });
-debtSchema.index({ fromRoute: 1 });
-debtSchema.index({ toRoute: 1 });
 debtSchema.index({ toRoute: 1, createdAt: -1 });
 debtSchema.index({ toRoute: 1, createdAt: -1, fromRoute: 1 });
-debtSchema.index({ toRoute: 1, dateDebt: -1, fromRoute: 1 });
 debtSchema.index({ toRoute: 1, dateDebt: 1, fromRoute: 1 });
 debtSchema.index({ fromRoute: 1, dateDebt: 1 });
-debtSchema.index({ fromRoute: 1, dateDebt: -1 });
 debtSchema.index({ toRoute: 1, dateDebt: 1 });
-debtSchema.index({ toRoute: 1, dateDebt: -1 });
 debtSchema.index({ createdAt: -1 });
 debtSchema.index({ dateDebt: 1 });
-debtSchema.index({ dateDebt: -1 });
 
-// Index is already created by unique: true in the field definition
+// UNIQUE constraint to prevent duplicate (fromRoute, toRoute, dateDebt)
+debtSchema.index({ fromRoute: 1, toRoute: 1, dateDebt: 1 }, { unique: true });
+
 export const Debt = mongoose.model<IDebt>('Debt', debtSchema);

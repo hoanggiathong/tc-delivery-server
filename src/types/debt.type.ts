@@ -65,14 +65,14 @@ export interface IDebtDetailWithListValues extends IDebtRow {
   homeDeliveryToRouteList: IDebtDetailItem[]; // GIAO TẬN NƠI VỀ
   surchargeFromRouteList: IDebtDetailItem[]; // PHỤ PHÍ VỀ
   costToRouteList: IDebtDetailItem[]; // TIỀN VỀ (from MoneyDelivery)
-  receivableList: IDebtDetailExpense[]; // TIỀN VỀ (from DebtManagement RECEIPT)
+  receivableManagementList: IDebtDetailExpense[]; // TIỀN VỀ (from DebtManagement RECEIPT)
 
   // Chiều ngược = chiều đi (toRoute -> fromRoute)
   feeCODFromRouteList: IDebtDetailItem[]; // NỢ CƯỚC ĐI
   homeDeliveryFromRouteList: IDebtDetailItem[]; // GIAO TẬN NƠI ĐI
   surchargeToRouteList: IDebtDetailItem[]; // PHỤ PHÍ ĐI
   costFromRouteList: IDebtDetailItem[]; // TIỀN ĐI (from MoneyDelivery)
-  accountPayableList: IDebtDetailExpense[]; // TIỀN ĐI (from DebtManagement PAYMENT)
+  paymentManagementList: IDebtDetailExpense[]; // TIỀN ĐI (from DebtManagement PAYMENT)
 }
 
 export interface IDebtReportDetailWithListValues {
