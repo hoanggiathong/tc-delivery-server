@@ -831,11 +831,8 @@ export class ReturnDeliveriesService {
   ): Promise<IReturnDeliveryResponse[]> {
     const { startDate, endDate } = query;
 
-    const start = new Date(String(startDate));
-    start.setHours(0, 0, 0, 0);
-
-    const end = new Date(String(endDate));
-    end.setHours(23, 59, 59, 999);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
 
     const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
 

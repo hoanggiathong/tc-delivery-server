@@ -1,4 +1,5 @@
 import { SORT_BY_RETURN_DELIVERIES } from '@/const/return-deliveries.const';
+import { DATE_YYYY_MM_DD_PATTERN, VALIDATION_MESSAGES } from '@/utils/validation-patterns';
 import z from 'zod';
 
 const SortBySchema = z.literal(SORT_BY_RETURN_DELIVERIES.CREATED_AT);
@@ -134,23 +135,37 @@ export const getListReturnDeliveriesIsReturnSchema = z
     query: z.object({
       startDate: z
         .string()
-        .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid start date in ISO format')
-        .transform(val => new Date(val))
-        .refine(val => {
-          const fourtyFiveDaysAgo = new Date();
-          fourtyFiveDaysAgo.setDate(fourtyFiveDaysAgo.getDate() - 45);
-          return val >= fourtyFiveDaysAgo;
-        }, 'Start date cannot be more than 45 days in the past'),
+        .regex(DATE_YYYY_MM_DD_PATTERN, VALIDATION_MESSAGES.DATE_YYYY_MM_DD)
+        .transform(val => {
+          // Parse date as server's local timezone start of day (00:00:00)
+          const [year, month, day] = val.split('-').map(Number);
+          return new Date(year, month - 1, day, 0, 0, 0, 0);
+        }),
       endDate: z
         .string()
-        .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid end date in ISO format')
-        .transform(val => new Date(val)),
+        .regex(DATE_YYYY_MM_DD_PATTERN, VALIDATION_MESSAGES.DATE_YYYY_MM_DD)
+        .transform(val => {
+          // Parse date as server's local timezone end of day (23:59:59.999)
+          const [year, month, day] = val.split('-').map(Number);
+          return new Date(year, month - 1, day, 23, 59, 59, 999);
+        }),
     }),
   })
   .refine(data => data.query.startDate <= data.query.endDate, {
     message: 'Start date must be before or equal to end date',
     path: ['query', 'startDate'],
-  });
+  })
+  .refine(
+    data => {
+      const diffTime = Math.abs(data.query.endDate.getTime() - data.query.startDate.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays <= 30;
+    },
+    {
+      message: 'Date range cannot exceed 30 days',
+      path: ['query', 'endDate'],
+    }
+  );
 
 // Schema for get detail images return delivery
 export const getDetailImagesReturnDeliverySchema = z.object({
