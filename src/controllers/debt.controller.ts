@@ -588,14 +588,14 @@ export class DebtController {
    *       Returns a single debt record by ID with detailed lists for each field.
    *       The debt must belong to the authenticated user's selected route (toRoute).
    *       Includes arrays of delivery codes and amounts for:
-   *       - NỢ CƯỚC ĐI (feeCODFromRouteList): Delivery codes with debt amounts (paymentType = 'debt')
-   *       - GIAO TẬN NƠI ĐI (homeDeliveryFromRouteList): Delivery codes with home delivery costs
-   *       - PHỤ PHÍ ĐI (surchargeToRouteList): Delivery codes with surcharge costs
-   *       - TIỀN ĐI (costFromRouteList, accountPayableList): Money delivery codes and debt management payments
-   *       - NỢ CƯỚC VỀ (feeCODToRouteList): Delivery codes with debt amounts (reverse direction)
-   *       - GIAO TẬN NƠI VỀ (homeDeliveryToRouteList): Delivery codes with home delivery costs (reverse)
-   *       - PHỤ PHÍ VỀ (surchargeFromRouteList): Delivery codes with surcharge costs (reverse)
-   *       - TIỀN VỀ (costToRouteList, receivableList): Money delivery codes and debt management receipts
+   *       - NỢ CƯỚC ĐI (feeCODFromRouteList): Delivery codes with debt amounts (toRoute → fromRoute, paymentType = 'debt')
+   *       - GIAO TẬN NƠI ĐI (homeDeliveryFromRouteList): Delivery codes with home delivery costs (toRoute → fromRoute, paymentType = 'paid')
+   *       - PHỤ PHÍ ĐI (surchargeFromRouteList): Delivery codes with surcharge costs (toRoute → fromRoute, paymentType = 'paid')
+   *       - TIỀN ĐI (costFromRouteList, paymentManagementList): Money delivery codes and debt management payments
+   *       - NỢ CƯỚC VỀ (feeCODToRouteList): Delivery codes with debt amounts (fromRoute → toRoute, paymentType = 'debt')
+   *       - GIAO TẬN NƠI VỀ (homeDeliveryToRouteList): Delivery codes with home delivery costs (fromRoute → toRoute, paymentType = 'paid')
+   *       - PHỤ PHÍ VỀ (surchargeToRouteList): Delivery codes with surcharge costs (fromRoute → toRoute, paymentType = 'paid')
+   *       - TIỀN VỀ (costToRouteList, receivableManagementList): Money delivery codes and debt management receipts
    *       Data is filtered by the debt's createdAt date (same day).
    *     tags: [Debt]
    *     security:
@@ -753,7 +753,7 @@ export class DebtController {
    *                           format: date-time
    *                         feeCODFromRouteList:
    *                           type: array
-   *                           description: NỢ CƯỚC ĐI - List of delivery codes with debt amounts
+   *                           description: NỢ CƯỚC ĐI - Delivery codes with debt amounts (toRoute → fromRoute, paymentType = 'debt')
    *                           items:
    *                             type: object
    *                             properties:
@@ -765,7 +765,7 @@ export class DebtController {
    *                                 example: 50000
    *                         homeDeliveryFromRouteList:
    *                           type: array
-   *                           description: GIAO TẬN NƠI ĐI - List of delivery codes with home delivery costs
+   *                           description: GIAO TẬN NƠI ĐI - Delivery codes with home delivery costs (toRoute → fromRoute, paymentType = 'paid')
    *                           items:
    *                             type: object
    *                             properties:
@@ -775,9 +775,9 @@ export class DebtController {
    *                               money:
    *                                 type: number
    *                                 example: 20000
-   *                         surchargeToRouteList:
+   *                         surchargeFromRouteList:
    *                           type: array
-   *                           description: PHỤ PHÍ ĐI - List of delivery codes with surcharge costs
+   *                           description: PHỤ PHÍ ĐI - Delivery codes with surcharge costs (toRoute → fromRoute, paymentType = 'paid')
    *                           items:
    *                             type: object
    *                             properties:
@@ -789,7 +789,7 @@ export class DebtController {
    *                                 example: 10000
    *                         costFromRouteList:
    *                           type: array
-   *                           description: TIỀN ĐI - List of money delivery codes with amounts
+   *                           description: TIỀN ĐI - Money delivery codes with amounts (toRoute → fromRoute)
    *                           items:
    *                             type: object
    *                             properties:
@@ -799,9 +799,9 @@ export class DebtController {
    *                               money:
    *                                 type: number
    *                                 example: 1000000
-   *                         accountPayableList:
+   *                         paymentManagementList:
    *                           type: array
-   *                           description: TIỀN ĐI (from DebtManagement) - List of payment descriptions with amounts
+   *                           description: TIỀN ĐI (from DebtManagement PAYMENT) - Payment descriptions with amounts
    *                           items:
    *                             type: object
    *                             properties:
@@ -813,7 +813,7 @@ export class DebtController {
    *                                 example: 500000
    *                         feeCODToRouteList:
    *                           type: array
-   *                           description: NỢ CƯỚC VỀ - List of delivery codes with debt amounts (reverse direction)
+   *                           description: NỢ CƯỚC VỀ - Delivery codes with debt amounts (fromRoute → toRoute, paymentType = 'debt')
    *                           items:
    *                             type: object
    *                             properties:
@@ -825,7 +825,7 @@ export class DebtController {
    *                                 example: 30000
    *                         homeDeliveryToRouteList:
    *                           type: array
-   *                           description: GIAO TẬN NƠI VỀ - List of delivery codes with home delivery costs (reverse)
+   *                           description: GIAO TẬN NƠI VỀ - Delivery codes with home delivery costs (fromRoute → toRoute, paymentType = 'paid')
    *                           items:
    *                             type: object
    *                             properties:
@@ -835,9 +835,9 @@ export class DebtController {
    *                               money:
    *                                 type: number
    *                                 example: 15000
-   *                         surchargeFromRouteList:
+   *                         surchargeToRouteList:
    *                           type: array
-   *                           description: PHỤ PHÍ VỀ - List of delivery codes with surcharge costs (reverse)
+   *                           description: PHỤ PHÍ VỀ - Delivery codes with surcharge costs (fromRoute → toRoute, paymentType = 'paid')
    *                           items:
    *                             type: object
    *                             properties:
@@ -849,7 +849,7 @@ export class DebtController {
    *                                 example: 5000
    *                         costToRouteList:
    *                           type: array
-   *                           description: TIỀN VỀ - List of money delivery codes with amounts (reverse)
+   *                           description: TIỀN VỀ - Money delivery codes with amounts (fromRoute → toRoute)
    *                           items:
    *                             type: object
    *                             properties:
@@ -859,9 +859,9 @@ export class DebtController {
    *                               money:
    *                                 type: number
    *                                 example: 800000
-   *                         receivableList:
+   *                         receivableManagementList:
    *                           type: array
-   *                           description: TIỀN VỀ (from DebtManagement) - List of receipt descriptions with amounts
+   *                           description: TIỀN VỀ (from DebtManagement RECEIPT) - Receipt descriptions with amounts
    *                           items:
    *                             type: object
    *                             properties:
@@ -928,13 +928,13 @@ export class DebtController {
    *                       homeDeliveryFromRouteList:
    *                         - code: "2501200001"
    *                           money: 20000
-   *                       surchargeToRouteList:
+   *                       surchargeFromRouteList:
    *                         - code: "2501200001"
    *                           money: 10000
    *                       costFromRouteList:
    *                         - code: "2501200001-T"
    *                           money: 1000000
-   *                       accountPayableList:
+   *                       paymentManagementList:
    *                         - content: "TPHCM CK"
    *                           money: 500000
    *                       feeCODToRouteList:
@@ -943,13 +943,13 @@ export class DebtController {
    *                       homeDeliveryToRouteList:
    *                         - code: "2501200002"
    *                           money: 15000
-   *                       surchargeFromRouteList:
+   *                       surchargeToRouteList:
    *                         - code: "2501200002"
    *                           money: 5000
    *                       costToRouteList:
    *                         - code: "2501200002-T"
    *                           money: 800000
-   *                       receivableList:
+   *                       receivableManagementList:
    *                         - content: "TPHCM CK"
    *                           money: 300000
    *       400:

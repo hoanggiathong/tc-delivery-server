@@ -340,26 +340,12 @@ export class DebtService {
 
       const debt = debtResult[0];
 
-      // Step 2 & 3: Calculate date range from debt createdAt
-      const debtDate = new Date(debt.createdAt || new Date());
-      const startDate = new Date(
-        debtDate.getFullYear(),
-        debtDate.getMonth(),
-        debtDate.getDate(),
-        0,
-        0,
-        0,
-        0
-      );
-      const endDate = new Date(
-        debtDate.getFullYear(),
-        debtDate.getMonth(),
-        debtDate.getDate(),
-        23,
-        59,
-        59,
-        999
-      );
+      // Step 2 & 3: Calculate date range from debt dateDebt
+      // dateDebt = 17:00 UTC (D-1) for VN day D (same convention as cronjob)
+      // Query range: [dateDebt, dateDebt + 24h - 1ms] = VN midnight to VN 23:59:59.999
+      const dateDebt = new Date(debt.dateDebt || debt.createdAt || new Date());
+      const startDate = new Date(dateDebt.getTime());
+      const endDate = new Date(dateDebt.getTime() + 24 * 60 * 60 * 1000 - 1);
 
       const fromRouteId = new Types.ObjectId(String(debt.fromRoute.id));
       const toRouteIdFromDebt = new Types.ObjectId(String(debt.toRoute.id));
