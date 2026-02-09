@@ -3,7 +3,7 @@ import { DEBT_MANAGEMENT_TYPE } from '@/const/debt-management.const';
 import { Debt } from '@/models/debt.model';
 import { DebtManagement } from '@/models/debt-management.model';
 import { Delivery } from '@/models/delivery.model';
-import { MoneyDelivery } from '@/models/money-delivery.model';
+import { MoneyDelivery, MoneyDeliveryType } from '@/models/money-delivery.model';
 import {
   IDebtDetailExpense,
   IDebtDetailItem,
@@ -372,14 +372,15 @@ export class DebtService {
             toRoute: toRouteIdFromDebt,
             createdAt: { $gte: startDate, $lte: endDate },
           })
-            .select('code cost homeDeliveryCost collectForCustomerCost paymentType')
+            .select('fullCode cost itemCost homeDeliveryCost collectForCustomerCost paymentType')
             .lean(),
           MoneyDelivery.find({
             fromRoute: fromRouteId,
             toRoute: toRouteIdFromDebt,
+            type: MoneyDeliveryType.NORMAL,
             createdAt: { $gte: startDate, $lte: endDate },
           })
-            .select('code sendMoneyAmount')
+            .select('fullCode sendMoneyAmount')
             .lean(),
           DebtManagement.find({
             fromRoute: fromRouteId,
@@ -401,14 +402,15 @@ export class DebtService {
             toRoute: fromRouteId,
             createdAt: { $gte: startDate, $lte: endDate },
           })
-            .select('code cost homeDeliveryCost collectForCustomerCost paymentType')
+            .select('fullCode cost itemCost homeDeliveryCost collectForCustomerCost paymentType')
             .lean(),
           MoneyDelivery.find({
             fromRoute: toRouteIdFromDebt,
             toRoute: fromRouteId,
+            type: MoneyDeliveryType.NORMAL,
             createdAt: { $gte: startDate, $lte: endDate },
           })
-            .select('code sendMoneyAmount')
+            .select('fullCode sendMoneyAmount')
             .lean(),
           DebtManagement.find({
             fromRoute: toRouteIdFromDebt,
@@ -437,27 +439,32 @@ export class DebtService {
 
       // Process deliveries forward (chiều thuận = chiều về: fromRoute -> toRoute)
       for (const delivery of deliveriesForward) {
-        // feeCODToRoute (NỢ CƯỚC VỀ)
-        if (delivery.paymentType === 'debt' && delivery.cost) {
+        const itemCost = delivery.itemCost ?? 0;
+        const costDelivery = delivery.cost ? delivery.cost + itemCost : 0;
+        const homeDeliveryCost = delivery.homeDeliveryCost ?? 0;
+        const collectForCustomerCost = delivery.collectForCustomerCost ?? 0;
+
+        // feeCODToRoute (NỢ CƯỚC VỀ) - chỉ khi nợ cước
+        if (delivery.paymentType === 'debt' && costDelivery > 0) {
           feeCODToRouteList.push({
-            code: delivery.code,
-            money: delivery.cost,
+            code: delivery.fullCode,
+            money: costDelivery,
           });
         }
 
-        // homeDeliveryToRoute (GIAO TẬN NƠI VỀ)
-        if (delivery.homeDeliveryCost && delivery.homeDeliveryCost > 0) {
+        // homeDeliveryToRoute (GIAO TẬN NƠI VỀ) - chỉ khi đã thu cước (paid)
+        if (delivery.paymentType === 'paid' && homeDeliveryCost > 0) {
           homeDeliveryToRouteList.push({
-            code: delivery.code,
-            money: delivery.homeDeliveryCost,
+            code: delivery.fullCode,
+            money: homeDeliveryCost,
           });
         }
 
-        // surchargeFromRoute (PHỤ PHÍ VỀ)
-        if (delivery.collectForCustomerCost && delivery.collectForCustomerCost > 0) {
+        // surchargeToRoute (PHỤ PHÍ VỀ) - chỉ khi đã thu cước (paid)
+        if (delivery.paymentType === 'paid' && collectForCustomerCost > 0) {
           surchargeToRouteList.push({
-            code: delivery.code,
-            money: delivery.collectForCustomerCost,
+            code: delivery.fullCode,
+            money: collectForCustomerCost,
           });
         }
       }
@@ -467,7 +474,7 @@ export class DebtService {
         // costToRoute (TIỀN VỀ)
         if (moneyDelivery.sendMoneyAmount && moneyDelivery.sendMoneyAmount > 0) {
           costToRouteList.push({
-            code: moneyDelivery.code,
+            code: moneyDelivery.fullCode,
             money: moneyDelivery.sendMoneyAmount,
           });
         }
@@ -485,27 +492,32 @@ export class DebtService {
 
       // Process deliveries reverse (chiều ngược = chiều đi: toRoute -> fromRoute)
       for (const delivery of deliveriesReverse) {
-        // feeCODFromRoute (NỢ CƯỚC ĐI)
-        if (delivery.paymentType === 'debt' && delivery.cost) {
+        const itemCost = delivery.itemCost ?? 0;
+        const costDelivery = delivery.cost ? delivery.cost + itemCost : 0;
+        const homeDeliveryCost = delivery.homeDeliveryCost ?? 0;
+        const collectForCustomerCost = delivery.collectForCustomerCost ?? 0;
+
+        // feeCODFromRoute (NỢ CƯỚC ĐI) - chỉ khi nợ cước
+        if (delivery.paymentType === 'debt' && costDelivery > 0) {
           feeCODFromRouteList.push({
-            code: delivery.code,
-            money: delivery.cost,
+            code: delivery.fullCode,
+            money: costDelivery,
           });
         }
 
-        // homeDeliveryFromRoute (GIAO TẬN NƠI ĐI)
-        if (delivery.homeDeliveryCost && delivery.homeDeliveryCost > 0) {
+        // homeDeliveryFromRoute (GIAO TẬN NƠI ĐI) - chỉ khi đã thu cước (paid)
+        if (delivery.paymentType === 'paid' && homeDeliveryCost > 0) {
           homeDeliveryFromRouteList.push({
-            code: delivery.code,
-            money: delivery.homeDeliveryCost,
+            code: delivery.fullCode,
+            money: homeDeliveryCost,
           });
         }
 
-        // surchargeToRoute (PHỤ PHÍ ĐI)
-        if (delivery.collectForCustomerCost && delivery.collectForCustomerCost > 0) {
+        // surchargeFromRoute (PHỤ PHÍ ĐI) - chỉ khi đã thu cước (paid)
+        if (delivery.paymentType === 'paid' && collectForCustomerCost > 0) {
           surchargeFromRouteList.push({
-            code: delivery.code,
-            money: delivery.collectForCustomerCost,
+            code: delivery.fullCode,
+            money: collectForCustomerCost,
           });
         }
       }
@@ -515,7 +527,7 @@ export class DebtService {
         // costFromRoute (TIỀN ĐI)
         if (moneyDelivery.sendMoneyAmount && moneyDelivery.sendMoneyAmount > 0) {
           costFromRouteList.push({
-            code: moneyDelivery.code,
+            code: moneyDelivery.fullCode,
             money: moneyDelivery.sendMoneyAmount,
           });
         }
