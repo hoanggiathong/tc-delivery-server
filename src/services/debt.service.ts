@@ -372,7 +372,7 @@ export class DebtService {
             fromRoute: fromRouteId,
             toRoute: toRouteIdFromDebt,
             type: DEBT_MANAGEMENT_TYPE.RECEIPT,
-            cashDate: { $gte: startDate, $lte: endDate },
+            createdAt: { $gte: startDate, $lte: endDate },
             deleted: false,
           })
             .select('content cash')
@@ -402,7 +402,7 @@ export class DebtService {
             fromRoute: toRouteIdFromDebt,
             toRoute: fromRouteId,
             type: DEBT_MANAGEMENT_TYPE.PAYMENT,
-            cashDate: { $gte: startDate, $lte: endDate },
+            createdAt: { $gte: startDate, $lte: endDate },
             deleted: false,
           })
             .select('content cash')

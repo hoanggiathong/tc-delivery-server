@@ -591,12 +591,14 @@ export class DebtController {
    *       - NỢ CƯỚC ĐI (feeCODFromRouteList): Delivery codes with debt amounts (toRoute → fromRoute, paymentType = 'debt')
    *       - GIAO TẬN NƠI ĐI (homeDeliveryFromRouteList): Delivery codes with home delivery costs (toRoute → fromRoute, paymentType = 'paid')
    *       - PHỤ PHÍ ĐI (surchargeFromRouteList): Delivery codes with surcharge costs (toRoute → fromRoute, paymentType = 'paid')
-   *       - TIỀN ĐI (costFromRouteList, paymentManagementList): Money delivery codes and debt management payments
+   *       - TIỀN ĐI (costFromRouteList): Money delivery codes with amounts (toRoute → fromRoute)
+   *       - TIỀN chi khác (paymentManagementList): Debt management payments descriptions with amounts
    *       - NỢ CƯỚC VỀ (feeCODToRouteList): Delivery codes with debt amounts (fromRoute → toRoute, paymentType = 'debt')
    *       - GIAO TẬN NƠI VỀ (homeDeliveryToRouteList): Delivery codes with home delivery costs (fromRoute → toRoute, paymentType = 'paid')
    *       - PHỤ PHÍ VỀ (surchargeToRouteList): Delivery codes with surcharge costs (fromRoute → toRoute, paymentType = 'paid')
-   *       - TIỀN VỀ (costToRouteList, receivableManagementList): Money delivery codes and debt management receipts
-   *       Data is filtered by the debt's createdAt date (same day).
+   *       - TIỀN VỀ (costToRouteList): Money delivery codes with amounts (fromRoute → toRoute)
+   *       - TIỀN thu khác (receivableManagementList): Debt management receipts descriptions with amounts
+   *       Data is filtered by the debt's dateDebt (VN calendar day range).
    *     tags: [Debt]
    *     security:
    *       - bearerAuth: []
