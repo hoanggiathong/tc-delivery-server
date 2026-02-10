@@ -11,6 +11,7 @@ import {
   IDebtReportDetailWithListValues,
   IDebtRow,
   IDebtTotal,
+  IExportTotalDebtResponse,
   IGetListDebtResponse,
 } from '@/types/debt.type';
 import { Request } from 'express';
@@ -555,6 +556,131 @@ export class DebtService {
         throw error;
       }
       throw new Error('get debt detail with list values failed');
+    }
+  }
+
+  async exportReportTotalDebt(req: Request, userId: string): Promise<IExportTotalDebtResponse> {
+    const { startDate, endDate, fromRouteId } = req.query;
+
+    const toRouteId = await this.userService.getUserSelectedRouteId(userId);
+    const startOfDate = new Date(String(startDate));
+    const endOfDate = new Date(String(endDate));
+
+    // Interpret startDate/endDate as VN calendar days; query dateDebt (17:00 UTC previous day)
+    const startExact = vnDateToDebtDateUtc(
+      startOfDate.getUTCFullYear(),
+      startOfDate.getUTCMonth(),
+      startOfDate.getUTCDate()
+    );
+    const endExact = vnDateToDebtDateUtc(
+      endOfDate.getUTCFullYear(),
+      endOfDate.getUTCMonth(),
+      endOfDate.getUTCDate()
+    );
+
+    try {
+      const toRouteIdObj = new Types.ObjectId(toRouteId);
+      const matchStage: Record<string, unknown> = {
+        toRoute: toRouteIdObj,
+        dateDebt: { $gte: startExact, $lte: endExact },
+      };
+
+      if (fromRouteId) {
+        if (!Types.ObjectId.isValid(String(fromRouteId))) {
+          throw new Error('Invalid fromRouteId format');
+        }
+        matchStage.fromRoute = new Types.ObjectId(String(fromRouteId));
+      }
+
+      const pipeline: PipelineStage[] = [
+        {
+          $match: matchStage,
+        },
+        // Join fromRoute
+        {
+          $lookup: {
+            from: 'routes',
+            localField: 'fromRoute',
+            foreignField: '_id',
+            as: 'fromRoute',
+          },
+        },
+        { $unwind: { path: '$fromRoute', preserveNullAndEmptyArrays: true } },
+        // Join toRoute
+        {
+          $lookup: {
+            from: 'routes',
+            localField: 'toRoute',
+            foreignField: '_id',
+            as: 'toRoute',
+          },
+        },
+        { $unwind: { path: '$toRoute', preserveNullAndEmptyArrays: true } },
+        // Group by fromRoute and sum all fields
+        {
+          $group: {
+            _id: '$fromRoute._id',
+            fromRouteName: { $first: '$fromRoute.name' },
+            openingBalance: { $sum: '$openingBalance' },
+            costFromRoute: { $sum: '$costFromRoute' },
+            feeCODToRoute: { $sum: '$feeCODToRoute' },
+            costToRoute: { $sum: '$costToRoute' },
+            feeCODFromRoute: { $sum: '$feeCODFromRoute' },
+            accountPayable: { $sum: '$accountPayable' },
+            receivable: { $sum: '$receivable' },
+            homeDeliveryFromRoute: { $sum: '$homeDeliveryFromRoute' },
+            homeDeliveryToRoute: { $sum: '$homeDeliveryToRoute' },
+            surchargeToRoute: { $sum: '$surchargeToRoute' },
+            surchargeFromRoute: { $sum: '$surchargeFromRoute' },
+            totalDebt: { $sum: '$totalDebt' },
+          },
+        },
+        // Project to match IExportTotalDebtRow interface
+        {
+          $project: {
+            _id: 0,
+            fromRoute: {
+              id: '$_id',
+              name: '$fromRouteName',
+            },
+            openingBalance: 1,
+            costFromRoute: 1,
+            feeCODToRoute: 1,
+            costToRoute: 1,
+            feeCODFromRoute: 1,
+            accountPayable: 1,
+            receivable: 1,
+            homeDeliveryFromRoute: 1,
+            homeDeliveryToRoute: 1,
+            surchargeToRoute: 1,
+            surchargeFromRoute: 1,
+            totalDebt: 1,
+          },
+        },
+        // Sort by fromRoute name
+        {
+          $sort: { 'fromRoute.name': 1 },
+        },
+      ];
+
+      const data = await Debt.aggregate(pipeline).exec();
+
+      // Get debt report total from DebtReportService (same VN date range)
+      const total: IDebtTotal = await this.debtReportService.getDebtReportTotal(
+        toRouteId,
+        startExact,
+        endExact
+      );
+
+      return {
+        data,
+        total,
+      };
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('export total debt failed');
     }
   }
 }

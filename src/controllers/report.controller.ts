@@ -1,7 +1,10 @@
 import { Response } from 'express';
 import { ReportService } from '@/services/report.service';
 import { ApiResponse, AuthRequest } from '@/types';
-import { IReportReturnMoneyDeliveryAndReturnDeliveryRequest } from '@/types/report.type';
+import {
+  IAccountingReportRequest,
+  IReportReturnMoneyDeliveryAndReturnDeliveryRequest,
+} from '@/types/report.type';
 import Logger from '@/utils/logger';
 
 export class ReportController {
@@ -235,6 +238,318 @@ export class ReportController {
         error instanceof Error
           ? error.message
           : 'Failed to get report return money delivery and return delivery';
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(500).json(response);
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/report/accounting:
+   *   get:
+   *     summary: Get accounting report grouped by route (max 45 days, Vietnam timezone)
+   *     description: |
+   *       Returns an accounting report (Báo Cáo Doanh Thu Bưu Phẩm) grouped by route (TUYẾN).
+   *       Each route contains 7 rows: HÀNG CHUYỂN THƯỜNG, HÀNG GIAO TẬN NƠI, TIỀN CHUYỂN THƯỜNG,
+   *       TIỀN CHUYỂN NHANH, TIỀN THU HỘ GIỮ, NỢ CƯỚC, TỔNG CỘNG TIỀN THỰC THU.
+   *       Each row has 3 columns: transferMoney, shippingFee, surcharge.
+   *       The total section contains grand totals across all routes.
+   *       Date range cannot exceed 45 days. Dates use Vietnam timezone (UTC+7).
+   *     tags: [Report]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: startDate
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Start date in YYYY-MM-DD format (Vietnam timezone). Date range cannot exceed 45 days.
+   *         example: "2025-11-01"
+   *       - in: query
+   *         name: endDate
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: End date in YYYY-MM-DD format (Vietnam timezone). Date range cannot exceed 45 days.
+   *         example: "2025-11-30"
+   *     responses:
+   *       200:
+   *         description: Accounting report retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Accounting report retrieved successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     routes:
+   *                       type: array
+   *                       description: List of routes with per-route accounting data
+   *                       items:
+   *                         type: object
+   *                         properties:
+   *                           routeId:
+   *                             type: string
+   *                           routeCode:
+   *                             type: string
+   *                           routeName:
+   *                             type: string
+   *                           normalDelivery:
+   *                             type: object
+   *                             description: "Row 1: HÀNG CHUYỂN THƯỜNG"
+   *                             properties:
+   *                               transferMoney:
+   *                                 type: number
+   *                               shippingFee:
+   *                                 type: number
+   *                               surcharge:
+   *                                 type: number
+   *                           homeDelivery:
+   *                             type: object
+   *                             description: "Row 2: HÀNG GIAO TẬN NƠI"
+   *                             properties:
+   *                               transferMoney:
+   *                                 type: number
+   *                               shippingFee:
+   *                                 type: number
+   *                               surcharge:
+   *                                 type: number
+   *                               homeDeliveryCostTotal:
+   *                                 type: number
+   *                                 description: Total home delivery cost for all deliveries (shown in label)
+   *                           normalMoneyTransfer:
+   *                             type: object
+   *                             description: "Row 3: TIỀN CHUYỂN THƯỜNG"
+   *                             properties:
+   *                               transferMoney:
+   *                                 type: number
+   *                               shippingFee:
+   *                                 type: number
+   *                               surcharge:
+   *                                 type: number
+   *                           expressMoneyTransfer:
+   *                             type: object
+   *                             description: "Row 4: TIỀN CHUYỂN NHANH"
+   *                             properties:
+   *                               transferMoney:
+   *                                 type: number
+   *                               shippingFee:
+   *                                 type: number
+   *                               surcharge:
+   *                                 type: number
+   *                           collectHoldMoney:
+   *                             type: object
+   *                             description: "Row 5: TIỀN THU HỘ GIỮ"
+   *                             properties:
+   *                               transferMoney:
+   *                                 type: number
+   *                               shippingFee:
+   *                                 type: number
+   *                               surcharge:
+   *                                 type: number
+   *                           debtCost:
+   *                             type: object
+   *                             description: "Row 6: NỢ CƯỚC"
+   *                             properties:
+   *                               transferMoney:
+   *                                 type: number
+   *                               shippingFee:
+   *                                 type: number
+   *                               surcharge:
+   *                                 type: number
+   *                           totalActualCollected:
+   *                             type: object
+   *                             description: "Row 7: TỔNG CỘNG TIỀN THỰC THU"
+   *                             properties:
+   *                               transferMoney:
+   *                                 type: number
+   *                               shippingFee:
+   *                                 type: number
+   *                               surcharge:
+   *                                 type: number
+   *                     total:
+   *                       type: object
+   *                       description: Grand totals across all routes
+   *                       properties:
+   *                         totalSendMoneyToStations:
+   *                           type: number
+   *                           description: "TỔNG TIỀN GỬI CÁC TRẠM"
+   *                         totalCollectHoldMoney:
+   *                           type: number
+   *                           description: "TỔNG TIỀN THU HỘ GIỮ"
+   *                         totalShippingCostNC:
+   *                           type: number
+   *                           description: "TỔNG CƯỚC GỬI NC"
+   *                         totalHomeDeliveryCostNC:
+   *                           type: number
+   *                           description: "TỔNG TIỀN GTN NC"
+   *                         totalActualRevenue:
+   *                           type: number
+   *                           description: "TỔNG THỰC THU"
+   *                         cashInSafe:
+   *                           type: number
+   *                           description: "TIỀN TRONG TỦ"
+   *                         revenue:
+   *                           type: number
+   *                           description: "Doanh Thu (Có GTN đi + Phụ phí đi)"
+   *                         totalOutgoingHomeDeliveryCost:
+   *                           type: number
+   *                           description: "TỔNG CƯỚC GTN đi"
+   *                         totalOutgoingSurcharge:
+   *                           type: number
+   *                           description: "TỔNG PHỤ PHÍ đi"
+   *                         totalRevenueFundSubmission:
+   *                           type: number
+   *                           description: "Tổng Doanh Thu Nộp Quỹ (BCTC)"
+   *             examples:
+   *               reportWithData:
+   *                 summary: Accounting report with data
+   *                 value:
+   *                   success: true
+   *                   message: "Accounting report retrieved successfully"
+   *                   data:
+   *                     routes:
+   *                       - routeId: "507f1f77bcf86cd799439011"
+   *                         routeCode: "T1"
+   *                         routeName: "LONG XUYÊN"
+   *                         normalDelivery: { transferMoney: 0, shippingFee: 4452000, surcharge: 0 }
+   *                         homeDelivery: { transferMoney: 0, shippingFee: 30000, surcharge: 0, homeDeliveryCostTotal: 50000 }
+   *                         normalMoneyTransfer: { transferMoney: 50000, shippingFee: 0, surcharge: 0 }
+   *                         expressMoneyTransfer: { transferMoney: 0, shippingFee: 0, surcharge: 0 }
+   *                         collectHoldMoney: { transferMoney: 700000, shippingFee: 15000, surcharge: 0 }
+   *                         debtCost: { transferMoney: 0, shippingFee: 2365000, surcharge: 0 }
+   *                         totalActualCollected: { transferMoney: 750000, shippingFee: 2132000, surcharge: 0 }
+   *                     total:
+   *                       totalSendMoneyToStations: 1400000
+   *                       totalCollectHoldMoney: 439935000
+   *                       totalShippingCostNC: 75490000
+   *                       totalHomeDeliveryCostNC: 0
+   *                       totalActualRevenue: 74034000
+   *                       cashInSafe: 515369000
+   *                       revenue: 150684000
+   *                       totalOutgoingHomeDeliveryCost: 2750000
+   *                       totalOutgoingSurcharge: 2535000
+   *                       totalRevenueFundSubmission: 145399000
+   *               emptyReport:
+   *                 summary: Empty accounting report
+   *                 value:
+   *                   success: true
+   *                   message: "Accounting report retrieved successfully"
+   *                   data:
+   *                     routes: []
+   *                     total:
+   *                       totalSendMoneyToStations: 0
+   *                       totalCollectHoldMoney: 0
+   *                       totalShippingCostNC: 0
+   *                       totalHomeDeliveryCostNC: 0
+   *                       totalActualRevenue: 0
+   *                       cashInSafe: 0
+   *                       revenue: 0
+   *                       totalOutgoingHomeDeliveryCost: 0
+   *                       totalOutgoingSurcharge: 0
+   *                       totalRevenueFundSubmission: 0
+   *       400:
+   *         description: Validation error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *             examples:
+   *               invalidDateRange:
+   *                 summary: Date range exceeds limit
+   *                 value:
+   *                   success: false
+   *                   message: "Date range cannot exceed 45 days"
+   *               invalidDateFormat:
+   *                 summary: Invalid date format
+   *                 value:
+   *                   success: false
+   *                   message: "Date must be in YYYY-MM-DD format"
+   *       401:
+   *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Unauthorized"
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   example: "Failed to get accounting report"
+   */
+  accountingReport = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const query: IAccountingReportRequest = req.query as unknown as IAccountingReportRequest;
+
+      Logger.info('Getting accounting report', {
+        userId: req.user.userId,
+        query,
+        path: req.path,
+        originalUrl: req.originalUrl,
+      });
+
+      const result = await this.reportService.getAccountingReport(query, req.user.userId);
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Accounting report retrieved successfully',
+        data: result,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      Logger.error('Failed to get accounting report', {
+        error: error instanceof Error ? error.message : error,
+        userId: req.user?.userId,
+        path: req.path,
+      });
+
+      const message = error instanceof Error ? error.message : 'Failed to get accounting report';
 
       const response: ApiResponse = {
         success: false,

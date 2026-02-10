@@ -1,4 +1,5 @@
 import { Types } from 'mongoose';
+import { IDebtManagement } from './debt-management.type';
 
 export interface IRouteInfo {
   id: Types.ObjectId | string;
@@ -79,3 +80,32 @@ export interface IDebtReportDetailWithListValues {
   data: IDebtRow;
   debtDetailWithListValues: IDebtDetailWithListValues;
 }
+
+export interface IExportTotalDebtRow {
+  fromRoute: IRouteInfo;
+  openingBalance: number;
+  costFromRoute: number;
+  feeCODToRoute: number;
+  costToRoute: number;
+  feeCODFromRoute: number;
+  accountPayable: number;
+  receivable: number;
+  homeDeliveryFromRoute: number;
+  homeDeliveryToRoute: number;
+  surchargeToRoute: number;
+  surchargeFromRoute: number;
+  totalDebt: number;
+}
+
+export interface IExportTotalDebtResponse {
+  data: IExportTotalDebtRow[];
+  total: IDebtTotal;
+}
+
+export interface IExportReportTotalDebtResponse {
+  data: IExportTotalDebtRow[];
+  total: IDebtTotal;
+  dataDebtManagement: IDebtManagement[]
+}
+
+
