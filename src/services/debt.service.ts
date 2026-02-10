@@ -3,7 +3,7 @@ import { DEBT_MANAGEMENT_TYPE } from '@/const/debt-management.const';
 import { Debt } from '@/models/debt.model';
 import { DebtManagement } from '@/models/debt-management.model';
 import { Delivery } from '@/models/delivery.model';
-import { MoneyDelivery } from '@/models/money-delivery.model';
+import { MoneyDelivery, MoneyDeliveryType } from '@/models/money-delivery.model';
 import {
   IDebtDetailExpense,
   IDebtDetailItem,
@@ -11,6 +11,7 @@ import {
   IDebtReportDetailWithListValues,
   IDebtRow,
   IDebtTotal,
+  IExportTotalDebtResponse,
   IGetListDebtResponse,
 } from '@/types/debt.type';
 import { Request } from 'express';
@@ -340,26 +341,12 @@ export class DebtService {
 
       const debt = debtResult[0];
 
-      // Step 2 & 3: Calculate date range from debt createdAt
-      const debtDate = new Date(debt.createdAt || new Date());
-      const startDate = new Date(
-        debtDate.getFullYear(),
-        debtDate.getMonth(),
-        debtDate.getDate(),
-        0,
-        0,
-        0,
-        0
-      );
-      const endDate = new Date(
-        debtDate.getFullYear(),
-        debtDate.getMonth(),
-        debtDate.getDate(),
-        23,
-        59,
-        59,
-        999
-      );
+      // Step 2 & 3: Calculate date range from debt dateDebt
+      // dateDebt = 17:00 UTC (D-1) for VN day D (same convention as cronjob)
+      // Query range: [dateDebt, dateDebt + 24h - 1ms] = VN midnight to VN 23:59:59.999
+      const dateDebt = new Date(debt.dateDebt || debt.createdAt || new Date());
+      const startDate = new Date(dateDebt.getTime());
+      const endDate = new Date(dateDebt.getTime() + 24 * 60 * 60 * 1000 - 1);
 
       const fromRouteId = new Types.ObjectId(String(debt.fromRoute.id));
       const toRouteIdFromDebt = new Types.ObjectId(String(debt.toRoute.id));
@@ -372,20 +359,21 @@ export class DebtService {
             toRoute: toRouteIdFromDebt,
             createdAt: { $gte: startDate, $lte: endDate },
           })
-            .select('code cost homeDeliveryCost collectForCustomerCost paymentType')
+            .select('fullCode cost itemCost homeDeliveryCost collectForCustomerCost paymentType')
             .lean(),
           MoneyDelivery.find({
             fromRoute: fromRouteId,
             toRoute: toRouteIdFromDebt,
+            type: MoneyDeliveryType.NORMAL,
             createdAt: { $gte: startDate, $lte: endDate },
           })
-            .select('code sendMoneyAmount')
+            .select('fullCode sendMoneyAmount')
             .lean(),
           DebtManagement.find({
             fromRoute: fromRouteId,
             toRoute: toRouteIdFromDebt,
             type: DEBT_MANAGEMENT_TYPE.RECEIPT,
-            cashDate: { $gte: startDate, $lte: endDate },
+            createdAt: { $gte: startDate, $lte: endDate },
             deleted: false,
           })
             .select('content cash')
@@ -401,20 +389,21 @@ export class DebtService {
             toRoute: fromRouteId,
             createdAt: { $gte: startDate, $lte: endDate },
           })
-            .select('code cost homeDeliveryCost collectForCustomerCost paymentType')
+            .select('fullCode cost itemCost homeDeliveryCost collectForCustomerCost paymentType')
             .lean(),
           MoneyDelivery.find({
             fromRoute: toRouteIdFromDebt,
             toRoute: fromRouteId,
+            type: MoneyDeliveryType.NORMAL,
             createdAt: { $gte: startDate, $lte: endDate },
           })
-            .select('code sendMoneyAmount')
+            .select('fullCode sendMoneyAmount')
             .lean(),
           DebtManagement.find({
             fromRoute: toRouteIdFromDebt,
             toRoute: fromRouteId,
             type: DEBT_MANAGEMENT_TYPE.PAYMENT,
-            cashDate: { $gte: startDate, $lte: endDate },
+            createdAt: { $gte: startDate, $lte: endDate },
             deleted: false,
           })
             .select('content cash')
@@ -437,27 +426,32 @@ export class DebtService {
 
       // Process deliveries forward (chiều thuận = chiều về: fromRoute -> toRoute)
       for (const delivery of deliveriesForward) {
-        // feeCODToRoute (NỢ CƯỚC VỀ)
-        if (delivery.paymentType === 'debt' && delivery.cost) {
+        const itemCost = delivery.itemCost ?? 0;
+        const costDelivery = delivery.cost ? delivery.cost + itemCost : 0;
+        const homeDeliveryCost = delivery.homeDeliveryCost ?? 0;
+        const collectForCustomerCost = delivery.collectForCustomerCost ?? 0;
+
+        // feeCODToRoute (NỢ CƯỚC VỀ) - chỉ khi nợ cước
+        if (delivery.paymentType === 'debt' && costDelivery > 0) {
           feeCODToRouteList.push({
-            code: delivery.code,
-            money: delivery.cost,
+            code: delivery.fullCode,
+            money: costDelivery,
           });
         }
 
-        // homeDeliveryToRoute (GIAO TẬN NƠI VỀ)
-        if (delivery.homeDeliveryCost && delivery.homeDeliveryCost > 0) {
+        // homeDeliveryToRoute (GIAO TẬN NƠI VỀ) - chỉ khi đã thu cước (paid)
+        if (delivery.paymentType === 'paid' && homeDeliveryCost > 0) {
           homeDeliveryToRouteList.push({
-            code: delivery.code,
-            money: delivery.homeDeliveryCost,
+            code: delivery.fullCode,
+            money: homeDeliveryCost,
           });
         }
 
-        // surchargeFromRoute (PHỤ PHÍ VỀ)
-        if (delivery.collectForCustomerCost && delivery.collectForCustomerCost > 0) {
+        // surchargeToRoute (PHỤ PHÍ VỀ) - chỉ khi đã thu cước (paid)
+        if (delivery.paymentType === 'paid' && collectForCustomerCost > 0) {
           surchargeToRouteList.push({
-            code: delivery.code,
-            money: delivery.collectForCustomerCost,
+            code: delivery.fullCode,
+            money: collectForCustomerCost,
           });
         }
       }
@@ -467,7 +461,7 @@ export class DebtService {
         // costToRoute (TIỀN VỀ)
         if (moneyDelivery.sendMoneyAmount && moneyDelivery.sendMoneyAmount > 0) {
           costToRouteList.push({
-            code: moneyDelivery.code,
+            code: moneyDelivery.fullCode,
             money: moneyDelivery.sendMoneyAmount,
           });
         }
@@ -485,27 +479,32 @@ export class DebtService {
 
       // Process deliveries reverse (chiều ngược = chiều đi: toRoute -> fromRoute)
       for (const delivery of deliveriesReverse) {
-        // feeCODFromRoute (NỢ CƯỚC ĐI)
-        if (delivery.paymentType === 'debt' && delivery.cost) {
+        const itemCost = delivery.itemCost ?? 0;
+        const costDelivery = delivery.cost ? delivery.cost + itemCost : 0;
+        const homeDeliveryCost = delivery.homeDeliveryCost ?? 0;
+        const collectForCustomerCost = delivery.collectForCustomerCost ?? 0;
+
+        // feeCODFromRoute (NỢ CƯỚC ĐI) - chỉ khi nợ cước
+        if (delivery.paymentType === 'debt' && costDelivery > 0) {
           feeCODFromRouteList.push({
-            code: delivery.code,
-            money: delivery.cost,
+            code: delivery.fullCode,
+            money: costDelivery,
           });
         }
 
-        // homeDeliveryFromRoute (GIAO TẬN NƠI ĐI)
-        if (delivery.homeDeliveryCost && delivery.homeDeliveryCost > 0) {
+        // homeDeliveryFromRoute (GIAO TẬN NƠI ĐI) - chỉ khi đã thu cước (paid)
+        if (delivery.paymentType === 'paid' && homeDeliveryCost > 0) {
           homeDeliveryFromRouteList.push({
-            code: delivery.code,
-            money: delivery.homeDeliveryCost,
+            code: delivery.fullCode,
+            money: homeDeliveryCost,
           });
         }
 
-        // surchargeToRoute (PHỤ PHÍ ĐI)
-        if (delivery.collectForCustomerCost && delivery.collectForCustomerCost > 0) {
+        // surchargeFromRoute (PHỤ PHÍ ĐI) - chỉ khi đã thu cước (paid)
+        if (delivery.paymentType === 'paid' && collectForCustomerCost > 0) {
           surchargeFromRouteList.push({
-            code: delivery.code,
-            money: delivery.collectForCustomerCost,
+            code: delivery.fullCode,
+            money: collectForCustomerCost,
           });
         }
       }
@@ -515,7 +514,7 @@ export class DebtService {
         // costFromRoute (TIỀN ĐI)
         if (moneyDelivery.sendMoneyAmount && moneyDelivery.sendMoneyAmount > 0) {
           costFromRouteList.push({
-            code: moneyDelivery.code,
+            code: moneyDelivery.fullCode,
             money: moneyDelivery.sendMoneyAmount,
           });
         }
@@ -557,6 +556,131 @@ export class DebtService {
         throw error;
       }
       throw new Error('get debt detail with list values failed');
+    }
+  }
+
+  async exportReportTotalDebt(req: Request, userId: string): Promise<IExportTotalDebtResponse> {
+    const { startDate, endDate, fromRouteId } = req.query;
+
+    const toRouteId = await this.userService.getUserSelectedRouteId(userId);
+    const startOfDate = new Date(String(startDate));
+    const endOfDate = new Date(String(endDate));
+
+    // Interpret startDate/endDate as VN calendar days; query dateDebt (17:00 UTC previous day)
+    const startExact = vnDateToDebtDateUtc(
+      startOfDate.getUTCFullYear(),
+      startOfDate.getUTCMonth(),
+      startOfDate.getUTCDate()
+    );
+    const endExact = vnDateToDebtDateUtc(
+      endOfDate.getUTCFullYear(),
+      endOfDate.getUTCMonth(),
+      endOfDate.getUTCDate()
+    );
+
+    try {
+      const toRouteIdObj = new Types.ObjectId(toRouteId);
+      const matchStage: Record<string, unknown> = {
+        toRoute: toRouteIdObj,
+        dateDebt: { $gte: startExact, $lte: endExact },
+      };
+
+      if (fromRouteId) {
+        if (!Types.ObjectId.isValid(String(fromRouteId))) {
+          throw new Error('Invalid fromRouteId format');
+        }
+        matchStage.fromRoute = new Types.ObjectId(String(fromRouteId));
+      }
+
+      const pipeline: PipelineStage[] = [
+        {
+          $match: matchStage,
+        },
+        // Join fromRoute
+        {
+          $lookup: {
+            from: 'routes',
+            localField: 'fromRoute',
+            foreignField: '_id',
+            as: 'fromRoute',
+          },
+        },
+        { $unwind: { path: '$fromRoute', preserveNullAndEmptyArrays: true } },
+        // Join toRoute
+        {
+          $lookup: {
+            from: 'routes',
+            localField: 'toRoute',
+            foreignField: '_id',
+            as: 'toRoute',
+          },
+        },
+        { $unwind: { path: '$toRoute', preserveNullAndEmptyArrays: true } },
+        // Group by fromRoute and sum all fields
+        {
+          $group: {
+            _id: '$fromRoute._id',
+            fromRouteName: { $first: '$fromRoute.name' },
+            openingBalance: { $sum: '$openingBalance' },
+            costFromRoute: { $sum: '$costFromRoute' },
+            feeCODToRoute: { $sum: '$feeCODToRoute' },
+            costToRoute: { $sum: '$costToRoute' },
+            feeCODFromRoute: { $sum: '$feeCODFromRoute' },
+            accountPayable: { $sum: '$accountPayable' },
+            receivable: { $sum: '$receivable' },
+            homeDeliveryFromRoute: { $sum: '$homeDeliveryFromRoute' },
+            homeDeliveryToRoute: { $sum: '$homeDeliveryToRoute' },
+            surchargeToRoute: { $sum: '$surchargeToRoute' },
+            surchargeFromRoute: { $sum: '$surchargeFromRoute' },
+            totalDebt: { $sum: '$totalDebt' },
+          },
+        },
+        // Project to match IExportTotalDebtRow interface
+        {
+          $project: {
+            _id: 0,
+            fromRoute: {
+              id: '$_id',
+              name: '$fromRouteName',
+            },
+            openingBalance: 1,
+            costFromRoute: 1,
+            feeCODToRoute: 1,
+            costToRoute: 1,
+            feeCODFromRoute: 1,
+            accountPayable: 1,
+            receivable: 1,
+            homeDeliveryFromRoute: 1,
+            homeDeliveryToRoute: 1,
+            surchargeToRoute: 1,
+            surchargeFromRoute: 1,
+            totalDebt: 1,
+          },
+        },
+        // Sort by fromRoute name
+        {
+          $sort: { 'fromRoute.name': 1 },
+        },
+      ];
+
+      const data = await Debt.aggregate(pipeline).exec();
+
+      // Get debt report total from DebtReportService (same VN date range)
+      const total: IDebtTotal = await this.debtReportService.getDebtReportTotal(
+        toRouteId,
+        startExact,
+        endExact
+      );
+
+      return {
+        data,
+        total,
+      };
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('export total debt failed');
     }
   }
 }

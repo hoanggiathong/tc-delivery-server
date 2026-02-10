@@ -332,18 +332,23 @@ export class CronjobService {
 
         newDayDebt.openingBalance = item.totalDebt === 0 ? 0 : item.totalDebt;
 
-        const newReceivable =
+        let newReceivable =
           item.costFromRoute +
           item.feeCODToRoute +
           item.homeDeliveryFromRoute +
           item.surchargeFromRoute +
           item.receivable;
-        const newAccountPayable =
+        let newAccountPayable =
           item.costToRoute +
           item.feeCODFromRoute +
           item.homeDeliveryToRoute +
           item.surchargeToRoute +
           item.accountPayable;
+
+        if (item.accountPayable === item.receivable) {
+          newAccountPayable = newAccountPayable - item.accountPayable;
+          newReceivable = newReceivable - item.receivable;
+        }
 
         newDayDebt.accountPayable = Math.abs(newAccountPayable);
         newDayDebt.receivable = Math.abs(newReceivable);
@@ -555,18 +560,23 @@ export class CronjobService {
       });
 
       const openingBalance = debt.totalDebt ?? 0;
-      const newReceivable =
+      let newReceivable =
         debt.receivable +
         debt.costFromRoute +
         debt.feeCODToRoute +
         debt.homeDeliveryFromRoute +
         debt.surchargeFromRoute;
-      const newAccountPayable =
+      let newAccountPayable =
         debt.accountPayable +
         debt.costToRoute +
         debt.feeCODFromRoute +
         debt.homeDeliveryToRoute +
         debt.surchargeToRoute;
+
+      if (debt.accountPayable === debt.receivable) {
+        newAccountPayable = newAccountPayable - debt.accountPayable;
+        newReceivable = newReceivable - debt.receivable;
+      }
 
       let accountPayable = Math.abs(newAccountPayable);
       let receivable = Math.abs(newReceivable);

@@ -1,4 +1,5 @@
 import { Types } from 'mongoose';
+import { IDebtManagement } from './debt-management.type';
 
 export interface IRouteInfo {
   id: Types.ObjectId | string;
@@ -63,19 +64,48 @@ export interface IDebtDetailWithListValues extends IDebtRow {
   // Chiều thuận = chiều về (fromRoute -> toRoute)
   feeCODToRouteList: IDebtDetailItem[]; // NỢ CƯỚC VỀ
   homeDeliveryToRouteList: IDebtDetailItem[]; // GIAO TẬN NƠI VỀ
-  surchargeFromRouteList: IDebtDetailItem[]; // PHỤ PHÍ VỀ
+  surchargeToRouteList: IDebtDetailItem[]; // PHỤ PHÍ VỀ
   costToRouteList: IDebtDetailItem[]; // TIỀN VỀ (from MoneyDelivery)
-  receivableManagementList: IDebtDetailExpense[]; // TIỀN VỀ (from DebtManagement RECEIPT)
+  receivableManagementList: IDebtDetailExpense[]; // TIỀN thu khác (from DebtManagement RECEIPT)
 
   // Chiều ngược = chiều đi (toRoute -> fromRoute)
   feeCODFromRouteList: IDebtDetailItem[]; // NỢ CƯỚC ĐI
   homeDeliveryFromRouteList: IDebtDetailItem[]; // GIAO TẬN NƠI ĐI
-  surchargeToRouteList: IDebtDetailItem[]; // PHỤ PHÍ ĐI
+  surchargeFromRouteList: IDebtDetailItem[]; // PHỤ PHÍ ĐI
   costFromRouteList: IDebtDetailItem[]; // TIỀN ĐI (from MoneyDelivery)
-  paymentManagementList: IDebtDetailExpense[]; // TIỀN ĐI (from DebtManagement PAYMENT)
+  paymentManagementList: IDebtDetailExpense[]; // TIỀN chi khác (from DebtManagement PAYMENT)
 }
 
 export interface IDebtReportDetailWithListValues {
   data: IDebtRow;
   debtDetailWithListValues: IDebtDetailWithListValues;
 }
+
+export interface IExportTotalDebtRow {
+  fromRoute: IRouteInfo;
+  openingBalance: number;
+  costFromRoute: number;
+  feeCODToRoute: number;
+  costToRoute: number;
+  feeCODFromRoute: number;
+  accountPayable: number;
+  receivable: number;
+  homeDeliveryFromRoute: number;
+  homeDeliveryToRoute: number;
+  surchargeToRoute: number;
+  surchargeFromRoute: number;
+  totalDebt: number;
+}
+
+export interface IExportTotalDebtResponse {
+  data: IExportTotalDebtRow[];
+  total: IDebtTotal;
+}
+
+export interface IExportReportTotalDebtResponse {
+  data: IExportTotalDebtRow[];
+  total: IDebtTotal;
+  dataDebtManagement: IDebtManagement[]
+}
+
+

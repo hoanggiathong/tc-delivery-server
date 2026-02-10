@@ -1,7 +1,10 @@
 import { ReportController } from '@/controllers/report.controller';
 import { authenticateToken } from '@/middlewares/auth.middleware';
 import { validate } from '@/middlewares/validation.middleware';
-import { getReportReturnMoneyDeliveryAndReturnDeliverySchema } from '@/schemas/report.schema';
+import {
+  accountingReportSchema,
+  getReportReturnMoneyDeliveryAndReturnDeliverySchema,
+} from '@/schemas/report.schema';
 import { Router } from 'express';
 
 const router = Router();
@@ -15,5 +18,7 @@ router.get(
   validate(getReportReturnMoneyDeliveryAndReturnDeliverySchema),
   reportController.getReportReturnMoneyDeliveryAndReturnDelivery
 );
+
+router.get('/accounting', validate(accountingReportSchema), reportController.accountingReport);
 
 export default router;
