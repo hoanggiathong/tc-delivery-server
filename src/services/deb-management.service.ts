@@ -12,7 +12,7 @@ import {
   IGetListPaymentDebtManagementResponse,
   IGetListReceiptDebtManagementResponse,
 } from '@/types/debt-management.type';
-import { IDebtTotal, IGetListDebtResponse } from '@/types/debt.type';
+import { IExportReportTotalDebtResponse, IGetListDebtResponse } from '@/types/debt.type';
 import { Request } from 'express';
 import mongoose, { Types } from 'mongoose';
 import { DebtReportService } from './debt-report.service';
@@ -866,11 +866,11 @@ export class DebtManagementService {
     | IGetListPaymentDebtManagementResponse
     | IGetListReceiptDebtManagementResponse
     | IGetListDebtResponse
-    | IDebtTotal
+    | IExportReportTotalDebtResponse
   > {
     try {
-      const toRouteId = await this.userService.getUserSelectedRouteId(userId);
-      const toRouteIdObj = new Types.ObjectId(toRouteId);
+      // const toRouteId = await this.userService.getUserSelectedRouteId(userId);
+      // const toRouteIdObj = new Types.ObjectId(toRouteId);
       // Validate routeId format if provided
       if (routeId && !Types.ObjectId.isValid(routeId)) {
         throw new Error('Invalid routeId format');
@@ -896,9 +896,21 @@ export class DebtManagementService {
         case DEBT_MANAGEMENT_TYPE_REPORT.DEBT:
           return await this.debtService.getListDebt(mockReq, userId);
 
-        case DEBT_MANAGEMENT_TYPE_REPORT.TOTAL:
-          return await this.debtReportService.getDebtReportTotal(toRouteIdObj, startDate, endDate);
+        case DEBT_MANAGEMENT_TYPE_REPORT.TOTAL: {
+          const exportReportTotalDebt = await this.debtService.exportReportTotalDebt(
+            mockReq,
+            userId
+          );
+          const dataDebtManagement = await this.getListReceiptDebtMangement(mockReq, userId);
 
+          const result: IExportReportTotalDebtResponse = {
+            data: exportReportTotalDebt.data,
+            total: exportReportTotalDebt.total,
+            dataDebtManagement: dataDebtManagement.data,
+          };
+
+          return result;
+        }
         default:
           throw new Error(`Invalid type: ${type}`);
       }
