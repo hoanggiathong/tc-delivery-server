@@ -402,9 +402,12 @@ export class ReportService {
         .filter(d => d.paymentType === PAYMENT_TYPE.DEBT)
         .reduce((sum, d) => sum + (d.homeDeliveryCost || 0), 0);
 
-      // Tổng thực thu = sum(totalActualCollected.shippingFee) tất cả tuyến
-      const totalActualRevenue = routes.reduce(
-        (sum, route) => sum + route.totalActualCollected.shippingFee,
+      // Lọc đơn đã thu
+      const paidDeliveries = returnDeliveries.filter(d => d.paymentType === PAYMENT_TYPE.PAID);
+
+      // Tổng thực thu: tổng cước gửi hàng đi đã thu
+      const totalActualRevenue = paidDeliveries.reduce(
+        (sum, d) => sum + (d.cost || 0) + (d.itemCost || 0),
         0
       );
 
@@ -423,12 +426,6 @@ export class ReportService {
         0
       );
 
-      // Total cước gửi hàng đi tất cả trạm (nc + đã thu) = normalDelivery.shippingFee + homeDelivery.shippingFee
-      const totalAllDeliveryShippingFee = routes.reduce(
-        (sum, route) => sum + route.normalDelivery.shippingFee + route.homeDelivery.shippingFee,
-        0
-      );
-
       // Tổng cước gửi tiền tất cả trạm (chuyển thường + chuyển nhanh)
       const totalMoneyTransferCost = routes.reduce(
         (sum, route) =>
@@ -442,12 +439,14 @@ export class ReportService {
         0
       );
 
-      // Doanh thu (có GTN đi + Phụ phí đi) = Total cước gửi hàng đi + Tổng cước gửi tiền + Tổng cước phí thu hộ giữ + Tổng phụ phí đi
+      // Doanh thu (có GTN đi + Phụ phí đi) = (Tổng thực thu + Tổng cước gửi nc) + Tổng cước phí gửi tiền + Tổng cước phí thu hộ giữ + Tổng phụ phí đi + Tổng cước gtn đi
       const revenue =
-        totalAllDeliveryShippingFee +
+        totalActualRevenue +
+        totalShippingCostDebt +
         totalMoneyTransferCost +
         totalCollectHoldMoneyCost +
-        totalOutgoingSurcharge;
+        totalOutgoingSurcharge +
+        totalOutgoingHomeDeliveryCost;
 
       // Tổng doanh thu nộp quỹ (BCTC) = Doanh thu - Tổng cước GTN đi - Tổng phụ phí đi
       const totalRevenueFundSubmission =
