@@ -223,67 +223,50 @@ export class ReportService {
       const returnDeliveries: IDeliveryResponse[] =
         await this.deliveryService.getListReturnDeliveriesByToRouteId(userId, start, end);
 
-      // Group deliveries by toRoute
-      const deliveriesByRoute = new Map<
+      // Consolidate all data into a single Map per route (1 trạm = 1 record)
+      const routeDataMap = new Map<
         string,
-        { route: IRouteResponse; deliveries: IDeliveryResponse[] }
-      >();
-      for (const delivery of returnDeliveries) {
-        const routeId = delivery.toRoute.id;
-        const existing = deliveriesByRoute.get(routeId);
-        if (existing) {
-          existing.deliveries.push(delivery);
-        } else {
-          deliveriesByRoute.set(routeId, { route: delivery.toRoute, deliveries: [delivery] });
+        {
+          route: IRouteResponse;
+          deliveries: IDeliveryResponse[];
+          moneyNormal: IMoneyDeliveryResponse[];
+          moneyCollect: IMoneyDeliveryResponse[];
         }
+      >();
+
+      const getOrCreateRouteData = (routeId: string, route: IRouteResponse) => {
+        let data = routeDataMap.get(routeId);
+        if (!data) {
+          data = { route, deliveries: [], moneyNormal: [], moneyCollect: [] };
+          routeDataMap.set(routeId, data);
+        }
+        return data;
+      };
+
+      // Group deliveries by toRoute
+      for (const delivery of returnDeliveries) {
+        const routeData = getOrCreateRouteData(delivery.toRoute.id, delivery.toRoute);
+        routeData.deliveries.push(delivery);
       }
 
       // Group money deliveries normal by toRoute
-      const moneyNormalByRoute = new Map<string, IMoneyDeliveryResponse[]>();
       for (const md of moneyDeliveriesTypeNormal) {
-        const routeId = md.toRoute.id;
-        const existing = moneyNormalByRoute.get(routeId);
-        if (existing) {
-          existing.push(md);
-        } else {
-          moneyNormalByRoute.set(routeId, [md]);
-        }
+        const routeData = getOrCreateRouteData(md.toRoute.id, md.toRoute);
+        routeData.moneyNormal.push(md);
       }
 
       // Group money deliveries collect by fromRoute (user's route is toRoute for collect)
-      const moneyCollectByRoute = new Map<string, IMoneyDeliveryResponse[]>();
       for (const md of moneyDeliveriesTypeCollect) {
-        const routeId = md.fromRoute.id;
-        const existing = moneyCollectByRoute.get(routeId);
-        if (existing) {
-          existing.push(md);
-        } else {
-          moneyCollectByRoute.set(routeId, [md]);
-        }
+        const routeData = getOrCreateRouteData(md.fromRoute.id, md.fromRoute);
+        routeData.moneyCollect.push(md);
       }
 
-      // Collect all unique route IDs and route info
-      const routeInfoMap = new Map<string, IRouteResponse>();
-      for (const [routeId, data] of deliveriesByRoute) {
-        routeInfoMap.set(routeId, data.route);
-      }
-      for (const md of moneyDeliveriesTypeNormal) {
-        if (!routeInfoMap.has(md.toRoute.id)) {
-          routeInfoMap.set(md.toRoute.id, md.toRoute);
-        }
-      }
-      for (const md of moneyDeliveriesTypeCollect) {
-        if (!routeInfoMap.has(md.fromRoute.id)) {
-          routeInfoMap.set(md.fromRoute.id, md.fromRoute);
-        }
-      }
-
-      // Build per-route data
+      // Build per-route data (1 trạm chỉ có 1 record, giá trị cộng dồn)
       const routes: IAccountingRouteData[] = [];
-      for (const [routeId, routeInfo] of routeInfoMap) {
-        const deliveries = deliveriesByRoute.get(routeId)?.deliveries || [];
-        const moneyNormal = moneyNormalByRoute.get(routeId) || [];
-        const moneyCollect = moneyCollectByRoute.get(routeId) || [];
+      for (const [
+        _routeId,
+        { route: routeInfo, deliveries, moneyNormal, moneyCollect },
+      ] of routeDataMap) {
         const debtDeliveries = deliveries.filter(d => d.paymentType === PAYMENT_TYPE.DEBT);
 
         // Split deliveries by GTN (giao tận nơi) vs non-GTN
