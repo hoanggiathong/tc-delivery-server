@@ -1018,10 +1018,10 @@ export class DebtManagementController {
    *     summary: Export report debt and debt management
    *     description: |
    *       Exports report data based on type parameter:
-   *       - PAYMENT: Returns payment debt management records (uses getListPaymentDebtMangement)
-   *       - RECEIPT: Returns receipt debt management records (uses getListReceiptDebtMangement)
-   *       - DEBT: Returns debt records (uses getListDebt)
-   *       - TOTAL: Will be handled later (currently returns empty data)
+   *       - **PAYMENT**: Returns payment debt management records (Chi). Uses user's selected route as fromRoute.
+   *       - **RECEIPT**: Returns receipt debt management records (Thu). Uses user's selected route as toRoute.
+   *       - **DEBT**: Returns debt records with totals. Uses user's selected route as toRoute.
+   *       - **TOTAL**: Returns aggregated total debt rows per route, overall totals, and receipt debt management records.
    *       The routeId is optional and will be used as filter parameter (toRouteId for PAYMENT, fromRouteId for RECEIPT and DEBT).
    *     tags: [Debt Management]
    *     security:
@@ -1033,7 +1033,7 @@ export class DebtManagementController {
    *         schema:
    *           type: string
    *           format: date
-   *         description: Start date for filtering (ISO format)
+   *         description: Start date for filtering (ISO format). Must be before or equal to endDate.
    *         example: "2024-01-01"
    *       - in: query
    *         name: endDate
@@ -1061,7 +1061,7 @@ export class DebtManagementController {
    *         example: "PAYMENT"
    *     responses:
    *       200:
-   *         description: Export report successful
+   *         description: Export report successful. Response shape depends on the `type` parameter.
    *         content:
    *           application/json:
    *             schema:
@@ -1076,34 +1076,46 @@ export class DebtManagementController {
    *                 data:
    *                   oneOf:
    *                     - type: object
-   *                       description: Payment debt management response
+   *                       title: PaymentResponse
+   *                       description: "Response when type=PAYMENT. Returns payment debt management records."
    *                       properties:
    *                         data:
    *                           type: array
    *                           items:
-   *                             type: object
+   *                             $ref: '#/components/schemas/DebtManagementItem'
    *                     - type: object
-   *                       description: Receipt debt management response
+   *                       title: ReceiptResponse
+   *                       description: "Response when type=RECEIPT. Returns receipt debt management records."
    *                       properties:
    *                         data:
    *                           type: array
    *                           items:
-   *                             type: object
+   *                             $ref: '#/components/schemas/DebtManagementItem'
    *                     - type: object
-   *                       description: Debt response
+   *                       title: DebtResponse
+   *                       description: "Response when type=DEBT. Returns debt records with totals."
    *                       properties:
    *                         data:
    *                           type: array
    *                           items:
-   *                             type: object
+   *                             $ref: '#/components/schemas/DebtRow'
    *                         total:
-   *                           type: object
+   *                           $ref: '#/components/schemas/DebtTotal'
    *                     - type: object
-   *                       description: Total response (empty for now)
+   *                       title: TotalResponse
+   *                       description: "Response when type=TOTAL. Returns aggregated total debt rows, totals, and receipt debt management records."
    *                       properties:
    *                         data:
    *                           type: array
-   *                           items: []
+   *                           items:
+   *                             $ref: '#/components/schemas/ExportTotalDebtRow'
+   *                         total:
+   *                           $ref: '#/components/schemas/DebtTotal'
+   *                         dataDebtManagement:
+   *                           type: array
+   *                           description: Receipt debt management records for the same date range
+   *                           items:
+   *                             $ref: '#/components/schemas/DebtManagementItem'
    *             examples:
    *               payment:
    *                 summary: Payment type response
@@ -1119,8 +1131,17 @@ export class DebtManagementController {
    *                         toRoute:
    *                           id: "507f1f77bcf86cd799439012"
    *                           name: "Route B"
+   *                         content: "TPHCM CK"
    *                         type: "PAYMENT"
    *                         cash: 50000
+   *                         cashDate: "2024-01-15T10:00:00.000Z"
+   *                         deleted: false
+   *                         createdAt: "2024-01-15T10:00:00.000Z"
+   *                         updatedAt: "2024-01-15T10:00:00.000Z"
+   *                         createdBy:
+   *                           id: "507f1f77bcf86cd799439099"
+   *                           username: "user1"
+   *                           name: "Nguyen Van A"
    *               receipt:
    *                 summary: Receipt type response
    *                 value:
@@ -1128,9 +1149,24 @@ export class DebtManagementController {
    *                   message: "export report debt and debt management successful"
    *                   data:
    *                     data:
-   *                       - id: "507f1f77bcf86cd799439011"
+   *                       - id: "507f1f77bcf86cd799439013"
+   *                         fromRoute:
+   *                           id: "507f1f77bcf86cd799439011"
+   *                           name: "Route A"
+   *                         toRoute:
+   *                           id: "507f1f77bcf86cd799439012"
+   *                           name: "Route B"
+   *                         content: "TPHCM CK"
    *                         type: "RECEIPT"
    *                         cash: 50000
+   *                         cashDate: "2024-01-15T10:00:00.000Z"
+   *                         deleted: false
+   *                         createdAt: "2024-01-15T10:00:00.000Z"
+   *                         updatedAt: "2024-01-15T10:00:00.000Z"
+   *                         createdBy:
+   *                           id: "507f1f77bcf86cd799439099"
+   *                           username: "user1"
+   *                           name: "Nguyen Van A"
    *               debt:
    *                 summary: Debt type response
    *                 value:
@@ -1138,11 +1174,92 @@ export class DebtManagementController {
    *                   message: "export report debt and debt management successful"
    *                   data:
    *                     data:
-   *                       - id: "507f1f77bcf86cd799439011"
-   *                         totalDebt: 50000
+   *                       - id: "507f1f77bcf86cd799439015"
+   *                         fromRoute:
+   *                           id: "507f1f77bcf86cd799439011"
+   *                           name: "Route A"
+   *                         toRoute:
+   *                           id: "507f1f77bcf86cd799439012"
+   *                           name: "Route B"
+   *                         openingBalance: 100000
+   *                         costFromRoute: 50000
+   *                         feeCODToRoute: 20000
+   *                         costToRoute: 30000
+   *                         feeCODFromRoute: 10000
+   *                         accountPayable: 5000
+   *                         receivable: 15000
+   *                         homeDeliveryFromRoute: 8000
+   *                         homeDeliveryToRoute: 6000
+   *                         surchargeToRoute: 3000
+   *                         surchargeFromRoute: 2000
+   *                         totalDebt: 250000
    *                     total:
-   *                       openingBalance: 0
+   *                       openingBalance: 100000
+   *                       costFromRoute: 50000
+   *                       feeCODToRoute: 20000
+   *                       costToRoute: 30000
+   *                       feeCODFromRoute: 10000
+   *                       accountPayable: 5000
+   *                       receivable: 15000
+   *                       homeDeliveryFromRoute: 8000
+   *                       homeDeliveryToRoute: 6000
+   *                       surchargeToRoute: 3000
+   *                       surchargeFromRoute: 2000
    *                       totalDebt: 250000
+   *               total:
+   *                 summary: Total type response
+   *                 value:
+   *                   success: true
+   *                   message: "export report debt and debt management successful"
+   *                   data:
+   *                     data:
+   *                       - fromRoute:
+   *                           id: "507f1f77bcf86cd799439011"
+   *                           name: "Route A"
+   *                         openingBalance: 100000
+   *                         costFromRoute: 50000
+   *                         feeCODToRoute: 20000
+   *                         costToRoute: 30000
+   *                         feeCODFromRoute: 10000
+   *                         accountPayable: 5000
+   *                         receivable: 15000
+   *                         homeDeliveryFromRoute: 8000
+   *                         homeDeliveryToRoute: 6000
+   *                         surchargeToRoute: 3000
+   *                         surchargeFromRoute: 2000
+   *                         totalDebt: 250000
+   *                     total:
+   *                       openingBalance: 100000
+   *                       costFromRoute: 50000
+   *                       feeCODToRoute: 20000
+   *                       costToRoute: 30000
+   *                       feeCODFromRoute: 10000
+   *                       accountPayable: 5000
+   *                       receivable: 15000
+   *                       homeDeliveryFromRoute: 8000
+   *                       homeDeliveryToRoute: 6000
+   *                       surchargeToRoute: 3000
+   *                       surchargeFromRoute: 2000
+   *                       totalDebt: 250000
+   *                     dataDebtManagement:
+   *                       - id: "507f1f77bcf86cd799439013"
+   *                         fromRoute:
+   *                           id: "507f1f77bcf86cd799439011"
+   *                           name: "Route A"
+   *                         toRoute:
+   *                           id: "507f1f77bcf86cd799439012"
+   *                           name: "Route B"
+   *                         content: "TPHCM CK"
+   *                         type: "RECEIPT"
+   *                         cash: 50000
+   *                         cashDate: "2024-01-15T10:00:00.000Z"
+   *                         deleted: false
+   *                         createdAt: "2024-01-15T10:00:00.000Z"
+   *                         updatedAt: "2024-01-15T10:00:00.000Z"
+   *                         createdBy:
+   *                           id: "507f1f77bcf86cd799439099"
+   *                           username: "user1"
+   *                           name: "Nguyen Van A"
    *       400:
    *         description: Bad request (validation error)
    *         content:
@@ -1156,6 +1273,22 @@ export class DebtManagementController {
    *                 message:
    *                   type: string
    *                   example: "Validation error"
+   *             examples:
+   *               invalidType:
+   *                 summary: Invalid type
+   *                 value:
+   *                   success: false
+   *                   message: "Invalid type. Must be one of: PAYMENT, RECEIPT, DEBT, TOTAL"
+   *               missingParams:
+   *                 summary: Missing required params
+   *                 value:
+   *                   success: false
+   *                   message: "startDate, endDate, and type are required"
+   *               invalidRouteId:
+   *                 summary: Invalid routeId
+   *                 value:
+   *                   success: false
+   *                   message: "Invalid routeId format"
    *       401:
    *         description: Unauthorized
    *         content:
@@ -1182,6 +1315,252 @@ export class DebtManagementController {
    *                 message:
    *                   type: string
    *                   example: "export report debt and debt management failed"
+   *
+   * components:
+   *   schemas:
+   *     DebtManagementItem:
+   *       type: object
+   *       properties:
+   *         id:
+   *           type: string
+   *           example: "507f1f77bcf86cd799439011"
+   *         fromRoute:
+   *           type: object
+   *           properties:
+   *             id:
+   *               type: string
+   *               example: "507f1f77bcf86cd799439011"
+   *             name:
+   *               type: string
+   *               example: "Route A"
+   *         toRoute:
+   *           type: object
+   *           properties:
+   *             id:
+   *               type: string
+   *               example: "507f1f77bcf86cd799439012"
+   *             name:
+   *               type: string
+   *               example: "Route B"
+   *         content:
+   *           type: string
+   *           example: "TPHCM CK"
+   *         type:
+   *           type: string
+   *           enum: [PAYMENT, RECEIPT]
+   *           example: "PAYMENT"
+   *         cash:
+   *           type: number
+   *           description: Amount of money
+   *           example: 50000
+   *         cashDate:
+   *           type: string
+   *           format: date-time
+   *           example: "2024-01-15T10:00:00.000Z"
+   *         deleted:
+   *           type: boolean
+   *           example: false
+   *         reason:
+   *           type: string
+   *           description: Reason for deletion (only present if deleted)
+   *           example: "Nhập sai thông tin"
+   *         createdAt:
+   *           type: string
+   *           format: date-time
+   *           example: "2024-01-15T10:00:00.000Z"
+   *         updatedAt:
+   *           type: string
+   *           format: date-time
+   *           example: "2024-01-15T10:00:00.000Z"
+   *         createdBy:
+   *           type: object
+   *           properties:
+   *             id:
+   *               type: string
+   *               example: "507f1f77bcf86cd799439099"
+   *             username:
+   *               type: string
+   *               example: "user1"
+   *             name:
+   *               type: string
+   *               example: "Nguyen Van A"
+   *     DebtRow:
+   *       type: object
+   *       properties:
+   *         id:
+   *           type: string
+   *           example: "507f1f77bcf86cd799439015"
+   *         fromRoute:
+   *           type: object
+   *           properties:
+   *             id:
+   *               type: string
+   *               example: "507f1f77bcf86cd799439011"
+   *             name:
+   *               type: string
+   *               example: "Route A"
+   *         toRoute:
+   *           type: object
+   *           properties:
+   *             id:
+   *               type: string
+   *               example: "507f1f77bcf86cd799439012"
+   *             name:
+   *               type: string
+   *               example: "Route B"
+   *         openingBalance:
+   *           type: number
+   *           description: Tồn đầu
+   *           example: 100000
+   *         costFromRoute:
+   *           type: number
+   *           description: Tiền đi
+   *           example: 50000
+   *         feeCODToRoute:
+   *           type: number
+   *           description: Nợ cước về
+   *           example: 20000
+   *         costToRoute:
+   *           type: number
+   *           description: Tiền về
+   *           example: 30000
+   *         feeCODFromRoute:
+   *           type: number
+   *           description: Nợ cước đi
+   *           example: 10000
+   *         accountPayable:
+   *           type: number
+   *           description: Chi
+   *           example: 5000
+   *         receivable:
+   *           type: number
+   *           description: Thu
+   *           example: 15000
+   *         homeDeliveryFromRoute:
+   *           type: number
+   *           description: Giao tận nơi đi
+   *           example: 8000
+   *         homeDeliveryToRoute:
+   *           type: number
+   *           description: Giao tận nơi về
+   *           example: 6000
+   *         surchargeToRoute:
+   *           type: number
+   *           description: Phụ phí về
+   *           example: 3000
+   *         surchargeFromRoute:
+   *           type: number
+   *           description: Phụ phí đi
+   *           example: 2000
+   *         totalDebt:
+   *           type: number
+   *           description: Tổng nợ
+   *           example: 250000
+   *         paymentDebt:
+   *           type: number
+   *           description: Thanh toán nợ
+   *           example: 0
+   *         dateDebt:
+   *           type: string
+   *           format: date-time
+   *           description: Ngày nợ
+   *           example: "2024-01-15T17:00:00.000Z"
+   *         createdAt:
+   *           type: string
+   *           format: date-time
+   *           example: "2024-01-15T10:00:00.000Z"
+   *         updatedAt:
+   *           type: string
+   *           format: date-time
+   *           example: "2024-01-15T10:00:00.000Z"
+   *     DebtTotal:
+   *       type: object
+   *       properties:
+   *         openingBalance:
+   *           type: number
+   *           example: 100000
+   *         costFromRoute:
+   *           type: number
+   *           example: 50000
+   *         feeCODToRoute:
+   *           type: number
+   *           example: 20000
+   *         costToRoute:
+   *           type: number
+   *           example: 30000
+   *         feeCODFromRoute:
+   *           type: number
+   *           example: 10000
+   *         accountPayable:
+   *           type: number
+   *           example: 5000
+   *         receivable:
+   *           type: number
+   *           example: 15000
+   *         homeDeliveryFromRoute:
+   *           type: number
+   *           example: 8000
+   *         homeDeliveryToRoute:
+   *           type: number
+   *           example: 6000
+   *         surchargeToRoute:
+   *           type: number
+   *           example: 3000
+   *         surchargeFromRoute:
+   *           type: number
+   *           example: 2000
+   *         totalDebt:
+   *           type: number
+   *           example: 250000
+   *     ExportTotalDebtRow:
+   *       type: object
+   *       description: Aggregated total debt row per route
+   *       properties:
+   *         fromRoute:
+   *           type: object
+   *           properties:
+   *             id:
+   *               type: string
+   *               example: "507f1f77bcf86cd799439011"
+   *             name:
+   *               type: string
+   *               example: "Route A"
+   *         openingBalance:
+   *           type: number
+   *           example: 100000
+   *         costFromRoute:
+   *           type: number
+   *           example: 50000
+   *         feeCODToRoute:
+   *           type: number
+   *           example: 20000
+   *         costToRoute:
+   *           type: number
+   *           example: 30000
+   *         feeCODFromRoute:
+   *           type: number
+   *           example: 10000
+   *         accountPayable:
+   *           type: number
+   *           example: 5000
+   *         receivable:
+   *           type: number
+   *           example: 15000
+   *         homeDeliveryFromRoute:
+   *           type: number
+   *           example: 8000
+   *         homeDeliveryToRoute:
+   *           type: number
+   *           example: 6000
+   *         surchargeToRoute:
+   *           type: number
+   *           example: 3000
+   *         surchargeFromRoute:
+   *           type: number
+   *           example: 2000
+   *         totalDebt:
+   *           type: number
+   *           example: 250000
    */
   exportReportDebtAndDebtManagement = async (
     request: AuthRequest,
