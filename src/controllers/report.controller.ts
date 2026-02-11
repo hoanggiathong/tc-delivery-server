@@ -374,7 +374,11 @@ export class ReportController {
    *                                 type: number
    *                           totalActualCollected:
    *                             type: object
-   *                             description: "Row 7: TỔNG CỘNG TIỀN THỰC THU"
+   *                             description: |
+   *                               Row 7: TỔNG CỘNG TIỀN THỰC THU
+   *                               - Chuyển tiền = Tiền chuyển thường + Tiền chuyển nhanh + Tiền thu hộ giữ
+   *                               - Cước phí = Hàng chuyển thường - Nợ cước + Hàng giao tận nơi + Tiền chuyển thường + Tiền chuyển nhanh + Tiền thu hộ giữ
+   *                               - Phụ phí = Phụ phí Hàng chuyển thường - Phụ phí Nợ cước
    *                             properties:
    *                               transferMoney:
    *                                 type: number
@@ -392,12 +396,12 @@ export class ReportController {
    *                         totalCollectHoldMoney:
    *                           type: number
    *                           description: "TỔNG TIỀN THU HỘ GIỮ"
-   *                         totalShippingCostNC:
+   *                         totalShippingCostDebt:
    *                           type: number
-   *                           description: "TỔNG CƯỚC GỬI NC"
-   *                         totalHomeDeliveryCostNC:
+   *                           description: "TỔNG CƯỚC GỬI NỢ CƯỚC"
+   *                         totalHomeDeliveryCostDebt:
    *                           type: number
-   *                           description: "TỔNG TIỀN GTN NC"
+   *                           description: "TỔNG TIỀN GTN NỢ CƯỚC"
    *                         totalActualRevenue:
    *                           type: number
    *                           description: "TỔNG THỰC THU"
@@ -437,8 +441,8 @@ export class ReportController {
    *                     total:
    *                       totalSendMoneyToStations: 1400000
    *                       totalCollectHoldMoney: 439935000
-   *                       totalShippingCostNC: 75490000
-   *                       totalHomeDeliveryCostNC: 0
+   *                       totalShippingCostDebt: 75490000
+   *                       totalHomeDeliveryCostDebt: 0
    *                       totalActualRevenue: 74034000
    *                       cashInSafe: 515369000
    *                       revenue: 150684000
@@ -455,8 +459,8 @@ export class ReportController {
    *                     total:
    *                       totalSendMoneyToStations: 0
    *                       totalCollectHoldMoney: 0
-   *                       totalShippingCostNC: 0
-   *                       totalHomeDeliveryCostNC: 0
+   *                       totalShippingCostDebt: 0
+   *                       totalHomeDeliveryCostDebt: 0
    *                       totalActualRevenue: 0
    *                       cashInSafe: 0
    *                       revenue: 0
