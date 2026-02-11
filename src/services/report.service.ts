@@ -245,19 +245,19 @@ export class ReportService {
 
       // Group deliveries by toRoute
       for (const delivery of returnDeliveries) {
-        const routeData = getOrCreateRouteData(delivery.toRoute.id, delivery.toRoute);
+        const routeData = getOrCreateRouteData(delivery.toRoute.id.toString(), delivery.toRoute);
         routeData.deliveries.push(delivery);
       }
 
       // Group money deliveries normal by toRoute
       for (const md of moneyDeliveriesTypeNormal) {
-        const routeData = getOrCreateRouteData(md.toRoute.id, md.toRoute);
+        const routeData = getOrCreateRouteData(md.toRoute.id.toString(), md.toRoute);
         routeData.moneyNormal.push(md);
       }
 
       // Group money deliveries collect by fromRoute (user's route is toRoute for collect)
       for (const md of moneyDeliveriesTypeCollect) {
-        const routeData = getOrCreateRouteData(md.fromRoute.id, md.fromRoute);
+        const routeData = getOrCreateRouteData(md.fromRoute.id.toString(), md.fromRoute);
         routeData.moneyCollect.push(md);
       }
 
