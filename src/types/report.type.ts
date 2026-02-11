@@ -57,8 +57,8 @@ export interface IAccountingRouteData {
 export interface IAccountingReportTotal {
   totalSendMoneyToStations: number; // TỔNG TIỀN GỬI CÁC TRẠM
   totalCollectHoldMoney: number; // TỔNG TIỀN THU HỘ GIỮ
-  totalShippingCostNC: number; // TỔNG CƯỚC GỬI NC
-  totalHomeDeliveryCostNC: number; // TỔNG TIỀN GTN NC
+  totalShippingCostDebt: number; // TỔNG CƯỚC GỬI NỢ CƯỚC
+  totalHomeDeliveryCostDebt: number; // TỔNG TIỀN GTN NỢ CƯỚC
   totalActualRevenue: number; // TỔNG THỰC THU
   cashInSafe: number; // TIỀN TRONG TỦ
   revenue: number; // Doanh Thu (Có GTN đi + Phụ phí đi)

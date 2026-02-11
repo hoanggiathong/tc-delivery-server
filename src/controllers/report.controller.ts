@@ -254,10 +254,10 @@ export class ReportController {
    *   get:
    *     summary: Get accounting report grouped by route (max 45 days, Vietnam timezone)
    *     description: |
-   *       Returns an accounting report (Báo Cáo Doanh Thu Bưu Phẩm) grouped by route (TUYẾN).
-   *       Each route contains 7 rows: HÀNG CHUYỂN THƯỜNG, HÀNG GIAO TẬN NƠI, TIỀN CHUYỂN THƯỜNG,
-   *       TIỀN CHUYỂN NHANH, TIỀN THU HỘ GIỮ, NỢ CƯỚC, TỔNG CỘNG TIỀN THỰC THU.
-   *       Each row has 3 columns: transferMoney, shippingFee, surcharge.
+   *       Returns an accounting report (Báo Cáo Kế Toán) grouped by route (TUYẾN).
+   *       Each route contains 7 rows: HÀNG CHUYỂN THƯỜNG (không GTN), HÀNG GIAO TẬN NƠI,
+   *       TIỀN CHUYỂN THƯỜNG, TIỀN CHUYỂN NHANH, TIỀN THU HỘ GIỮ, NỢ CƯỚC, TỔNG CỘNG TIỀN THỰC THU.
+   *       Each row has 3 columns: transferMoney (Chuyển tiền), shippingFee (Cước phí), surcharge (Phụ phí).
    *       The total section contains grand totals across all routes.
    *       Date range cannot exceed 45 days. Dates use Vietnam timezone (UTC+7).
    *     tags: [Report]
@@ -311,27 +311,38 @@ export class ReportController {
    *                             type: string
    *                           normalDelivery:
    *                             type: object
-   *                             description: "Row 1: HÀNG CHUYỂN THƯỜNG"
+   *                             description: |
+   *                               Row 1: HÀNG CHUYỂN THƯỜNG (chỉ đơn không giao tận nơi, bao gồm nợ cước + đã thu)
+   *                               - shippingFee: tổng cước + phí trị giá (cost + itemCost) không GTN
+   *                               - surcharge: tổng phụ phí (collectForCustomerCost) không GTN
    *                             properties:
    *                               transferMoney:
    *                                 type: number
    *                               shippingFee:
    *                                 type: number
+   *                                 description: Tổng cước + phí trị giá đơn hàng không GTN (nc + đã thu)
    *                               surcharge:
    *                                 type: number
+   *                                 description: Tổng phụ phí đơn hàng không GTN (nc + đã thu)
    *                           homeDelivery:
    *                             type: object
-   *                             description: "Row 2: HÀNG GIAO TẬN NƠI"
+   *                             description: |
+   *                               Row 2: HÀNG GIAO TẬN NƠI (đơn có giao tận nơi, bao gồm nc + đã thu)
+   *                               - shippingFee: tổng cước gửi hàng + phí trị giá (cost + itemCost) đơn GTN
+   *                               - surcharge: tổng phụ phí (collectForCustomerCost) đơn GTN
+   *                               - homeDeliveryCostTotal: tổng cước giao tận nơi (homeDeliveryCost) tất cả đơn
    *                             properties:
    *                               transferMoney:
    *                                 type: number
    *                               shippingFee:
    *                                 type: number
+   *                                 description: Tổng cước gửi hàng + phí trị giá đơn GTN (nc + đã thu)
    *                               surcharge:
    *                                 type: number
+   *                                 description: Tổng phụ phí đơn GTN (nc + đã thu)
    *                               homeDeliveryCostTotal:
    *                                 type: number
-   *                                 description: Total home delivery cost for all deliveries (shown in label)
+   *                                 description: Tổng cước giao tận nơi (homeDeliveryCost) bao gồm nc + đã thu
    *                           normalMoneyTransfer:
    *                             type: object
    *                             description: "Row 3: TIỀN CHUYỂN THƯỜNG"
@@ -374,7 +385,11 @@ export class ReportController {
    *                                 type: number
    *                           totalActualCollected:
    *                             type: object
-   *                             description: "Row 7: TỔNG CỘNG TIỀN THỰC THU"
+   *                             description: |
+   *                               Row 7: TỔNG CỘNG TIỀN THỰC THU
+   *                               - Chuyển tiền = Tiền chuyển thường + Tiền chuyển nhanh + Tiền thu hộ giữ
+   *                               - Cước phí = (Hàng chuyển thường + Hàng giao tận nơi + Tiền chuyển thường + Tiền chuyển nhanh + Tiền thu hộ giữ) - Nợ cước
+   *                               - Phụ phí = Phụ phí Hàng chuyển thường + Phụ phí Hàng giao tận nơi - Phụ phí Nợ cước
    *                             properties:
    *                               transferMoney:
    *                                 type: number
@@ -388,34 +403,34 @@ export class ReportController {
    *                       properties:
    *                         totalSendMoneyToStations:
    *                           type: number
-   *                           description: "TỔNG TIỀN GỬI CÁC TRẠM"
+   *                           description: "Tổng tiền gửi các trạm gửi: Total tiền gửi đi tất cả tuyến (gửi nhanh + thường)"
    *                         totalCollectHoldMoney:
    *                           type: number
-   *                           description: "TỔNG TIỀN THU HỘ GIỮ"
-   *                         totalShippingCostNC:
+   *                           description: "Tổng tiền thu hộ giữ: Total tiền thu hộ giữ tất cả tuyến"
+   *                         totalShippingCostDebt:
    *                           type: number
-   *                           description: "TỔNG CƯỚC GỬI NC"
-   *                         totalHomeDeliveryCostNC:
+   *                           description: "Tổng cước gửi nợ cước: Total Nợ cước hàng đi tất cả tuyến"
+   *                         totalHomeDeliveryCostDebt:
    *                           type: number
-   *                           description: "TỔNG TIỀN GTN NC"
+   *                           description: "Tổng tiền GTN nợ cước: Total cước GTN nợ cước hàng đi tất cả Tuyến"
    *                         totalActualRevenue:
    *                           type: number
-   *                           description: "TỔNG THỰC THU"
+   *                           description: "Tổng thực thu: Total cột Cước phí mục Tổng cộng tiền thực thu tất cả Tuyến"
    *                         cashInSafe:
    *                           type: number
-   *                           description: "TIỀN TRONG TỦ"
+   *                           description: "Tiền trong tủ = Tổng tiền gửi các trạm + Tổng tiền thu hộ giữ + Tổng thực thu"
    *                         revenue:
    *                           type: number
-   *                           description: "Doanh Thu (Có GTN đi + Phụ phí đi)"
+   *                           description: "Doanh thu (có GTN đi + Phụ phí đi) = Total cước gửi hàng đi + Tổng cước gửi tiền + Tổng cước phí thu hộ giữ + Tổng phụ phí đi"
    *                         totalOutgoingHomeDeliveryCost:
    *                           type: number
-   *                           description: "TỔNG CƯỚC GTN đi"
+   *                           description: "Tổng cước GTN đi: Tổng cước GTN đi tất cả Tuyến (đã thu + nc)"
    *                         totalOutgoingSurcharge:
    *                           type: number
-   *                           description: "TỔNG PHỤ PHÍ đi"
+   *                           description: "Tổng phụ phí đi: Tổng Phụ Phí đi tất cả tuyến (đã thu + nc)"
    *                         totalRevenueFundSubmission:
    *                           type: number
-   *                           description: "Tổng Doanh Thu Nộp Quỹ (BCTC)"
+   *                           description: "Tổng doanh thu nộp quỹ (BCTC) = Doanh thu - Tổng cước GTN đi - Tổng phụ phí đi"
    *             examples:
    *               reportWithData:
    *                 summary: Accounting report with data
@@ -427,18 +442,18 @@ export class ReportController {
    *                       - routeId: "507f1f77bcf86cd799439011"
    *                         routeCode: "T1"
    *                         routeName: "LONG XUYÊN"
-   *                         normalDelivery: { transferMoney: 0, shippingFee: 4452000, surcharge: 0 }
-   *                         homeDelivery: { transferMoney: 0, shippingFee: 30000, surcharge: 0, homeDeliveryCostTotal: 50000 }
-   *                         normalMoneyTransfer: { transferMoney: 50000, shippingFee: 0, surcharge: 0 }
+   *                         normalDelivery: { transferMoney: 0, shippingFee: 4452000, surcharge: 150000 }
+   *                         homeDelivery: { transferMoney: 0, shippingFee: 1200000, surcharge: 50000, homeDeliveryCostTotal: 80000 }
+   *                         normalMoneyTransfer: { transferMoney: 50000, shippingFee: 5000, surcharge: 0 }
    *                         expressMoneyTransfer: { transferMoney: 0, shippingFee: 0, surcharge: 0 }
    *                         collectHoldMoney: { transferMoney: 700000, shippingFee: 15000, surcharge: 0 }
-   *                         debtCost: { transferMoney: 0, shippingFee: 2365000, surcharge: 0 }
-   *                         totalActualCollected: { transferMoney: 750000, shippingFee: 2132000, surcharge: 0 }
+   *                         debtCost: { transferMoney: 0, shippingFee: 2365000, surcharge: 80000 }
+   *                         totalActualCollected: { transferMoney: 750000, shippingFee: 3307000, surcharge: 120000 }
    *                     total:
    *                       totalSendMoneyToStations: 1400000
    *                       totalCollectHoldMoney: 439935000
-   *                       totalShippingCostNC: 75490000
-   *                       totalHomeDeliveryCostNC: 0
+   *                       totalShippingCostDebt: 75490000
+   *                       totalHomeDeliveryCostDebt: 0
    *                       totalActualRevenue: 74034000
    *                       cashInSafe: 515369000
    *                       revenue: 150684000
@@ -455,8 +470,8 @@ export class ReportController {
    *                     total:
    *                       totalSendMoneyToStations: 0
    *                       totalCollectHoldMoney: 0
-   *                       totalShippingCostNC: 0
-   *                       totalHomeDeliveryCostNC: 0
+   *                       totalShippingCostDebt: 0
+   *                       totalHomeDeliveryCostDebt: 0
    *                       totalActualRevenue: 0
    *                       cashInSafe: 0
    *                       revenue: 0

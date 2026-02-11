@@ -10,7 +10,7 @@ import {
 } from '@/types/report.type';
 import { DeliveryService } from './delivery.service';
 import { MoneyDeliveryService } from './money-delivery.service';
-import { MoneyDeliveryType } from '@/models/money-delivery.model';
+import { MoneyDeliveryType, TransferType } from '@/models/money-delivery.model';
 import { PAYMENT_TYPE } from '@/const/money-deliveries.const';
 
 export class ReportService {
@@ -223,100 +223,106 @@ export class ReportService {
       const returnDeliveries: IDeliveryResponse[] =
         await this.deliveryService.getListReturnDeliveriesByToRouteId(userId, start, end);
 
-      // Group deliveries by toRoute
-      const deliveriesByRoute = new Map<
+      // Consolidate all data into a single Map per route (1 trạm = 1 record)
+      const routeDataMap = new Map<
         string,
-        { route: IRouteResponse; deliveries: IDeliveryResponse[] }
-      >();
-      for (const delivery of returnDeliveries) {
-        const routeId = delivery.toRoute.id;
-        const existing = deliveriesByRoute.get(routeId);
-        if (existing) {
-          existing.deliveries.push(delivery);
-        } else {
-          deliveriesByRoute.set(routeId, { route: delivery.toRoute, deliveries: [delivery] });
+        {
+          route: IRouteResponse;
+          deliveries: IDeliveryResponse[];
+          moneyNormal: IMoneyDeliveryResponse[];
+          moneyCollect: IMoneyDeliveryResponse[];
         }
+      >();
+
+      const getOrCreateRouteData = (routeId: string, route: IRouteResponse) => {
+        let data = routeDataMap.get(routeId);
+        if (!data) {
+          data = { route, deliveries: [], moneyNormal: [], moneyCollect: [] };
+          routeDataMap.set(routeId, data);
+        }
+        return data;
+      };
+
+      // Group deliveries by toRoute
+      for (const delivery of returnDeliveries) {
+        const routeData = getOrCreateRouteData(delivery.toRoute.id.toString(), delivery.toRoute);
+        routeData.deliveries.push(delivery);
       }
 
       // Group money deliveries normal by toRoute
-      const moneyNormalByRoute = new Map<string, IMoneyDeliveryResponse[]>();
       for (const md of moneyDeliveriesTypeNormal) {
-        const routeId = md.toRoute.id;
-        const existing = moneyNormalByRoute.get(routeId);
-        if (existing) {
-          existing.push(md);
-        } else {
-          moneyNormalByRoute.set(routeId, [md]);
-        }
+        const routeData = getOrCreateRouteData(md.toRoute.id.toString(), md.toRoute);
+        routeData.moneyNormal.push(md);
       }
 
       // Group money deliveries collect by fromRoute (user's route is toRoute for collect)
-      const moneyCollectByRoute = new Map<string, IMoneyDeliveryResponse[]>();
       for (const md of moneyDeliveriesTypeCollect) {
-        const routeId = md.fromRoute.id;
-        const existing = moneyCollectByRoute.get(routeId);
-        if (existing) {
-          existing.push(md);
-        } else {
-          moneyCollectByRoute.set(routeId, [md]);
-        }
+        const routeData = getOrCreateRouteData(md.fromRoute.id.toString(), md.fromRoute);
+        routeData.moneyCollect.push(md);
       }
 
-      // Collect all unique route IDs and route info
-      const routeInfoMap = new Map<string, IRouteResponse>();
-      for (const [routeId, data] of deliveriesByRoute) {
-        routeInfoMap.set(routeId, data.route);
-      }
-      for (const md of moneyDeliveriesTypeNormal) {
-        if (!routeInfoMap.has(md.toRoute.id)) {
-          routeInfoMap.set(md.toRoute.id, md.toRoute);
-        }
-      }
-      for (const md of moneyDeliveriesTypeCollect) {
-        if (!routeInfoMap.has(md.fromRoute.id)) {
-          routeInfoMap.set(md.fromRoute.id, md.fromRoute);
-        }
-      }
-
-      // Build per-route data
+      // Build per-route data (1 trạm chỉ có 1 record, giá trị cộng dồn)
       const routes: IAccountingRouteData[] = [];
-      for (const [routeId, routeInfo] of routeInfoMap) {
-        const deliveries = deliveriesByRoute.get(routeId)?.deliveries || [];
-        const moneyNormal = moneyNormalByRoute.get(routeId) || [];
-        const moneyCollect = moneyCollectByRoute.get(routeId) || [];
+      for (const [
+        _routeId,
+        { route: routeInfo, deliveries, moneyNormal, moneyCollect },
+      ] of routeDataMap) {
         const debtDeliveries = deliveries.filter(d => d.paymentType === PAYMENT_TYPE.DEBT);
-        const paidDeliveries = deliveries.filter(d => d.paymentType === PAYMENT_TYPE.PAID);
 
-        // Row 1: HÀNG CHUYỂN THƯỜNG
+        // Split deliveries by GTN (giao tận nơi) vs non-GTN
+        const nonHomeDeliveries = deliveries.filter(
+          d => !d.homeDeliveryCost || d.homeDeliveryCost === 0
+        );
+        const homeDeliveredDeliveries = deliveries.filter(
+          d => d.homeDeliveryCost && d.homeDeliveryCost > 0
+        );
+
+        const moneyNormalRegular = moneyNormal.filter(
+          md => md.transferType === TransferType.REGULAR
+        );
+        const moneyNormalExpress = moneyNormal.filter(
+          md => md.transferType === TransferType.EXPRESS
+        );
+
+        // Row 1: HÀNG CHUYỂN THƯỜNG (chỉ đơn không giao tận nơi, bao gồm nợ cước + đã thu)
         const normalDelivery = {
           transferMoney: 0,
-          shippingFee: deliveries.reduce((sum, d) => sum + (d.cost || 0) + (d.itemCost || 0), 0),
-          surcharge: deliveries.reduce((sum, d) => sum + (d.collectForCustomerCost || 0), 0),
+          shippingFee: nonHomeDeliveries.reduce(
+            (sum, d) => sum + (d.cost || 0) + (d.itemCost || 0),
+            0
+          ),
+          surcharge: nonHomeDeliveries.reduce((sum, d) => sum + (d.collectForCustomerCost || 0), 0),
         };
 
-        // Row 2: HÀNG GIAO TẬN NƠI
+        // Row 2: HÀNG GIAO TẬN NƠI (cước gửi hàng + phí trị giá của đơn GTN, bao gồm nc + đã thu)
         const homeDeliveryCostTotal = deliveries.reduce(
           (sum, d) => sum + (d.homeDeliveryCost || 0),
           0
         );
         const homeDelivery = {
           transferMoney: 0,
-          shippingFee: paidDeliveries.reduce((sum, d) => sum + (d.homeDeliveryCost || 0), 0),
-          surcharge: 0,
+          shippingFee: homeDeliveredDeliveries.reduce(
+            (sum, d) => sum + (d.cost || 0) + (d.itemCost || 0),
+            0
+          ),
+          surcharge: homeDeliveredDeliveries.reduce(
+            (sum, d) => sum + (d.collectForCustomerCost || 0),
+            0
+          ),
           homeDeliveryCostTotal,
         };
 
-        // Row 3: TIỀN CHUYỂN THƯỜNG
+        // Row 3: TIỀN CHUYỂN THƯỜNG (only transferType = regular)
         const normalMoneyTransfer = {
-          transferMoney: moneyNormal.reduce((sum, md) => sum + (md.sendMoneyAmount || 0), 0),
-          shippingFee: moneyNormal.reduce((sum, md) => sum + (md.sendCost || 0), 0),
+          transferMoney: moneyNormalRegular.reduce((sum, md) => sum + (md.sendMoneyAmount || 0), 0),
+          shippingFee: moneyNormalRegular.reduce((sum, md) => sum + (md.sendCost || 0), 0),
           surcharge: 0,
         };
 
-        // Row 4: TIỀN CHUYỂN NHANH
+        // Row 4: TIỀN CHUYỂN NHANH (only transferType = express)
         const expressMoneyTransfer = {
-          transferMoney: 0,
-          shippingFee: 0,
+          transferMoney: moneyNormalExpress.reduce((sum, md) => sum + (md.sendMoneyAmount || 0), 0),
+          shippingFee: moneyNormalExpress.reduce((sum, md) => sum + (md.sendCost || 0), 0),
           surcharge: 0,
         };
 
@@ -337,29 +343,23 @@ export class ReportService {
           surcharge: debtDeliveries.reduce((sum, d) => sum + (d.collectForCustomerCost || 0), 0),
         };
 
-        // Row 7: TỔNG CỘNG TIỀN THỰC THU = sum of rows 1-5 minus row 6
+        // Row 7: TỔNG CỘNG TIỀN THỰC THU
         const totalActualCollected = {
+          // Chuyển tiền = Tiền chuyển thường + Tiền chuyển nhanh + Tiền thu hộ giữ
           transferMoney:
-            normalDelivery.transferMoney +
-            homeDelivery.transferMoney +
             normalMoneyTransfer.transferMoney +
             expressMoneyTransfer.transferMoney +
-            collectHoldMoney.transferMoney -
-            debtCost.transferMoney,
+            collectHoldMoney.transferMoney,
+          // Cước phí = Hàng chuyển thường - Nợ cước + Hàng giao tận nơi + Tiền chuyển thường + Tiền chuyển nhanh + Tiền thu hộ giữ
           shippingFee:
-            normalDelivery.shippingFee +
+            normalDelivery.shippingFee -
+            debtCost.shippingFee +
             homeDelivery.shippingFee +
             normalMoneyTransfer.shippingFee +
             expressMoneyTransfer.shippingFee +
-            collectHoldMoney.shippingFee -
-            debtCost.shippingFee,
-          surcharge:
-            normalDelivery.surcharge +
-            homeDelivery.surcharge +
-            normalMoneyTransfer.surcharge +
-            expressMoneyTransfer.surcharge +
-            collectHoldMoney.surcharge -
-            debtCost.surcharge,
+            collectHoldMoney.shippingFee,
+          // Phụ phí = Phụ phí Hàng chuyển thường + Phụ phí Hàng giao tận nơi - Phụ phí Nợ cước
+          surcharge: normalDelivery.surcharge + homeDelivery.surcharge - debtCost.surcharge,
         };
 
         routes.push({
@@ -377,48 +377,78 @@ export class ReportService {
       }
 
       // Calculate grand totals
+
+      // Tổng tiền gửi các trạm = tiền gửi thường + tiền gửi nhanh (KHÔNG bao gồm thu hộ giữ)
       const totalSendMoneyToStations = routes.reduce(
-        (sum, route) => sum + route.totalActualCollected.transferMoney,
+        (sum, route) =>
+          sum + route.normalMoneyTransfer.transferMoney + route.expressMoneyTransfer.transferMoney,
         0
       );
+
+      // Tổng tiền thu hộ giữ
       const totalCollectHoldMoney = moneyDeliveriesTypeCollect.reduce(
         (sum, md) => sum + (md.sendMoneyAmount || 0),
         0
       );
-      const totalCostDelivery = returnDeliveries.reduce(
+
+      // Tổng cước gửi nợ cước = sum(debtCost.shippingFee) tất cả tuyến
+      const totalShippingCostDebt = routes.reduce(
+        (sum, route) => sum + route.debtCost.shippingFee,
+        0
+      );
+
+      // Tổng tiền gtn nợ cước: Total cước gtn nợ cước hàng đi của tất cả các Tuyến
+      const totalHomeDeliveryCostDebt = returnDeliveries
+        .filter(d => d.paymentType === PAYMENT_TYPE.DEBT)
+        .reduce((sum, d) => sum + (d.homeDeliveryCost || 0), 0);
+
+      // Lọc đơn đã thu
+      const paidDeliveries = returnDeliveries.filter(d => d.paymentType === PAYMENT_TYPE.PAID);
+
+      // Tổng thực thu: tổng cước gửi hàng đi đã thu
+      const totalActualRevenue = paidDeliveries.reduce(
         (sum, d) => sum + (d.cost || 0) + (d.itemCost || 0),
         0
       );
-      const totalCostDebtDelivery = returnDeliveries
-        .filter(d => d.paymentType === PAYMENT_TYPE.DEBT)
-        .reduce((sum, d) => sum + (d.cost || 0) + (d.itemCost || 0), 0);
-      const totalSendCostNormal = moneyDeliveriesTypeNormal.reduce(
-        (sum, md) => sum + (md.sendCost || 0),
-        0
-      );
-      const totalSendCostCollect = moneyDeliveriesTypeCollect.reduce(
-        (sum, md) => sum + (md.sendCost || 0),
-        0
-      );
-      const homeDeliveryCostPaid = returnDeliveries
-        .filter(d => d.paymentType === PAYMENT_TYPE.PAID)
-        .reduce((sum, d) => sum + (d.homeDeliveryCost || 0), 0);
-      const collectForCustomerCostPaid = returnDeliveries
-        .filter(d => d.paymentType === PAYMENT_TYPE.PAID)
-        .reduce((sum, d) => sum + (d.collectForCustomerCost || 0), 0);
 
-      const totalShippingCostNC = totalCostDelivery;
-      const totalHomeDeliveryCostNC = 0;
-      const totalActualRevenue = totalCostDelivery - totalCostDebtDelivery;
+      // Tiền trong tủ = Tổng tiền gửi các trạm + Tổng tiền thu hộ giữ + Tổng thực thu
       const cashInSafe = totalSendMoneyToStations + totalCollectHoldMoney + totalActualRevenue;
-      const totalOutgoingHomeDeliveryCost = homeDeliveryCostPaid;
-      const totalOutgoingSurcharge = collectForCustomerCostPaid;
+
+      // Tổng cước gtn đi = Tổng cước GTN đi của tất cả các Tuyến (đã thu + nc)
+      const totalOutgoingHomeDeliveryCost = returnDeliveries.reduce(
+        (sum, d) => sum + (d.homeDeliveryCost || 0),
+        0
+      );
+
+      // Tổng phụ phí đi = Tổng Phụ Phí đi của tất cả các tuyến (đã thu + nc)
+      const totalOutgoingSurcharge = returnDeliveries.reduce(
+        (sum, d) => sum + (d.collectForCustomerCost || 0),
+        0
+      );
+
+      // Tổng cước gửi tiền tất cả trạm (chuyển thường + chuyển nhanh)
+      const totalMoneyTransferCost = routes.reduce(
+        (sum, route) =>
+          sum + route.normalMoneyTransfer.shippingFee + route.expressMoneyTransfer.shippingFee,
+        0
+      );
+
+      // Tổng cước phí thu hộ giữ tất cả trạm
+      const totalCollectHoldMoneyCost = routes.reduce(
+        (sum, route) => sum + route.collectHoldMoney.shippingFee,
+        0
+      );
+
+      // Doanh thu (có GTN đi + Phụ phí đi) = (Tổng thực thu + Tổng cước gửi nc) + Tổng cước phí gửi tiền + Tổng cước phí thu hộ giữ + Tổng phụ phí đi + Tổng cước gtn đi
       const revenue =
         totalActualRevenue +
-        totalSendCostNormal +
-        totalSendCostCollect +
-        totalOutgoingHomeDeliveryCost +
-        totalOutgoingSurcharge;
+        totalShippingCostDebt +
+        totalMoneyTransferCost +
+        totalCollectHoldMoneyCost +
+        totalOutgoingSurcharge +
+        totalOutgoingHomeDeliveryCost;
+
+      // Tổng doanh thu nộp quỹ (BCTC) = Doanh thu - Tổng cước GTN đi - Tổng phụ phí đi
       const totalRevenueFundSubmission =
         revenue - totalOutgoingHomeDeliveryCost - totalOutgoingSurcharge;
 
@@ -427,8 +457,8 @@ export class ReportService {
         total: {
           totalSendMoneyToStations,
           totalCollectHoldMoney,
-          totalShippingCostNC,
-          totalHomeDeliveryCostNC,
+          totalShippingCostDebt,
+          totalHomeDeliveryCostDebt,
           totalActualRevenue,
           cashInSafe,
           revenue,
