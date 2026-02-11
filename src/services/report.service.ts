@@ -285,7 +285,14 @@ export class ReportService {
         const moneyNormal = moneyNormalByRoute.get(routeId) || [];
         const moneyCollect = moneyCollectByRoute.get(routeId) || [];
         const debtDeliveries = deliveries.filter(d => d.paymentType === PAYMENT_TYPE.DEBT);
-        const paidDeliveries = deliveries.filter(d => d.paymentType === PAYMENT_TYPE.PAID);
+
+        // Split deliveries by GTN (giao tận nơi) vs non-GTN
+        const nonHomeDeliveries = deliveries.filter(
+          d => !d.homeDeliveryCost || d.homeDeliveryCost === 0
+        );
+        const homeDeliveredDeliveries = deliveries.filter(
+          d => d.homeDeliveryCost && d.homeDeliveryCost > 0
+        );
 
         const moneyNormalRegular = moneyNormal.filter(
           md => md.transferType === TransferType.REGULAR
@@ -294,22 +301,31 @@ export class ReportService {
           md => md.transferType === TransferType.EXPRESS
         );
 
-        // Row 1: HÀNG CHUYỂN THƯỜNG
+        // Row 1: HÀNG CHUYỂN THƯỜNG (chỉ đơn không giao tận nơi, bao gồm nợ cước + đã thu)
         const normalDelivery = {
           transferMoney: 0,
-          shippingFee: deliveries.reduce((sum, d) => sum + (d.cost || 0) + (d.itemCost || 0), 0),
-          surcharge: deliveries.reduce((sum, d) => sum + (d.collectForCustomerCost || 0), 0),
+          shippingFee: nonHomeDeliveries.reduce(
+            (sum, d) => sum + (d.cost || 0) + (d.itemCost || 0),
+            0
+          ),
+          surcharge: nonHomeDeliveries.reduce((sum, d) => sum + (d.collectForCustomerCost || 0), 0),
         };
 
-        // Row 2: HÀNG GIAO TẬN NƠI
+        // Row 2: HÀNG GIAO TẬN NƠI (cước gửi hàng + phí trị giá của đơn GTN, bao gồm nc + đã thu)
         const homeDeliveryCostTotal = deliveries.reduce(
           (sum, d) => sum + (d.homeDeliveryCost || 0),
           0
         );
         const homeDelivery = {
           transferMoney: 0,
-          shippingFee: paidDeliveries.reduce((sum, d) => sum + (d.homeDeliveryCost || 0), 0),
-          surcharge: 0,
+          shippingFee: homeDeliveredDeliveries.reduce(
+            (sum, d) => sum + (d.cost || 0) + (d.itemCost || 0),
+            0
+          ),
+          surcharge: homeDeliveredDeliveries.reduce(
+            (sum, d) => sum + (d.collectForCustomerCost || 0),
+            0
+          ),
           homeDeliveryCostTotal,
         };
 
@@ -359,8 +375,8 @@ export class ReportService {
             normalMoneyTransfer.shippingFee +
             expressMoneyTransfer.shippingFee +
             collectHoldMoney.shippingFee,
-          // Phụ phí = Phụ phí Hàng chuyển thường - Phụ phí Nợ cước
-          surcharge: normalDelivery.surcharge - debtCost.surcharge,
+          // Phụ phí = Phụ phí Hàng chuyển thường + Phụ phí Hàng giao tận nơi - Phụ phí Nợ cước
+          surcharge: normalDelivery.surcharge + homeDelivery.surcharge - debtCost.surcharge,
         };
 
         routes.push({
@@ -398,18 +414,10 @@ export class ReportService {
         0
       );
 
-      // Tổng tiền GTN nợ cước = homeDeliveryCostTotal - homeDelivery.shippingFee (đã thu) tất cả tuyến
-      // cách 1:
-      const totalHomeDeliveryCostDebt = routes.reduce(
-        (sum, route) =>
-          sum + route.homeDelivery.homeDeliveryCostTotal - route.homeDelivery.shippingFee,
-        0
-      );
-
-      // cách 2:
-      // const totalHomeDeliveryCostDebt = returnDeliveries
-      //   .filter(d => d.paymentType === PAYMENT_TYPE.DEBT)
-      //   .reduce((sum, d) => sum + (d.homeDeliveryCost || 0), 0);
+      // Tổng tiền gtn nợ cước: Total cước gtn nợ cước hàng đi của tất cả các Tuyến
+      const totalHomeDeliveryCostDebt = returnDeliveries
+        .filter(d => d.paymentType === PAYMENT_TYPE.DEBT)
+        .reduce((sum, d) => sum + (d.homeDeliveryCost || 0), 0);
 
       // Tổng thực thu = sum(totalActualCollected.shippingFee) tất cả tuyến
       const totalActualRevenue = routes.reduce(
@@ -420,51 +428,47 @@ export class ReportService {
       // Tiền trong tủ = Tổng tiền gửi các trạm + Tổng tiền thu hộ giữ + Tổng thực thu
       const cashInSafe = totalSendMoneyToStations + totalCollectHoldMoney + totalActualRevenue;
 
-      // Tổng cước GTN đi (đã thu + NC) = sum(homeDeliveryCostTotal) tất cả tuyến
-      // cách 1: dựa trên routes
-      const totalOutgoingHomeDeliveryCost = routes.reduce(
-        (sum, route) => sum + route.homeDelivery.homeDeliveryCostTotal,
+      // Tổng cước gtn đi = Tổng cước GTN đi của tất cả các Tuyến (đã thu + nc)
+      const totalOutgoingHomeDeliveryCost = returnDeliveries.reduce(
+        (sum, d) => sum + (d.homeDeliveryCost || 0),
         0
       );
 
-      //cách 2: lấy tất cả deliveries
-      // const totalOutgoingHomeDeliveryCost = returnDeliveries.reduce(
-      //   (sum, d) => sum + (d.homeDeliveryCost || 0),
-      //   0
-      // );
-
-      // Tổng phụ phí đi (đã thu + NC) = sum(normalDelivery.surcharge) tất cả tuyến
-
-      //cách 1: dựa trên routes
-      const totalOutgoingSurcharge = routes.reduce(
-        (sum, route) => sum + route.normalDelivery.surcharge,
+      // Tổng phụ phí đi = Tổng Phụ Phí đi của tất cả các tuyến (đã thu + nc)
+      const totalOutgoingSurcharge = returnDeliveries.reduce(
+        (sum, d) => sum + (d.collectForCustomerCost || 0),
         0
       );
 
-      //cách 2: lấy tất cả deliveries
-      // const totalOutgoingSurcharge = returnDeliveries.reduce(
-      //   (sum, d) => sum + (d.collectForCustomerCost || 0),
-      //   0
-      // );
-
-      // Tổng cước phí Hàng chuyển thường
-      const totalNormalDeliveryShippingFee = routes.reduce(
-        (sum, route) => sum + route.normalDelivery.shippingFee,
+      // Total cước gửi hàng đi tất cả trạm (nc + đã thu) = normalDelivery.shippingFee + homeDelivery.shippingFee
+      const totalAllDeliveryShippingFee = routes.reduce(
+        (sum, route) => sum + route.normalDelivery.shippingFee + route.homeDelivery.shippingFee,
         0
       );
 
-      // Doanh thu = Total cước phí Hàng chuyển thường + Tổng cước GTN đi + Tổng phụ phí đi
+      // Tổng cước gửi tiền tất cả trạm (chuyển thường + chuyển nhanh)
+      const totalMoneyTransferCost = routes.reduce(
+        (sum, route) =>
+          sum + route.normalMoneyTransfer.shippingFee + route.expressMoneyTransfer.shippingFee,
+        0
+      );
+
+      // Tổng cước phí thu hộ giữ tất cả trạm
+      const totalCollectHoldMoneyCost = routes.reduce(
+        (sum, route) => sum + route.collectHoldMoney.shippingFee,
+        0
+      );
+
+      // Doanh thu (có GTN đi + Phụ phí đi) = Total cước gửi hàng đi + Tổng cước gửi tiền + Tổng cước phí thu hộ giữ + Tổng phụ phí đi
       const revenue =
-        totalNormalDeliveryShippingFee + totalOutgoingHomeDeliveryCost + totalOutgoingSurcharge;
+        totalAllDeliveryShippingFee +
+        totalMoneyTransferCost +
+        totalCollectHoldMoneyCost +
+        totalOutgoingSurcharge;
 
-      // Tổng doanh thu nộp quỹ (BCTC) = Doanh thu - GTN đi - Phụ phí đi
-
-      //cách 1: theo công thức
+      // Tổng doanh thu nộp quỹ (BCTC) = Doanh thu - Tổng cước GTN đi - Tổng phụ phí đi
       const totalRevenueFundSubmission =
         revenue - totalOutgoingHomeDeliveryCost - totalOutgoingSurcharge;
-
-      // cách 2:
-      // const totalRevenueFundSubmission = totalNormalDeliveryShippingFee;
 
       const data: IAccountingReportResponse = {
         routes,
