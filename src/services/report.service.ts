@@ -411,8 +411,33 @@ export class ReportService {
         0
       );
 
+      // Tổng cước gtn đi = Tổng cước GTN đi của tất cả các Tuyến (đã thu)
+      const totalPaidOutgoingHomeDeliveryCost = paidDeliveries.reduce(
+        (sum, d) => sum + (d.homeDeliveryCost || 0),
+        0
+      );
+
+      // Tổng phụ phí đi = Tổng Phụ Phí đi của tất cả các tuyến (đã thu)
+      const totalPaidOutgoingSurcharge = paidDeliveries.reduce(
+        (sum, d) => sum + (d.collectForCustomerCost || 0),
+        0
+      );
+
+      // Tổng cước tiền gửi các trạm = tiền gửi thường + tiền gửi nhanh (KHÔNG bao gồm thu hộ giữ)
+      const totalSendCostToStations = routes.reduce(
+        (sum, route) =>
+          sum + route.normalMoneyTransfer.shippingFee + route.expressMoneyTransfer.shippingFee,
+        0
+      );
+
       // Tiền trong tủ = Tổng tiền gửi các trạm + Tổng tiền thu hộ giữ + Tổng thực thu
-      const cashInSafe = totalSendMoneyToStations + totalCollectHoldMoney + totalActualRevenue;
+      const cashInSafe =
+        totalSendMoneyToStations +
+        totalCollectHoldMoney +
+        totalActualRevenue +
+        totalPaidOutgoingHomeDeliveryCost +
+        totalPaidOutgoingSurcharge +
+        totalSendCostToStations;
 
       // Tổng cước gtn đi = Tổng cước GTN đi của tất cả các Tuyến (đã thu + nc)
       const totalOutgoingHomeDeliveryCost = returnDeliveries.reduce(
