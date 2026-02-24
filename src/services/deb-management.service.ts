@@ -901,12 +901,20 @@ export class DebtManagementService {
             mockReq,
             userId
           );
-          const dataDebtManagement = await this.getListReceiptDebtMangement(mockReq, userId);
+          const dataListReceiptDebtManagement = await this.getListReceiptDebtMangement(
+            mockReq,
+            userId
+          );
+          const dataListPaymentDebtManagement = await this.getListPaymentDebtMangement(
+            mockReq,
+            userId
+          );
 
           const result: IExportReportTotalDebtResponse = {
             data: exportReportTotalDebt.data,
             total: exportReportTotalDebt.total,
-            dataDebtManagement: dataDebtManagement.data,
+            dataListReceiptDebtManagement: dataListReceiptDebtManagement.data,
+            dataListPaymentDebtManagement: dataListPaymentDebtManagement.data,
           };
 
           return result;
