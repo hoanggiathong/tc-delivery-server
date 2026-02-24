@@ -1111,9 +1111,14 @@ export class DebtManagementController {
    *                             $ref: '#/components/schemas/ExportTotalDebtRow'
    *                         total:
    *                           $ref: '#/components/schemas/DebtTotal'
-   *                         dataDebtManagement:
+   *                         dataListReceiptDebtManagement:
    *                           type: array
    *                           description: Receipt debt management records for the same date range
+   *                           items:
+   *                             $ref: '#/components/schemas/DebtManagementItem'
+   *                         dataListPaymentDebtManagement:
+   *                           type: array
+   *                           description: Payment debt management records for the same date range
    *                           items:
    *                             $ref: '#/components/schemas/DebtManagementItem'
    *             examples:
@@ -1241,7 +1246,7 @@ export class DebtManagementController {
    *                       surchargeToRoute: 3000
    *                       surchargeFromRoute: 2000
    *                       totalDebt: 250000
-   *                     dataDebtManagement:
+   *                     dataListReceiptDebtManagement:
    *                       - id: "507f1f77bcf86cd799439013"
    *                         fromRoute:
    *                           id: "507f1f77bcf86cd799439011"
@@ -1251,6 +1256,25 @@ export class DebtManagementController {
    *                           name: "Route B"
    *                         content: "TPHCM CK"
    *                         type: "RECEIPT"
+   *                         cash: 50000
+   *                         cashDate: "2024-01-15T10:00:00.000Z"
+   *                         deleted: false
+   *                         createdAt: "2024-01-15T10:00:00.000Z"
+   *                         updatedAt: "2024-01-15T10:00:00.000Z"
+   *                         createdBy:
+   *                           id: "507f1f77bcf86cd799439099"
+   *                           username: "user1"
+   *                           name: "Nguyen Van A"
+   *                     dataListPaymentDebtManagement:
+   *                       - id: "507f1f77bcf86cd799439014"
+   *                         fromRoute:
+   *                           id: "507f1f77bcf86cd799439011"
+   *                           name: "Route A"
+   *                         toRoute:
+   *                           id: "507f1f77bcf86cd799439012"
+   *                           name: "Route B"
+   *                         content: "TPHCM CK"
+   *                         type: "PAYMENT"
    *                         cash: 50000
    *                         cashDate: "2024-01-15T10:00:00.000Z"
    *                         deleted: false
