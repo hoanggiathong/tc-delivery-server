@@ -105,5 +105,6 @@ export interface IExportTotalDebtResponse {
 export interface IExportReportTotalDebtResponse {
   data: IExportTotalDebtRow[];
   total: IDebtTotal;
-  dataDebtManagement: IDebtManagement[];
+  dataListReceiptDebtManagement: IDebtManagement[];
+  dataListPaymentDebtManagement: IDebtManagement[];
 }
