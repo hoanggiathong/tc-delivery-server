@@ -225,7 +225,7 @@ export interface IFrequentMoneyCustomer {
     code: string;
     name: string;
     address?: string;
-    type: RouteType;
+    type?: RouteType;
   };
 }
 
@@ -358,7 +358,6 @@ export interface IMoneyDeliveryCostReportFilter {
     code: string;
     name: string;
     address: string;
-    type: RouteType;
   };
 }
 

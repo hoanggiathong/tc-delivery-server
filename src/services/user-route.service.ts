@@ -113,7 +113,7 @@ export class UserRouteService {
         phone: userRoute.routeId.phone,
         createdAt: userRoute.routeId.createdAt,
         updatedAt: userRoute.updatedAt,
-        type: userRoute.type ?? RouteType.OWNED,
+        type: userRoute.routeId.type ?? RouteType.OWNED,
       },
       assignedByUser: {
         id: userRoute.assignedBy._id,

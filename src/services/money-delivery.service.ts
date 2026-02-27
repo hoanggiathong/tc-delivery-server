@@ -1067,6 +1067,7 @@ export class MoneyDeliveryService {
             code: route.code,
             name: route.name,
             address: route.address || '',
+            type: route.type ?? RouteType.OWNED,
           },
         },
       };

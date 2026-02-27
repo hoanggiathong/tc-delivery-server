@@ -368,6 +368,7 @@ describe('Money Delivery API Integration Tests', () => {
             code: 'T2',
             name: 'Test Route 2',
             address: 'Test Address 2',
+            type: RouteType.OWNED,
           },
           senderName: 'Nguyen Van A',
           senderPhone: '+84123456789',
