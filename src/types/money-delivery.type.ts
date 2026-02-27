@@ -11,7 +11,7 @@ import {
 } from '@/models/money-delivery.model';
 import { IUser } from '@/models/user.model';
 import { IRoute } from '@/models/route.model';
-
+import { RouteType } from '@/types/route.type';
 // Simplified customer info for money delivery response
 export interface IMoneyDeliveryCustomerInfo {
   id: string;
@@ -182,6 +182,7 @@ export interface IMoneyDeliveryLeanPopulated {
     phone?: string;
     createdAt: Date;
     updatedAt: Date;
+    type: RouteType;
   };
   toRoute: {
     _id: string;
@@ -191,6 +192,7 @@ export interface IMoneyDeliveryLeanPopulated {
     phone?: string;
     createdAt: Date;
     updatedAt: Date;
+    type: RouteType;
   };
   sendMoneyAmount: number;
   sendCost: number;
@@ -223,6 +225,7 @@ export interface IFrequentMoneyCustomer {
     code: string;
     name: string;
     address?: string;
+    type: RouteType;
   };
 }
 
@@ -355,6 +358,7 @@ export interface IMoneyDeliveryCostReportFilter {
     code: string;
     name: string;
     address: string;
+    type: RouteType;
   };
 }
 
@@ -416,6 +420,7 @@ export interface ITodayMoneyDeliveryRawItem {
     code: string;
     name: string;
     address: string;
+    type: RouteType;
   };
   sendMoneyAmount: number;
   sendCost: number;
@@ -447,6 +452,7 @@ export interface IMoneyDeliveryCostReportRawItem {
     code: string;
     name: string;
     address: string;
+    type: RouteType;
   };
   sendMoneyAmount: number;
   sendCost: number;
