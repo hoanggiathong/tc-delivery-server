@@ -358,6 +358,7 @@ export interface IMoneyDeliveryCostReportFilter {
     code: string;
     name: string;
     address: string;
+    type: RouteType;
   };
 }
 
