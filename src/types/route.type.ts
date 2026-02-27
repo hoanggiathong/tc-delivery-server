@@ -13,6 +13,7 @@ export interface IRouteResponse extends BaseEntity {
   surcharge?: number;
   surchargeUnit?: SurchargeUnit;
   phone?: string;
+  type: RouteType;
 }
 
 export interface IRouteCreateRequest {
@@ -46,4 +47,10 @@ export interface IRouteLean {
   phone?: string;
   createdAt: Date;
   updatedAt: Date;
+  type?: RouteType;
+}
+
+export enum RouteType {
+  OWNED = 'owned', // Trạm trực thuộc
+  PARTNER = 'partner', // Trạm liên kết
 }

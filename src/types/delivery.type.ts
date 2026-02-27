@@ -387,6 +387,7 @@ export interface ITodayDeliveryItem {
   paymentType?: PaymentType;
   upItems?: string;
   downItems?: string;
+  isReturn?: boolean;
   notes?: string;
   details?: {
     weight?: number;

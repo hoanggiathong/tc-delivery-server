@@ -29,9 +29,10 @@ import {
 } from '@/types/return-delivery.type';
 import { ICustomer, Customer } from '@/models/customer.model';
 import Logger from '@/utils/logger';
-import { PaymentType } from '@/types';
+import { PaymentType, RouteType } from '@/types';
 import { PAYMENT_TYPE } from '@/const/money-deliveries.const';
 import { DELIVERY_IDENTIFIER_PARSE_PATTERN } from '@/utils/validation-patterns';
+import { mergeNotes } from '@/utils/merge-notes';
 
 export class DeliveryService {
   private customerService: CustomerService;
@@ -363,6 +364,21 @@ export class DeliveryService {
       }
       updateData.toRoute = data.toRouteId;
     }
+
+    const newNote = mergeNotes(delivery.notes, data.notes);
+
+    /*
+    const note = data.notes;
+    const existingNotes = typeof delivery.notes === 'string' ? delivery.notes : '';
+    const newNote = existingNotes ? `${note}, ${existingNotes}` : note;
+    */
+    /*const existingCollectForCustomerNote =
+      typeof delivery.collectForCustomerNote === 'string' ? delivery.collectForCustomerNote : '';
+    const newCollectForCustomerNote = existingCollectForCustomerNote
+      ? `${note}, ${existingCollectForCustomerNote}`
+      : note;
+    */
+
     // Use lodash omitBy to filter out undefined values for optional fields
     const optionalFieldsUpdate = omitBy(
       {
@@ -379,9 +395,9 @@ export class DeliveryService {
         collectCost: data.collectCost,
         collectForCustomer: data.collectForCustomer,
         collectForCustomerCost: data.collectForCustomerCost,
-        collectForCustomerNote: data.collectForCustomerNote,
+        collectForCustomerNote: data.notes,
         details: data.details,
-        notes: data.notes,
+        notes: newNote,
         paymentType: data.paymentType,
         isFree: data.isFree,
       },
@@ -615,12 +631,14 @@ export class DeliveryService {
         code: toRoute.code,
         name: toRoute.name,
         address: toRoute.address,
+        type: RouteType.OWNED,
       },
       fromRoute: {
         id: fromRoute._id,
         code: fromRoute.code,
         name: fromRoute.name,
         address: fromRoute.address,
+        type: RouteType.OWNED,
       },
     };
   }
@@ -983,6 +1001,7 @@ export class DeliveryService {
             paymentType: 1,
             upItems: 1,
             downItems: 1,
+            isReturn: 1,
             notes: 1,
             details: 1,
           },
@@ -1027,6 +1046,7 @@ export class DeliveryService {
         paymentType: d.paymentType,
         upItems: d.upItems || undefined,
         downItems: d.downItems || undefined,
+        isReturn: d.isReturn,
         notes: d.notes,
         details: d.details,
         createdAt: d.createdAt,

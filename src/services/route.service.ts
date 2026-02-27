@@ -1,5 +1,5 @@
 import { Route, IRoute } from '@/models/route.model';
-import { IRouteResponse, IRouteLean } from '@/types/route.type';
+import { IRouteResponse, IRouteLean, RouteType } from '@/types/route.type';
 import { CreateRouteRequest, UpdateRouteRequest } from '@/schemas/route.schema';
 import { omitBy, isUndefined } from 'lodash';
 
@@ -19,6 +19,7 @@ export class RouteService {
       phone: route.phone,
       createdAt: route.createdAt,
       updatedAt: route.updatedAt,
+      type: route.type ?? RouteType.OWNED,
     };
   }
 
@@ -37,6 +38,7 @@ export class RouteService {
       phone: route.phone,
       createdAt: route.createdAt,
       updatedAt: route.updatedAt,
+      type: route.type ?? RouteType.OWNED,
     };
   }
 
@@ -55,6 +57,11 @@ export class RouteService {
         code: data.code.toUpperCase(),
         name: data.name,
         address: data.address,
+        distance: data.distance,
+        surcharge: data.surcharge,
+        surchargeUnit: data.surchargeUnit,
+        phone: data.phone,
+        type: data.type ?? RouteType.OWNED,
       });
 
       await newRoute.save();
@@ -86,9 +93,16 @@ export class RouteService {
   /**
    * Get all routes
    */
-  async getAllRoutes(): Promise<IRouteResponse[]> {
+  async getAllRoutes(type?: RouteType): Promise<IRouteResponse[]> {
     try {
-      const routes = await Route.find({}).sort({ createdAt: -1 }).lean();
+      const filter: any = {};
+
+      if (type) {
+        filter.type = type;
+      }
+
+      const routes = await Route.find(filter).sort({ createdAt: -1 }).lean();
+
       return routes.map(route => this.transformRouteLeanToResponse(route as IRouteLean));
     } catch (error) {
       console.error('Error getting all routes:', error);
@@ -139,6 +153,11 @@ export class RouteService {
           code: data.code?.toUpperCase(),
           name: data.name,
           address: data.address,
+          distance: data.distance,
+          surcharge: data.surcharge,
+          surchargeUnit: data.surchargeUnit,
+          phone: data.phone,
+          type: data.type,
         },
         isUndefined
       );

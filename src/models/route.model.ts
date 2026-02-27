@@ -4,7 +4,7 @@ import {
   ROUTE_CODE_PATTERN,
   VALIDATION_MESSAGES,
 } from '@/utils/validation-patterns';
-import { SurchargeUnit } from '@/types/route.type';
+import { SurchargeUnit, RouteType } from '@/types/route.type';
 
 export interface IRoute extends Document {
   _id: string;
@@ -17,6 +17,7 @@ export interface IRoute extends Document {
   phone?: string;
   createdAt: Date;
   updatedAt: Date;
+  type: RouteType;
 }
 
 const routeSchema = new Schema<IRoute>(
