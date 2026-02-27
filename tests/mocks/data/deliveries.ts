@@ -1,6 +1,6 @@
 import { IDeliveryResponse } from '@/types/delivery.type';
 import { SMSStatus } from '@/types/sms-notification.type';
-
+import { RouteType } from '@/types/route.type';
 export const createMockDelivery = (
   overrides: Partial<IDeliveryResponse> = {}
 ): IDeliveryResponse => {
@@ -31,6 +31,7 @@ export const createMockDelivery = (
       name: 'Test Route 1',
       createdAt: new Date('2023-01-01'),
       updatedAt: new Date('2023-01-01'),
+      type: RouteType.OWNED,
     },
     toRoute: {
       id: 'route-id-2',
@@ -39,6 +40,7 @@ export const createMockDelivery = (
       address: 'Test Route 2 Address',
       createdAt: new Date('2023-01-01'),
       updatedAt: new Date('2023-01-01'),
+      type: RouteType.OWNED,
     },
     name: 'Test Package',
     quantity: 1,
@@ -165,6 +167,7 @@ export const mockNextCodeResponseForIntegration = {
     name: 'Ha Noi',
     createdAt: new Date(),
     updatedAt: new Date(),
+    type: RouteType.OWNED,
   },
   fromRoute: {
     id: '507f1f77bcf86cd799439011',
@@ -172,6 +175,7 @@ export const mockNextCodeResponseForIntegration = {
     name: 'Ho Chi Minh',
     createdAt: new Date(),
     updatedAt: new Date(),
+    type: RouteType.OWNED,
   },
 };
 
@@ -201,6 +205,7 @@ export const mockCostReportForIntegration = {
         code: 'T2',
         name: 'Ha Noi',
         address: '456 Ha Noi Street',
+        type: RouteType.OWNED,
       },
       cost: 50000,
       homeDelivery: '123 Street, Ha Noi',
@@ -248,6 +253,7 @@ export const mockCostReportForIntegration = {
         code: 'T3',
         name: 'Ho Chi Minh',
         address: '789 Ho Chi Minh Street',
+        type: RouteType.OWNED,
       },
       cost: 60000,
       homeDelivery: '456 Avenue, Ho Chi Minh',
@@ -280,6 +286,7 @@ export const mockCostReportForIntegration = {
       id: 'route-1',
       code: 'T1',
       name: 'Test Route',
+      type: RouteType.OWNED,
     },
     routeCode: 'T1',
     routeName: 'Test Route',

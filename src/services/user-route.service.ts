@@ -9,7 +9,7 @@ import {
   IRemoveMultipleRoutesRequest,
 } from '@/types/user-route.type';
 import { UserRole } from '@/types/user.type';
-import { IRouteResponse } from '@/types/route.type';
+import { IRouteResponse, RouteType } from '@/types/route.type';
 
 export class UserRouteService {
   /**
@@ -24,6 +24,7 @@ export class UserRouteService {
    * Type assertion helper for populated route objects
    */
   private toPopulatedRoute(route: any): {
+    type: RouteType;
     _id: string;
     code: string;
     name: string;
@@ -65,6 +66,7 @@ export class UserRouteService {
         name: populatedUserRoute.routeId.name,
         createdAt: populatedUserRoute.routeId.createdAt,
         updatedAt: populatedUserRoute.routeId.updatedAt,
+        type: populatedUserRoute.routeId.type ?? RouteType.OWNED,
       },
       assignedByUser: {
         id: populatedUserRoute.assignedBy._id,
@@ -111,6 +113,7 @@ export class UserRouteService {
         phone: userRoute.routeId.phone,
         createdAt: userRoute.routeId.createdAt,
         updatedAt: userRoute.updatedAt,
+        type: userRoute.type ?? RouteType.OWNED,
       },
       assignedByUser: {
         id: userRoute.assignedBy._id,
@@ -321,6 +324,7 @@ export class UserRouteService {
           address: route.address,
           createdAt: route.createdAt,
           updatedAt: route.updatedAt,
+          type: route.type ?? RouteType.OWNED,
         };
       });
     } catch (error) {

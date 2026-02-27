@@ -4,6 +4,7 @@ import {
   MoneyDeliveryType,
   TransferType,
 } from '@/models/money-delivery.model';
+import { RouteType } from '@/types';
 
 export const createMockMoneyDelivery = (
   overrides: Partial<IMoneyDeliveryResponse> = {}
@@ -27,6 +28,7 @@ export const createMockMoneyDelivery = (
       id: 'route-id-1',
       code: 'T1',
       name: 'Test Route 1',
+      type: RouteType.OWNED,
       createdAt: new Date('2023-01-01'),
       updatedAt: new Date('2023-01-01'),
     },
@@ -34,6 +36,7 @@ export const createMockMoneyDelivery = (
       id: 'route-id-2',
       code: 'T2',
       name: 'Test Route 2',
+      type: RouteType.OWNED,
       createdAt: new Date('2023-01-01'),
       updatedAt: new Date('2023-01-01'),
     },
@@ -74,6 +77,7 @@ export const createMockNextCodeResult = (overrides: any = {}) => {
       name: 'Test Route 1',
       createdAt: new Date('2023-01-01'),
       updatedAt: new Date('2023-01-01'),
+      type: RouteType.OWNED,
     },
     fromRoute: {
       id: 'route-id-2',
@@ -81,6 +85,7 @@ export const createMockNextCodeResult = (overrides: any = {}) => {
       name: 'Test Route 2',
       createdAt: new Date('2023-01-01'),
       updatedAt: new Date('2023-01-01'),
+      type: RouteType.OWNED,
     },
     ...overrides,
   };
@@ -127,6 +132,7 @@ export const mockMoneyDeliveryForIntegration = {
     name: 'Test Route 1',
     createdAt: new Date(),
     updatedAt: new Date(),
+    type: RouteType.OWNED,
   },
   toRoute: {
     id: 'route456',
@@ -134,6 +140,7 @@ export const mockMoneyDeliveryForIntegration = {
     name: 'Test Route 2',
     createdAt: new Date(),
     updatedAt: new Date(),
+    type: RouteType.OWNED,
   },
   sendMoneyAmount: 1000000,
   sendCost: 50000,
@@ -161,6 +168,7 @@ export const mockMoneyDeliveryNextCodeResponseForIntegration = {
     name: 'Test Route',
     createdAt: new Date(),
     updatedAt: new Date(),
+    type: RouteType.OWNED,
   },
   fromRoute: {
     id: 'route-id-2',
@@ -168,6 +176,7 @@ export const mockMoneyDeliveryNextCodeResponseForIntegration = {
     name: 'Test Route 2',
     createdAt: new Date(),
     updatedAt: new Date(),
+    type: RouteType.OWNED,
   },
 };
 
@@ -195,6 +204,7 @@ export const mockUpdatedMoneyDeliveryForIntegration = {
     name: 'Test Route 1',
     createdAt: new Date(),
     updatedAt: new Date(),
+    type: RouteType.OWNED,
   },
   toRoute: {
     id: 'route789',
@@ -202,6 +212,7 @@ export const mockUpdatedMoneyDeliveryForIntegration = {
     name: 'Test Route 3',
     createdAt: new Date(),
     updatedAt: new Date(),
+    type: RouteType.OWNED,
   },
   sendMoneyAmount: 2000000,
   sendCost: 75000,
@@ -240,6 +251,7 @@ export const mockMoneyDeliveryWithAlphaRoutes = {
     name: 'Alpha Gamma Route',
     createdAt: new Date(),
     updatedAt: new Date(),
+    type: RouteType.OWNED,
   },
   toRoute: {
     id: 'route015',
@@ -247,6 +259,7 @@ export const mockMoneyDeliveryWithAlphaRoutes = {
     name: 'Beta Charlie Route',
     createdAt: new Date(),
     updatedAt: new Date(),
+    type: RouteType.OWNED,
   },
   sendMoneyAmount: 5000000,
   sendCost: 150000,
@@ -351,6 +364,7 @@ export const mockMoneyDeliveryCostReportForIntegration = {
         code: 'T2',
         name: 'Test Route 2',
         address: '456 Street',
+        type: RouteType.OWNED,
       },
       sendMoneyAmount: 2000000,
       sendCost: 60000,
@@ -379,6 +393,7 @@ export const mockMoneyDeliveryCostReportForIntegration = {
         code: 'T2',
         name: 'Test Route 2',
         address: '456 Street',
+        type: RouteType.OWNED,
       },
       sendMoneyAmount: 1000000,
       sendCost: 30000,
@@ -408,6 +423,7 @@ export const mockMoneyDeliveryCostReportForIntegration = {
         code: 'T2',
         name: 'Test Route 2',
         address: '456 Street',
+        type: RouteType.OWNED,
       },
       sendMoneyAmount: 3000000,
       sendCost: 90000,
@@ -429,6 +445,7 @@ export const mockMoneyDeliveryCostReportForIntegration = {
       code: 'T1',
       name: 'Test Route 1',
       address: '123 Street',
+      type: RouteType.OWNED,
     },
   },
 };

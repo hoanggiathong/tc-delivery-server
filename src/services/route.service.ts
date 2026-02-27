@@ -93,7 +93,7 @@ export class RouteService {
   /**
    * Get all routes
    */
-  async getAllRoutes(type?: RouteType): Promise<IRouteResponse[]> {
+  async getAllRoutes(type: RouteType): Promise<IRouteResponse[]> {
     try {
       const filter: any = {};
 

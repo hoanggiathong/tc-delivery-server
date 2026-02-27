@@ -36,6 +36,7 @@ export interface IUserRouteLean {
 
 // User route with populated references (lean)
 export interface IUserRouteLeanPopulated {
+  type: import('d:/PROJECTS/GIAPHUOCEXPRESS/tc-delivery-server/src/types/route.type').RouteType;
   _id: string;
   userId: {
     _id: string;

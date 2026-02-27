@@ -18,6 +18,7 @@ import {
   mockMoneyDeliveryWithAlphaRoutes,
   mockMoneyDeliveryCostReportForIntegration,
 } from '../mocks';
+import { RouteType } from '@/types/route.type';
 
 // Mock MoneyDeliveryService at module level
 jest.mock('@/services/money-delivery.service');
@@ -123,6 +124,7 @@ describe('Money Delivery API Integration Tests', () => {
           address: 'Test Address 2',
           createdAt: new Date(),
           updatedAt: new Date(),
+          type: RouteType.OWNED,
         },
         toRoute: {
           id: 'route123',
@@ -130,6 +132,7 @@ describe('Money Delivery API Integration Tests', () => {
           name: 'Test Route 1',
           createdAt: new Date(),
           updatedAt: new Date(),
+          type: RouteType.OWNED,
         },
         sendMoneyAmount: 2000000,
         sendCost: 75000,
@@ -616,6 +619,7 @@ describe('Money Delivery API Integration Tests', () => {
             name: 'Da Nang',
             createdAt: new Date('2025-06-27T07:51:17.342Z'),
             updatedAt: new Date('2025-06-27T07:51:17.342Z'),
+            type: RouteType.OWNED,
           },
         };
 
@@ -648,6 +652,7 @@ describe('Money Delivery API Integration Tests', () => {
             name: 'Da Nang',
             createdAt: new Date('2025-06-27T07:51:17.342Z'),
             updatedAt: new Date('2025-06-27T07:51:17.342Z'),
+            type: RouteType.OWNED,
           },
         };
 

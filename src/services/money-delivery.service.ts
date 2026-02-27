@@ -34,6 +34,7 @@ import {
   ITodayMoneyDeliveryItem,
   ITodayMoneyDeliveryReport,
 } from '@/types/money-delivery.type';
+import { RouteType } from '@/types';
 
 export class MoneyDeliveryService {
   private customerService: CustomerService;
@@ -1274,6 +1275,7 @@ export class MoneyDeliveryService {
               phone: moneyDelivery.fromRoute.phone || '',
               createdAt: moneyDelivery.fromRoute.createdAt,
               updatedAt: moneyDelivery.fromRoute.updatedAt,
+              type: moneyDelivery.fromRoute.type ?? RouteType.OWNED,
             },
             toRoute: {
               id: moneyDelivery.toRoute._id.toString(),
@@ -1283,6 +1285,7 @@ export class MoneyDeliveryService {
               phone: moneyDelivery.toRoute.phone || '',
               createdAt: moneyDelivery.toRoute.createdAt,
               updatedAt: moneyDelivery.toRoute.updatedAt,
+              type: moneyDelivery.toRoute.type ?? RouteType.OWNED,
             },
             sendMoneyAmount: moneyDelivery.sendMoneyAmount,
             sendCost: moneyDelivery.sendCost,
@@ -1556,6 +1559,7 @@ export class MoneyDeliveryService {
               phone: moneyDelivery.fromRoute.phone || '',
               createdAt: moneyDelivery.fromRoute.createdAt,
               updatedAt: moneyDelivery.fromRoute.updatedAt,
+              type: moneyDelivery.fromRoute.type ?? RouteType.OWNED,
             },
             toRoute: {
               id: moneyDelivery.toRoute._id.toString(),
@@ -1565,6 +1569,7 @@ export class MoneyDeliveryService {
               phone: moneyDelivery.toRoute.phone || '',
               createdAt: moneyDelivery.toRoute.createdAt,
               updatedAt: moneyDelivery.toRoute.updatedAt,
+              type: moneyDelivery.toRoute.type ?? RouteType.OWNED,
             },
             sendMoneyAmount: moneyDelivery.sendMoneyAmount,
             sendCost: moneyDelivery.sendCost,
