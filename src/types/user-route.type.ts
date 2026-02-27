@@ -1,7 +1,7 @@
 import { BaseEntity } from '.';
 import { IUserResponse } from './user.type';
 import { IRouteResponse } from './route.type';
-
+import { RouteType } from '@/types/route.type';
 // User route response interface
 export interface IUserRouteResponse extends BaseEntity {
   userId: string;
@@ -51,6 +51,7 @@ export interface IUserRouteLeanPopulated {
     phone?: string;
     createdAt: Date;
     updatedAt: Date;
+    type: RouteType;
   };
   assignedBy: {
     _id: string;

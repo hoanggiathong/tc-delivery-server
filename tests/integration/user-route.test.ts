@@ -3,7 +3,7 @@ import app from '@/app';
 import { UserRouteService } from '@/services/user-route.service';
 import { UserRole } from '@/types/user.type';
 import jwt from 'jsonwebtoken';
-
+import { RouteType } from '@/types/route.type';
 // Mock all models and services
 jest.mock('@/models/user.model');
 jest.mock('@/models/route.model');
@@ -42,6 +42,7 @@ describe('User Route Integration Tests', () => {
       name: 'Test Route',
       createdAt: new Date(),
       updatedAt: new Date(),
+      type: RouteType.OWNED,
     },
     assignedByUser: {
       id: '507f1f77bcf86cd799439011',
@@ -62,6 +63,7 @@ describe('User Route Integration Tests', () => {
       name: 'TP.HCM',
       createdAt: new Date(),
       updatedAt: new Date(),
+      type: RouteType.OWNED,
     },
     {
       id: '507f1f77bcf86cd799439015',
@@ -69,6 +71,7 @@ describe('User Route Integration Tests', () => {
       name: 'Long An',
       createdAt: new Date(),
       updatedAt: new Date(),
+      type: RouteType.OWNED,
     },
   ];
 

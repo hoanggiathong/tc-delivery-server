@@ -4,7 +4,7 @@ import {
   PHONE_NUMBER_PATTERN,
   VALIDATION_MESSAGES,
 } from '@/utils/validation-patterns';
-import { SurchargeUnit } from '@/types/route.type';
+import { SurchargeUnit, RouteType } from '@/types/route.type';
 
 export const createRouteSchema = z.object({
   body: z.object({
@@ -28,6 +28,7 @@ export const createRouteSchema = z.object({
       .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
       .trim()
       .optional(),
+    type: z.nativeEnum(RouteType).optional(), // default OWNED
   }),
 });
 
@@ -56,6 +57,7 @@ export const updateRouteSchema = z.object({
         .regex(PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER)
         .trim()
         .optional(),
+      type: z.nativeEnum(RouteType).optional(),
     })
     .refine(
       data =>
@@ -65,7 +67,8 @@ export const updateRouteSchema = z.object({
         data.distance !== undefined ||
         data.surcharge !== undefined ||
         data.surchargeUnit ||
-        data.phone,
+        data.phone ||
+        data.type,
       {
         message: 'At least one field must be provided for update',
       }
