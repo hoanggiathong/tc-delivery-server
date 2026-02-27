@@ -47,7 +47,7 @@ export interface IRouteLean {
   phone?: string;
   createdAt: Date;
   updatedAt: Date;
-  type?: RouteType;
+  type: RouteType;
 }
 
 export enum RouteType {

@@ -631,14 +631,14 @@ export class DeliveryService {
         code: toRoute.code,
         name: toRoute.name,
         address: toRoute.address,
-        type: RouteType.OWNED,
+        type: toRoute.type ?? RouteType.OWNED,
       },
       fromRoute: {
         id: fromRoute._id,
         code: fromRoute.code,
         name: fromRoute.name,
         address: fromRoute.address,
-        type: RouteType.OWNED,
+        type: fromRoute.type ?? RouteType.OWNED,
       },
     };
   }
