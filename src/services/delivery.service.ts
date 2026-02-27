@@ -159,6 +159,7 @@ export class DeliveryService {
         name: delivery.fromRoute.name,
         address: delivery.fromRoute.address,
         phone: delivery.fromRoute.phone,
+        type: delivery.fromRoute.type ?? RouteType.OWNED,
       },
       toRoute: {
         id: delivery.toRoute._id,
@@ -166,6 +167,7 @@ export class DeliveryService {
         name: delivery.toRoute.name,
         address: delivery.toRoute.address,
         phone: delivery.toRoute.phone,
+        type: delivery.toRoute.type ?? RouteType.OWNED,
       },
       name: delivery.name,
       nameProductAndAdditionalInformation: delivery.nameProductAndAdditionalInformation,

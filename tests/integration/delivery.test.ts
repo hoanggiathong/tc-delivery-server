@@ -302,6 +302,7 @@ describe('Delivery Endpoints', () => {
             name: 'Can Tho',
             createdAt: new Date('2025-06-27T07:51:17.342Z'),
             updatedAt: new Date('2025-06-27T07:51:17.342Z'),
+            type: RouteType.OWNED,
           },
           toRoute: {
             id: '507f1f77bcf86cd799439011',
@@ -309,6 +310,7 @@ describe('Delivery Endpoints', () => {
             name: 'Ho Chi Minh',
             createdAt: new Date('2025-06-27T07:51:17.342Z'),
             updatedAt: new Date('2025-06-27T07:51:17.342Z'),
+            type: RouteType.OWNED,
           },
         });
 
@@ -325,6 +327,7 @@ describe('Delivery Endpoints', () => {
             name: 'Da Nang',
             createdAt: new Date('2025-06-27T07:51:17.342Z'),
             updatedAt: new Date('2025-06-27T07:51:17.342Z'),
+            type: RouteType.OWNED,
           },
         });
 
@@ -354,6 +357,7 @@ describe('Delivery Endpoints', () => {
             name: 'Can Tho',
             createdAt: new Date('2025-06-27T07:51:17.342Z'),
             updatedAt: new Date('2025-06-27T07:51:17.342Z'),
+            type: RouteType.OWNED,
           },
           toRoute: {
             id: '507f1f77bcf86cd799439011',
@@ -361,6 +365,7 @@ describe('Delivery Endpoints', () => {
             name: 'Ho Chi Minh',
             createdAt: new Date('2025-06-27T07:51:17.342Z'),
             updatedAt: new Date('2025-06-27T07:51:17.342Z'),
+            type: RouteType.OWNED,
           },
         });
 
@@ -377,6 +382,7 @@ describe('Delivery Endpoints', () => {
             name: 'Da Nang',
             createdAt: new Date('2025-06-27T07:51:17.342Z'),
             updatedAt: new Date('2025-06-27T07:51:17.342Z'),
+            type: RouteType.OWNED,
           },
         });
 
@@ -406,6 +412,7 @@ describe('Delivery Endpoints', () => {
             name: 'Ho Chi Minh',
             createdAt: new Date('2025-06-27T07:51:17.342Z'),
             updatedAt: new Date('2025-06-27T07:51:17.342Z'),
+            type: RouteType.OWNED,
           },
         });
 

@@ -9,6 +9,7 @@ import { IRoute } from '@/models/route.model';
 import { ICustomerBankLean } from '@/models/customer-bank.model';
 import { IReturnDeliveryResponse } from './return-delivery.type';
 import { SMSStatus, SMSType } from './sms-notification.type';
+import { RouteType } from '@/types/route.type';
 
 export enum InventoryType {
   FROM_ROUTE = 'fromRoute',
@@ -248,6 +249,7 @@ export interface IDeliveryLeanPopulated {
     phone?: string;
     createdAt?: Date;
     updatedAt?: Date;
+    type: RouteType.OWNED;
   };
   toRoute: {
     _id: string;
@@ -257,6 +259,7 @@ export interface IDeliveryLeanPopulated {
     phone?: string;
     createdAt?: Date;
     updatedAt?: Date;
+    type: RouteType.OWNED;
   };
   name: string;
   nameProductAndAdditionalInformation?: string;

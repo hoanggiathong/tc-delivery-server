@@ -1,3 +1,4 @@
+import { FilterQuery } from 'mongoose';
 import { Route, IRoute } from '@/models/route.model';
 import { IRouteResponse, IRouteLean, RouteType } from '@/types/route.type';
 import { CreateRouteRequest, UpdateRouteRequest } from '@/schemas/route.schema';
@@ -93,9 +94,9 @@ export class RouteService {
   /**
    * Get all routes
    */
-  async getAllRoutes(type: RouteType): Promise<IRouteResponse[]> {
+  async getAllRoutes(type?: RouteType): Promise<IRouteResponse[]> {
     try {
-      const filter: any = {};
+      const filter: FilterQuery<IRoute> = {};
 
       if (type) {
         filter.type = type;

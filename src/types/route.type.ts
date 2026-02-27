@@ -24,6 +24,7 @@ export interface IRouteCreateRequest {
   surcharge?: number;
   surchargeUnit?: SurchargeUnit;
   phone?: string;
+  type: RouteType;
 }
 
 export interface IRouteUpdateRequest {
@@ -34,6 +35,7 @@ export interface IRouteUpdateRequest {
   surcharge?: number;
   surchargeUnit?: SurchargeUnit;
   phone?: string;
+  type: RouteType;
 }
 
 export interface IRouteLean {

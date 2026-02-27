@@ -168,6 +168,7 @@ describe('Money Delivery API Integration Tests', () => {
         name: 'Test Route 1',
         createdAt: new Date(),
         updatedAt: new Date(),
+        type: RouteType.OWNED,
       },
       toRoute: {
         id: 'route456',
@@ -176,6 +177,7 @@ describe('Money Delivery API Integration Tests', () => {
         address: 'Test Address 2',
         createdAt: new Date(),
         updatedAt: new Date(),
+        type: RouteType.OWNED,
       },
       sendMoneyAmount: 1000000,
       sendCost: 50000,
@@ -198,6 +200,7 @@ describe('Money Delivery API Integration Tests', () => {
           code: 'T2',
           name: 'Test Route 2',
           address: 'Test Address 2',
+          type: RouteType.OWNED,
         },
         senderName: 'Nguyen Van A',
         senderPhone: '+84123456789',
