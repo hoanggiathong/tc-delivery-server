@@ -75,7 +75,7 @@ module.exports = {
       max_memory_restart: '1G',
       health_check_grace_period: 10000,
     },
-    {
+   /* {
       name: 'tc-delivery-sms-queue-prod',
       version: APP_VERSION,
       script: 'dist/cronjob/process-sms-queue.cronjob.js',
@@ -97,7 +97,32 @@ module.exports = {
       max_restarts: 10,
       min_uptime: '10s',
       health_check_grace_period: 10000,
-    },
+    },*/
+    {
+      name: 'tc-delivery-sms-queue-prod',
+      version: APP_VERSION,
+      script: 'dist/cronjob/process-sms-queue.cronjob.js',
+      cwd: './',
+      instances: 1,
+      exec_mode: 'fork',
+
+      cron_restart: '*/1 * * * *',
+
+      env: {
+        NODE_ENV: 'production',
+      },
+      env_file: '.env.production',
+
+      log_file: './logs/sms-queue-prod-combined.log',
+      out_file: './logs/sms-queue-prod-out.log',
+      error_file: './logs/sms-queue-prod-error.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+
+      watch: false,
+      autorestart: false,          // tắt autorestart
+      max_restarts: 0,             // tránh PM2 kill
+      health_check_grace_period: 10000,
+    }
     // ==================== SERVER ====================
     {
       name: 'tc-delivery-server-prod',
