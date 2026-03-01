@@ -75,7 +75,7 @@ module.exports = {
       max_memory_restart: '1G',
       health_check_grace_period: 10000,
     },
-   /* {
+    /* {
       name: 'tc-delivery-sms-queue-prod',
       version: APP_VERSION,
       script: 'dist/cronjob/process-sms-queue.cronjob.js',
@@ -119,10 +119,10 @@ module.exports = {
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
 
       watch: false,
-      autorestart: false,          // tắt autorestart
-      max_restarts: 0,             // tránh PM2 kill
+      autorestart: false, // tắt autorestart
+      max_restarts: 0, // tránh PM2 kill
       health_check_grace_period: 10000,
-    }
+    },
     // ==================== SERVER ====================
     {
       name: 'tc-delivery-server-prod',
