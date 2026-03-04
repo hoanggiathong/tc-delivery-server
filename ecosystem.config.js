@@ -106,8 +106,6 @@ module.exports = {
       instances: 1,
       exec_mode: 'fork',
 
-      cron_restart: '*/1 * * * *',
-
       env: {
         NODE_ENV: 'production',
       },
@@ -119,8 +117,11 @@ module.exports = {
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
 
       watch: false,
-      autorestart: false, // tắt autorestart
-      max_restarts: 0, // tránh PM2 kill
+      autorestart: true,
+      max_memory_restart: '512M',
+      restart_delay: 3000,
+      min_uptime: '10s',
+      max_restarts: 0,
       health_check_grace_period: 10000,
     },
     // ==================== SERVER ====================
