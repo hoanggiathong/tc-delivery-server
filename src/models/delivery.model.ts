@@ -500,15 +500,15 @@ deliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next) {
     // Get current document to merge with updates
     const currentDoc = await this.model.findOne(this.getQuery());
     if (currentDoc) {
-      // const cost = updateFields.cost !== undefined ? updateFields.cost : currentDoc.cost;
-      // const itemCost =
-      //   updateFields.itemCost !== undefined ? updateFields.itemCost : currentDoc.itemCost;
+      const cost = updateFields.cost !== undefined ? updateFields.cost : currentDoc.cost;
+      const itemCost =
+        updateFields.itemCost !== undefined ? updateFields.itemCost : currentDoc.itemCost;
       const collectCost =
         updateFields.collectCost !== undefined ? updateFields.collectCost : currentDoc.collectCost;
-      // const collectForCustomerCost =
-      //   updateFields.collectForCustomerCost !== undefined
-      //     ? updateFields.collectForCustomerCost
-      //     : currentDoc.collectForCustomerCost;
+      const collectForCustomerCost =
+        updateFields.collectForCustomerCost !== undefined
+          ? updateFields.collectForCustomerCost
+          : currentDoc.collectForCustomerCost;
       const collectForCustomer =
         updateFields.collectForCustomer !== undefined
           ? updateFields.collectForCustomer
@@ -555,11 +555,7 @@ deliverySchema.pre(['updateOne', 'findOneAndUpdate'], async function (next) {
       if (isFree || paymentType === 'paid') {
         updateFields.totalCost = 0;
       } else {
-        updateFields.totalCost =
-          (updateFields.cost ?? 0) +
-          (updateFields.itemCost ?? 0) +
-          (updateFields.collectForCustomerCost ?? 0) +
-          (updateFields.homeDeliveryCost ?? 0);
+        updateFields.totalCost = cost + itemCost + collectForCustomerCost + homeDeliveryCost;
       }
 
       // Calculate actualRevenue (totalCost + collectCost + collectForCustomer)
