@@ -390,6 +390,9 @@ export interface ITodayDeliveryItem {
   paymentType?: PaymentType;
   upItems?: string;
   downItems?: string;
+  smsType?: string;
+  timeToSendSMS?: Date;
+  inventory?: string;
   isReturn?: boolean;
   notes?: string;
   details?: {
