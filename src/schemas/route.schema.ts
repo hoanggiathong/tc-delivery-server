@@ -29,6 +29,7 @@ export const createRouteSchema = z.object({
       .trim()
       .optional(),
     type: z.nativeEnum(RouteType).optional(), // default OWNED
+    parentRouteId: z.string().min(1, 'Parent route ID is invalid').nullable().optional(),
   }),
 });
 
@@ -58,6 +59,7 @@ export const updateRouteSchema = z.object({
         .trim()
         .optional(),
       type: z.nativeEnum(RouteType).optional(),
+      parentRouteId: z.string().min(1, 'Parent route ID is invalid').nullable().optional(),
     })
     .refine(
       data =>

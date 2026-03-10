@@ -103,7 +103,11 @@ export class DebtManagementService {
       999
     );
 
-    const fromRouteId = await this.userService.getUserSelectedRouteId(userId);
+    const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
+    const fromRouteRootId = await this.getRootRouteIdNoSession(
+      new Types.ObjectId(String(selectedRouteId))
+    );
+
     let sort: Record<string, 1 | -1> = {};
 
     let typeSortValue: 1 | -1 | undefined = undefined;
@@ -139,14 +143,17 @@ export class DebtManagementService {
 
     try {
       const matchStage: Record<string, unknown> = {
-        fromRoute: new Types.ObjectId(fromRouteId),
+        fromRoute: fromRouteRootId,
         type: DEBT_MANAGEMENT_TYPE.PAYMENT,
         createdAt: { $gte: start, $lte: endOfDay },
         deleted: false,
       };
 
       if (toRouteId) {
-        matchStage.toRoute = new Types.ObjectId(String(toRouteId));
+        const toRouteRootId = await this.getRootRouteIdNoSession(
+          new Types.ObjectId(String(toRouteId))
+        );
+        matchStage.toRoute = toRouteRootId;
       }
 
       const pipeline = [
@@ -252,7 +259,11 @@ export class DebtManagementService {
       999
     );
 
-    const toRouteId = await this.userService.getUserSelectedRouteId(userId);
+    const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
+    const toRouteRootId = await this.getRootRouteIdNoSession(
+      new Types.ObjectId(String(selectedRouteId))
+    );
+
     let sort: Record<string, 1 | -1> = {};
 
     let typeSortValue: 1 | -1 | undefined = undefined;
@@ -287,17 +298,18 @@ export class DebtManagementService {
     }
 
     try {
-      const toRouteIdObj = new Types.ObjectId(toRouteId);
-
       const matchStage: Record<string, unknown> = {
-        toRoute: toRouteIdObj,
+        toRoute: toRouteRootId,
         type: DEBT_MANAGEMENT_TYPE.RECEIPT,
-        cashDate: { $gte: start, $lte: endOfDay },
+        createdAt: { $gte: start, $lte: endOfDay },
         deleted: false,
       };
 
       if (fromRouteId) {
-        matchStage.fromRoute = new Types.ObjectId(String(fromRouteId));
+        const fromRouteRootId = await this.getRootRouteIdNoSession(
+          new Types.ObjectId(String(fromRouteId))
+        );
+        matchStage.fromRoute = fromRouteRootId;
       }
 
       const pipeline = [
@@ -576,11 +588,17 @@ export class DebtManagementService {
     session.startTransaction();
 
     try {
-      const toRouteId = await this.userService.getUserSelectedRouteId(userId);
+      const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
+
+      const fromRouteIdObjRaw = new Types.ObjectId(String(data.fromRoute));
+      const toRouteIdObjRaw = new Types.ObjectId(String(selectedRouteId));
+
+      const fromRouteIdObj = await this.getRootRouteId(fromRouteIdObjRaw, session);
+      const toRouteIdObj = await this.getRootRouteId(toRouteIdObjRaw, session);
 
       const [fromRoute, toRoute] = await Promise.all([
-        Route.findById(data.fromRoute),
-        Route.findById(toRouteId),
+        Route.findById(fromRouteIdObj).session(session),
+        Route.findById(toRouteIdObj).session(session),
       ]);
 
       if (!fromRoute) {
@@ -591,16 +609,13 @@ export class DebtManagementService {
         throw new Error('To route not found');
       }
 
-      if (data.fromRoute.toString() === toRouteId.toString()) {
+      if (fromRouteIdObj.equals(toRouteIdObj)) {
         throw new Error('Cannot create debt management for the same route');
       }
 
-      const fromRouteIdObj = new Types.ObjectId(String(data.fromRoute));
-      const toRouteIdObj = new Types.ObjectId(String(toRouteId));
-
       const receiptDebtManagement = new DebtManagement({
-        fromRoute: data.fromRoute,
-        toRoute: toRouteId,
+        fromRoute: fromRouteIdObj,
+        toRoute: toRouteIdObj,
         cash: data.cash,
         cashDate: data.cashDate,
         content: data.content,
@@ -609,8 +624,8 @@ export class DebtManagementService {
       });
 
       const paymentDebtManagement = new DebtManagement({
-        fromRoute: data.fromRoute,
-        toRoute: toRouteId,
+        fromRoute: fromRouteIdObj,
+        toRoute: toRouteIdObj,
         cash: data.cash,
         cashDate: data.cashDate,
         content: data.content,
@@ -632,7 +647,7 @@ export class DebtManagementService {
       );
 
       await this.debtReportService.updateDebtReport(
-        toRouteId,
+        String(toRouteIdObj),
         dateDebtExact,
         data.cash,
         session,
@@ -641,7 +656,7 @@ export class DebtManagementService {
       );
 
       await this.debtReportService.updateDebtReport(
-        data.fromRoute,
+        String(fromRouteIdObj),
         dateDebtExact,
         data.cash,
         session,
@@ -669,13 +684,13 @@ export class DebtManagementService {
         const toRouteNameValue = (toRouteObj as { name?: string })?.name || '';
 
         return {
-          id: populatedResult._id,
+          id: String(populatedResult._id),
           fromRoute: {
-            id: fromRouteIdValue,
+            id: String(fromRouteIdValue),
             name: fromRouteNameValue,
           },
           toRoute: {
-            id: toRouteIdValue,
+            id: String(toRouteIdValue),
             name: toRouteNameValue,
           },
           content: populatedResult.content,
@@ -687,7 +702,7 @@ export class DebtManagementService {
           updatedAt: populatedResult.updatedAt,
           deletedAt: populatedResult.deletedAt,
           __v: populatedResult.__v,
-        } as IDebtManagement;
+        };
       };
 
       return [transformDebtManagement(receiptResult), transformDebtManagement(paymentResult)];
@@ -771,6 +786,7 @@ export class DebtManagementService {
       throw new Error('Debt pair pivot -> target not found');
     }
 
+    /*
     const sourceToPivotDebt = Math.max(0, sourcePivotPair.currentDebt1.receivable ?? 0);
     const pivotToTargetDebt = Math.max(0, pivotTargetPair.currentDebt1.receivable ?? 0);
 
@@ -789,6 +805,7 @@ export class DebtManagementService {
     if (cash > pivotToTargetDebt) {
       throw new Error(`Clearing amount exceeds pivot -> target debt (${pivotToTargetDebt})`);
     }
+    */
   }
 
   async createDebtClearing(
@@ -1064,7 +1081,7 @@ export class DebtManagementService {
       const matchStage: Record<string, unknown> = {
         pivotRoute: pivotRouteId,
         type: DEBT_MANAGEMENT_TYPE.CLEARING,
-        cashDate: { $gte: start, $lte: endOfDay },
+        createdAt: { $gte: start, $lte: endOfDay },
         deleted: false,
       };
 

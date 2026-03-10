@@ -15,6 +15,7 @@ export interface IRouteResponse extends BaseEntity {
   surchargeUnit?: SurchargeUnit;
   phone?: string;
   type: RouteType;
+  parentRouteId?: string | null;
 }
 
 export interface IRouteCreateRequest {

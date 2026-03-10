@@ -40,6 +40,7 @@ export class RouteService {
       createdAt: route.createdAt,
       updatedAt: route.updatedAt,
       type: route.type ?? RouteType.OWNED,
+      parentRouteId: route.parentRouteId ? route.parentRouteId.toString() : null,
     };
   }
 
@@ -63,6 +64,7 @@ export class RouteService {
         surchargeUnit: data.surchargeUnit,
         phone: data.phone,
         type: data.type ?? RouteType.OWNED,
+        parentRouteId: data.parentRouteId ?? null,
       });
 
       await newRoute.save();
