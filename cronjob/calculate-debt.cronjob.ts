@@ -10,6 +10,7 @@ const envFile =
     : process.env.NODE_ENV === 'production'
       ? '.env.production'
       : '.env';
+
 config({ path: path.resolve(process.cwd(), envFile) });
 
 import mongoose from 'mongoose';
@@ -18,6 +19,19 @@ import { CronLogService } from '../src/services/cron-log.service';
 import { DebtReportService } from '../src/services/debt-report.service';
 import { APP_VERSION, BUILD_TIME } from '../src/version';
 
+function getTodayKeyVn(): string {
+  const VN_UTC_OFFSET_HOURS = 7;
+  const now = new Date();
+  const vnMs = now.getTime() + VN_UTC_OFFSET_HOURS * 60 * 60 * 1000;
+  const vnDate = new Date(vnMs);
+
+  const y = vnDate.getUTCFullYear();
+  const m = vnDate.getUTCMonth();
+  const d = vnDate.getUTCDate();
+
+  return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
 async function main() {
   console.log(`[Debt Cronjob] Version: ${APP_VERSION} | Build: ${BUILD_TIME}`);
 
@@ -25,17 +39,6 @@ async function main() {
   if (!uri) {
     console.error('Missing MONGODB_URI');
     process.exit(2);
-  }
-
-  function getTodayKeyVn(): string {
-    const VN_UTC_OFFSET_HOURS = 7;
-    const now = new Date();
-    const vnMs = now.getTime() + VN_UTC_OFFSET_HOURS * 60 * 60 * 1000;
-    const vnDate = new Date(vnMs);
-    const y = vnDate.getUTCFullYear();
-    const m = vnDate.getUTCMonth();
-    const d = vnDate.getUTCDate();
-    return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
   }
 
   const key = `Calculate-debt-${getTodayKeyVn()}`;
@@ -52,32 +55,29 @@ async function main() {
     const isRun = await CronLogService.isSuccess(key);
     if (isRun) {
       console.log(`Cronjob calculate debt already run success for this date: ${key}`);
-      await mongoose.disconnect();
       return;
     }
 
     await CronLogService.start(key, 'Calculate debt cronjob');
+
     await cronjobService.cronjobCalculateDebt();
     await debtReportService.generateDebtReport();
+
     await CronLogService.success(key);
-    await mongoose.disconnect();
+    console.log(`Cronjob calculate debt success: ${key}`);
   } catch (error) {
-    console.log(`Error calculate debt cron-job [${key}]:`, error);
+    console.error(`Error calculate debt cron-job [${key}]:`, error);
     const errorMessage = error instanceof Error ? error.message : String(error);
-    await CronLogService.fail(key, String(errorMessage));
-    await mongoose.disconnect();
+    await CronLogService.fail(key, errorMessage);
     throw error;
+  } finally {
+    await mongoose.disconnect();
   }
 }
 
 main()
   .then(() => process.exit(0))
-  .catch(async e => {
-    console.error(e);
-    try {
-      await mongoose.disconnect();
-    } catch {
-      // ignore
-    }
+  .catch(error => {
+    console.error(error);
     process.exit(1);
   });

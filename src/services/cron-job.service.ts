@@ -222,7 +222,10 @@ export class CronjobService {
           );
         }
 
-        const dateKey = `${newDayVn.year}-${newDayVn.month + 1}-${newDayVn.date}`;
+        //const dateKey = `${newDayVn.year}-${newDayVn.month + 1}-${newDayVn.date}`;
+        const dateKey = `${newDayVn.year}-${String(newDayVn.month + 1).padStart(2, '0')}-${String(
+          newDayVn.date
+        ).padStart(2, '0')}`;
 
         if (!skipLock) {
           const lockRes = await mongoose.connection

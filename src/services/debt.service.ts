@@ -19,6 +19,11 @@ import { PipelineStage, Types } from 'mongoose';
 import { DebtReportService } from './debt-report.service';
 import { UserService } from './user.service';
 import { Route } from '@/models/route.model';
+
+type RouteLean = {
+  _id: Types.ObjectId;
+  parentRouteId?: Types.ObjectId | null;
+};
 /**
  * For a VN calendar day (year, month, date), return the UTC dateDebt value.
  * Same convention as cron-job: debt for VN day D has dateDebt = 17:00 UTC on previous UTC day.
@@ -36,21 +41,27 @@ export class DebtService {
   }
 
   private async getRootRouteId(routeId: string): Promise<string> {
-    let current = await Route.findById(routeId).lean();
+    let current: RouteLean | null = await Route.findById(routeId)
+      .select('_id parentRouteId')
+      .lean<RouteLean | null>();
 
     if (!current) {
-      throw new Error('Route not found');
+      throw new Error(`Route not found: ${routeId}`);
     }
 
     while (current.parentRouteId) {
-      const parent = await Route.findById(current.parentRouteId).lean();
+      const parent: RouteLean | null = await Route.findById(current.parentRouteId)
+        .select('_id parentRouteId')
+        .lean<RouteLean | null>();
+
       if (!parent) {
         break;
       }
+
       current = parent;
     }
 
-    return String(current._id);
+    return current._id.toString();
   }
 
   async getListDebt(req: Request, userId: string): Promise<IGetListDebtResponse> {

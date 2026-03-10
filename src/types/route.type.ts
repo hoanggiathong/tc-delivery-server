@@ -1,4 +1,5 @@
 import { BaseEntity } from '.';
+import { Types } from 'mongoose';
 
 export enum SurchargeUnit {
   PERCENTAGE = 'percentage',
@@ -39,7 +40,7 @@ export interface IRouteUpdateRequest {
 }
 
 export interface IRouteLean {
-  _id: string;
+  _id: Types.ObjectId;
   code: string;
   name: string;
   address?: string;
@@ -50,6 +51,7 @@ export interface IRouteLean {
   createdAt: Date;
   updatedAt: Date;
   type: RouteType;
+  parentRouteId?: Types.ObjectId | null;
 }
 
 export enum RouteType {

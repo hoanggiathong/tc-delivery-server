@@ -80,11 +80,12 @@ export class RouteService {
    */
   async getRouteById(id: string): Promise<IRouteResponse | null> {
     try {
-      const route = await Route.findById(id).lean();
+      const route = await Route.findById(id).lean<IRouteLean>();
       if (!route) {
         return null;
       }
-      return this.transformRouteLeanToResponse(route as IRouteLean);
+
+      return this.transformRouteLeanToResponse(route);
     } catch (error) {
       console.error('Error getting route by ID:', error);
       throw new Error('Failed to get route by ID');
