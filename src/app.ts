@@ -53,7 +53,7 @@ if (process.env.NODE_ENV === 'development') {
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // Swagger documentation - setup with dynamic spec to avoid cache
 app.use('/api-docs', swaggerUi.serve);
