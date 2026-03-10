@@ -133,13 +133,53 @@ export const createDebtManagementSchema = z.object({
       .min(1, 'From route ID is required')
       .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
       .trim(),
-    cash: z.number().min(0, 'Cash amount must be positive'),
+    cash: z.number().positive('Cash amount must be greater than 0'),
     cashDate: z
       .string()
       .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid cash date in ISO format')
       .transform(val => new Date(val)),
   }),
 });
+
+export const createDebtClearingSchema = z.object({
+  body: z
+    .object({
+      content: z
+        .string()
+        .min(1, 'content is required')
+        .max(100, 'content must not exceed 100 characters')
+        .trim(),
+
+      fromRoute: z
+        .string()
+        .min(1, 'From route ID is required')
+        .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
+        .trim(),
+
+      toRoute: z
+        .string()
+        .min(1, 'To route ID is required')
+        .regex(OBJECTID_PATTERN, VALIDATION_MESSAGES.OBJECTID)
+        .trim(),
+
+      cash: z.number().positive('Cash amount must be greater than 0'),
+
+      cashDate: z
+        .string()
+        .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid cash date in ISO format')
+        .transform(val => new Date(val)),
+    })
+    .superRefine((data, ctx) => {
+      if (data.fromRoute === data.toRoute) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['toRoute'],
+          message: 'fromRoute and toRoute must be different',
+        });
+      }
+    }),
+});
+
 export type CreateDebtManagementRequest = z.infer<typeof createDebtManagementSchema>['body'];
 
 // Schema for export report debt and debt management

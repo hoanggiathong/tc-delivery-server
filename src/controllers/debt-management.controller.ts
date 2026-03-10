@@ -807,6 +807,153 @@ export class DebtManagementController {
 
   /**
    * @swagger
+   * /api/debt-management/create-clearing:
+   *   post:
+   *     summary: Create debt clearing slip (phiếu gặt)
+   *     description: |
+   *       Tạo phiếu gặt công nợ qua trạm hiện tại đang chọn.
+   *       Ví dụ:
+   *       - TM nợ TA 20k
+   *       - TA nợ TP 20k
+   *       => Gặt TM qua TP
+   *       => TM sẽ nợ TP 20k, TA hết nợ TP, TM hết nợ TA
+   *
+   *       Trong request:
+   *       - fromRoute = TM
+   *       - toRoute = TP
+   *       - route đang chọn của user = TA (trạm trung gian/pivot)
+   *     tags:
+   *       - Debt Management
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - fromRoute
+   *               - toRoute
+   *               - cash
+   *               - cashDate
+   *               - content
+   *             properties:
+   *               fromRoute:
+   *                 type: string
+   *                 example: "507f1f77bcf86cd799439011"
+   *               toRoute:
+   *                 type: string
+   *                 example: "507f1f77bcf86cd799439012"
+   *               cash:
+   *                 type: number
+   *                 minimum: 1
+   *                 example: 20000
+   *               cashDate:
+   *                 type: string
+   *                 format: date-time
+   *                 example: "2026-03-09T08:30:00.000Z"
+   *               content:
+   *                 type: string
+   *                 example: "Gặt TM qua TP"
+   *     responses:
+   *       201:
+   *         description: create debt clearing successful
+   *       400:
+   *         description: validation error
+   *       401:
+   *         description: unauthorized
+   *       404:
+   *         description: route/debt not found
+   *       500:
+   *         description: internal server error
+   */
+  createDebtClearing = async (request: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!request.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const debtClearing = await this.debtManagementService.createDebtClearing(
+        request.body,
+        request.user.userId
+      );
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'create debt clearing successful',
+        data: {
+          data: debtClearing,
+        },
+      };
+
+      res.status(201).json(response);
+    } catch (error) {
+      logger.error('create debt clearing error:', error);
+
+      const message = error instanceof Error ? error.message : 'create debt clearing failed';
+
+      let statusCode = 500;
+      if (message.includes('not found')) {
+        statusCode = 404;
+      } else if (
+        message.includes('validation') ||
+        message.includes('invalid') ||
+        message.includes('different')
+      ) {
+        statusCode = 400;
+      }
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(statusCode).json(response);
+    }
+  };
+
+  getListClearingDebtManagement = async (
+    request: AuthRequest,
+    response: Response
+  ): Promise<void> => {
+    try {
+      if (!request.user) {
+        response.status(401).json({
+          success: false,
+          message: 'Unauthorized',
+        });
+        return;
+      }
+
+      const result = await this.debtManagementService.getListClearingDebtManagement(
+        request,
+        request.user.userId
+      );
+
+      response.status(200).json({
+        success: true,
+        message: 'Get list clearing debt management successful',
+        data: result,
+      });
+    } catch (error) {
+      logger.error('get list clearing debt management error:', error);
+
+      response.status(500).json({
+        success: false,
+        message:
+          error instanceof Error ? error.message : 'get list clearing debt management failed',
+      });
+    }
+  };
+
+  /**
+   * @swagger
    * /api/debt-management/{id}:
    *   put:
    *     summary: Delete debt management by ID

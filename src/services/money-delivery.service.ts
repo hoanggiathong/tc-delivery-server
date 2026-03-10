@@ -95,7 +95,7 @@ export class MoneyDeliveryService {
         phone: populated.receiver.phone,
       },
       fromRoute: {
-        id: populated.fromRoute._id,
+        id: String(populated.fromRoute._id),
         code: populated.fromRoute.code,
         name: populated.fromRoute.name,
         address: populated.fromRoute.address,
@@ -105,7 +105,7 @@ export class MoneyDeliveryService {
         type: populated.fromRoute.type ?? RouteType.OWNED,
       },
       toRoute: {
-        id: populated.toRoute._id,
+        id: String(populated.toRoute._id),
         code: populated.toRoute.code,
         name: populated.toRoute.name,
         address: populated.toRoute.address,
@@ -480,7 +480,7 @@ export class MoneyDeliveryService {
       fullCode: codeData.fullCode,
       subCode: codeData.subCode,
       toRoute: {
-        id: toRoute._id,
+        id: String(toRoute._id),
         code: toRoute.code,
         name: toRoute.name,
         address: toRoute.address,
@@ -489,7 +489,7 @@ export class MoneyDeliveryService {
         type: toRoute.type ?? RouteType.OWNED,
       },
       fromRoute: {
-        id: fromRoute._id,
+        id: String(fromRoute._id),
         code: fromRoute.code,
         name: fromRoute.name,
         address: fromRoute.address,

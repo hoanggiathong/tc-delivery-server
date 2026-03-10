@@ -42,6 +42,26 @@ function vnDatePrev(
   };
 }
 
+type GroupedDebtReport = {
+  toRoute: mongoose.Types.ObjectId;
+  openingBalance: number;
+  costFromRoute: number;
+  feeCODToRoute: number;
+  costToRoute: number;
+  feeCODFromRoute: number;
+  accountPayable: number;
+  receivable: number;
+  homeDeliveryFromRoute: number;
+  homeDeliveryToRoute: number;
+  surchargeToRoute: number;
+  surchargeFromRoute: number;
+  revenueHomeDelivery: number;
+  revenueSurcharge: number;
+  revenueTotal: number;
+  totalDebt: number;
+  dateDebtReport?: Date;
+};
+
 export class DebtReportService {
   /**
    * Generate debt report for "old day" and "new day" in VN timezone (same logic as debt cronjob).
@@ -91,29 +111,7 @@ export class DebtReportService {
         .setOptions({ readConcern: { level: 'majority' } });
       const debts = await (session ? debtQuery.session(session).lean() : debtQuery.lean());
 
-      if (debts.length === 0) {
-        return;
-      }
-
-      const groupedDebts = new Map<
-        string,
-        {
-          toRoute: mongoose.Types.ObjectId;
-          openingBalance: number;
-          costFromRoute: number;
-          feeCODToRoute: number;
-          costToRoute: number;
-          feeCODFromRoute: number;
-          accountPayable: number;
-          receivable: number;
-          homeDeliveryFromRoute: number;
-          homeDeliveryToRoute: number;
-          surchargeToRoute: number;
-          surchargeFromRoute: number;
-          totalDebt: number;
-          dateDebtReport: Date;
-        }
-      >();
+      const groupedDebts = new Map<string, GroupedDebtReport>();
 
       for (const debt of debts) {
         const toRouteObjId =
@@ -136,6 +134,9 @@ export class DebtReportService {
             homeDeliveryToRoute: 0,
             surchargeToRoute: 0,
             surchargeFromRoute: 0,
+            revenueHomeDelivery: 0,
+            revenueSurcharge: 0,
+            revenueTotal: 0,
             totalDebt: 0,
             dateDebtReport: new Date(dateDebtExact.getTime()),
           });
@@ -145,6 +146,7 @@ export class DebtReportService {
         if (!grouped) {
           continue;
         }
+
         grouped.openingBalance += debt.openingBalance ?? 0;
         grouped.costFromRoute += debt.costFromRoute ?? 0;
         grouped.feeCODToRoute += debt.feeCODToRoute ?? 0;
@@ -156,6 +158,9 @@ export class DebtReportService {
         grouped.homeDeliveryToRoute += debt.homeDeliveryToRoute ?? 0;
         grouped.surchargeToRoute += debt.surchargeToRoute ?? 0;
         grouped.surchargeFromRoute += debt.surchargeFromRoute ?? 0;
+        grouped.revenueHomeDelivery += debt.revenueHomeDelivery ?? 0;
+        grouped.revenueSurcharge += debt.revenueSurcharge ?? 0;
+        grouped.revenueTotal += debt.revenueTotal ?? 0;
         grouped.totalDebt += debt.totalDebt ?? 0;
       }
 
@@ -189,7 +194,7 @@ export class DebtReportService {
         }
         throw new Error('Generate debt report failed');
       } finally {
-        session.endSession();
+        await session.endSession();
       }
     } else {
       await doWork();
@@ -215,28 +220,7 @@ export class DebtReportService {
         .setOptions({ readConcern: { level: 'majority' } });
       const debts = await (session ? debtQuery.session(session).lean() : debtQuery.lean());
 
-      if (debts.length === 0) {
-        return;
-      }
-
-      const groupedDebts = new Map<
-        string,
-        {
-          toRoute: mongoose.Types.ObjectId;
-          openingBalance: number;
-          costFromRoute: number;
-          feeCODToRoute: number;
-          costToRoute: number;
-          feeCODFromRoute: number;
-          accountPayable: number;
-          receivable: number;
-          homeDeliveryFromRoute: number;
-          homeDeliveryToRoute: number;
-          surchargeToRoute: number;
-          surchargeFromRoute: number;
-          totalDebt: number;
-        }
-      >();
+      const groupedDebts = new Map<string, GroupedDebtReport>();
 
       for (const debt of debts) {
         const toRouteObjId =
@@ -259,6 +243,9 @@ export class DebtReportService {
             homeDeliveryToRoute: 0,
             surchargeToRoute: 0,
             surchargeFromRoute: 0,
+            revenueHomeDelivery: 0,
+            revenueSurcharge: 0,
+            revenueTotal: 0,
             totalDebt: 0,
           });
         }
@@ -267,6 +254,7 @@ export class DebtReportService {
         if (!grouped) {
           continue;
         }
+
         grouped.openingBalance += debt.openingBalance ?? 0;
         grouped.costFromRoute += debt.costFromRoute ?? 0;
         grouped.feeCODToRoute += debt.feeCODToRoute ?? 0;
@@ -278,12 +266,16 @@ export class DebtReportService {
         grouped.homeDeliveryToRoute += debt.homeDeliveryToRoute ?? 0;
         grouped.surchargeToRoute += debt.surchargeToRoute ?? 0;
         grouped.surchargeFromRoute += debt.surchargeFromRoute ?? 0;
+        grouped.revenueHomeDelivery += debt.revenueHomeDelivery ?? 0;
+        grouped.revenueSurcharge += debt.revenueSurcharge ?? 0;
+        grouped.revenueTotal += debt.revenueTotal ?? 0;
         grouped.totalDebt += debt.totalDebt ?? 0;
       }
 
       const now = new Date();
       const reportFilter = dateDebtQueryRange(dateDebtExact);
 
+      // update những report đã có hoặc tạo mới nếu thiếu
       for (const grouped of groupedDebts.values()) {
         const updateOp = DebtReport.updateOne(
           {
@@ -303,10 +295,19 @@ export class DebtReportService {
               homeDeliveryToRoute: grouped.homeDeliveryToRoute,
               surchargeToRoute: grouped.surchargeToRoute,
               surchargeFromRoute: grouped.surchargeFromRoute,
+              revenueHomeDelivery: grouped.revenueHomeDelivery,
+              revenueSurcharge: grouped.revenueSurcharge,
+              revenueTotal: grouped.revenueTotal,
               totalDebt: grouped.totalDebt,
               updatedAt: now,
             },
-          }
+            $setOnInsert: {
+              toRoute: grouped.toRoute,
+              dateDebtReport: new Date(dateDebtExact.getTime()),
+              createdAt: now,
+            },
+          },
+          { upsert: true }
         );
         await (session ? updateOp.session(session) : updateOp);
       }
@@ -325,7 +326,7 @@ export class DebtReportService {
         }
         throw new Error('Update debt report for VN day failed');
       } finally {
-        session.endSession();
+        await session.endSession();
       }
     } else {
       await doWork();
@@ -351,13 +352,11 @@ export class DebtReportService {
     updateReceivable?: boolean
   ): Promise<IDebtReport | null> {
     try {
-      // Convert toRoute to ObjectId if it's a string
       const toRouteObjId =
         toRoute instanceof mongoose.Types.ObjectId
           ? toRoute
           : new mongoose.Types.ObjectId(String(toRoute));
 
-      // Calculate start and end of day for createdAt
       const startOfDay = new Date(
         dateDebtReport.getFullYear(),
         dateDebtReport.getMonth(),
@@ -377,7 +376,6 @@ export class DebtReportService {
         999
       );
 
-      // Find the debt report first to calculate totalDebt correctly
       const debtReport = await DebtReport.findOne({
         toRoute: toRouteObjId,
         dateDebtReport: {
@@ -392,7 +390,6 @@ export class DebtReportService {
         return null;
       }
 
-      // Calculate new values
       const newAccountPayable = updateAccountPayable
         ? (debtReport.accountPayable ?? 0) + cash
         : (debtReport.accountPayable ?? 0);
@@ -400,23 +397,23 @@ export class DebtReportService {
         ? (debtReport.receivable ?? 0) + cash
         : (debtReport.receivable ?? 0);
 
-      // Calculate totalDebt using the correct formula:
-      // totalDebt = (costFromRoute + feeCODToRoute + homeDeliveryFromRoute + surchargeFromRoute + receivable)
-      //           - (costToRoute + feeCODFromRoute + homeDeliveryToRoute +  surchargeToRoute + accountPayable)
-      //           + openingBalance
+      // totalDebt của report phải cộng thêm revenueTotal
       const A =
         (debtReport.costFromRoute ?? 0) +
         (debtReport.feeCODToRoute ?? 0) +
         (debtReport.homeDeliveryFromRoute ?? 0) +
         (debtReport.surchargeFromRoute ?? 0) +
         newReceivable;
+
       const B =
         (debtReport.costToRoute ?? 0) +
         (debtReport.feeCODFromRoute ?? 0) +
         (debtReport.homeDeliveryToRoute ?? 0) +
         (debtReport.surchargeToRoute ?? 0) +
         newAccountPayable;
-      const newTotalDebt = A - B + (debtReport.openingBalance ?? 0);
+
+      const newTotalDebt =
+        A - B + (debtReport.openingBalance ?? 0) + (debtReport.revenueTotal ?? 0);
 
       const updateQuery: mongoose.UpdateQuery<IDebtReport> = {
         $set: {
@@ -427,7 +424,6 @@ export class DebtReportService {
         },
       };
 
-      // Find and update debt report
       const options: mongoose.QueryOptions = {
         new: true,
         runValidators: true,
@@ -461,8 +457,8 @@ export class DebtReportService {
   /**
    * Get debt reports by toRoute and date range, then calculate total
    * @param toRouteId - ObjectId or string of the toRoute
-   * @param startDate - Start date (will be set to start of day)
-   * @param endDate - End date (will be set to end of day)
+   * @param startDate - Start date
+   * @param endDate - End date
    * @returns Total of all debt report fields
    */
   async getDebtReportTotal(
@@ -471,17 +467,14 @@ export class DebtReportService {
     endDate: Date
   ): Promise<IDebtTotal> {
     try {
-      // Convert toRouteId to ObjectId if it's a string
       const toRouteObjId =
         toRouteId instanceof mongoose.Types.ObjectId
           ? toRouteId
           : new mongoose.Types.ObjectId(String(toRouteId));
 
-      // Set start date to start of day
       const start = new Date(startDate);
       start.setHours(0, 0, 0, 0);
 
-      // Set end date to end of day
       const endOfDay = new Date(endDate);
       endOfDay.setHours(23, 59, 59, 999);
 
@@ -492,8 +485,23 @@ export class DebtReportService {
 
       const debtReports = await DebtReport.find(where).lean();
 
-      // Initialize total object
-      const total = {
+      const total: {
+        openingBalance: number;
+        costFromRoute: number;
+        feeCODToRoute: number;
+        costToRoute: number;
+        feeCODFromRoute: number;
+        accountPayable: number;
+        receivable: number;
+        homeDeliveryFromRoute: number;
+        homeDeliveryToRoute: number;
+        surchargeToRoute: number;
+        surchargeFromRoute: number;
+        revenueHomeDelivery: number;
+        revenueSurcharge: number;
+        revenueTotal: number;
+        totalDebt: number;
+      } = {
         openingBalance: 0,
         costFromRoute: 0,
         feeCODToRoute: 0,
@@ -505,10 +513,12 @@ export class DebtReportService {
         homeDeliveryToRoute: 0,
         surchargeToRoute: 0,
         surchargeFromRoute: 0,
+        revenueHomeDelivery: 0,
+        revenueSurcharge: 0,
+        revenueTotal: 0,
         totalDebt: 0,
       };
 
-      // Sum all fields from debt reports (each report is already a daily total)
       for (const debtReport of debtReports) {
         total.openingBalance += debtReport.openingBalance ?? 0;
         total.costFromRoute += debtReport.costFromRoute ?? 0;
@@ -521,10 +531,13 @@ export class DebtReportService {
         total.homeDeliveryToRoute += debtReport.homeDeliveryToRoute ?? 0;
         total.surchargeToRoute += debtReport.surchargeToRoute ?? 0;
         total.surchargeFromRoute += debtReport.surchargeFromRoute ?? 0;
+        total.revenueHomeDelivery += debtReport.revenueHomeDelivery ?? 0;
+        total.revenueSurcharge += debtReport.revenueSurcharge ?? 0;
+        total.revenueTotal += debtReport.revenueTotal ?? 0;
         total.totalDebt += debtReport.totalDebt ?? 0;
       }
 
-      return total;
+      return total as IDebtTotal;
     } catch (error) {
       if (error instanceof Error) {
         throw error;
