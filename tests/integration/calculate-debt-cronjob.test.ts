@@ -74,7 +74,7 @@ describe('Calculate Debt Cronjob (4 days run)', () => {
     ];
 
     for (const runAsOfVnDate of runDays) {
-      await cronjobService.cronjobCalculateDebt(true, runAsOfVnDate);
+      await cronjobService.cronjobCalculateDebt(runAsOfVnDate, true);
       await debtReportService.generateDebtReport(true, runAsOfVnDate);
     }
 
@@ -107,7 +107,7 @@ describe('Calculate Debt Cronjob (4 days run)', () => {
     ];
 
     for (const runAsOfVnDate of runDays) {
-      await cronjobService.cronjobCalculateDebt(false, runAsOfVnDate);
+      await cronjobService.cronjobCalculateDebt(runAsOfVnDate, false);
       await debtReportService.generateDebtReport(false, runAsOfVnDate);
     }
 
