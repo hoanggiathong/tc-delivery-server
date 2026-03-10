@@ -3,16 +3,27 @@ import path from 'path';
 
 const storage = multer.memoryStorage();
 
-const fileFilter = (req: any, file: any, cb: any) => {
-  const allowedTypes = /jpeg|jpg|png|gif/;
-  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = allowedTypes.test(file.mimetype);
+const fileFilter = (_req: any, file: any, cb: any) => {
+  const allowedMimeTypes = [
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+    'image/bmp',
+  ];
 
-  if (mimetype && extname) {
+  const ext = path.extname(file.originalname || '').toLowerCase();
+  const allowedExt = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
+
+  const hasValidMime = allowedMimeTypes.includes(file.mimetype);
+  const hasValidExt = !ext || allowedExt.includes(ext);
+
+  if (hasValidMime && hasValidExt) {
     return cb(null, true);
-  } else {
-    cb(new Error('Only image files are allowed'));
   }
+
+  return cb(new Error(`Only image files are allowed. Received: ${file.mimetype}`));
 };
 
 export const uploadMiddleware = multer({
@@ -42,7 +53,6 @@ export const uploadMoneyDeliveryImagesFields = multer({
   fileFilter: fileFilter,
 }).fields([{ name: 'images', maxCount: 5 }]);
 
-/*
 export const uploadMoneyDeliveryDualImagesFields = multer({
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
@@ -51,12 +61,15 @@ export const uploadMoneyDeliveryDualImagesFields = multer({
   { name: 'customerImages', maxCount: 5 },
   { name: 'moneyImages', maxCount: 5 },
 ]);
-*/
+
+/*
 export const uploadMoneyDeliveryDualImagesFields = multer({
   storage: storage,
   limits: {
-    fileSize: 5 * 1024 * 1024,
-    fieldSize: 2 * 1024 * 1024, // Tăng cái này để chứa được các chuỗi text dài
+    fileSize: 10 * 1024 * 1024,
+    fieldSize: 5 * 1024 * 1024, // Tăng cái này để chứa được các chuỗi text dài
+    fields: 100,
   },
   fileFilter: fileFilter,
 }).any(); // Chấp nhận tất cả các field name
+*/
