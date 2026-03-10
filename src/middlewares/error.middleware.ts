@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import Logger from '@/utils/logger';
 import { ApiResponse } from '@/types';
+import multer from 'multer';
 
 export class AppError extends Error {
   statusCode: number;
@@ -58,7 +59,7 @@ const sendErrorDev = (err: any, res: Response) => {
   res.status(err.statusCode || 500).json(response);
 };
 
-const sendErrorProd = (err: any, res: Response) => {
+/*const sendErrorProd = (err: any, res: Response) => {
   // Operational, trusted error: send message to client
   if (err.isOperational) {
     const response: ApiResponse = {
@@ -78,6 +79,45 @@ const sendErrorProd = (err: any, res: Response) => {
 
     res.status(500).json(response);
   }
+};*/
+
+const sendErrorProd = (err: any, res: Response) => {
+  // multer errors
+  if (err instanceof multer.MulterError) {
+    let message = 'Upload error';
+
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      message = 'File size too large';
+    }
+
+    return res.status(400).json({
+      success: false,
+      message,
+    });
+  }
+
+  // body too large
+  if (err.type === 'entity.too.large') {
+    return res.status(413).json({
+      success: false,
+      message: 'Payload too large',
+    });
+  }
+
+  // trusted error
+  if (err.isOperational) {
+    return res.status(err.statusCode || 400).json({
+      success: false,
+      message: err.message,
+    });
+  }
+
+  Logger.error('ERROR:', err);
+
+  return res.status(500).json({
+    success: false,
+    message: 'Something went wrong!',
+  });
 };
 
 export const globalErrorHandler = (
