@@ -666,8 +666,11 @@ export class DebtManagementService {
 
       await receiptResult.populate('fromRoute', 'name');
       await receiptResult.populate('toRoute', 'name');
+      await receiptResult.populate('createdBy', 'username name');
+
       await paymentResult.populate('fromRoute', 'name');
       await paymentResult.populate('toRoute', 'name');
+      await paymentResult.populate('createdBy', 'username name');
 
       await session.commitTransaction();
       await session.endSession();
@@ -682,6 +685,14 @@ export class DebtManagementService {
         const toRouteObj = populatedResult.toRoute as { _id?: unknown; name?: string } | unknown;
         const toRouteIdValue = (toRouteObj as { _id?: unknown })?._id || toRouteObj;
         const toRouteNameValue = (toRouteObj as { name?: string })?.name || '';
+
+        const createdByObj = populatedResult.createdBy as
+          | { _id?: unknown; username?: string; name?: string }
+          | unknown;
+
+        const createdByIdValue = (createdByObj as { _id?: unknown })?._id || createdByObj;
+        const createdByUsernameValue = (createdByObj as { username?: string })?.username || '';
+        const createdByNameValue = (createdByObj as { name?: string })?.name || '';
 
         return {
           id: String(populatedResult._id),
@@ -702,6 +713,11 @@ export class DebtManagementService {
           updatedAt: populatedResult.updatedAt,
           deletedAt: populatedResult.deletedAt,
           __v: populatedResult.__v,
+          createdBy: {
+            id: String(createdByIdValue),
+            username: createdByUsernameValue,
+            name: createdByNameValue,
+          },
         };
       };
 
