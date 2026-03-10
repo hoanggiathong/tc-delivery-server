@@ -629,14 +629,14 @@ export class DeliveryService {
       fullCode: codeData.fullCode,
       subCode: codeData.subCode,
       toRoute: {
-        id: toRoute._id,
+        id: toRoute._id.toString(),
         code: toRoute.code,
         name: toRoute.name,
         address: toRoute.address,
         type: toRoute.type ?? RouteType.OWNED,
       },
       fromRoute: {
-        id: fromRoute._id,
+        id: fromRoute._id.toString(),
         code: fromRoute.code,
         name: fromRoute.name,
         address: fromRoute.address,

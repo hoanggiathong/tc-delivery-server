@@ -3,6 +3,7 @@ import { authenticateToken } from '@/middlewares/auth.middleware';
 import { validate } from '@/middlewares/validation.middleware';
 import {
   createDebtManagementSchema,
+  createDebtClearingSchema,
   deleteDebtManagementSchema,
   exportReportDebtAndDebtManagementSchema,
   getListPaymentDebtManagementSchema,
@@ -29,6 +30,8 @@ router.get(
   debtManagementController.getListReceipt
 );
 
+router.get('/clearing', debtManagementController.getListClearingDebtManagement);
+
 router.get(
   '/export-report-debt-and-debt-management',
   validate(exportReportDebtAndDebtManagementSchema),
@@ -39,6 +42,12 @@ router.post(
   '/create',
   validate(createDebtManagementSchema),
   debtManagementController.createDebtManagement
+);
+
+router.post(
+  '/create-clearing',
+  validate(createDebtClearingSchema),
+  debtManagementController.createDebtClearing
 );
 
 router.put(

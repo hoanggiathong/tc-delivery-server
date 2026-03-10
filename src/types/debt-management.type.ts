@@ -1,5 +1,11 @@
 import { Types } from 'mongoose';
-import { IUserFullInformationResponse } from './user.type';
+//import { IUserFullInformationResponse } from './user.type';
+
+type IDebtManagementCreatedBy = {
+  id: string;
+  username: string;
+  name: string;
+};
 
 export interface IRouteInfo {
   id: Types.ObjectId | string;
@@ -10,6 +16,10 @@ export interface IDebtManagement {
   id: Types.ObjectId | string;
   fromRoute: IRouteInfo;
   toRoute: IRouteInfo;
+  pivotRoute?: {
+    id: string;
+    name: string;
+  };
   content: string;
   type: string;
   cash: number; // so tien
@@ -19,7 +29,7 @@ export interface IDebtManagement {
   createdAt: Date;
   updatedAt: Date;
   deletedAt?: Date;
-  createdBy: IUserFullInformationResponse;
+  createdBy: IDebtManagementCreatedBy;
   __v?: number;
 }
 
@@ -43,6 +53,18 @@ export interface ICreateDebtManagementRequest {
   content: string;
   cash: number;
   cashDate: Date;
+}
+
+export interface ICreateDebtClearingRequest {
+  fromRoute: string; // trạm đang nợ trạm hiện tại, ví dụ TM
+  toRoute: string; // trạm mà trạm hiện tại đang nợ, ví dụ TP
+  content: string;
+  cash: number;
+  cashDate: Date;
+}
+
+export interface ICreateDebtClearingResponse {
+  data: IDebtManagement;
 }
 
 export interface IGetListPaymentDebtManagementResponse {

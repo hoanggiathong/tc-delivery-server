@@ -6,6 +6,37 @@ export interface IRouteInfo {
   name?: string;
 }
 
+export interface IDebtRowDB {
+  id: Types.ObjectId;
+
+  fromRoute: Types.ObjectId;
+  toRoute: Types.ObjectId;
+
+  openingBalance?: number;
+
+  costFromRoute: number;
+  feeCODToRoute: number;
+  costToRoute: number;
+  feeCODFromRoute: number;
+
+  accountPayable: number;
+  receivable: number;
+
+  homeDeliveryFromRoute: number;
+  homeDeliveryToRoute: number;
+
+  surchargeToRoute: number;
+  surchargeFromRoute: number;
+
+  revenueHomeDelivery: number;
+  revenueSurcharge: number;
+  revenueTotal: number;
+
+  totalDebt: number;
+
+  dateDebt?: Date;
+}
+
 export interface IDebtRow {
   id: Types.ObjectId | string;
   fromRoute: IRouteInfo;
@@ -21,6 +52,9 @@ export interface IDebtRow {
   homeDeliveryToRoute: number;
   surchargeToRoute: number;
   surchargeFromRoute: number;
+  revenueHomeDelivery: number; // DT GTN NỘP (+)
+  revenueSurcharge: number; // DT PHỤ PHÍ NỘP (+)
+  revenueTotal: number; // DOANH THU
   totalDebt: number;
   paymentDebt?: number;
   createdAt?: Date;
@@ -30,7 +64,7 @@ export interface IDebtRow {
 }
 
 export interface IDebtTotal {
-  openingBalance: number;
+  openingBalance?: number;
   costFromRoute: number;
   feeCODToRoute: number;
   costToRoute: number;
@@ -41,6 +75,9 @@ export interface IDebtTotal {
   homeDeliveryToRoute: number;
   surchargeToRoute: number;
   surchargeFromRoute: number;
+  revenueHomeDelivery: number; //DT GTN NỘP (+)
+  revenueSurcharge: number; //DT PHỤ PHÍ NỘP (+)
+  revenueTotal: number; //DOANH THU
   totalDebt: number;
   dateDebt?: Date;
 }
@@ -83,7 +120,7 @@ export interface IDebtReportDetailWithListValues {
 
 export interface IExportTotalDebtRow {
   fromRoute: IRouteInfo;
-  openingBalance: number;
+  openingBalance?: number;
   costFromRoute: number;
   feeCODToRoute: number;
   costToRoute: number;

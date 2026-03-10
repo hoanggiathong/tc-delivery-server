@@ -18,7 +18,7 @@ import { Request } from 'express';
 import { PipelineStage, Types } from 'mongoose';
 import { DebtReportService } from './debt-report.service';
 import { UserService } from './user.service';
-
+import { Route } from '@/models/route.model';
 /**
  * For a VN calendar day (year, month, date), return the UTC dateDebt value.
  * Same convention as cron-job: debt for VN day D has dateDebt = 17:00 UTC on previous UTC day.
@@ -35,6 +35,24 @@ export class DebtService {
     this.debtReportService = new DebtReportService();
   }
 
+  private async getRootRouteId(routeId: string): Promise<string> {
+    let current = await Route.findById(routeId).lean();
+
+    if (!current) {
+      throw new Error('Route not found');
+    }
+
+    while (current.parentRouteId) {
+      const parent = await Route.findById(current.parentRouteId).lean();
+      if (!parent) {
+        break;
+      }
+      current = parent;
+    }
+
+    return String(current._id);
+  }
+
   async getListDebt(req: Request, userId: string): Promise<IGetListDebtResponse> {
     const { startDate, endDate, keySort, key, fromRouteId } = req.query;
 
@@ -46,7 +64,8 @@ export class DebtService {
       }
     }
 
-    const toRouteId = await this.userService.getUserSelectedRouteId(userId);
+    const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
+    const toRouteId = await this.getRootRouteId(selectedRouteId);
     const startOfDate = new Date(String(startDate));
     const endOfDate = new Date(String(endDate));
 
@@ -155,6 +174,9 @@ export class DebtService {
           homeDeliveryToRoute: 1,
           surchargeToRoute: 1,
           surchargeFromRoute: 1,
+          revenueHomeDelivery: 1, // DT GTN NỘP (+)
+          revenueSurcharge: 1, // DT PHỤ PHÍ NỘP (+)
+          revenueTotal: 1, // DOANH THU
           totalDebt: 1,
           createdAt: 1,
           updatedAt: 1,
@@ -190,7 +212,8 @@ export class DebtService {
 
   async getDebtById(debtId: string, userId: string): Promise<IDebtRow | null> {
     try {
-      const toRouteId = await this.userService.getUserSelectedRouteId(userId);
+      const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
+      const toRouteId = await this.getRootRouteId(selectedRouteId);
 
       // Validate ObjectId format
       if (!Types.ObjectId.isValid(debtId)) {
@@ -271,7 +294,8 @@ export class DebtService {
     userId: string
   ): Promise<IDebtReportDetailWithListValues | null> {
     try {
-      const toRouteId = await this.userService.getUserSelectedRouteId(userId);
+      const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
+      const toRouteId = await this.getRootRouteId(selectedRouteId);
 
       // Validate ObjectId format
       if (!Types.ObjectId.isValid(debtId)) {
@@ -562,7 +586,8 @@ export class DebtService {
   async exportReportTotalDebt(req: Request, userId: string): Promise<IExportTotalDebtResponse> {
     const { startDate, endDate, fromRouteId } = req.query;
 
-    const toRouteId = await this.userService.getUserSelectedRouteId(userId);
+    const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
+    const toRouteId = await this.getRootRouteId(selectedRouteId);
     const startOfDate = new Date(String(startDate));
     const endOfDate = new Date(String(endDate));
 

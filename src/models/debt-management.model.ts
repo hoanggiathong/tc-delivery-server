@@ -5,6 +5,7 @@ export interface IDebtManagement extends Document {
   _id: string;
   fromRoute: ObjectId; // tram tra tien
   toRoute: ObjectId; // tram nhan tien
+  pivotRoute?: ObjectId; // trạm trung gian gặt
   content: string;
   type: string;
   cash: number; // so tien
@@ -28,6 +29,12 @@ const debtManagementSchema = new Schema<IDebtManagement>(
       type: Schema.Types.ObjectId,
       ref: 'Route',
       required: false,
+    },
+    pivotRoute: {
+      type: Schema.Types.ObjectId,
+      ref: 'Route',
+      required: false,
+      default: null,
     },
     type: {
       type: String,
@@ -83,7 +90,14 @@ debtManagementSchema.index({ fromRoute: 1, toRoute: 1, createdAt: -1 });
 debtManagementSchema.index({ fromRoute: 1, type: 1, createdAt: -1 });
 debtManagementSchema.index({ toRoute: 1, type: 1, createdAt: -1 });
 debtManagementSchema.index({ createdAt: -1 });
-debtManagementSchema.index({ fromRoute: 1, toRoute: 1, cash: 1, cashDate: 1, deleted: 1 });
+debtManagementSchema.index({
+  fromRoute: 1,
+  toRoute: 1,
+  pivotRoute: 1,
+  cash: 1,
+  cashDate: 1,
+  deleted: 1,
+});
 
 // Added indexes for queries with cashDate (getListReceipt, debt.service queries)
 debtManagementSchema.index({ fromRoute: 1, toRoute: 1, type: 1, cashDate: 1, deleted: 1 });

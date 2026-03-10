@@ -7,7 +7,7 @@ import {
 import { SurchargeUnit, RouteType } from '@/types/route.type';
 
 export interface IRoute extends Document {
-  _id: string;
+  _id: mongoose.Types.ObjectId;
   code: string;
   name: string;
   address?: string;
@@ -18,6 +18,7 @@ export interface IRoute extends Document {
   createdAt: Date;
   updatedAt: Date;
   type: RouteType;
+  parentRouteId?: mongoose.Types.ObjectId | null;
 }
 
 const routeSchema = new Schema<IRoute>(
@@ -78,6 +79,18 @@ const routeSchema = new Schema<IRoute>(
       required: false,
       trim: true,
       match: [PHONE_NUMBER_PATTERN, VALIDATION_MESSAGES.PHONE_NUMBER],
+    },
+    type: {
+      type: String,
+      enum: Object.values(RouteType),
+      default: RouteType.OWNED,
+    },
+
+    parentRouteId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Route',
+      default: null,
+      index: true,
     },
   },
   {

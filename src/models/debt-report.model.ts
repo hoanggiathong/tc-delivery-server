@@ -14,6 +14,9 @@ export interface IDebtReport extends Document {
   homeDeliveryToRoute: number; // GTN ve
   surchargeToRoute: number; // phu phi di
   surchargeFromRoute: number; // phu phi ve
+  revenueHomeDelivery: number; // DT GTN NỘP (+)
+  revenueSurcharge: number; // DT PHỤ PHÍ NỘP (+)
+  revenueTotal: number; // DOANH THU
   totalDebt: number; // cong no (co the am - bieu thi so du co hoac tra vuot)
   createdAt: Date;
   updatedAt: Date;
@@ -81,6 +84,20 @@ const debtReportSchema = new Schema<IDebtReport>(
     surchargeFromRoute: {
       type: Schema.Types.Number,
       required: false,
+      default: 0,
+    },
+    revenueHomeDelivery: {
+      type: Schema.Types.Number,
+      default: 0,
+    },
+
+    revenueSurcharge: {
+      type: Schema.Types.Number,
+      default: 0,
+    },
+
+    revenueTotal: {
+      type: Schema.Types.Number,
       default: 0,
     },
     totalDebt: {
