@@ -42,6 +42,7 @@ export const uploadMoneyDeliveryImagesFields = multer({
   fileFilter: fileFilter,
 }).fields([{ name: 'images', maxCount: 5 }]);
 
+/*
 export const uploadMoneyDeliveryDualImagesFields = multer({
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
@@ -50,3 +51,12 @@ export const uploadMoneyDeliveryDualImagesFields = multer({
   { name: 'customerImages', maxCount: 5 },
   { name: 'moneyImages', maxCount: 5 },
 ]);
+*/
+export const uploadMoneyDeliveryDualImagesFields = multer({
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+    fieldSize: 2 * 1024 * 1024, // Tăng cái này để chứa được các chuỗi text dài
+  },
+  fileFilter: fileFilter,
+}).any(); // Chấp nhận tất cả các field name
