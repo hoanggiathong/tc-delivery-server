@@ -82,41 +82,27 @@ const sendErrorDev = (err: any, res: Response) => {
 };*/
 
 const sendErrorProd = (err: any, res: Response) => {
-  // multer errors
+  // 1. Bắt tất cả các loại lỗi từ Multer
   if (err instanceof multer.MulterError) {
-    let message = 'Upload error';
+    let message = err.message; // Mặc định lấy thông báo của Multer (ví dụ: "Unexpected field")
 
     if (err.code === 'LIMIT_FILE_SIZE') {
-      message = 'File size too large';
+      message = 'File quá lớn (Tối đa 5MB)';
     }
 
     return res.status(400).json({
       success: false,
-      message,
+      message: `Lỗi Upload: ${message}`, // Hiển thị chi tiết lỗi Multer
     });
   }
 
-  // body too large
-  if (err.type === 'entity.too.large') {
-    return res.status(413).json({
-      success: false,
-      message: 'Payload too large',
-    });
-  }
+  // 2. Kiểm tra các lỗi runtime
+  Logger.error('CHI TIẾT LỖI TẠI SERVER:', err); // Log này cực kỳ quan trọng để debug
 
-  // trusted error
-  if (err.isOperational) {
-    return res.status(err.statusCode || 400).json({
-      success: false,
-      message: err.message,
-    });
-  }
-
-  Logger.error('ERROR:', err);
-
-  return res.status(500).json({
+  return res.status(err.statusCode || 500).json({
     success: false,
-    message: 'Something went wrong!',
+    message: err.isOperational ? err.message : 'Something went wrong!',
+    // Gợi ý: Trong môi trường phát triển, nên trả về err.stack để biết lỗi ở dòng nào
   });
 };
 
