@@ -453,20 +453,20 @@ export class CronjobService {
       const sendMoneyAmount = money.sendMoneyAmount ?? 0;
       const sendCost = (money as any).sendCost ?? 0;
 
-      // Chỉ NORMAL mới tính vào Tiền Về / Tiền Đi
+      // Tiền Về / Tiền Đi chỉ lấy NORMAL
       if (money.type === MoneyDeliveryType.NORMAL && sendMoneyAmount > 0) {
         row.costToRoute += sendMoneyAmount;
         opp.costFromRoute += sendMoneyAmount;
       }
 
-      // Doanh thu cộng sendCost cho cả NORMAL và COLLECT
+      // Doanh thu cộng theo đúng chiều đang phát sinh
       if (shouldAddRevenue && sendCost > 0) {
         if (money.type === MoneyDeliveryType.NORMAL) {
-          (opp as any).revNormalSendCost += sendCost;
+          (row as any).revNormalSendCost += sendCost;
         }
 
         if (money.type === MoneyDeliveryType.COLLECT) {
-          (opp as any).revCollectSendCost += sendCost;
+          (row as any).revCollectSendCost += sendCost;
         }
       }
     }
