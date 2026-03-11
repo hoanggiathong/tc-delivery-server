@@ -451,14 +451,16 @@ export class CronjobService {
       const opp = getRow(toRoot, fromRoot);
 
       const sendMoneyAmount = money.sendMoneyAmount ?? 0;
-      if (sendMoneyAmount) {
+      const sendCost = (money as any).sendCost ?? 0;
+
+      // Chỉ NORMAL mới tính vào Tiền Về / Tiền Đi
+      if (money.type === MoneyDeliveryType.NORMAL && sendMoneyAmount > 0) {
         row.costToRoute += sendMoneyAmount;
         opp.costFromRoute += sendMoneyAmount;
       }
 
-      if (shouldAddRevenue) {
-        const sendCost = (money as any).sendCost ?? 0;
-
+      // Doanh thu cộng sendCost cho cả NORMAL và COLLECT
+      if (shouldAddRevenue && sendCost > 0) {
         if (money.type === MoneyDeliveryType.NORMAL) {
           (opp as any).revNormalSendCost += sendCost;
         }
