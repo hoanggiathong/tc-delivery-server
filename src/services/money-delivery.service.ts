@@ -1887,7 +1887,9 @@ export class MoneyDeliveryService {
     try {
       const fromRouteId = await this.userService.getUserSelectedRouteId(userId);
       const where: Record<string, unknown> = {
-        type: MoneyDeliveryType.NORMAL,
+        type: {
+          $in: [MoneyDeliveryType.NORMAL, MoneyDeliveryType.COLLECT_FOR_CUSTOMER],
+        },
         fromRoute: fromRouteId,
         createdAt: {
           $gte: startDate,
