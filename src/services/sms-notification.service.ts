@@ -44,7 +44,7 @@ export class SMSNotificationService {
 
   /**
    * Get deliveries eligible for SMS notification
-   * Condition: isReturn=false AND smsStatus=0 (NOT_SENT)
+   * Condition: isReturn != true AND no homeDelivery (not GTN - giao tận nơi)
    * Optional: filter by date (toDate) - gets results from 7 days before that date up to that date
    * Automatically filters by user's selected route
    */
@@ -60,6 +60,7 @@ export class SMSNotificationService {
     const query: Record<string, unknown> = {
       toRoute: selectedRouteId,
       isReturn: { $ne: true },
+      $or: [{ homeDelivery: null }, { homeDelivery: '' }],
     };
 
     // Always apply 7-day filter (default to today if not provided)

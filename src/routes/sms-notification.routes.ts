@@ -27,7 +27,7 @@ const smsController = new SMSNotificationController();
  * /api/sms/eligible:
  *   get:
  *     summary: Get deliveries eligible for SMS notification
- *     description: Get all return deliveries (isReturn=true) that haven't been sent SMS yet (smsStatus=0). Automatically filters by the authenticated user's selected route. Optionally filter by date to get results from a specific date and before.
+ *     description: Get all deliveries (isReturn != true) that don't have home delivery (GTN). Automatically filters by the authenticated user's selected route. Optionally filter by date to get results from a specific date and before.
  *     tags: [SMS Notifications]
  *     security:
  *       - bearerAuth: []
