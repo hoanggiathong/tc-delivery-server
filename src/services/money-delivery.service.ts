@@ -1745,6 +1745,16 @@ export class MoneyDeliveryService {
     return moneyDelivery.images || [];
   }
 
+  async getDetailImagesByDeliveryId(deliveryId: string): Promise<IMoneyDeliveryImage[]> {
+    const moneyDelivery = await MoneyDelivery.findOne({ deliveryId }).select('images').lean();
+
+    if (!moneyDelivery) {
+      return [];
+    }
+
+    return moneyDelivery.images || [];
+  }
+
   async updateDataImagesMoneyDelivery(
     moneyDeliveryId: string,
     images: IMoneyDeliveryImage[]
