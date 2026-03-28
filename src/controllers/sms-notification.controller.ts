@@ -20,6 +20,7 @@ export class SMSNotificationController {
   /**
    * GET /api/sms/eligible
    * Get deliveries eligible for SMS notification
+   * Condition: isReturn != true AND no homeDelivery (not GTN)
    * Query params:
    * - toDate (optional): End date for 7-day range filter (gets data from 7 days before to this date)
    * Note: Always filters by createdAt field and user's selected route
