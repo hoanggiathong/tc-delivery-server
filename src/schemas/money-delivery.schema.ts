@@ -295,6 +295,13 @@ export const getDetailImagesMoneyDeliverySchema = z.object({
   }),
 });
 
+// Schema for get detail images money delivery by delivery ID
+export const getDetailImagesByDeliveryIdSchema = z.object({
+  params: z.object({
+    deliveryId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format'),
+  }),
+});
+
 // Schema for update data images money delivery
 export const updateDataImagesMoneyDeliverySchema = z.object({
   params: z.object({

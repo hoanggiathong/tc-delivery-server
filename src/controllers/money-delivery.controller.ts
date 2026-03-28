@@ -2210,6 +2210,84 @@ export class MoneyDeliveryController {
 
   /**
    * @swagger
+   * /api/money-deliveries/get-detail-images-by-delivery/{deliveryId}:
+   *   get:
+   *     summary: Get detail images money delivery by delivery ID
+   *     tags: [Money Delivery]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: deliveryId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Delivery ID
+   *     responses:
+   *       200:
+   *         description: Get detail images by delivery ID successful
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "get detail images by delivery id successful"
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       url:
+   *                         type: string
+   *                       rotate:
+   *                         type: number
+   *                         enum: [0, 90, 180, 270]
+   *       500:
+   *         description: Internal server error
+   */
+  getDetailImagesByDeliveryId = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      const { deliveryId } = req.params;
+      const result = await this.moneyDeliveryService.getDetailImagesByDeliveryId(deliveryId);
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'get detail images by delivery id successful',
+        data: result,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      logger.error('get detail images by delivery id error:', error);
+
+      const message =
+        error instanceof Error ? error.message : 'get detail images by delivery id failed';
+
+      const response: ApiResponse = {
+        success: false,
+        message,
+      };
+
+      res.status(500).json(response);
+    }
+  };
+
+  /**
+   * @swagger
    * /api/money-deliveries/update-data-images-money-delivery/{moneyDeliveryId}:
    *   put:
    *     summary: Update data images money delivery (update data only, no file upload)

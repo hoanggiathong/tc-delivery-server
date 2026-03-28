@@ -14,6 +14,7 @@ import {
   updateMoneyDeliveryByFullCodeSchema,
   uploadMoneyDeliveryImagesSchema,
   getDetailImagesMoneyDeliverySchema,
+  getDetailImagesByDeliveryIdSchema,
   updateDataImagesMoneyDeliverySchema,
   deleteMoneyDeliveryByFullCodeSchema,
   recoveryMoneyDeliveryWithTypeCollectSchema,
@@ -246,6 +247,13 @@ router.get(
   '/get-detail-images-money-delivery/:moneyDeliveryId',
   validate(getDetailImagesMoneyDeliverySchema),
   moneyDeliveryController.getDetailImagesMoneyDelivery
+);
+
+// Get detail images by delivery ID route (must be before /:id to avoid conflicts)
+router.get(
+  '/get-detail-images-by-delivery/:deliveryId',
+  validate(getDetailImagesByDeliveryIdSchema),
+  moneyDeliveryController.getDetailImagesByDeliveryId
 );
 
 // Update data images route (must be before /:id to avoid conflicts)
