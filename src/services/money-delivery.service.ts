@@ -771,6 +771,7 @@ export class MoneyDeliveryService {
               code: '$toRoute.code',
               name: '$toRoute.name',
               address: '$toRoute.address',
+              phone: '$toRoute.phone',
               type: '$toRoute.type?? RouteType.OWNED',
             },
             sendMoneyAmount: 1,
