@@ -405,6 +405,8 @@ export interface ITodayDeliveryItem {
   };
   createdAt: Date;
   updatedAt?: Date;
+  dateReturn?: Date | null;
+  contentReturn?: string | null;
 }
 
 export interface ITodayDeliveryReport {
