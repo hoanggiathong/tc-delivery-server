@@ -1020,46 +1020,62 @@ export class DeliveryService {
       // Execute aggregation
       const result = await Delivery.aggregate(pipeline);
 
+      // Query money deliveries linked to these deliveries (separate query for performance)
+      const deliveryIds = result.map((d: any) => d._id);
+      const moneyDeliveryData = await MoneyDelivery.find(
+        { deliveryId: { $in: deliveryIds } },
+        { deliveryId: 1, dateReturn: 1, contentReturn: 1 }
+      ).lean();
+
+      const moneyDeliveryMap = new Map(
+        moneyDeliveryData.map(md => [md.deliveryId!.toString(), md])
+      );
+
       // Transform deliveries to ITodayDeliveryItem format
-      const deliveryItems: ITodayDeliveryItem[] = result.map((d: any) => ({
-        id: d._id.toString(),
-        code: d.code,
-        fullCode: d.fullCode,
-        subCode: d.subCode,
-        name: d.name,
-        nameProductAndAdditionalInformation: d.nameProductAndAdditionalInformation,
-        quantity: d.quantity,
-        sender: d.sender,
-        receiver: d.receiver,
-        toRoute: {
-          id: d.toRoute.id.toString(),
-          code: d.toRoute.code,
-          name: d.toRoute.name,
-          address: d.toRoute.address,
-        },
-        cost: d.cost,
-        homeDelivery: d.homeDelivery,
-        homeDeliveryCost: d.homeDeliveryCost,
-        itemCost: d.itemCost,
-        itemValue: d.itemValue,
-        collectCost: d.collectCost,
-        collectForCustomer: d.collectForCustomer,
-        collectForCustomerCost: d.collectForCustomerCost,
-        collectForCustomerNote: d.collectForCustomerNote,
-        totalCost: d.totalCost,
-        actualRevenue: d.actualRevenue,
-        paymentType: d.paymentType,
-        upItems: d.upItems || undefined,
-        downItems: d.downItems || undefined,
-        smsType: d.smsType || undefined,
-        timeToSendSMS: d.timeToSendSMS || undefined,
-        inventory: d.inventory || undefined,
-        isReturn: d.isReturn,
-        notes: d.notes,
-        details: d.details,
-        createdAt: d.createdAt,
-        updatedAt: d.updatedAt,
-      }));
+      const deliveryItems: ITodayDeliveryItem[] = result.map((d: any) => {
+        const md = moneyDeliveryMap.get(d._id.toString());
+        return {
+          id: d._id.toString(),
+          code: d.code,
+          fullCode: d.fullCode,
+          subCode: d.subCode,
+          name: d.name,
+          nameProductAndAdditionalInformation: d.nameProductAndAdditionalInformation,
+          quantity: d.quantity,
+          sender: d.sender,
+          receiver: d.receiver,
+          toRoute: {
+            id: d.toRoute.id.toString(),
+            code: d.toRoute.code,
+            name: d.toRoute.name,
+            address: d.toRoute.address,
+          },
+          cost: d.cost,
+          homeDelivery: d.homeDelivery,
+          homeDeliveryCost: d.homeDeliveryCost,
+          itemCost: d.itemCost,
+          itemValue: d.itemValue,
+          collectCost: d.collectCost,
+          collectForCustomer: d.collectForCustomer,
+          collectForCustomerCost: d.collectForCustomerCost,
+          collectForCustomerNote: d.collectForCustomerNote,
+          totalCost: d.totalCost,
+          actualRevenue: d.actualRevenue,
+          paymentType: d.paymentType,
+          upItems: d.upItems || undefined,
+          downItems: d.downItems || undefined,
+          smsType: d.smsType || undefined,
+          timeToSendSMS: d.timeToSendSMS || undefined,
+          inventory: d.inventory || undefined,
+          isReturn: d.isReturn,
+          notes: d.notes,
+          details: d.details,
+          createdAt: d.createdAt,
+          updatedAt: d.updatedAt,
+          dateReturn: md?.dateReturn ?? null,
+          contentReturn: md?.contentReturn ?? null,
+        };
+      });
 
       // Build final response with routeInfo
       const report: ITodayDeliveryReport = {

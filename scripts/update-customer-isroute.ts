@@ -51,14 +51,12 @@ async function updateCustomerIsRoute() {
 
     // Step 1: Fetch all routes and extract phone numbers
     console.log('📋 Step 1: Fetching all routes and extracting phone numbers...');
-    const routes = await Route.find({})
-      .select('_id code name phone')
-      .lean();
-    
+    const routes = await Route.find({}).select('_id code name phone').lean();
+
     // Create a set of route phone numbers (normalize phone numbers for comparison)
     const routePhoneSet = new Set<string>();
     const routePhoneMap = new Map<string, { code: string; name: string }>();
-    
+
     routes.forEach(route => {
       if (route.phone && route.phone.trim() !== '') {
         const normalizedPhone = route.phone.trim();
@@ -69,7 +67,7 @@ async function updateCustomerIsRoute() {
         });
       }
     });
-    
+
     console.log(`✅ Found ${routes.length} routes`);
     console.log(`✅ Found ${routePhoneSet.size} routes with phone numbers\n`);
 
@@ -86,7 +84,11 @@ async function updateCustomerIsRoute() {
 
     // Step 3: Identify customers to update
     console.log('🔍 Step 3: Identifying customers to update...');
-    const customersToSetTrue: Array<{ id: string; phone: string; routeInfo: { code: string; name: string } }> = [];
+    const customersToSetTrue: Array<{
+      id: string;
+      phone: string;
+      routeInfo: { code: string; name: string };
+    }> = [];
     const customersToSetFalse: Array<{ id: string; phone: string; currentIsRoute: any }> = [];
 
     customers.forEach((customer: any) => {
@@ -175,13 +177,13 @@ async function updateCustomerIsRoute() {
     // Update customers to set isRoute = false
     if (customersToSetFalse.length > 0) {
       console.log(`   Setting isRoute = false for ${customersToSetFalse.length} customers...`);
-      
+
       // Use bulk update for better performance
       const BATCH_SIZE = 100;
       for (let i = 0; i < customersToSetFalse.length; i += BATCH_SIZE) {
         const batch = customersToSetFalse.slice(i, i + BATCH_SIZE);
         const customerIds = batch.map(c => new Types.ObjectId(c.id));
-        
+
         try {
           const result = await Customer.updateMany(
             { _id: { $in: customerIds } },
@@ -249,4 +251,3 @@ updateCustomerIsRoute().catch(error => {
   console.error('❌ Fatal error:', error);
   process.exit(1);
 });
-
