@@ -397,7 +397,7 @@ export class DeliveryService {
         collectCost: data.collectCost,
         collectForCustomer: data.collectForCustomer,
         collectForCustomerCost: data.collectForCustomerCost,
-        collectForCustomerNote: data.collectForCustomerNote ?? data.notes ?? null,
+        collectForCustomerNote: data.notes || data.collectForCustomerNote || null,
         details: data.details,
         notes: newNote,
         paymentType: data.paymentType,
