@@ -1028,7 +1028,7 @@ export class DeliveryService {
       ).lean();
 
       const moneyDeliveryMap = new Map(
-        moneyDeliveryData.map((md) => [md.deliveryId!.toString(), md])
+        moneyDeliveryData.map(md => [md.deliveryId!.toString(), md])
       );
 
       // Transform deliveries to ITodayDeliveryItem format
