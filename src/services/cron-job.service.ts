@@ -7,9 +7,78 @@ import { IDebtRowDB } from '@/types/debt.type';
 import { RouteType } from '@/types/route.type';
 
 const VN_UTC_OFFSET_HOURS = 7;
+const COMPANY_ROUTE_CODE = 'SG';
 
 type VnDate = { year: number; month: number; date: number };
 type RouteRelation = 'OWNED_OWNED' | 'OWNED_PARTNER' | 'PARTNER_OWNED' | 'PARTNER_PARTNER';
+
+type RevenueExtraFields = {
+  revDebtAmount?: number;
+  revPaidAmount?: number;
+  revNormalSendCost?: number;
+  revCollectSendCost?: number;
+  revPaidHomeDelivery?: number;
+  revPaidCollectForCustomer?: number;
+  revDebtHomeDelivery?: number;
+  revDebtCollectForCustomer?: number;
+
+  netDebt?: number;
+  cashCollectedToday?: number;
+  newDebtFreightToday?: number;
+  paidOldDebtToday?: number;
+  minimumTransferToCompany?: number;
+};
+
+type DebtRowExt = IDebtRowDB & RevenueExtraFields;
+
+type RootRevenueAccumulator = {
+  revDebtAmount: number;
+  revPaidAmount: number;
+  revNormalSendCost: number;
+  revCollectSendCost: number;
+  revPaidHomeDelivery: number;
+  revPaidCollectForCustomer: number;
+  revDebtHomeDelivery: number;
+  revDebtCollectForCustomer: number;
+};
+
+function createRootRevenueAccumulator(): RootRevenueAccumulator {
+  return {
+    revDebtAmount: 0,
+    revPaidAmount: 0,
+    revNormalSendCost: 0,
+    revCollectSendCost: 0,
+    revPaidHomeDelivery: 0,
+    revPaidCollectForCustomer: 0,
+    revDebtHomeDelivery: 0,
+    revDebtCollectForCustomer: 0,
+  };
+}
+
+function getOrCreateRootRevenueBucket(
+  map: Map<string, RootRevenueAccumulator>,
+  rootId: Types.ObjectId
+): RootRevenueAccumulator {
+  const key = rootId.toString();
+  let bucket = map.get(key);
+  if (!bucket) {
+    bucket = createRootRevenueAccumulator();
+    map.set(key, bucket);
+  }
+  return bucket;
+}
+
+function isOwnedRouteType(type?: string | null): boolean {
+  return (
+    String(type || '')
+      .trim()
+      .toLowerCase() === RouteType.OWNED
+  );
+}
+
+function isTpRoute(route?: IRoute | null): boolean {
+  return (route?.code ?? '') === COMPANY_ROUTE_CODE;
+}
 
 function getTodayVn(): VnDate {
   const now = new Date();
@@ -57,18 +126,6 @@ function vnDateToUtcRange(year: number, month: number, date: number) {
   return { start, end };
 }
 
-/*
-function dateDebtQueryRange(dateDebt: Date) {
-  const start = dateDebt.getTime();
-  const end = start + 24 * 60 * 60 * 1000 - 1;
-
-  return {
-    $gte: new Date(start),
-    $lte: new Date(end),
-  };
-}
-*/
-
 function buildRootRouteMap(routes: IRoute[]) {
   const routeMap = new Map<string, IRoute>();
   routes.forEach(r => routeMap.set(r._id.toString(), r));
@@ -107,26 +164,18 @@ function toObjectId(id: any): Types.ObjectId {
 }
 
 function getRouteRelation(from: IRoute, to: IRoute): RouteRelation {
-  if (from.type === RouteType.OWNED && to.type === RouteType.OWNED) {
+  if (isOwnedRouteType(from.type) && isOwnedRouteType(to.type)) {
     return 'OWNED_OWNED';
   }
-  if (from.type === RouteType.OWNED && to.type === RouteType.PARTNER) {
+  if (isOwnedRouteType(from.type) && !isOwnedRouteType(to.type)) {
     return 'OWNED_PARTNER';
   }
-  if (from.type === RouteType.PARTNER && to.type === RouteType.OWNED) {
+  if (!isOwnedRouteType(from.type) && isOwnedRouteType(to.type)) {
     return 'PARTNER_OWNED';
   }
   return 'PARTNER_PARTNER';
 }
 
-/**
- * OWNED_OWNED:
- * - GTN/PP không khấu trừ nữa
- * - chỉ khấu trừ tiền đi/về, nợ cước đi/về, thu/chi
- *
- * Các relation còn lại:
- * - khấu trừ như partner
- */
 function computeBaseTotalDebt(row: IDebtRowDB, relation: RouteRelation) {
   if (relation === 'OWNED_OWNED') {
     return (
@@ -153,56 +202,295 @@ function computeBaseTotalDebt(row: IDebtRowDB, relation: RouteRelation) {
   );
 }
 
-/**
- * revenueTotal =
- *   (cost + itemValue)(debt)
- * + (cost + itemValue)(paid)
- * + homeDeliveryCost(paid)
- * + collectForCustomerCost(paid)
- * + sendCost(normal)
- * + sendCost(collect)
- */
-function finalizeRevenue(row: IDebtRowDB) {
-  const revDebtAmount = (row as any).revDebtAmount ?? 0;
-  const revPaidAmount = (row as any).revPaidAmount ?? 0;
-  const revNormalSendCost = (row as any).revNormalSendCost ?? 0;
-  const revCollectSendCost = (row as any).revCollectSendCost ?? 0;
-  const revPaidHomeDelivery = (row as any).revPaidHomeDelivery ?? 0;
-  const revPaidCollectForCustomer = (row as any).revPaidCollectForCustomer ?? 0;
+function finalizeRevenue(row: DebtRowExt) {
+  const revDebtAmount = row.revDebtAmount ?? 0;
+  const revPaidAmount = row.revPaidAmount ?? 0;
+  const revNormalSendCost = row.revNormalSendCost ?? 0;
+  const revCollectSendCost = row.revCollectSendCost ?? 0;
+  const revPaidHomeDelivery = row.revPaidHomeDelivery ?? 0;
+  const revPaidCollectForCustomer = row.revPaidCollectForCustomer ?? 0;
+  const revDebtHomeDelivery = row.revDebtHomeDelivery ?? 0;
+  const revDebtCollectForCustomer = row.revDebtCollectForCustomer ?? 0;
 
-  row.revenueHomeDelivery = revPaidHomeDelivery;
-  row.revenueSurcharge = revPaidCollectForCustomer;
+  row.revenueHomeDelivery = revPaidHomeDelivery + revDebtHomeDelivery;
+  row.revenueSurcharge = revPaidCollectForCustomer + revDebtCollectForCustomer;
 
   row.revenueTotal =
     revDebtAmount +
     revPaidAmount +
     revNormalSendCost +
     revCollectSendCost +
+    row.revenueHomeDelivery +
+    row.revenueSurcharge;
+
+  row.newDebtFreightToday = revDebtAmount;
+
+  row.cashCollectedToday =
+    revPaidAmount +
+    revNormalSendCost +
+    revCollectSendCost +
     revPaidHomeDelivery +
     revPaidCollectForCustomer;
 
-  delete (row as any).revDebtAmount;
-  delete (row as any).revPaidAmount;
-  delete (row as any).revNormalSendCost;
-  delete (row as any).revCollectSendCost;
-  delete (row as any).revPaidHomeDelivery;
-  delete (row as any).revPaidCollectForCustomer;
+  row.paidOldDebtToday = 0;
+  row.minimumTransferToCompany = row.cashCollectedToday ?? 0;
+
+  delete row.revDebtAmount;
+  delete row.revPaidAmount;
+  delete row.revNormalSendCost;
+  delete row.revCollectSendCost;
+  delete row.revPaidHomeDelivery;
+  delete row.revPaidCollectForCustomer;
+  delete row.revDebtHomeDelivery;
+  delete row.revDebtCollectForCustomer;
 }
 
-function clearRevenue(row: IDebtRowDB) {
+function clearRevenue(row: DebtRowExt) {
   row.revenueHomeDelivery = 0;
   row.revenueSurcharge = 0;
   row.revenueTotal = 0;
+  row.cashCollectedToday = 0;
+  row.newDebtFreightToday = 0;
+  row.paidOldDebtToday = 0;
+  row.minimumTransferToCompany = 0;
 
-  delete (row as any).revDebtAmount;
-  delete (row as any).revPaidAmount;
-  delete (row as any).revNormalSendCost;
-  delete (row as any).revCollectSendCost;
-  delete (row as any).revPaidHomeDelivery;
-  delete (row as any).revPaidCollectForCustomer;
+  delete row.revDebtAmount;
+  delete row.revPaidAmount;
+  delete row.revNormalSendCost;
+  delete row.revCollectSendCost;
+  delete row.revPaidHomeDelivery;
+  delete row.revPaidCollectForCustomer;
+  delete row.revDebtHomeDelivery;
+  delete row.revDebtCollectForCustomer;
 }
 
 export class CronjobService {
+  private createDebtRow(from: Types.ObjectId, to: Types.ObjectId, dateDebt: Date): DebtRowExt {
+    return {
+      id: new Types.ObjectId(),
+      fromRoute: from,
+      toRoute: to,
+
+      openingBalance: 0,
+
+      costFromRoute: 0,
+      feeCODToRoute: 0,
+      costToRoute: 0,
+      feeCODFromRoute: 0,
+
+      accountPayable: 0,
+      receivable: 0,
+
+      homeDeliveryFromRoute: 0,
+      homeDeliveryToRoute: 0,
+      surchargeToRoute: 0,
+      surchargeFromRoute: 0,
+
+      revenueHomeDelivery: 0,
+      revenueSurcharge: 0,
+      revenueTotal: 0,
+
+      totalDebt: 0,
+      dateDebt,
+
+      netDebt: 0,
+      cashCollectedToday: 0,
+      newDebtFreightToday: 0,
+      paidOldDebtToday: 0,
+      minimumTransferToCompany: 0,
+
+      revDebtAmount: 0,
+      revPaidAmount: 0,
+      revNormalSendCost: 0,
+      revCollectSendCost: 0,
+      revPaidHomeDelivery: 0,
+      revPaidCollectForCustomer: 0,
+      revDebtHomeDelivery: 0,
+      revDebtCollectForCustomer: 0,
+    };
+  }
+
+  private addRevenueToBucket(
+    bucket: RootRevenueAccumulator,
+    patch: Partial<RootRevenueAccumulator>
+  ) {
+    bucket.revDebtAmount += patch.revDebtAmount ?? 0;
+    bucket.revPaidAmount += patch.revPaidAmount ?? 0;
+    bucket.revNormalSendCost += patch.revNormalSendCost ?? 0;
+    bucket.revCollectSendCost += patch.revCollectSendCost ?? 0;
+    bucket.revPaidHomeDelivery += patch.revPaidHomeDelivery ?? 0;
+    bucket.revPaidCollectForCustomer += patch.revPaidCollectForCustomer ?? 0;
+    bucket.revDebtHomeDelivery += patch.revDebtHomeDelivery ?? 0;
+    bucket.revDebtCollectForCustomer += patch.revDebtCollectForCustomer ?? 0;
+  }
+
+  private pickRevenueTargetRow(
+    debtMap: Record<string, DebtRowExt>,
+    rootRouteInfoMap: Map<string, IRoute>,
+    ownedRootId: Types.ObjectId
+  ): DebtRowExt | null {
+    const rows = Object.values(debtMap).filter(
+      row => row.toRoute.toString() === ownedRootId.toString()
+    );
+
+    if (!rows.length) {
+      return null;
+    }
+
+    const withClearing = rows.filter(
+      row =>
+        (row.costFromRoute ?? 0) !== 0 ||
+        (row.feeCODToRoute ?? 0) !== 0 ||
+        (row.costToRoute ?? 0) !== 0 ||
+        (row.feeCODFromRoute ?? 0) !== 0 ||
+        (row.homeDeliveryFromRoute ?? 0) !== 0 ||
+        (row.homeDeliveryToRoute ?? 0) !== 0 ||
+        (row.surchargeFromRoute ?? 0) !== 0 ||
+        (row.surchargeToRoute ?? 0) !== 0
+    );
+
+    const base = withClearing.length ? withClearing : rows;
+
+    return (
+      base.find(row => {
+        const fromRoute = rootRouteInfoMap.get(row.fromRoute.toString());
+        return fromRoute?.code === COMPANY_ROUTE_CODE;
+      }) ?? base[0]
+    );
+  }
+
+  private applyRevenueBucketToExistingRow(row: DebtRowExt, bucket: RootRevenueAccumulator) {
+    row.revDebtAmount = bucket.revDebtAmount;
+    row.revPaidAmount = bucket.revPaidAmount;
+    row.revNormalSendCost = bucket.revNormalSendCost;
+    row.revCollectSendCost = bucket.revCollectSendCost;
+    row.revPaidHomeDelivery = bucket.revPaidHomeDelivery;
+    row.revPaidCollectForCustomer = bucket.revPaidCollectForCustomer;
+    row.revDebtHomeDelivery = bucket.revDebtHomeDelivery;
+    row.revDebtCollectForCustomer = bucket.revDebtCollectForCustomer;
+  }
+
+  private getFreightRevenueOwner(
+    fromRootRoute: IRoute,
+    toRootRoute: IRoute
+  ): Types.ObjectId | null {
+    if (isOwnedRouteType(fromRootRoute.type)) {
+      return toObjectId(fromRootRoute._id);
+    }
+
+    if (isOwnedRouteType(toRootRoute.type)) {
+      return toObjectId(toRootRoute._id);
+    }
+
+    return null;
+  }
+
+  private getDestinationRevenueOwner(
+    fromRootRoute: IRoute,
+    toRootRoute: IRoute
+  ): Types.ObjectId | null {
+    if (isOwnedRouteType(toRootRoute.type)) {
+      return toObjectId(toRootRoute._id);
+    }
+
+    if (isOwnedRouteType(fromRootRoute.type)) {
+      return toObjectId(fromRootRoute._id);
+    }
+
+    return null;
+  }
+
+  // GTN đi / PP đi chỉ cộng doanh thu khi paymentType = paid
+  // GTN về / PP về chỉ cộng doanh thu khi paymentType = debt của chiều về
+  // ví dụ đang đứng TA (owned) thì chỉ cộng GTN/PP từ các đơn trạm khác -> TA có paymentType = debt
+  private getDebtReturnRevenueOwner(
+    fromRootRoute: IRoute,
+    toRootRoute: IRoute
+  ): Types.ObjectId | null {
+    if (isOwnedRouteType(toRootRoute.type)) {
+      return toObjectId(toRootRoute._id);
+    }
+
+    return null;
+  }
+
+  private getMoneyRevenueOwner(fromRootRoute: IRoute, toRootRoute: IRoute): Types.ObjectId | null {
+    if (isOwnedRouteType(fromRootRoute.type)) {
+      return toObjectId(fromRootRoute._id);
+    }
+
+    if (isOwnedRouteType(toRootRoute.type)) {
+      return toObjectId(toRootRoute._id);
+    }
+
+    return null;
+  }
+
+  private normalizeCompanyPairTotals(
+    debtMap: Record<string, DebtRowExt>,
+    routeMap: Map<string, IRoute>
+  ) {
+    const processed = new Set<string>();
+
+    for (const row of Object.values(debtMap)) {
+      const fromId = row.fromRoute.toString();
+      const toId = row.toRoute.toString();
+      const pairKey = [fromId, toId].sort().join('__');
+
+      if (processed.has(pairKey)) {
+        continue;
+      }
+      processed.add(pairKey);
+
+      const reverseKey = `${toId}_${fromId}`;
+      const reverseRow = debtMap[reverseKey];
+      if (!reverseRow) {
+        continue;
+      }
+
+      const fromRoute = routeMap.get(fromId);
+      const toRoute = routeMap.get(toId);
+      const reverseFromRoute = routeMap.get(reverseRow.fromRoute.toString());
+      const reverseToRoute = routeMap.get(reverseRow.toRoute.toString());
+
+      if (!fromRoute || !toRoute || !reverseFromRoute || !reverseToRoute) {
+        continue;
+      }
+
+      let ownedViewRow: DebtRowExt | null = null;
+      let reverseViewRow: DebtRowExt | null = null;
+      let ownedViewFromRoute: IRoute | null = null;
+      let ownedViewToRoute: IRoute | null = null;
+
+      if (isTpRoute(fromRoute) && isOwnedRouteType(toRoute.type)) {
+        ownedViewRow = row;
+        reverseViewRow = reverseRow;
+        ownedViewFromRoute = fromRoute;
+        ownedViewToRoute = toRoute;
+      } else if (isTpRoute(reverseFromRoute) && isOwnedRouteType(reverseToRoute.type)) {
+        ownedViewRow = reverseRow;
+        reverseViewRow = row;
+        ownedViewFromRoute = reverseFromRoute;
+        ownedViewToRoute = reverseToRoute;
+      }
+
+      if (!ownedViewRow || !reverseViewRow || !ownedViewFromRoute || !ownedViewToRoute) {
+        continue;
+      }
+
+      const relation = getRouteRelation(ownedViewFromRoute, ownedViewToRoute);
+      const baseDebt = computeBaseTotalDebt(ownedViewRow, relation);
+      const revenue = ownedViewRow.revenueTotal ?? 0;
+      const finalDebt = baseDebt + revenue;
+
+      ownedViewRow.totalDebt = finalDebt;
+      ownedViewRow.netDebt = finalDebt;
+
+      reverseViewRow.totalDebt = -finalDebt;
+      reverseViewRow.netDebt = -finalDebt;
+    }
+  }
+
   async cronjobCalculateDebt(runAsOf?: VnDate | string, skipLock = false) {
     const session = await mongoose.startSession();
 
@@ -222,7 +510,6 @@ export class CronjobService {
           );
         }
 
-        //const dateKey = `${newDayVn.year}-${newDayVn.month + 1}-${newDayVn.date}`;
         const dateKey = `${newDayVn.year}-${String(newDayVn.month + 1).padStart(2, '0')}-${String(
           newDayVn.date
         ).padStart(2, '0')}`;
@@ -259,45 +546,6 @@ export class CronjobService {
     }
   }
 
-  private createDebtRow(from: Types.ObjectId, to: Types.ObjectId, dateDebt: Date): IDebtRowDB {
-    const row: IDebtRowDB = {
-      id: new Types.ObjectId(),
-      fromRoute: from,
-      toRoute: to,
-
-      openingBalance: 0,
-
-      costFromRoute: 0,
-      feeCODToRoute: 0,
-      costToRoute: 0,
-      feeCODFromRoute: 0,
-
-      accountPayable: 0,
-      receivable: 0,
-
-      homeDeliveryFromRoute: 0,
-      homeDeliveryToRoute: 0,
-      surchargeToRoute: 0,
-      surchargeFromRoute: 0,
-
-      revenueHomeDelivery: 0,
-      revenueSurcharge: 0,
-      revenueTotal: 0,
-
-      totalDebt: 0,
-      dateDebt,
-    };
-
-    (row as any).revDebtAmount = 0;
-    (row as any).revPaidAmount = 0;
-    (row as any).revNormalSendCost = 0;
-    (row as any).revCollectSendCost = 0;
-    (row as any).revPaidHomeDelivery = 0;
-    (row as any).revPaidCollectForCustomer = 0;
-
-    return row;
-  }
-
   private async buildDebtMapForDate(
     oldDayVn: VnDate,
     oldDayDebtDate: Date,
@@ -322,7 +570,8 @@ export class CronjobService {
     }
 
     const rootRouteIds = Array.from(rootRouteInfoMap.keys()).map(id => new Types.ObjectId(id));
-    const debtMap: Record<string, IDebtRowDB> = {};
+    const debtMap: Record<string, DebtRowExt> = {};
+    const rootRevenueMap = new Map<string, RootRevenueAccumulator>();
 
     const getRow = (from: Types.ObjectId, to: Types.ObjectId) => {
       const key = `${from}_${to}`;
@@ -373,9 +622,6 @@ export class CronjobService {
 
       const fromRoot = getRootRoute(new Types.ObjectId(delivery.fromRoute), rootRouteMap);
       const toRoot = getRootRoute(new Types.ObjectId(delivery.toRoute), rootRouteMap);
-      if (fromRoot.equals(toRoot)) {
-        continue;
-      }
 
       const fromRoute = rootRouteInfoMap.get(fromRoot.toString());
       const toRoute = rootRouteInfoMap.get(toRoot.toString());
@@ -383,45 +629,88 @@ export class CronjobService {
         continue;
       }
 
-      const relation = getRouteRelation(fromRoute, toRoute);
-      const shouldAddRevenue = relation === 'OWNED_OWNED' || fromRoute.type === RouteType.OWNED;
-
-      const row = getRow(fromRoot, toRoot);
-      const opp = getRow(toRoot, fromRoot);
-
       const itemValue = delivery.itemCost ?? 0;
       const cost = delivery.cost ?? 0;
       const costWithItem = cost + itemValue;
+      const gtn = delivery.homeDeliveryCost ?? 0;
+      const surcharge = delivery.collectForCustomerCost ?? 0;
+
+      const freightOwner = this.getFreightRevenueOwner(fromRoute, toRoute);
+      if (freightOwner) {
+        const bucket = getOrCreateRootRevenueBucket(rootRevenueMap, freightOwner);
+        if (delivery.paymentType === 'debt') {
+          this.addRevenueToBucket(bucket, { revDebtAmount: costWithItem });
+        }
+        if (delivery.paymentType === 'paid') {
+          this.addRevenueToBucket(bucket, { revPaidAmount: costWithItem });
+        }
+      }
+
+      // paymentType=paid:
+      // chỉ cộng GTN đi / PP đi cho trạm owned của chiều hiện tại
+      if (delivery.paymentType === 'paid') {
+        const paidDestinationOwner = this.getDestinationRevenueOwner(fromRoute, toRoute);
+        if (paidDestinationOwner) {
+          const bucket = getOrCreateRootRevenueBucket(rootRevenueMap, paidDestinationOwner);
+          this.addRevenueToBucket(bucket, {
+            revPaidHomeDelivery: gtn,
+            revPaidCollectForCustomer: surcharge,
+          });
+        }
+      }
+
+      // paymentType=debt:
+      // chỉ cộng GTN về / PP về cho trạm owned là nơi nhận hàng của chiều đó
+      if (delivery.paymentType === 'debt') {
+        const debtReturnOwner = this.getDebtReturnRevenueOwner(fromRoute, toRoute);
+        if (debtReturnOwner) {
+          const bucket = getOrCreateRootRevenueBucket(rootRevenueMap, debtReturnOwner);
+          this.addRevenueToBucket(bucket, {
+            revDebtHomeDelivery: gtn,
+            revDebtCollectForCustomer: surcharge,
+          });
+        }
+      }
+
+      if (fromRoot.equals(toRoot)) {
+        continue;
+      }
+
+      const row = getRow(fromRoot, toRoot);
+      const opp = getRow(toRoot, fromRoot);
 
       if (delivery.paymentType === 'debt') {
         row.feeCODToRoute += costWithItem;
         opp.feeCODFromRoute += costWithItem;
 
-        if (shouldAddRevenue) {
-          (opp as any).revDebtAmount += costWithItem;
+        if (gtn > 0) {
+          row.feeCODToRoute += gtn;
+          opp.feeCODFromRoute += gtn;
+        }
+
+        if (surcharge > 0) {
+          row.feeCODToRoute += surcharge;
+          opp.feeCODFromRoute += surcharge;
         }
       }
 
       if (delivery.paymentType === 'paid') {
-        const gtn = delivery.homeDeliveryCost ?? 0;
-        const surcharge = delivery.collectForCustomerCost ?? 0;
-
         row.homeDeliveryToRoute += gtn;
         row.surchargeToRoute += surcharge;
 
         opp.homeDeliveryFromRoute += gtn;
         opp.surchargeFromRoute += surcharge;
-
-        if (shouldAddRevenue) {
-          (opp as any).revPaidAmount += costWithItem;
-          (opp as any).revPaidHomeDelivery += gtn;
-          (opp as any).revPaidCollectForCustomer += surcharge;
-        }
       }
     }
 
     const moneyCursor = MoneyDelivery.find({
-      type: { $in: [MoneyDeliveryType.NORMAL, MoneyDeliveryType.COLLECT] },
+      type: {
+        $in: [
+          MoneyDeliveryType.NORMAL,
+          MoneyDeliveryType.COLLECT,
+          MoneyDeliveryType.COLLECT_FOR_CUSTOMER,
+        ],
+      },
       createdAt: { $gte: range.start, $lte: range.end },
     })
       .session(session)
@@ -434,9 +723,6 @@ export class CronjobService {
 
       const fromRoot = getRootRoute(new Types.ObjectId(money.fromRoute), rootRouteMap);
       const toRoot = getRootRoute(new Types.ObjectId(money.toRoute), rootRouteMap);
-      if (fromRoot.equals(toRoot)) {
-        continue;
-      }
 
       const fromRoute = rootRouteInfoMap.get(fromRoot.toString());
       const toRoute = rootRouteInfoMap.get(toRoot.toString());
@@ -444,31 +730,58 @@ export class CronjobService {
         continue;
       }
 
-      const relation = getRouteRelation(fromRoute, toRoute);
-      const shouldAddRevenue = relation === 'OWNED_OWNED' || fromRoute.type === RouteType.OWNED;
+      const sendMoneyAmount = money.sendMoneyAmount ?? 0;
+      const sendCost = (money as any).sendCost ?? 0;
+
+      const moneyOwner = this.getMoneyRevenueOwner(fromRoute, toRoute);
+      if (moneyOwner && sendCost > 0) {
+        const bucket = getOrCreateRootRevenueBucket(rootRevenueMap, moneyOwner);
+        if (
+          money.type === MoneyDeliveryType.NORMAL ||
+          money.type === MoneyDeliveryType.COLLECT_FOR_CUSTOMER
+        ) {
+          this.addRevenueToBucket(bucket, { revNormalSendCost: sendCost });
+        }
+
+        if (money.type === MoneyDeliveryType.COLLECT) {
+          this.addRevenueToBucket(bucket, { revCollectSendCost: sendCost });
+        }
+      }
+
+      if (fromRoot.equals(toRoot)) {
+        continue;
+      }
 
       const row = getRow(fromRoot, toRoot);
       const opp = getRow(toRoot, fromRoot);
 
-      const sendMoneyAmount = money.sendMoneyAmount ?? 0;
-      const sendCost = (money as any).sendCost ?? 0;
+      const isNormalOrCollectForCustomer =
+        money.type === MoneyDeliveryType.NORMAL ||
+        money.type === MoneyDeliveryType.COLLECT_FOR_CUSTOMER;
 
-      // Tiền Về / Tiền Đi chỉ lấy NORMAL
-      if (money.type === MoneyDeliveryType.NORMAL && sendMoneyAmount > 0) {
+      if (isNormalOrCollectForCustomer && sendMoneyAmount > 0) {
         row.costToRoute += sendMoneyAmount;
         opp.costFromRoute += sendMoneyAmount;
       }
+    }
 
-      // Doanh thu cộng theo đúng chiều đang phát sinh
-      if (shouldAddRevenue && sendCost > 0) {
-        if (money.type === MoneyDeliveryType.NORMAL) {
-          (row as any).revNormalSendCost += sendCost;
-        }
-
-        if (money.type === MoneyDeliveryType.COLLECT) {
-          (row as any).revCollectSendCost += sendCost;
-        }
+    for (const [rootId, bucket] of rootRevenueMap.entries()) {
+      const rootRoute = rootRouteInfoMap.get(rootId);
+      if (!rootRoute || !isOwnedRouteType(rootRoute.type)) {
+        continue;
       }
+
+      const targetRow = this.pickRevenueTargetRow(
+        debtMap,
+        rootRouteInfoMap,
+        rootRoute._id as Types.ObjectId
+      );
+
+      if (!targetRow) {
+        continue;
+      }
+
+      this.applyRevenueBucketToExistingRow(targetRow, bucket);
     }
 
     return { debtMap, routeMap: rootRouteInfoMap };
@@ -482,8 +795,6 @@ export class CronjobService {
       false
     );
 
-    const ops: mongoose.AnyBulkWriteOperation<IDebtRowDB>[] = [];
-
     for (const row of Object.values(debtMap)) {
       if (row.fromRoute.toString() === row.toRoute.toString()) {
         continue;
@@ -496,15 +807,24 @@ export class CronjobService {
       }
 
       const relation = getRouteRelation(fromRoute, toRoute);
-      const shouldAddRevenue = relation === 'OWNED_OWNED' || toRoute.type === RouteType.OWNED;
 
       row.totalDebt = computeBaseTotalDebt(row, relation);
+      row.netDebt = row.totalDebt;
 
-      if (shouldAddRevenue) {
+      if (isOwnedRouteType(toRoute.type)) {
         finalizeRevenue(row);
-        row.totalDebt += row.revenueTotal ?? 0;
       } else {
         clearRevenue(row);
+      }
+    }
+
+    this.normalizeCompanyPairTotals(debtMap, routeMap);
+
+    const ops: mongoose.AnyBulkWriteOperation<IDebtRowDB>[] = [];
+
+    for (const row of Object.values(debtMap)) {
+      if (row.fromRoute.toString() === row.toRoute.toString()) {
+        continue;
       }
 
       ops.push({
@@ -514,7 +834,36 @@ export class CronjobService {
             toRoute: row.toRoute,
             dateDebt: row.dateDebt,
           },
-          update: { $setOnInsert: row },
+          update: {
+            $set: {
+              openingBalance: row.openingBalance ?? 0,
+              costFromRoute: row.costFromRoute,
+              feeCODToRoute: row.feeCODToRoute,
+              costToRoute: row.costToRoute,
+              feeCODFromRoute: row.feeCODFromRoute,
+              accountPayable: row.accountPayable ?? 0,
+              receivable: row.receivable ?? 0,
+              homeDeliveryFromRoute: row.homeDeliveryFromRoute,
+              homeDeliveryToRoute: row.homeDeliveryToRoute,
+              surchargeFromRoute: row.surchargeFromRoute,
+              surchargeToRoute: row.surchargeToRoute,
+              revenueHomeDelivery: row.revenueHomeDelivery,
+              revenueSurcharge: row.revenueSurcharge,
+              revenueTotal: row.revenueTotal,
+              totalDebt: row.totalDebt,
+              netDebt: row.netDebt ?? 0,
+              cashCollectedToday: row.cashCollectedToday ?? 0,
+              newDebtFreightToday: row.newDebtFreightToday ?? 0,
+              paidOldDebtToday: row.paidOldDebtToday ?? 0,
+              minimumTransferToCompany: row.minimumTransferToCompany ?? 0,
+            },
+            $setOnInsert: {
+              id: row.id,
+              fromRoute: row.fromRoute,
+              toRoute: row.toRoute,
+              dateDebt: row.dateDebt,
+            },
+          },
           upsert: true,
         },
       });
@@ -537,8 +886,6 @@ export class CronjobService {
       true
     );
 
-    const ops: mongoose.AnyBulkWriteOperation<IDebtRowDB>[] = [];
-
     for (const row of Object.values(debtMap)) {
       if (row.fromRoute.toString() === row.toRoute.toString()) {
         continue;
@@ -551,15 +898,24 @@ export class CronjobService {
       }
 
       const relation = getRouteRelation(fromRoute, toRoute);
-      const shouldAddRevenue = relation === 'OWNED_OWNED' || toRoute.type === RouteType.OWNED;
 
       row.totalDebt = computeBaseTotalDebt(row, relation);
+      row.netDebt = row.totalDebt;
 
-      if (shouldAddRevenue) {
+      if (isOwnedRouteType(toRoute.type)) {
         finalizeRevenue(row);
-        row.totalDebt += row.revenueTotal ?? 0;
       } else {
         clearRevenue(row);
+      }
+    }
+
+    this.normalizeCompanyPairTotals(debtMap, routeMap);
+
+    const ops: mongoose.AnyBulkWriteOperation<IDebtRowDB>[] = [];
+
+    for (const row of Object.values(debtMap)) {
+      if (row.fromRoute.toString() === row.toRoute.toString()) {
+        continue;
       }
 
       ops.push({
@@ -571,10 +927,13 @@ export class CronjobService {
           },
           update: {
             $set: {
+              openingBalance: row.openingBalance ?? 0,
               costFromRoute: row.costFromRoute,
               feeCODToRoute: row.feeCODToRoute,
               costToRoute: row.costToRoute,
               feeCODFromRoute: row.feeCODFromRoute,
+              accountPayable: row.accountPayable ?? 0,
+              receivable: row.receivable ?? 0,
               homeDeliveryFromRoute: row.homeDeliveryFromRoute,
               homeDeliveryToRoute: row.homeDeliveryToRoute,
               surchargeFromRoute: row.surchargeFromRoute,
@@ -583,6 +942,11 @@ export class CronjobService {
               revenueSurcharge: row.revenueSurcharge,
               revenueTotal: row.revenueTotal,
               totalDebt: row.totalDebt,
+              netDebt: row.netDebt ?? 0,
+              cashCollectedToday: row.cashCollectedToday ?? 0,
+              newDebtFreightToday: row.newDebtFreightToday ?? 0,
+              paidOldDebtToday: row.paidOldDebtToday ?? 0,
+              minimumTransferToCompany: row.minimumTransferToCompany ?? 0,
             },
           },
           upsert: false,
@@ -603,9 +967,9 @@ export class CronjobService {
     const ops: mongoose.AnyBulkWriteOperation<IDebtRowDB>[] = [];
 
     for (const debt of debts) {
-      const openingBalance = debt.totalDebt ?? 0;
+      const openingBalance = (debt as any).netDebt ?? debt.totalDebt ?? 0;
 
-      const newDayDebt: IDebtRowDB = {
+      const newDayDebt: DebtRowExt = {
         id: new Types.ObjectId(),
         fromRoute: debt.fromRoute as any,
         toRoute: debt.toRoute as any,
@@ -630,6 +994,13 @@ export class CronjobService {
         revenueTotal: 0,
 
         totalDebt: openingBalance,
+        netDebt: openingBalance,
+
+        cashCollectedToday: 0,
+        newDebtFreightToday: 0,
+        paidOldDebtToday: 0,
+        minimumTransferToCompany: 0,
+
         dateDebt: newDayDebtDate,
       };
 
@@ -640,7 +1011,11 @@ export class CronjobService {
             toRoute: newDayDebt.toRoute,
             dateDebt: newDayDebt.dateDebt,
           },
-          update: { $setOnInsert: newDayDebt },
+          update: {
+            $setOnInsert: {
+              ...newDayDebt,
+            },
+          },
           upsert: true,
         },
       });
@@ -651,3 +1026,7 @@ export class CronjobService {
     }
   }
 }
+
+export class CronJobService extends CronjobService {}
+
+export default CronjobService;
