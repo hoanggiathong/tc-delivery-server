@@ -7,7 +7,7 @@ import { IDebtRowDB } from '@/types/debt.type';
 import { RouteType } from '@/types/route.type';
 
 const VN_UTC_OFFSET_HOURS = 7;
-const COMPANY_ROUTE_CODE = 'TP';
+const COMPANY_ROUTE_CODE = 'SG';
 
 type VnDate = { year: number; month: number; date: number };
 type RouteRelation = 'OWNED_OWNED' | 'OWNED_PARTNER' | 'PARTNER_OWNED' | 'PARTNER_PARTNER';
