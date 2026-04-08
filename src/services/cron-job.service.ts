@@ -387,14 +387,7 @@ export class CronjobService {
     return null;
   }
 
-  private getDestinationRevenueOwner(
-    fromRootRoute: IRoute,
-    toRootRoute: IRoute
-  ): Types.ObjectId | null {
-    if (isOwnedRouteType(toRootRoute.type)) {
-      return toObjectId(toRootRoute._id);
-    }
-
+  private getDestinationRevenueOwner(fromRootRoute: IRoute): Types.ObjectId | null {
     if (isOwnedRouteType(fromRootRoute.type)) {
       return toObjectId(fromRootRoute._id);
     }
@@ -405,10 +398,7 @@ export class CronjobService {
   // GTN đi / PP đi chỉ cộng doanh thu khi paymentType = paid
   // GTN về / PP về chỉ cộng doanh thu khi paymentType = debt của chiều về
   // ví dụ đang đứng TA (owned) thì chỉ cộng GTN/PP từ các đơn trạm khác -> TA có paymentType = debt
-  private getDebtReturnRevenueOwner(
-    fromRootRoute: IRoute,
-    toRootRoute: IRoute
-  ): Types.ObjectId | null {
+  private getDebtReturnRevenueOwner(toRootRoute: IRoute): Types.ObjectId | null {
     if (isOwnedRouteType(toRootRoute.type)) {
       return toObjectId(toRootRoute._id);
     }
@@ -651,7 +641,7 @@ export class CronjobService {
       // paymentType=paid:
       // chỉ cộng GTN đi / PP đi cho trạm owned của chiều hiện tại
       if (delivery.paymentType === 'paid') {
-        const paidDestinationOwner = this.getDestinationRevenueOwner(fromRoute, toRoute);
+        const paidDestinationOwner = this.getDestinationRevenueOwner(fromRoute);
         if (paidDestinationOwner) {
           const bucket = getOrCreateRootRevenueBucket(rootRevenueMap, paidDestinationOwner);
           this.addRevenueToBucket(bucket, {
@@ -664,7 +654,7 @@ export class CronjobService {
       // paymentType=debt:
       // chỉ cộng GTN về / PP về cho trạm owned là nơi nhận hàng của chiều đó
       if (delivery.paymentType === 'debt') {
-        const debtReturnOwner = this.getDebtReturnRevenueOwner(fromRoute, toRoute);
+        const debtReturnOwner = this.getDebtReturnRevenueOwner(toRoute);
         if (debtReturnOwner) {
           const bucket = getOrCreateRootRevenueBucket(rootRevenueMap, debtReturnOwner);
           this.addRevenueToBucket(bucket, {
