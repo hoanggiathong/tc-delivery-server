@@ -220,8 +220,10 @@ function finalizeRevenue(row: DebtRowExt) {
     revPaidAmount +
     revNormalSendCost +
     revCollectSendCost +
-    row.revenueHomeDelivery +
-    row.revenueSurcharge;
+    revPaidHomeDelivery +
+    revPaidCollectForCustomer +
+    revDebtHomeDelivery +
+    revDebtCollectForCustomer;
 
   row.newDebtFreightToday = revDebtAmount;
 
