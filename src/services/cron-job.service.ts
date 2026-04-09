@@ -312,10 +312,6 @@ export class CronjobService {
     };
   }
 
-  private isOwnedNonCompanyRoute(route?: IRoute | null): boolean {
-    return !!route && isOwnedRouteType(route.type) && !isTpRoute(route);
-  }
-
   private addRevenueToBucket(
     bucket: RootRevenueAccumulator,
     patch: Partial<RootRevenueAccumulator>
@@ -380,8 +376,8 @@ export class CronjobService {
     fromRootRoute: IRoute,
     _toRootRoute: IRoute
   ): Types.ObjectId | null {
-    // Cước gửi HÀNG thuộc trạm gửi nếu trạm gửi là owned non-company
-    if (this.isOwnedNonCompanyRoute(fromRootRoute)) {
+    // Cước gửi HÀNG thuộc trạm gửi nếu trạm gửi là owned
+    if (isOwnedRouteType(fromRootRoute.type)) {
       return toObjectId(fromRootRoute._id);
     }
 
@@ -389,30 +385,55 @@ export class CronjobService {
   }
 
   private getDestinationRevenueOwner(fromRootRoute: IRoute): Types.ObjectId | null {
-    if (this.isOwnedNonCompanyRoute(fromRootRoute)) {
+    // GTN đi / PP đi paid thuộc trạm gửi nếu trạm gửi là owned
+    if (isOwnedRouteType(fromRootRoute.type)) {
       return toObjectId(fromRootRoute._id);
     }
 
     return null;
   }
 
-  // GTN đi / PP đi chỉ cộng doanh thu khi paymentType = paid
-  // GTN về / PP về chỉ cộng doanh thu khi paymentType = debt của chiều về
-  // ví dụ đang đứng TA (owned) thì chỉ cộng GTN/PP từ các đơn trạm khác -> TA có paymentType = debt
+  // GTN về / PP về debt thuộc trạm nhận nếu trạm nhận là owned
   private getDebtReturnRevenueOwner(toRootRoute: IRoute): Types.ObjectId | null {
-    if (this.isOwnedNonCompanyRoute(toRootRoute)) {
+    if (isOwnedRouteType(toRootRoute.type)) {
       return toObjectId(toRootRoute._id);
     }
 
     return null;
   }
 
-  private getMoneyRevenueOwner(fromRootRoute: IRoute, _toRootRoute: IRoute): Types.ObjectId | null {
-    // Cước gửi tiền / cước thu hộ thuộc trạm gửi nếu trạm gửi là owned non-company
-    if (this.isOwnedNonCompanyRoute(fromRootRoute)) {
-      return toObjectId(fromRootRoute._id);
+  private getMoneyRevenueOwner(
+    moneyType: MoneyDeliveryType,
+    fromRootRoute: IRoute,
+    toRootRoute: IRoute
+  ): Types.ObjectId | null {
+    // Cước gửi tiền: ưu tiên trạm gửi, fallback trạm nhận nếu là owned
+    if (moneyType === MoneyDeliveryType.NORMAL) {
+      if (isOwnedRouteType(fromRootRoute.type)) {
+        return toObjectId(fromRootRoute._id);
+      }
+
+      if (isOwnedRouteType(toRootRoute.type)) {
+        return toObjectId(toRootRoute._id);
+      }
+
+      return null;
     }
 
+    // Cước thu hộ: ưu tiên trạm nhận / xử lý khoản thu hộ
+    if (moneyType === MoneyDeliveryType.COLLECT) {
+      if (isOwnedRouteType(toRootRoute.type)) {
+        return toObjectId(toRootRoute._id);
+      }
+
+      if (isOwnedRouteType(fromRootRoute.type)) {
+        return toObjectId(fromRootRoute._id);
+      }
+
+      return null;
+    }
+
+    // COLLECT_FOR_CUSTOMER không cộng vào doanh thu
     return null;
   }
 
@@ -637,7 +658,7 @@ export class CronjobService {
       }
 
       // paymentType=paid:
-      // chỉ cộng GTN đi / PP đi cho trạm owned non-company của chiều hiện tại
+      // chỉ cộng GTN đi / PP đi cho trạm gửi là owned
       if (delivery.paymentType === 'paid') {
         const paidDestinationOwner = this.getDestinationRevenueOwner(fromRoute);
         if (paidDestinationOwner) {
@@ -662,7 +683,7 @@ export class CronjobService {
       }
 
       // paymentType=debt:
-      // chỉ cộng GTN về / PP về cho trạm owned non-company là nơi nhận hàng của chiều đó
+      // chỉ cộng GTN về / PP về cho trạm nhận là owned
       if (delivery.paymentType === 'debt') {
         const debtReturnOwner = this.getDebtReturnRevenueOwner(toRoute);
         if (debtReturnOwner) {
@@ -746,7 +767,7 @@ export class CronjobService {
       const sendMoneyAmount = money.sendMoneyAmount ?? 0;
       const sendCost = (money as any).sendCost ?? 0;
 
-      const moneyOwner = this.getMoneyRevenueOwner(fromRoute, toRoute);
+      const moneyOwner = this.getMoneyRevenueOwner(money.type, fromRoute, toRoute);
 
       // Doanh thu chỉ tính:
       // - NORMAL => cước gửi tiền
@@ -786,7 +807,7 @@ export class CronjobService {
 
     for (const [rootId, bucket] of rootRevenueMap.entries()) {
       const rootRoute = rootRouteInfoMap.get(rootId);
-      if (!rootRoute || !this.isOwnedNonCompanyRoute(rootRoute)) {
+      if (!rootRoute || !isOwnedRouteType(rootRoute.type)) {
         continue;
       }
 
@@ -830,7 +851,7 @@ export class CronjobService {
       row.totalDebt = computeBaseTotalDebt(row, relation);
       row.netDebt = row.totalDebt;
 
-      if (this.isOwnedNonCompanyRoute(toRoute)) {
+      if (isOwnedRouteType(toRoute.type)) {
         finalizeRevenue(row);
       } else {
         clearRevenue(row);
@@ -921,7 +942,7 @@ export class CronjobService {
       row.totalDebt = computeBaseTotalDebt(row, relation);
       row.netDebt = row.totalDebt;
 
-      if (this.isOwnedNonCompanyRoute(toRoute)) {
+      if (isOwnedRouteType(toRoute.type)) {
         finalizeRevenue(row);
       } else {
         clearRevenue(row);
