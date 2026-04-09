@@ -643,7 +643,7 @@ export class CronjobService {
       if (delivery.paymentType === 'paid') {
         const paidDestinationOwner = this.getDestinationRevenueOwner(fromRoute);
         if (paidDestinationOwner) {
-          console.log('[PAID GTN/PP -> REVENUE]', {
+          /*console.log('[PAID GTN/PP -> REVENUE]', {
             deliveryId: delivery._id?.toString?.(),
             fromRoot: fromRoute.code,
             toRoot: toRoute.code,
@@ -654,7 +654,7 @@ export class CronjobService {
             surcharge,
             paymentType: delivery.paymentType,
           });
-
+          */
           const bucket = getOrCreateRootRevenueBucket(rootRevenueMap, paidDestinationOwner);
           this.addRevenueToBucket(bucket, {
             revPaidHomeDelivery: gtn,
