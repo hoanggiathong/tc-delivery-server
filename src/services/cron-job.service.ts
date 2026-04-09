@@ -312,6 +312,10 @@ export class CronjobService {
     };
   }
 
+  private isOwnedNonCompanyRoute(route?: IRoute | null): boolean {
+    return !!route && isOwnedRouteType(route.type) && !isTpRoute(route);
+  }
+
   private addRevenueToBucket(
     bucket: RootRevenueAccumulator,
     patch: Partial<RootRevenueAccumulator>
@@ -376,19 +380,21 @@ export class CronjobService {
     fromRootRoute: IRoute,
     toRootRoute: IRoute
   ): Types.ObjectId | null {
-    if (isOwnedRouteType(fromRootRoute.type)) {
-      return toObjectId(fromRootRoute._id);
+    // chỉ lấy doanh thu freight cho owned non-company khi nó là trạm đích đang xem
+    if (this.isOwnedNonCompanyRoute(toRootRoute)) {
+      return toObjectId(toRootRoute._id);
     }
 
-    if (isOwnedRouteType(toRootRoute.type)) {
-      return toObjectId(toRootRoute._id);
+    // riêng case owned -> company thì doanh thu thuộc trạm owned gửi đi
+    if (this.isOwnedNonCompanyRoute(fromRootRoute) && isTpRoute(toRootRoute)) {
+      return toObjectId(fromRootRoute._id);
     }
 
     return null;
   }
 
   private getDestinationRevenueOwner(fromRootRoute: IRoute): Types.ObjectId | null {
-    if (isOwnedRouteType(fromRootRoute.type)) {
+    if (this.isOwnedNonCompanyRoute(fromRootRoute)) {
       return toObjectId(fromRootRoute._id);
     }
 
@@ -399,7 +405,7 @@ export class CronjobService {
   // GTN về / PP về chỉ cộng doanh thu khi paymentType = debt của chiều về
   // ví dụ đang đứng TA (owned) thì chỉ cộng GTN/PP từ các đơn trạm khác -> TA có paymentType = debt
   private getDebtReturnRevenueOwner(toRootRoute: IRoute): Types.ObjectId | null {
-    if (isOwnedRouteType(toRootRoute.type)) {
+    if (this.isOwnedNonCompanyRoute(toRootRoute)) {
       return toObjectId(toRootRoute._id);
     }
 
@@ -407,11 +413,11 @@ export class CronjobService {
   }
 
   private getMoneyRevenueOwner(fromRootRoute: IRoute, toRootRoute: IRoute): Types.ObjectId | null {
-    if (isOwnedRouteType(fromRootRoute.type)) {
+    if (this.isOwnedNonCompanyRoute(fromRootRoute)) {
       return toObjectId(fromRootRoute._id);
     }
 
-    if (isOwnedRouteType(toRootRoute.type)) {
+    if (this.isOwnedNonCompanyRoute(toRootRoute)) {
       return toObjectId(toRootRoute._id);
     }
 
@@ -639,11 +645,11 @@ export class CronjobService {
       }
 
       // paymentType=paid:
-      // chỉ cộng GTN đi / PP đi cho trạm owned của chiều hiện tại
+      // chỉ cộng GTN đi / PP đi cho trạm owned non-company của chiều hiện tại
       if (delivery.paymentType === 'paid') {
         const paidDestinationOwner = this.getDestinationRevenueOwner(fromRoute);
         if (paidDestinationOwner) {
-          /*console.log('[PAID GTN/PP -> REVENUE]', {
+          console.log('[PAID GTN/PP -> REVENUE]', {
             deliveryId: delivery._id?.toString?.(),
             fromRoot: fromRoute.code,
             toRoot: toRoute.code,
@@ -654,7 +660,7 @@ export class CronjobService {
             surcharge,
             paymentType: delivery.paymentType,
           });
-          */
+
           const bucket = getOrCreateRootRevenueBucket(rootRevenueMap, paidDestinationOwner);
           this.addRevenueToBucket(bucket, {
             revPaidHomeDelivery: gtn,
@@ -664,10 +670,21 @@ export class CronjobService {
       }
 
       // paymentType=debt:
-      // chỉ cộng GTN về / PP về cho trạm owned là nơi nhận hàng của chiều đó
+      // chỉ cộng GTN về / PP về cho trạm owned non-company là nơi nhận hàng của chiều đó
       if (delivery.paymentType === 'debt') {
         const debtReturnOwner = this.getDebtReturnRevenueOwner(toRoute);
         if (debtReturnOwner) {
+          console.log('[DEBT RETURN -> REVENUE]', {
+            deliveryId: delivery._id?.toString?.(),
+            fromRoot: fromRoute.code,
+            toRoot: toRoute.code,
+            toType: toRoute.type,
+            owner: debtReturnOwner.toString(),
+            costWithItem,
+            gtn,
+            surcharge,
+            paymentType: delivery.paymentType,
+          });
           const bucket = getOrCreateRootRevenueBucket(rootRevenueMap, debtReturnOwner);
           this.addRevenueToBucket(bucket, {
             revDebtHomeDelivery: gtn,
@@ -777,7 +794,7 @@ export class CronjobService {
 
     for (const [rootId, bucket] of rootRevenueMap.entries()) {
       const rootRoute = rootRouteInfoMap.get(rootId);
-      if (!rootRoute || !isOwnedRouteType(rootRoute.type)) {
+      if (!rootRoute || !this.isOwnedNonCompanyRoute(rootRoute)) {
         continue;
       }
 
@@ -821,7 +838,7 @@ export class CronjobService {
       row.totalDebt = computeBaseTotalDebt(row, relation);
       row.netDebt = row.totalDebt;
 
-      if (isOwnedRouteType(toRoute.type)) {
+      if (this.isOwnedNonCompanyRoute(toRoute)) {
         finalizeRevenue(row);
       } else {
         clearRevenue(row);
@@ -912,7 +929,7 @@ export class CronjobService {
       row.totalDebt = computeBaseTotalDebt(row, relation);
       row.netDebt = row.totalDebt;
 
-      if (isOwnedRouteType(toRoute.type)) {
+      if (this.isOwnedNonCompanyRoute(toRoute)) {
         finalizeRevenue(row);
       } else {
         clearRevenue(row);
