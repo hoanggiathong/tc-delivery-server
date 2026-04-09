@@ -643,6 +643,18 @@ export class CronjobService {
       if (delivery.paymentType === 'paid') {
         const paidDestinationOwner = this.getDestinationRevenueOwner(fromRoute);
         if (paidDestinationOwner) {
+          console.log('[PAID GTN/PP -> REVENUE]', {
+            deliveryId: delivery._id?.toString?.(),
+            fromRoot: fromRoute.code,
+            toRoot: toRoute.code,
+            fromType: fromRoute.type,
+            owner: paidDestinationOwner.toString(),
+            costWithItem,
+            gtn,
+            surcharge,
+            paymentType: delivery.paymentType,
+          });
+
           const bucket = getOrCreateRootRevenueBucket(rootRevenueMap, paidDestinationOwner);
           this.addRevenueToBucket(bucket, {
             revPaidHomeDelivery: gtn,
@@ -726,12 +738,15 @@ export class CronjobService {
       const sendCost = (money as any).sendCost ?? 0;
 
       const moneyOwner = this.getMoneyRevenueOwner(fromRoute, toRoute);
+
+      // Doanh thu chỉ tính:
+      // - NORMAL => cước gửi tiền
+      // - COLLECT => cước thu hộ
+      // COLLECT_FOR_CUSTOMER không cộng vào doanh thu
       if (moneyOwner && sendCost > 0) {
         const bucket = getOrCreateRootRevenueBucket(rootRevenueMap, moneyOwner);
-        if (
-          money.type === MoneyDeliveryType.NORMAL ||
-          money.type === MoneyDeliveryType.COLLECT_FOR_CUSTOMER
-        ) {
+
+        if (money.type === MoneyDeliveryType.NORMAL) {
           this.addRevenueToBucket(bucket, { revNormalSendCost: sendCost });
         }
 
@@ -747,6 +762,9 @@ export class CronjobService {
       const row = getRow(fromRoot, toRoot);
       const opp = getRow(toRoot, fromRoot);
 
+      // sendMoneyAmount phải gồm:
+      // - NORMAL
+      // - COLLECT_FOR_CUSTOMER
       const isNormalOrCollectForCustomer =
         money.type === MoneyDeliveryType.NORMAL ||
         money.type === MoneyDeliveryType.COLLECT_FOR_CUSTOMER;
