@@ -378,15 +378,10 @@ export class CronjobService {
 
   private getFreightRevenueOwner(
     fromRootRoute: IRoute,
-    toRootRoute: IRoute
+    _toRootRoute: IRoute
   ): Types.ObjectId | null {
-    // chỉ lấy doanh thu freight cho owned non-company khi nó là trạm đích đang xem
-    if (this.isOwnedNonCompanyRoute(toRootRoute)) {
-      return toObjectId(toRootRoute._id);
-    }
-
-    // riêng case owned -> company thì doanh thu thuộc trạm owned gửi đi
-    if (this.isOwnedNonCompanyRoute(fromRootRoute) && isTpRoute(toRootRoute)) {
+    // Cước gửi HÀNG thuộc trạm gửi nếu trạm gửi là owned non-company
+    if (this.isOwnedNonCompanyRoute(fromRootRoute)) {
       return toObjectId(fromRootRoute._id);
     }
 
@@ -412,13 +407,10 @@ export class CronjobService {
     return null;
   }
 
-  private getMoneyRevenueOwner(fromRootRoute: IRoute, toRootRoute: IRoute): Types.ObjectId | null {
+  private getMoneyRevenueOwner(fromRootRoute: IRoute, _toRootRoute: IRoute): Types.ObjectId | null {
+    // Cước gửi tiền / cước thu hộ thuộc trạm gửi nếu trạm gửi là owned non-company
     if (this.isOwnedNonCompanyRoute(fromRootRoute)) {
       return toObjectId(fromRootRoute._id);
-    }
-
-    if (this.isOwnedNonCompanyRoute(toRootRoute)) {
-      return toObjectId(toRootRoute._id);
     }
 
     return null;
