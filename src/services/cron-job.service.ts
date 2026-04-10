@@ -17,8 +17,10 @@ type RevenueExtraFields = {
   revPaidAmount?: number;
   revNormalSendCost?: number;
   revCollectSendCost?: number;
+  // GTN/PP đi đã thu của owned
   revPaidHomeDelivery?: number;
   revPaidCollectForCustomer?: number;
+  // tạm thời vẫn giữ field để không vỡ type cũ, nhưng sẽ không cộng vào revenue
   revDebtHomeDelivery?: number;
   revDebtCollectForCustomer?: number;
 
@@ -207,23 +209,17 @@ function finalizeRevenue(row: DebtRowExt) {
   const revPaidAmount = row.revPaidAmount ?? 0;
   const revNormalSendCost = row.revNormalSendCost ?? 0;
   const revCollectSendCost = row.revCollectSendCost ?? 0;
+
+  // chỉ giữ GTN/PP đi đã thu để nộp thêm vào công nợ
   const revPaidHomeDelivery = row.revPaidHomeDelivery ?? 0;
   const revPaidCollectForCustomer = row.revPaidCollectForCustomer ?? 0;
-  const revDebtHomeDelivery = row.revDebtHomeDelivery ?? 0;
-  const revDebtCollectForCustomer = row.revDebtCollectForCustomer ?? 0;
 
-  row.revenueHomeDelivery = revPaidHomeDelivery + revDebtHomeDelivery;
-  row.revenueSurcharge = revPaidCollectForCustomer + revDebtCollectForCustomer;
+  // tạm thời KHÔNG cộng GTN/PP nợ cước vào doanh thu
+  row.revenueHomeDelivery = revPaidHomeDelivery;
+  row.revenueSurcharge = revPaidCollectForCustomer;
 
-  row.revenueTotal =
-    revDebtAmount +
-    revPaidAmount +
-    revNormalSendCost +
-    revCollectSendCost +
-    revPaidHomeDelivery +
-    revPaidCollectForCustomer +
-    revDebtHomeDelivery +
-    revDebtCollectForCustomer;
+  // doanh thu tạm thời không cộng GTN/PP
+  row.revenueTotal = revDebtAmount + revPaidAmount + revNormalSendCost + revCollectSendCost;
 
   row.newDebtFreightToday = revDebtAmount;
 
@@ -394,6 +390,7 @@ export class CronjobService {
   }
 
   // GTN về / PP về debt thuộc trạm nhận nếu trạm nhận là owned
+  /*
   private getDebtReturnRevenueOwner(toRootRoute: IRoute): Types.ObjectId | null {
     if (isOwnedRouteType(toRootRoute.type)) {
       return toObjectId(toRootRoute._id);
@@ -401,6 +398,7 @@ export class CronjobService {
 
     return null;
   }
+  */
 
   private getMoneyRevenueOwner(
     moneyType: MoneyDeliveryType,
@@ -492,7 +490,11 @@ export class CronjobService {
       const relation = getRouteRelation(ownedViewFromRoute, ownedViewToRoute);
       const baseDebt = computeBaseTotalDebt(ownedViewRow, relation);
       const revenue = ownedViewRow.revenueTotal ?? 0;
-      const finalDebt = baseDebt + revenue;
+      const revenueHomeDelivery = ownedViewRow.revenueHomeDelivery ?? 0;
+      const revenueSurcharge = ownedViewRow.revenueSurcharge ?? 0;
+
+      // công nợ = baseDebt + doanh thu + GTN nộp + PP nộp
+      const finalDebt = baseDebt + revenue + revenueHomeDelivery + revenueSurcharge;
 
       ownedViewRow.totalDebt = finalDebt;
       ownedViewRow.netDebt = finalDebt;
@@ -684,6 +686,7 @@ export class CronjobService {
 
       // paymentType=debt:
       // chỉ cộng GTN về / PP về cho trạm nhận là owned
+      /*
       if (delivery.paymentType === 'debt') {
         const debtReturnOwner = this.getDebtReturnRevenueOwner(toRoute);
         if (debtReturnOwner) {
@@ -705,6 +708,7 @@ export class CronjobService {
           });
         }
       }
+      */
 
       if (fromRoot.equals(toRoot)) {
         continue;
@@ -717,6 +721,8 @@ export class CronjobService {
         row.feeCODToRoute += costWithItem;
         opp.feeCODFromRoute += costWithItem;
 
+        // tạm thời không cộng gtn, surcharge này vào
+        /*
         if (gtn > 0) {
           row.feeCODToRoute += gtn;
           opp.feeCODFromRoute += gtn;
@@ -726,6 +732,7 @@ export class CronjobService {
           row.feeCODToRoute += surcharge;
           opp.feeCODFromRoute += surcharge;
         }
+        */
       }
 
       if (delivery.paymentType === 'paid') {
