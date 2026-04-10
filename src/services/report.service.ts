@@ -153,7 +153,10 @@ export class ReportService {
       getListReturnDeliveriesIsReturnTrueOfToRouteForCalculateCollectForCustomerCost.map(item => {
         totalCollectForCustomerCostWithPaymentTypeDebtDelivery += item.collectForCustomerCost || 0;
         totalCostWithPaymentTypePaidInTodayOfReturnDelivery +=
-          (item.cost || 0) + (item.itemCost || 0);
+          (item.cost || 0) +
+          (item.itemCost || 0) +
+          (item.homeDeliveryCost || 0) +
+          (item.collectForCustomerCost || 0);
       });
 
       const sum = {
