@@ -17,10 +17,8 @@ type RevenueExtraFields = {
   revPaidAmount?: number;
   revNormalSendCost?: number;
   revCollectSendCost?: number;
-  // GTN/PP đi đã thu của owned
   revPaidHomeDelivery?: number;
   revPaidCollectForCustomer?: number;
-  // tạm thời vẫn giữ field để không vỡ type cũ, nhưng sẽ không cộng vào revenue
   revDebtHomeDelivery?: number;
   revDebtCollectForCustomer?: number;
 
@@ -80,6 +78,10 @@ function isOwnedRouteType(type?: string | null): boolean {
 
 function isTpRoute(route?: IRoute | null): boolean {
   return (route?.code ?? '') === COMPANY_ROUTE_CODE;
+}
+
+function canRunWithoutTransaction(): boolean {
+  return process.env.NODE_ENV !== 'production' && process.env.ALLOW_NO_TRANSACTION_DEBUG === 'true';
 }
 
 function getTodayVn(): VnDate {
@@ -210,15 +212,12 @@ function finalizeRevenue(row: DebtRowExt) {
   const revNormalSendCost = row.revNormalSendCost ?? 0;
   const revCollectSendCost = row.revCollectSendCost ?? 0;
 
-  // chỉ giữ GTN/PP đi đã thu để nộp thêm vào công nợ
   const revPaidHomeDelivery = row.revPaidHomeDelivery ?? 0;
   const revPaidCollectForCustomer = row.revPaidCollectForCustomer ?? 0;
 
-  // tạm thời KHÔNG cộng GTN/PP nợ cước vào doanh thu
   row.revenueHomeDelivery = revPaidHomeDelivery;
   row.revenueSurcharge = revPaidCollectForCustomer;
 
-  // doanh thu tạm thời không cộng GTN/PP
   row.revenueTotal = revDebtAmount + revPaidAmount + revNormalSendCost + revCollectSendCost;
 
   row.newDebtFreightToday = revDebtAmount;
@@ -322,39 +321,93 @@ export class CronjobService {
     bucket.revDebtCollectForCustomer += patch.revDebtCollectForCustomer ?? 0;
   }
 
+  private getRowActivityScore(row: DebtRowExt): number {
+    return (
+      Math.abs(row.costFromRoute ?? 0) +
+      Math.abs(row.feeCODToRoute ?? 0) +
+      Math.abs(row.costToRoute ?? 0) +
+      Math.abs(row.feeCODFromRoute ?? 0) +
+      Math.abs(row.homeDeliveryFromRoute ?? 0) +
+      Math.abs(row.homeDeliveryToRoute ?? 0) +
+      Math.abs(row.surchargeFromRoute ?? 0) +
+      Math.abs(row.surchargeToRoute ?? 0) +
+      Math.abs(row.receivable ?? 0) +
+      Math.abs(row.accountPayable ?? 0)
+    );
+  }
+
+  private sortRowsDeterministically(
+    rows: DebtRowExt[],
+    rootRouteInfoMap: Map<string, IRoute>
+  ): DebtRowExt[] {
+    return [...rows].sort((a, b) => {
+      const activityDiff = this.getRowActivityScore(b) - this.getRowActivityScore(a);
+      if (activityDiff !== 0) {
+        return activityDiff;
+      }
+
+      const aFrom = rootRouteInfoMap.get(a.fromRoute.toString());
+      const bFrom = rootRouteInfoMap.get(b.fromRoute.toString());
+      const aFromCode = aFrom?.code ?? '';
+      const bFromCode = bFrom?.code ?? '';
+      const fromCodeDiff = aFromCode.localeCompare(bFromCode, 'vi');
+      if (fromCodeDiff !== 0) {
+        return fromCodeDiff;
+      }
+
+      const aTo = rootRouteInfoMap.get(a.toRoute.toString());
+      const bTo = rootRouteInfoMap.get(b.toRoute.toString());
+      const aToCode = aTo?.code ?? '';
+      const bToCode = bTo?.code ?? '';
+      const toCodeDiff = aToCode.localeCompare(bToCode, 'vi');
+      if (toCodeDiff !== 0) {
+        return toCodeDiff;
+      }
+
+      return a.fromRoute.toString().localeCompare(b.fromRoute.toString(), 'vi');
+    });
+  }
+
   private pickRevenueTargetRow(
     debtMap: Record<string, DebtRowExt>,
     rootRouteInfoMap: Map<string, IRoute>,
     ownedRootId: Types.ObjectId
   ): DebtRowExt | null {
-    const rows = Object.values(debtMap).filter(
-      row => row.toRoute.toString() === ownedRootId.toString()
-    );
-
-    if (!rows.length) {
+    const ownedRoot = rootRouteInfoMap.get(ownedRootId.toString());
+    if (!ownedRoot) {
       return null;
     }
 
-    const withClearing = rows.filter(
-      row =>
-        (row.costFromRoute ?? 0) !== 0 ||
-        (row.feeCODToRoute ?? 0) !== 0 ||
-        (row.costToRoute ?? 0) !== 0 ||
-        (row.feeCODFromRoute ?? 0) !== 0 ||
-        (row.homeDeliveryFromRoute ?? 0) !== 0 ||
-        (row.homeDeliveryToRoute ?? 0) !== 0 ||
-        (row.surchargeFromRoute ?? 0) !== 0 ||
-        (row.surchargeToRoute ?? 0) !== 0
-    );
+    if (!isTpRoute(ownedRoot)) {
+      const rows = Object.values(debtMap).filter(
+        row => row.toRoute.toString() === ownedRootId.toString()
+      );
 
-    const base = withClearing.length ? withClearing : rows;
+      if (!rows.length) {
+        return null;
+      }
 
-    return (
-      base.find(row => {
+      const preferredRows = rows.filter(row => {
         const fromRoute = rootRouteInfoMap.get(row.fromRoute.toString());
         return fromRoute?.code === COMPANY_ROUTE_CODE;
-      }) ?? base[0]
+      });
+
+      if (preferredRows.length) {
+        return this.sortRowsDeterministically(preferredRows, rootRouteInfoMap)[0];
+      }
+
+      return this.sortRowsDeterministically(rows, rootRouteInfoMap)[0];
+    }
+
+    const inboundRowsToCompany = Object.values(debtMap).filter(
+      row => row.toRoute.toString() === ownedRootId.toString()
     );
+
+    if (!inboundRowsToCompany.length) {
+      return null;
+    }
+
+    return this.sortRowsDeterministically(inboundRowsToCompany, rootRouteInfoMap)[0];
   }
 
   private applyRevenueBucketToExistingRow(row: DebtRowExt, bucket: RootRevenueAccumulator) {
@@ -372,7 +425,6 @@ export class CronjobService {
     fromRootRoute: IRoute,
     _toRootRoute: IRoute
   ): Types.ObjectId | null {
-    // Cước gửi HÀNG thuộc trạm gửi nếu trạm gửi là owned
     if (isOwnedRouteType(fromRootRoute.type)) {
       return toObjectId(fromRootRoute._id);
     }
@@ -381,7 +433,6 @@ export class CronjobService {
   }
 
   private getDestinationRevenueOwner(fromRootRoute: IRoute): Types.ObjectId | null {
-    // GTN đi / PP đi paid thuộc trạm gửi nếu trạm gửi là owned
     if (isOwnedRouteType(fromRootRoute.type)) {
       return toObjectId(fromRootRoute._id);
     }
@@ -389,49 +440,27 @@ export class CronjobService {
     return null;
   }
 
-  // GTN về / PP về debt thuộc trạm nhận nếu trạm nhận là owned
-  /*
-  private getDebtReturnRevenueOwner(toRootRoute: IRoute): Types.ObjectId | null {
-    if (isOwnedRouteType(toRootRoute.type)) {
-      return toObjectId(toRootRoute._id);
-    }
-
-    return null;
-  }
-  */
-
   private getMoneyRevenueOwner(
     moneyType: MoneyDeliveryType,
     fromRootRoute: IRoute,
     toRootRoute: IRoute
   ): Types.ObjectId | null {
-    // Cước gửi tiền: ưu tiên trạm gửi, fallback trạm nhận nếu là owned
     if (moneyType === MoneyDeliveryType.NORMAL) {
       if (isOwnedRouteType(fromRootRoute.type)) {
         return toObjectId(fromRootRoute._id);
       }
 
-      if (isOwnedRouteType(toRootRoute.type)) {
-        return toObjectId(toRootRoute._id);
-      }
-
       return null;
     }
 
-    // Cước thu hộ: ưu tiên trạm nhận / xử lý khoản thu hộ
     if (moneyType === MoneyDeliveryType.COLLECT) {
       if (isOwnedRouteType(toRootRoute.type)) {
         return toObjectId(toRootRoute._id);
       }
 
-      if (isOwnedRouteType(fromRootRoute.type)) {
-        return toObjectId(fromRootRoute._id);
-      }
-
       return null;
     }
 
-    // COLLECT_FOR_CUSTOMER không cộng vào doanh thu
     return null;
   }
 
@@ -493,7 +522,6 @@ export class CronjobService {
       const revenueHomeDelivery = ownedViewRow.revenueHomeDelivery ?? 0;
       const revenueSurcharge = ownedViewRow.revenueSurcharge ?? 0;
 
-      // công nợ = baseDebt + doanh thu + GTN nộp + PP nộp
       const finalDebt = baseDebt + revenue + revenueHomeDelivery + revenueSurcharge;
 
       ownedViewRow.totalDebt = finalDebt;
@@ -504,56 +532,89 @@ export class CronjobService {
     }
   }
 
+  private async runCronDebtCore(
+    runAsOf?: VnDate | string,
+    skipLock = false,
+    session?: mongoose.ClientSession
+  ) {
+    const newDayVn =
+      typeof runAsOf === 'string' ? parseVnDateISO(runAsOf) : (runAsOf ?? getTodayVn());
+
+    const oldDayVn = vnDatePrev(newDayVn.year, newDayVn.month, newDayVn.date);
+
+    const oldDayDebtDate = vnDateToDebtDateUtc(oldDayVn.year, oldDayVn.month, oldDayVn.date);
+    const newDayDebtDate = vnDateToDebtDateUtc(newDayVn.year, newDayVn.month, newDayVn.date);
+
+    if (isNaN(oldDayDebtDate.getTime()) || isNaN(newDayDebtDate.getTime())) {
+      throw new Error(
+        `Invalid debt dates. newDayVn=${JSON.stringify(newDayVn)} oldDayVn=${JSON.stringify(oldDayVn)}`
+      );
+    }
+
+    const dateKey = `${newDayVn.year}-${String(newDayVn.month + 1).padStart(2, '0')}-${String(
+      newDayVn.date
+    ).padStart(2, '0')}`;
+
+    if (!skipLock) {
+      const cronlocks = mongoose.connection.collection('cronlocks');
+      const lockRes = session
+        ? await cronlocks.findOneAndUpdate(
+            { job: 'cron_debt', date: dateKey },
+            { $setOnInsert: { job: 'cron_debt', date: dateKey } },
+            { upsert: true, returnDocument: 'before', session }
+          )
+        : await cronlocks.findOneAndUpdate(
+            { job: 'cron_debt', date: dateKey },
+            { $setOnInsert: { job: 'cron_debt', date: dateKey } },
+            { upsert: true, returnDocument: 'before' }
+          );
+
+      if ((lockRes as any)?.value) {
+        return;
+      }
+    }
+
+    const countQuery = Debt.countDocuments({
+      dateDebt: oldDayDebtDate,
+    });
+
+    const count = session ? await countQuery.session(session) : await countQuery;
+
+    if (count === 0) {
+      await this.firstRun(oldDayVn, oldDayDebtDate, session);
+      await this.dailyRun(oldDayDebtDate, newDayDebtDate, session);
+    } else {
+      await this.recomputeOldDay(oldDayVn, oldDayDebtDate, session);
+      await this.dailyRun(oldDayDebtDate, newDayDebtDate, session);
+    }
+  }
+
   async cronjobCalculateDebt(runAsOf?: VnDate | string, skipLock = false) {
     const session = await mongoose.startSession();
 
     try {
-      await session.withTransaction(async () => {
-        const newDayVn =
-          typeof runAsOf === 'string' ? parseVnDateISO(runAsOf) : (runAsOf ?? getTodayVn());
+      let isReplicaSet = false;
 
-        const oldDayVn = vnDatePrev(newDayVn.year, newDayVn.month, newDayVn.date);
+      const db = mongoose.connection.db;
+      if (db) {
+        const hello = await db.admin().command({ hello: 1 });
+        isReplicaSet = Boolean((hello as any)?.setName);
+      }
 
-        const oldDayDebtDate = vnDateToDebtDateUtc(oldDayVn.year, oldDayVn.month, oldDayVn.date);
-        const newDayDebtDate = vnDateToDebtDateUtc(newDayVn.year, newDayVn.month, newDayVn.date);
+      if (isReplicaSet) {
+        await session.withTransaction(async () => {
+          await this.runCronDebtCore(runAsOf, skipLock, session);
+        });
+        return;
+      }
 
-        if (isNaN(oldDayDebtDate.getTime()) || isNaN(newDayDebtDate.getTime())) {
-          throw new Error(
-            `Invalid debt dates. newDayVn=${JSON.stringify(newDayVn)} oldDayVn=${JSON.stringify(oldDayVn)}`
-          );
-        }
+      if (!canRunWithoutTransaction()) {
+        throw new Error(
+          'MongoDB local is standalone. Set ALLOW_NO_TRANSACTION_DEBUG=true to run debug without transaction.'
+        );
+      }
 
-        const dateKey = `${newDayVn.year}-${String(newDayVn.month + 1).padStart(2, '0')}-${String(
-          newDayVn.date
-        ).padStart(2, '0')}`;
-
-        if (!skipLock) {
-          const lockRes = await mongoose.connection
-            .collection('cronlocks')
-            .findOneAndUpdate(
-              { job: 'cron_debt', date: dateKey },
-              { $setOnInsert: { job: 'cron_debt', date: dateKey } },
-              { upsert: true, returnDocument: 'before', session }
-            );
-
-          if ((lockRes as any)?.value) {
-            console.log('cron already executed');
-            return;
-          }
-        }
-
-        const count = await Debt.countDocuments({
-          dateDebt: oldDayDebtDate,
-        }).session(session);
-
-        if (count === 0) {
-          await this.firstRun(oldDayVn, oldDayDebtDate, session);
-          await this.dailyRun(oldDayDebtDate, newDayDebtDate, session);
-        } else {
-          await this.recomputeOldDay(oldDayVn, oldDayDebtDate, session);
-          await this.dailyRun(oldDayDebtDate, newDayDebtDate, session);
-        }
-      });
+      await this.runCronDebtCore(runAsOf, skipLock, undefined);
     } finally {
       await session.endSession();
     }
@@ -562,12 +623,14 @@ export class CronjobService {
   private async buildDebtMapForDate(
     oldDayVn: VnDate,
     oldDayDebtDate: Date,
-    session: mongoose.ClientSession,
+    session?: mongoose.ClientSession,
     seedExisting = false
   ) {
     const range = vnDateToUtcRange(oldDayVn.year, oldDayVn.month, oldDayVn.date);
 
-    const routes = await Route.find().session(session).lean<IRoute[]>();
+    const routeQuery = Route.find().lean<IRoute[]>();
+    const routes = session ? await routeQuery.session(session) : await routeQuery;
+
     const rootRouteMap = buildRootRouteMap(routes);
 
     const allRouteMap = new Map<string, IRoute>();
@@ -604,9 +667,12 @@ export class CronjobService {
     }
 
     if (seedExisting) {
-      const existingDebts = await Debt.find({
+      const existingDebtQuery = Debt.find({
         dateDebt: oldDayDebtDate,
-      }).session(session);
+      });
+      const existingDebts = session
+        ? await existingDebtQuery.session(session)
+        : await existingDebtQuery;
 
       for (const d of existingDebts) {
         const fromRoot = getRootRoute(toObjectId(d.fromRoute), rootRouteMap);
@@ -622,11 +688,13 @@ export class CronjobService {
       }
     }
 
-    const deliveryCursor = Delivery.find({
+    const deliveryQuery = Delivery.find({
       createdAt: { $gte: range.start, $lte: range.end },
-    })
-      .session(session)
-      .cursor();
+    });
+
+    const deliveryCursor = session
+      ? deliveryQuery.session(session).cursor()
+      : deliveryQuery.cursor();
 
     for await (const delivery of deliveryCursor) {
       if (!delivery.fromRoute || !delivery.toRoute) {
@@ -649,33 +717,22 @@ export class CronjobService {
       const surcharge = delivery.collectForCustomerCost ?? 0;
 
       const freightOwner = this.getFreightRevenueOwner(fromRoute, toRoute);
+
       if (freightOwner) {
         const bucket = getOrCreateRootRevenueBucket(rootRevenueMap, freightOwner);
+
         if (delivery.paymentType === 'debt') {
           this.addRevenueToBucket(bucket, { revDebtAmount: costWithItem });
         }
+
         if (delivery.paymentType === 'paid') {
           this.addRevenueToBucket(bucket, { revPaidAmount: costWithItem });
         }
       }
 
-      // paymentType=paid:
-      // chỉ cộng GTN đi / PP đi cho trạm gửi là owned
       if (delivery.paymentType === 'paid') {
         const paidDestinationOwner = this.getDestinationRevenueOwner(fromRoute);
         if (paidDestinationOwner) {
-          console.log('[PAID GTN/PP -> REVENUE]', {
-            deliveryId: delivery._id?.toString?.(),
-            fromRoot: fromRoute.code,
-            toRoot: toRoute.code,
-            fromType: fromRoute.type,
-            owner: paidDestinationOwner.toString(),
-            costWithItem,
-            gtn,
-            surcharge,
-            paymentType: delivery.paymentType,
-          });
-
           const bucket = getOrCreateRootRevenueBucket(rootRevenueMap, paidDestinationOwner);
           this.addRevenueToBucket(bucket, {
             revPaidHomeDelivery: gtn,
@@ -683,32 +740,6 @@ export class CronjobService {
           });
         }
       }
-
-      // paymentType=debt:
-      // chỉ cộng GTN về / PP về cho trạm nhận là owned
-      /*
-      if (delivery.paymentType === 'debt') {
-        const debtReturnOwner = this.getDebtReturnRevenueOwner(toRoute);
-        if (debtReturnOwner) {
-          console.log('[DEBT RETURN -> REVENUE]', {
-            deliveryId: delivery._id?.toString?.(),
-            fromRoot: fromRoute.code,
-            toRoot: toRoute.code,
-            toType: toRoute.type,
-            owner: debtReturnOwner.toString(),
-            costWithItem,
-            gtn,
-            surcharge,
-            paymentType: delivery.paymentType,
-          });
-          const bucket = getOrCreateRootRevenueBucket(rootRevenueMap, debtReturnOwner);
-          this.addRevenueToBucket(bucket, {
-            revDebtHomeDelivery: gtn,
-            revDebtCollectForCustomer: surcharge,
-          });
-        }
-      }
-      */
 
       if (fromRoot.equals(toRoot)) {
         continue;
@@ -720,19 +751,6 @@ export class CronjobService {
       if (delivery.paymentType === 'debt') {
         row.feeCODToRoute += costWithItem;
         opp.feeCODFromRoute += costWithItem;
-
-        // tạm thời không cộng gtn, surcharge này vào
-        /*
-        if (gtn > 0) {
-          row.feeCODToRoute += gtn;
-          opp.feeCODFromRoute += gtn;
-        }
-
-        if (surcharge > 0) {
-          row.feeCODToRoute += surcharge;
-          opp.feeCODFromRoute += surcharge;
-        }
-        */
       }
 
       if (delivery.paymentType === 'paid') {
@@ -744,7 +762,7 @@ export class CronjobService {
       }
     }
 
-    const moneyCursor = MoneyDelivery.find({
+    const moneyQuery = MoneyDelivery.find({
       type: {
         $in: [
           MoneyDeliveryType.NORMAL,
@@ -753,9 +771,9 @@ export class CronjobService {
         ],
       },
       createdAt: { $gte: range.start, $lte: range.end },
-    })
-      .session(session)
-      .cursor();
+    });
+
+    const moneyCursor = session ? moneyQuery.session(session).cursor() : moneyQuery.cursor();
 
     for await (const money of moneyCursor) {
       if (!money.fromRoute || !money.toRoute) {
@@ -776,10 +794,6 @@ export class CronjobService {
 
       const moneyOwner = this.getMoneyRevenueOwner(money.type, fromRoute, toRoute);
 
-      // Doanh thu chỉ tính:
-      // - NORMAL => cước gửi tiền
-      // - COLLECT => cước thu hộ
-      // COLLECT_FOR_CUSTOMER không cộng vào doanh thu
       if (moneyOwner && sendCost > 0) {
         const bucket = getOrCreateRootRevenueBucket(rootRevenueMap, moneyOwner);
 
@@ -799,9 +813,6 @@ export class CronjobService {
       const row = getRow(fromRoot, toRoot);
       const opp = getRow(toRoot, fromRoot);
 
-      // sendMoneyAmount phải gồm:
-      // - NORMAL
-      // - COLLECT_FOR_CUSTOMER
       const isNormalOrCollectForCustomer =
         money.type === MoneyDeliveryType.NORMAL ||
         money.type === MoneyDeliveryType.COLLECT_FOR_CUSTOMER;
@@ -834,7 +845,7 @@ export class CronjobService {
     return { debtMap, routeMap: rootRouteInfoMap };
   }
 
-  async firstRun(oldDayVn: VnDate, oldDayDebtDate: Date, session: mongoose.ClientSession) {
+  async firstRun(oldDayVn: VnDate, oldDayDebtDate: Date, session?: mongoose.ClientSession) {
     const { debtMap, routeMap } = await this.buildDebtMapForDate(
       oldDayVn,
       oldDayDebtDate,
@@ -917,14 +928,18 @@ export class CronjobService {
     }
 
     if (ops.length) {
-      await Debt.bulkWrite(ops, { ordered: false, session });
+      if (session) {
+        await Debt.bulkWrite(ops, { ordered: false, session });
+      } else {
+        await Debt.bulkWrite(ops, { ordered: false });
+      }
     }
   }
 
   private async recomputeOldDay(
     oldDayVn: VnDate,
     oldDayDebtDate: Date,
-    session: mongoose.ClientSession
+    session?: mongoose.ClientSession
   ) {
     const { debtMap, routeMap } = await this.buildDebtMapForDate(
       oldDayVn,
@@ -1002,14 +1017,20 @@ export class CronjobService {
     }
 
     if (ops.length) {
-      await Debt.bulkWrite(ops, { ordered: false, session });
+      if (session) {
+        await Debt.bulkWrite(ops, { ordered: false, session });
+      } else {
+        await Debt.bulkWrite(ops, { ordered: false });
+      }
     }
   }
 
-  async dailyRun(oldDayDebtDate: Date, newDayDebtDate: Date, session: mongoose.ClientSession) {
-    const debts = await Debt.find({
+  async dailyRun(oldDayDebtDate: Date, newDayDebtDate: Date, session?: mongoose.ClientSession) {
+    const debtQuery = Debt.find({
       dateDebt: oldDayDebtDate,
-    }).session(session);
+    });
+
+    const debts = session ? await debtQuery.session(session) : await debtQuery;
 
     const ops: mongoose.AnyBulkWriteOperation<IDebtRowDB>[] = [];
 
@@ -1069,7 +1090,11 @@ export class CronjobService {
     }
 
     if (ops.length) {
-      await Debt.bulkWrite(ops, { ordered: false, session });
+      if (session) {
+        await Debt.bulkWrite(ops, { ordered: false, session });
+      } else {
+        await Debt.bulkWrite(ops, { ordered: false });
+      }
     }
   }
 }
