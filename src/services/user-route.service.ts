@@ -288,7 +288,7 @@ export class UserRouteService {
       const userRoutes = await UserRoute.find({ userId })
         .populate([
           { path: 'userId', select: '_id username name role createdAt updatedAt' },
-          { path: 'routeId', select: '_id code name address phone createdAt updatedAt' },
+          { path: 'routeId', select: '_id code name address phone type createdAt updatedAt' },
           { path: 'assignedBy', select: '_id username name role createdAt updatedAt' },
         ])
         .sort({ createdAt: -1 })
