@@ -22,6 +22,9 @@ type RevenueExtraFields = {
   revDebtHomeDelivery?: number;
   revDebtCollectForCustomer?: number;
 
+  partnerHomeDeliveryIn?: number;
+  partnerHomeDeliveryOut?: number;
+
   netDebt?: number;
   cashCollectedToday?: number;
   newDebtFreightToday?: number;
@@ -215,7 +218,10 @@ function finalizeRevenue(row: DebtRowExt) {
   const revPaidHomeDelivery = row.revPaidHomeDelivery ?? 0;
   const revPaidCollectForCustomer = row.revPaidCollectForCustomer ?? 0;
 
-  row.revenueHomeDelivery = revPaidHomeDelivery;
+  // Calculate net partner GTN (GTN về - GTN đi)
+  const netPartnerGtn = (row.partnerHomeDeliveryIn ?? 0) - (row.partnerHomeDeliveryOut ?? 0);
+
+  row.revenueHomeDelivery = revPaidHomeDelivery + netPartnerGtn;
   row.revenueSurcharge = revPaidCollectForCustomer;
 
   row.revenueTotal = revDebtAmount + revPaidAmount + revNormalSendCost + revCollectSendCost;
@@ -259,6 +265,8 @@ function clearRevenue(row: DebtRowExt) {
   delete row.revPaidCollectForCustomer;
   delete row.revDebtHomeDelivery;
   delete row.revDebtCollectForCustomer;
+  delete row.partnerHomeDeliveryIn;
+  delete row.partnerHomeDeliveryOut;
 }
 
 export class CronjobService {
@@ -304,6 +312,8 @@ export class CronjobService {
       revPaidCollectForCustomer: 0,
       revDebtHomeDelivery: 0,
       revDebtCollectForCustomer: 0,
+      partnerHomeDeliveryIn: 0,
+      partnerHomeDeliveryOut: 0,
     };
   }
 
@@ -529,6 +539,14 @@ export class CronjobService {
 
       reverseViewRow.totalDebt = -finalDebt;
       reverseViewRow.netDebt = -finalDebt;
+
+      reverseViewRow.revenueHomeDelivery = revenueHomeDelivery;
+      reverseViewRow.revenueSurcharge = revenueSurcharge;
+      reverseViewRow.revenueTotal = revenue;
+      reverseViewRow.cashCollectedToday = ownedViewRow.cashCollectedToday ?? 0;
+      reverseViewRow.newDebtFreightToday = ownedViewRow.newDebtFreightToday ?? 0;
+      reverseViewRow.paidOldDebtToday = ownedViewRow.paidOldDebtToday ?? 0;
+      reverseViewRow.minimumTransferToCompany = ownedViewRow.minimumTransferToCompany ?? 0;
     }
   }
 
@@ -742,6 +760,28 @@ export class CronjobService {
       }
 
       if (fromRoot.equals(toRoot)) {
+        // Handle partner GTN within same root group
+        const originalFromRoute = allRouteMap.get(delivery.fromRoute.toString());
+        const originalToRoute = allRouteMap.get(delivery.toRoute.toString());
+
+        if (originalFromRoute && originalToRoute && delivery.paymentType === 'paid') {
+          const gtn = delivery.homeDeliveryCost ?? 0;
+
+          // Get the row for this root group (fromRoot to fromRoot)
+          const groupRow = getRow(fromRoot, fromRoot);
+
+          if (isOwnedRouteType(originalFromRoute.type) && !isOwnedRouteType(originalToRoute.type)) {
+            // Owned -> Partner: GTN đi
+            groupRow.partnerHomeDeliveryOut = (groupRow.partnerHomeDeliveryOut ?? 0) + gtn;
+          } else if (
+            !isOwnedRouteType(originalFromRoute.type) &&
+            isOwnedRouteType(originalToRoute.type)
+          ) {
+            // Partner -> Owned: GTN về
+            groupRow.partnerHomeDeliveryIn = (groupRow.partnerHomeDeliveryIn ?? 0) + gtn;
+          }
+        }
+
         continue;
       }
 
@@ -1068,6 +1108,9 @@ export class CronjobService {
         newDebtFreightToday: 0,
         paidOldDebtToday: 0,
         minimumTransferToCompany: 0,
+
+        partnerHomeDeliveryIn: 0,
+        partnerHomeDeliveryOut: 0,
 
         dateDebt: newDayDebtDate,
       };
