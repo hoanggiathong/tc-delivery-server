@@ -105,19 +105,20 @@ export class ReportService {
       const moneyDeliveryList = [...moneyDeliveriesTypeNormal, ...moneyDeliveriesTypeCollect];
 
       for (const moneyDelivery of moneyDeliveryList) {
-        // Thu dùm -> cộng thêm vào tiền thường
-        if (moneyDelivery.type === MoneyDeliveryType.COLLECT_FOR_CUSTOMER) {
-          totalSendMoneyAmountTypeNormalMoneyDelivery += moneyDelivery.sendMoneyAmount || 0;
-          totalSendCostWithTypeNormalMoneyDelivery += moneyDelivery.sendCost || 0;
-        }
+        switch (moneyDelivery.type) {
+          case MoneyDeliveryType.COLLECT_FOR_CUSTOMER:
+          case MoneyDeliveryType.NORMAL:
+            totalSendMoneyAmountTypeNormalMoneyDelivery += moneyDelivery.sendMoneyAmount || 0;
+            totalSendCostWithTypeNormalMoneyDelivery += moneyDelivery.sendCost || 0;
+            break;
 
-        if (moneyDelivery.type === MoneyDeliveryType.NORMAL) {
-          totalSendMoneyAmountTypeNormalMoneyDelivery += moneyDelivery.sendMoneyAmount || 0;
-          totalSendCostWithTypeNormalMoneyDelivery += moneyDelivery.sendCost || 0;
-        } else {
-          // Thu hộ giữ nguyên
-          totalSendMoneyAmountTypeCollectMoneyDelivery += moneyDelivery.sendMoneyAmount || 0;
-          totalSendCostWithTypeCollectMoneyDelivery += moneyDelivery.sendCost || 0;
+          case MoneyDeliveryType.COLLECT:
+            totalSendMoneyAmountTypeCollectMoneyDelivery += moneyDelivery.sendMoneyAmount || 0;
+            totalSendCostWithTypeCollectMoneyDelivery += moneyDelivery.sendCost || 0;
+            break;
+
+          default:
+            break;
         }
       }
 
