@@ -57,6 +57,15 @@ export const createMoneyDeliverySchema = z
   })
   .refine(
     data => {
+      return data.body.senderPhone !== data.body.receiverPhone;
+    },
+    {
+      message: 'Sender and receiver cannot be the same person',
+      path: ['body', 'receiverPhone'],
+    }
+  )
+  .refine(
+    data => {
       const { type, deliveryId } = data.body;
       if (type === 'collect' || type === 'collectForCustomer') {
         return !!deliveryId;
