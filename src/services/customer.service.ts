@@ -628,39 +628,62 @@ export class CustomerService {
         const bankId = customer.bankId;
 
         if (bankId) {
-          // Update existing bank
           try {
             await this.customerBankService.updateBank(bankId.toString(), bankDataWithQR);
-            Logger.debug('Bank info updated with QR code', {
-              customerId: customer._id,
-              bankId,
-              bankAccount: bankInfo.bankAccount,
-              qrCodeUrl,
-            });
-          } catch (error) {
-            Logger.error('BankId found but it have an error occured during update');
+          } catch (error: any) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+
+            if (
+              error?.code === 11000 ||
+              (typeof errorMessage === 'string' &&
+                errorMessage.includes('E11000 duplicate key error') &&
+                errorMessage.includes('bankAccount'))
+            ) {
+              throw new Error('Số tài khoản này đã được sử dụng. Vui lòng đăng ký stk khác.');
+            }
+
+            Logger.error('BankId found but update failed, fallback create');
             Logger.error(error);
+
             try {
               const newBank = await this.customerBankService.createBank(bankDataWithQR);
               customer.bankId = new Types.ObjectId(newBank._id);
               await customer.save();
-            } catch (error) {
-              Logger.error(
-                'An error occured while trying to create bank after updating bankId failed'
-              );
+            } catch (error: any) {
+              const errorMessage = error instanceof Error ? error.message : String(error);
+
+              if (
+                error?.code === 11000 ||
+                (typeof errorMessage === 'string' &&
+                  errorMessage.includes('E11000 duplicate key error') &&
+                  errorMessage.includes('bankAccount'))
+              ) {
+                throw new Error('Số tài khoản này đã được sử dụng. Vui lòng đăng ký stk khác.');
+              }
+
+              Logger.error('Create bank after update failed');
+              throw error;
             }
           }
         } else {
-          // Create new bank
-          const newBank = await this.customerBankService.createBank(bankDataWithQR);
-          customer.bankId = new Types.ObjectId(newBank._id);
-          await customer.save();
-          Logger.debug('New bank created and linked with QR code', {
-            customerId: customer._id,
-            bankId: newBank._id,
-            bankAccount: newBank.bankAccount,
-            qrCodeUrl,
-          });
+          try {
+            const newBank = await this.customerBankService.createBank(bankDataWithQR);
+            customer.bankId = new Types.ObjectId(newBank._id);
+            await customer.save();
+          } catch (error: any) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+
+            if (
+              error?.code === 11000 ||
+              (typeof errorMessage === 'string' &&
+                errorMessage.includes('E11000 duplicate key error') &&
+                errorMessage.includes('bankAccount'))
+            ) {
+              throw new Error('Số tài khoản này đã được sử dụng. Vui lòng đăng ký stk khác.');
+            }
+
+            throw error;
+          }
         }
       }
 
