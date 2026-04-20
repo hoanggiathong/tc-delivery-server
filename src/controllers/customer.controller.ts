@@ -712,10 +712,15 @@ export class CustomerController {
       console.error('Update bank info error:', error);
 
       let statusCode = 400;
-      const message = error instanceof Error ? error.message : 'Failed to update bank info';
+      let message = error instanceof Error ? error.message : 'Failed to update bank info';
 
-      // Handle specific error cases
-      if (message === 'Name is required when creating new customer') {
+      if (
+        typeof message === 'string' &&
+        message.includes('E11000 duplicate key error') &&
+        message.includes('bankAccount')
+      ) {
+        message = 'Số tài khoản này đã được sử dụng. Vui lòng đăng ký stk khác.';
+      } else if (message === 'Name is required when creating new customer') {
         statusCode = 400;
       } else if (message === 'User must have a selected route') {
         statusCode = 400;
