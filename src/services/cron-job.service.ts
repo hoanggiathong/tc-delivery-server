@@ -215,8 +215,14 @@ function finalizeRevenue(row: DebtRowExt) {
   const revPaidHomeDelivery = row.revPaidHomeDelivery ?? 0;
   const revPaidCollectForCustomer = row.revPaidCollectForCustomer ?? 0;
 
-  row.revenueHomeDelivery = revPaidHomeDelivery;
-  row.revenueSurcharge = revPaidCollectForCustomer;
+  const revDebtHomeDelivery = row.revDebtHomeDelivery ?? 0;
+  const revDebtCollectForCustomer = row.revDebtCollectForCustomer ?? 0;
+
+  // DT GTN NỘP = GTN paid + GTN nợ cước về
+  row.revenueHomeDelivery = revPaidHomeDelivery + revDebtHomeDelivery;
+
+  // PP NỘP = Phụ phí paid + Phụ phí nợ cước về
+  row.revenueSurcharge = revPaidCollectForCustomer + revDebtCollectForCustomer;
 
   row.revenueTotal = revDebtAmount + revPaidAmount + revNormalSendCost + revCollectSendCost;
 
