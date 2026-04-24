@@ -405,9 +405,16 @@ export class CronjobService {
       return this.sortRowsDeterministically(rows, rootRouteInfoMap)[0];
     }
 
-    const inboundRowsToCompany = Object.values(debtMap).filter(
-      row => row.toRoute.toString() === ownedRootId.toString()
-    );
+    const inboundRowsToCompany = Object.values(debtMap).filter(row => {
+      if (row.toRoute.toString() !== ownedRootId.toString()) {
+        return false;
+      }
+
+      const fromRoute = rootRouteInfoMap.get(row.fromRoute.toString());
+
+      // SG chỉ nhận doanh thu từ owned route, tuyệt đối không gắn doanh thu lên partner -> SG
+      return fromRoute && isOwnedRouteType(fromRoute.type);
+    });
 
     if (!inboundRowsToCompany.length) {
       return null;
@@ -1032,6 +1039,7 @@ export class CronjobService {
 
     this.applyOwnedSubmissionMetrics(debtMap, routeMap);
     this.syncCompanyViewMetrics(debtMap, routeMap);
+    this.clearPartnerViewRevenueMetrics(debtMap, routeMap);
     this.normalizeCompanyPairTotals(debtMap, routeMap);
 
     const ops: mongoose.AnyBulkWriteOperation<IDebtRowDB>[] = [];
@@ -1129,6 +1137,7 @@ export class CronjobService {
 
     this.applyOwnedSubmissionMetrics(debtMap, routeMap);
     this.syncCompanyViewMetrics(debtMap, routeMap);
+    this.clearPartnerViewRevenueMetrics(debtMap, routeMap);
     this.normalizeCompanyPairTotals(debtMap, routeMap);
 
     const ops: mongoose.AnyBulkWriteOperation<IDebtRowDB>[] = [];
@@ -1253,6 +1262,30 @@ export class CronjobService {
       } else {
         await Debt.bulkWrite(ops, { ordered: false });
       }
+    }
+  }
+
+  private clearPartnerViewRevenueMetrics(
+    debtMap: Record<string, DebtRowExt>,
+    routeMap: Map<string, IRoute>
+  ) {
+    for (const row of Object.values(debtMap)) {
+      const fromRoute = routeMap.get(row.fromRoute.toString());
+      const toRoute = routeMap.get(row.toRoute.toString());
+
+      if (!fromRoute || !toRoute) {
+        continue;
+      }
+
+      const hasPartner = !isOwnedRouteType(fromRoute.type) || !isOwnedRouteType(toRoute.type);
+
+      if (!hasPartner) {
+        continue;
+      }
+
+      // Partner không có DT GTN nộp và PP nộp
+      row.revenueHomeDelivery = 0;
+      row.revenueSurcharge = 0;
     }
   }
 }
