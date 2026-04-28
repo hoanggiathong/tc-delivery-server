@@ -20,7 +20,13 @@ const allowedOrigins = [
   'ionic://localhost',
 
   ...(process.env.NODE_ENV === 'development'
-    ? ['http://localhost:8080', 'http://localhost:3000', 'http://localhost:5173']
+    ? [
+        'http://localhost:8080',
+        'http://localhost:3000',
+        'http://localhost:5173',
+        'http://vantai.localhost:8080',
+        'http://thuchi.localhost:8080',
+      ]
     : []),
 ];
 
@@ -46,14 +52,13 @@ app.use(
 // Debug middleware (only in development)
 if (process.env.NODE_ENV === 'development') {
   app.use(debugMiddleware);
-  app.use(
-    helmet({
-      crossOriginResourcePolicy: { policy: 'cross-origin' },
-    })
-  );
-} else {
-  app.use(helmet());
 }
+
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
