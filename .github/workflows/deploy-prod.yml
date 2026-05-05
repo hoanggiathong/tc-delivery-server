@@ -13,11 +13,43 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for tags
 
       - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: '20.19.4'
+
+      - name: Generate version tag
+        id: version
+        run: |
+          YEAR=$(date +%Y)
+          MONTH=$(date +%-m)
+          PREFIX="${YEAR}.${MONTH}"
+
+          # Get all tags matching current year.month pattern
+          LATEST_TAG=$(git tag -l "${PREFIX}.*" | sort -t. -k3 -n | tail -1)
+
+          if [ -z "$LATEST_TAG" ]; then
+            # No tags for this month, start at 1
+            NEW_VERSION="${PREFIX}.1"
+          else
+            # Extract the last number and increment
+            LAST_NUM=$(echo "$LATEST_TAG" | cut -d. -f3)
+            NEW_NUM=$((LAST_NUM + 1))
+            NEW_VERSION="${PREFIX}.${NEW_NUM}"
+          fi
+
+          echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
+          echo "Generated version: ${NEW_VERSION}"
+
+      - name: Create and push tag
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git tag -a ${{ steps.version.outputs.version }} -m "Production release ${{ steps.version.outputs.version }}"
+          git push origin ${{ steps.version.outputs.version }}
 
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.3
@@ -27,63 +59,75 @@ jobs:
           password: ${{ secrets.VPS_PASSWORD }}
           port: ${{ secrets.VPS_PORT }}
           script: |
+            set -euo pipefail
+
             cd prod/tc-delivery-server/
 
-            # Pull latest changes and fetch tags
-            git fetch --tags
+            echo "==> Pull latest production code"
             git pull origin prod
 
-            # Generate version tag
-            YEAR=$(date +%Y)
-            MONTH=$(date +%-m)
-            TAG_PREFIX="${YEAR}.${MONTH}"
-
-            # Get latest tag for this month
-            LATEST_TAG=$(git tag -l "${TAG_PREFIX}.*" | sort -t. -k3 -n | tail -1)
-
-            if [ -z "$LATEST_TAG" ]; then
-              NEW_VERSION="${TAG_PREFIX}.1"
-            else
-              LAST_NUM=$(echo "$LATEST_TAG" | cut -d. -f3)
-              NEW_NUM=$((LAST_NUM + 1))
-              NEW_VERSION="${TAG_PREFIX}.${NEW_NUM}"
-            fi
-
-            echo "Creating tag: ${NEW_VERSION}"
-
-            # Create and push tag
-            git tag -a "${NEW_VERSION}" -m "Production release ${NEW_VERSION}"
-            git push origin "${NEW_VERSION}"
-
-            # Load NVM and use default Node version
+            echo "==> Load NVM"
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
-            echo "Current Node version:"
+            echo "Current Node version before nvm use:"
             node --version
 
             nvm use default
 
-            # Install dependencies
+            echo "Current Node version after nvm use:"
+            node --version
+            npm --version
+
+            echo "==> Install dependencies"
             npm ci
 
-            # Clean typescript build cache
+            echo "==> Backup current dist before clean build"
+            rm -rf dist.backup
+            if [ -d dist ]; then
+              cp -a dist dist.backup
+            fi
+
+            echo "==> Clean TypeScript build output"
             rm -rf dist/
 
-            # Build and deploy Production environment (force restart to reload config)
-            npm run deploy:force:prod
+            echo "==> Build Production"
+            if ! npm run build; then
+              echo "Production build failed. Restoring previous dist and stopping deploy."
+              rm -rf dist
+              if [ -d dist.backup ]; then
+                cp -a dist.backup dist
+              fi
+              exit 1
+            fi
 
-            # Deploy cronjobs (force restart to reload config)
+            echo "==> Verify build output"
+            if [ ! -f dist/src/index.js ]; then
+              echo "Missing dist/src/index.js after build. Restoring previous dist and stopping deploy."
+              echo "Found index.js files:"
+              find dist -name "index.js" -print || true
+              rm -rf dist
+              if [ -d dist.backup ]; then
+                cp -a dist.backup dist
+              fi
+              exit 1
+            fi
+
+            echo "==> Restart Production API only after successful build"
+            pm2 restart tc-delivery-server-prod --update-env
+
+            echo "==> Deploy cronjobs only after API build/restart success"
             pm2 delete tc-delivery-debt-calculator-prod || true
-            pm2 start ecosystem.config.js --only tc-delivery-debt-calculator-prod
+            pm2 start ecosystem.config.js --only tc-delivery-debt-calculator-prod --update-env
 
             pm2 delete tc-delivery-sms-queue-prod || true
-            pm2 start ecosystem.config.js --only tc-delivery-sms-queue-prod
+            pm2 start ecosystem.config.js --only tc-delivery-sms-queue-prod --update-env
 
-            # Show PM2 status
+            echo "==> Save PM2 process list"
+            pm2 save
+
+            echo "==> Show PM2 status"
             pm2 status
 
-            # Show logs (last 20 lines)
+            echo "==> Show API logs"
             pm2 logs tc-delivery-server-prod --lines 20 --nostream
-
-            echo "Deployed version: ${NEW_VERSION}"

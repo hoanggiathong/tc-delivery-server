@@ -27,38 +27,59 @@ jobs:
           password: ${{ secrets.VPS_PASSWORD }}
           port: ${{ secrets.VPS_PORT }}
           script: |
+            set -e
+
             cd dev/tc-delivery-server/
 
-            # Pull latest changes
-            git pull origin dev
+            echo "===== Pull latest changes ====="
+            git fetch origin dev
+            git reset --hard origin/dev
 
-            # Load NVM and use default Node version
+            echo "===== Load Node/NVM ====="
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
-            echo "Current Node version:"
-            node --version
-
             nvm use default
 
-            # Install dependencies
+            echo "Current Node version:"
+            node --version
+            echo "Current NPM version:"
+            npm --version
+
+            echo "===== Install dependencies ====="
             npm ci
 
-            # Clean typescript build cache
+            echo "===== Clean old build ====="
             rm -rf dist/
 
-            # Build and deploy UAT environment (force restart to reload config)
-            npm run deploy:force:uat
+            echo "===== Build backend ====="
+            npm run build
 
-            # Deploy cronjobs (force restart to reload config)
+            echo "===== Verify build output ====="
+            if [ ! -f dist/src/index.js ]; then
+              echo "Build failed: dist/src/index.js not found"
+              echo "Available index.js files:"
+              find dist -name "index.js" -print || true
+              exit 1
+            fi
+
+            echo "Build OK: dist/src/index.js exists"
+
+            echo "===== Restart UAT backend ====="
+            pm2 restart tc-delivery-server-uat --update-env || pm2 start ecosystem.config.js --only tc-delivery-server-uat --update-env
+
+            echo "===== Restart cronjobs ====="
             pm2 delete tc-delivery-debt-calculator-uat || true
-            pm2 start ecosystem.config.js --only tc-delivery-debt-calculator-uat
+            pm2 start ecosystem.config.js --only tc-delivery-debt-calculator-uat --update-env
 
             pm2 delete tc-delivery-sms-queue-uat || true
-            pm2 start ecosystem.config.js --only tc-delivery-sms-queue-uat
+            pm2 start ecosystem.config.js --only tc-delivery-sms-queue-uat --update-env
 
-            # Show PM2 status
+            echo "===== Save PM2 process list ====="
+            pm2 save
+
+            echo "===== PM2 status ====="
             pm2 status
 
-            # Show logs (last 20 lines)
-            pm2 logs tc-delivery-server-uat --lines 20 --nostream
+            echo "===== Backend logs ====="
+            pm2 logs tc-delivery-server-uat --lines 50 --nostream
