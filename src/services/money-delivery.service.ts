@@ -1086,6 +1086,58 @@ export class MoneyDeliveryService {
   /**
    * Update money delivery by fullCode (only sender, receiver, and route fields allowed)
    */
+  private async resolveEditableCustomer(
+    currentCustomerId: string,
+    name?: string,
+    phone?: string,
+    routeId?: string
+  ): Promise<Types.ObjectId> {
+    const currentCustomer = await Customer.findById(currentCustomerId);
+
+    if (!currentCustomer) {
+      throw new Error('Customer not found');
+    }
+
+    const nextName = name?.trim();
+    const nextPhone = phone?.trim();
+
+    if (nextPhone && nextPhone !== currentCustomer.phone) {
+      const existedCustomer = await Customer.findOne({
+        phone: nextPhone,
+        _id: { $ne: currentCustomer._id },
+      });
+
+      if (existedCustomer) {
+        if (nextName !== undefined) {
+          existedCustomer.name = nextName;
+        }
+
+        if (routeId) {
+          existedCustomer.routeId = new Types.ObjectId(routeId);
+        }
+
+        await existedCustomer.save();
+        return new Types.ObjectId(existedCustomer._id);
+      }
+    }
+
+    if (nextName !== undefined) {
+      currentCustomer.name = nextName;
+    }
+
+    if (nextPhone !== undefined) {
+      currentCustomer.phone = nextPhone;
+    }
+
+    if (routeId) {
+      currentCustomer.routeId = new Types.ObjectId(routeId);
+    }
+
+    await currentCustomer.save();
+
+    return new Types.ObjectId(currentCustomer._id);
+  }
+
   async updateMoneyDeliveryByFullCode(
     fullCode: string,
     updateData: {
@@ -1093,12 +1145,10 @@ export class MoneyDeliveryService {
       senderPhone?: string;
       receiverName?: string;
       receiverPhone?: string;
-      fromRouteId?: string;
       toRouteId?: string;
     }
   ): Promise<IMoneyDeliveryResponse> {
     try {
-      // Parse fullCode to get code and route information
       const parsed = this.parseDeliveryIdentifier(fullCode);
       if (!parsed) {
         throw new Error('Invalid fullCode format');
@@ -1106,7 +1156,6 @@ export class MoneyDeliveryService {
 
       const { code, fromRouteCode, toRouteCode } = parsed;
 
-      // Find fromRoute and toRoute by codes
       const [fromRoute, toRoute] = await Promise.all([
         Route.findOne({ code: fromRouteCode }),
         Route.findOne({ code: toRouteCode }),
@@ -1116,58 +1165,56 @@ export class MoneyDeliveryService {
         throw new Error('Routes not found for the given fullCode');
       }
 
-      // Find existing money delivery
       const existingMoneyDelivery = await MoneyDelivery.findOne({
-        code,
-        fromRoute: fromRoute._id,
-        toRoute: toRoute._id,
+        fullCode: fullCode,
       });
 
       if (!existingMoneyDelivery) {
         throw new Error('Money delivery not found');
       }
 
-      // Prepare update object
       const updates: any = {};
 
-      // Handle sender update (create if not exists)
-      if (updateData.senderName || updateData.senderPhone) {
-        const sender = await this.customerService.updateOrCreateCustomerWithPartialData(
+      if (updateData.senderName !== undefined || updateData.senderPhone !== undefined) {
+        updates.sender = await this.resolveEditableCustomer(
           existingMoneyDelivery.sender.toString(),
           updateData.senderName,
           updateData.senderPhone,
-          updateData.fromRouteId,
-          updateData.toRouteId
+          fromRoute._id.toString()
         );
-        updates.sender = sender.id;
+
+        if (updateData.senderName !== undefined) {
+          updates.senderName = updateData.senderName.trim();
+        }
       }
 
-      // Handle receiver update (create if not exists)
-      if (updateData.receiverName || updateData.receiverPhone) {
-        const receiver = await this.customerService.updateOrCreateCustomerWithPartialData(
+      const finalToRouteId = updateData.toRouteId ?? toRoute._id.toString();
+
+      if (updateData.receiverName !== undefined || updateData.receiverPhone !== undefined) {
+        updates.receiver = await this.resolveEditableCustomer(
           existingMoneyDelivery.receiver.toString(),
           updateData.receiverName,
           updateData.receiverPhone,
-          updateData.fromRouteId,
-          updateData.toRouteId
+          finalToRouteId
         );
-        updates.receiver = receiver.id;
+        if (updateData.receiverName !== undefined) {
+          updates.receiverName = updateData.receiverName.trim();
+        }
       }
 
-      // Handle route update
-      if (updateData.toRouteId) {
+      if (updateData.toRouteId !== undefined) {
         const newToRoute = await Route.findById(updateData.toRouteId);
+
         if (!newToRoute) {
           throw new Error('New to route not found');
         }
+
         updates.toRoute = newToRoute._id;
-        updates.fullCode = `${code}${fromRoute.code}${newToRoute.code}-T`;
       }
 
-      // Update the money delivery
       const updatedMoneyDelivery = await MoneyDelivery.findByIdAndUpdate(
         existingMoneyDelivery._id,
-        updates,
+        { $set: updates },
         { new: true, runValidators: true }
       );
 
@@ -1178,9 +1225,11 @@ export class MoneyDeliveryService {
       return this.transformMoneyDeliveryToResponse(updatedMoneyDelivery);
     } catch (error) {
       Logger.error('Error updating money delivery by fullCode:', error);
+
       if (error instanceof Error) {
         throw error;
       }
+
       throw new Error('Failed to update money delivery by fullCode');
     }
   }
