@@ -100,7 +100,7 @@ app.get('/health', (_req, res) => {
 // Serve uploaded images with 90-day immutable cache
 // Use process.cwd() to ensure correct path in both dev and production
 // When compiled, __dirname points to dist/src/, but files are in public/uploads at project root
-app.use(
+/*app.use(
   '/uploads',
   express.static(path.join(process.cwd(), 'public/uploads'), {
     etag: true,
@@ -109,6 +109,19 @@ app.use(
     setHeaders: res => {
       // 90 days = 90 * 24 * 60 * 60 = 7776000 seconds
       res.setHeader('Cache-Control', 'public, max-age=7776000, immutable');
+    },
+  })
+);*/
+app.use(
+  '/uploads',
+  express.static(path.join(process.cwd(), 'public/uploads'), {
+    etag: false,
+    lastModified: false,
+    maxAge: 0,
+    setHeaders: res => {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
     },
   })
 );
