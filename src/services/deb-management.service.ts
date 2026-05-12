@@ -64,6 +64,15 @@ type DebtPairResult = {
   };
 };
 
+type DebtClearingDirection = 'FORWARD' | 'REVERSE';
+
+type DebtClearingPlan = {
+  direction: DebtClearingDirection;
+  sourceRouteIdObj: Types.ObjectId;
+  pivotRouteIdObj: Types.ObjectId;
+  targetRouteIdObj: Types.ObjectId;
+};
+
 export class DebtManagementService {
   private userService: UserService;
   private debtReportService: DebtReportService;
@@ -517,7 +526,10 @@ export class DebtManagementService {
 
     await Debt.findOneAndUpdate(
       { _id: currentDebt1._id },
-      { totalDebt: totalDebt1, receivable: receivable1 },
+      {
+        totalDebt: totalDebt1,
+        receivable: receivable1,
+      },
       { session, new: true, runValidators: true }
     );
 
@@ -538,7 +550,8 @@ export class DebtManagementService {
     toRouteId: Types.ObjectId,
     dateDebtExact: Date,
     cash: number,
-    session: mongoose.ClientSession
+    session: mongoose.ClientSession,
+    allowNegative = false
   ): Promise<DebtPairResult> {
     const { currentDebt1, currentDebt2 } = await this.getDebtPair(
       fromRouteId,
@@ -556,10 +569,13 @@ export class DebtManagementService {
       );
     }
 
-    const receivable1 = Math.max(0, (currentDebt1.receivable ?? 0) - cash);
-    const totalDebt1 = this.calcTotalDebtForForward(currentDebt1, receivable1);
+    const rawReceivable1 = (currentDebt1.receivable ?? 0) - cash;
+    const rawAccountPayable2 = (currentDebt2.accountPayable ?? 0) - cash;
 
-    const accountPayable2 = Math.max(0, (currentDebt2.accountPayable ?? 0) - cash);
+    const receivable1 = allowNegative ? rawReceivable1 : Math.max(0, rawReceivable1);
+    const accountPayable2 = allowNegative ? rawAccountPayable2 : Math.max(0, rawAccountPayable2);
+
+    const totalDebt1 = this.calcTotalDebtForForward(currentDebt1, receivable1);
     const totalDebt2 = this.calcTotalDebtForReverse(currentDebt2, accountPayable2);
 
     await Debt.findOneAndUpdate(
@@ -776,9 +792,9 @@ export class DebtManagementService {
     cash: number,
     dateDebtExact: Date,
     session: mongoose.ClientSession
-  ): Promise<void> {
+  ): Promise<DebtClearingPlan> {
     if (cash <= 0) {
-      throw new Error('Cash amount must be greater than 0');
+      throw new Error('Số tiền gặt phải lớn hơn 0');
     }
 
     if (
@@ -786,42 +802,152 @@ export class DebtManagementService {
       sourceRouteIdObj.equals(targetRouteIdObj) ||
       pivotRouteIdObj.equals(targetRouteIdObj)
     ) {
-      throw new Error('Routes in clearing slip must be different');
+      throw new Error('Trạm nguồn, trạm trung gian và trạm đích phải khác nhau');
     }
 
-    const [sourcePivotPair, pivotTargetPair] = await Promise.all([
+    const [sourcePivotPair, pivotTargetPair, targetPivotPair, pivotSourcePair] = await Promise.all([
       this.getDebtPair(sourceRouteIdObj, pivotRouteIdObj, dateDebtExact, session),
       this.getDebtPair(pivotRouteIdObj, targetRouteIdObj, dateDebtExact, session),
+      this.getDebtPair(targetRouteIdObj, pivotRouteIdObj, dateDebtExact, session),
+      this.getDebtPair(pivotRouteIdObj, sourceRouteIdObj, dateDebtExact, session),
     ]);
 
-    if (!sourcePivotPair.currentDebt1 || !sourcePivotPair.currentDebt2) {
-      throw new Error('Debt pair source -> pivot not found');
+    const getDebtAmount = (pair: Awaited<ReturnType<typeof this.getDebtPair>>): number | null => {
+      if (!pair.currentDebt1 || !pair.currentDebt2) {
+        return null;
+      }
+
+      // Công nợ thực tế đang hiển thị trên bảng nằm ở totalDebt.
+      return Math.max(0, pair.currentDebt1.totalDebt ?? 0);
+    };
+
+    /**
+     * Case thuận:
+     * source nợ pivot
+     * pivot nợ target
+     *
+     * Ví dụ:
+     * RS nợ TD: 20k
+     * TD nợ SG: 40k
+     * => Gặt RS qua SG
+     * => RS nợ SG: 20k
+     */
+    const sourceToPivotDebt = getDebtAmount(sourcePivotPair);
+    const pivotToTargetDebt = getDebtAmount(pivotTargetPair);
+
+    /**
+     * Case ngược:
+     * target nợ pivot
+     * pivot nợ source
+     *
+     * Ví dụ:
+     * TM nợ TA: 100
+     * TP nợ TM: 200
+     * Người dùng chọn: Gặt TA qua TP, pivot là TM
+     * Bản chất đúng là:
+     * TP -> TM -> TA
+     * => TP nợ TA: 100
+     */
+    const targetToPivotDebt = getDebtAmount(targetPivotPair);
+    const pivotToSourceDebt = getDebtAmount(pivotSourcePair);
+
+    const canForward =
+      sourceToPivotDebt !== null &&
+      pivotToTargetDebt !== null &&
+      sourceToPivotDebt > 0 &&
+      pivotToTargetDebt > 0;
+
+    const canReverse =
+      targetToPivotDebt !== null &&
+      pivotToSourceDebt !== null &&
+      targetToPivotDebt > 0 &&
+      pivotToSourceDebt > 0;
+
+    if (canForward && cash <= sourceToPivotDebt && cash <= pivotToTargetDebt) {
+      return {
+        direction: 'FORWARD',
+        sourceRouteIdObj,
+        pivotRouteIdObj,
+        targetRouteIdObj,
+      };
     }
 
-    if (!pivotTargetPair.currentDebt1 || !pivotTargetPair.currentDebt2) {
-      throw new Error('Debt pair pivot -> target not found');
+    if (canReverse && cash <= targetToPivotDebt && cash <= pivotToSourceDebt) {
+      return {
+        direction: 'REVERSE',
+        sourceRouteIdObj: targetRouteIdObj,
+        pivotRouteIdObj,
+        targetRouteIdObj: sourceRouteIdObj,
+      };
     }
 
-    /*
-    const sourceToPivotDebt = Math.max(0, sourcePivotPair.currentDebt1.receivable ?? 0);
-    const pivotToTargetDebt = Math.max(0, pivotTargetPair.currentDebt1.receivable ?? 0);
+    if (canForward) {
+      if (cash > sourceToPivotDebt) {
+        throw new Error(
+          `Số tiền gặt vượt quá công nợ từ trạm nguồn đến trạm trung gian (${sourceToPivotDebt.toLocaleString('vi-VN')}đ)`
+        );
+      }
 
-    if (sourceToPivotDebt <= 0) {
-      throw new Error('Source route does not owe pivot route');
+      if (cash > pivotToTargetDebt) {
+        throw new Error(
+          `Số tiền gặt vượt quá công nợ từ trạm trung gian đến trạm đích (${pivotToTargetDebt.toLocaleString('vi-VN')}đ)`
+        );
+      }
     }
 
-    if (pivotToTargetDebt <= 0) {
-      throw new Error('Pivot route does not owe target route');
+    if (canReverse) {
+      if (cash > targetToPivotDebt) {
+        throw new Error(
+          `Số tiền gặt vượt quá công nợ từ trạm đích đến trạm trung gian (${targetToPivotDebt.toLocaleString('vi-VN')}đ)`
+        );
+      }
+
+      if (cash > pivotToSourceDebt) {
+        throw new Error(
+          `Số tiền gặt vượt quá công nợ từ trạm trung gian đến trạm nguồn (${pivotToSourceDebt.toLocaleString('vi-VN')}đ)`
+        );
+      }
     }
 
-    if (cash > sourceToPivotDebt) {
-      throw new Error(`Clearing amount exceeds source -> pivot debt (${sourceToPivotDebt})`);
-    }
+    throw new Error(
+      'Không thể tạo phiếu gặt. Công nợ không đúng chuỗi trung gian. Chỉ hỗ trợ dạng A nợ B, B nợ C hoặc C nợ B, B nợ A.'
+    );
+  }
 
-    if (cash > pivotToTargetDebt) {
-      throw new Error(`Clearing amount exceeds pivot -> target debt (${pivotToTargetDebt})`);
-    }
-    */
+  private async applyDebtReportPairDelta(
+    fromRouteId: Types.ObjectId,
+    toRouteId: Types.ObjectId,
+    dateDebtExact: Date,
+    cash: number,
+    session: mongoose.ClientSession
+  ): Promise<void> {
+    await this.debtReportService.updateDebtReport(
+      String(toRouteId),
+      dateDebtExact,
+      cash,
+      session,
+      false,
+      true
+    );
+
+    await this.debtReportService.updateDebtReport(
+      String(fromRouteId),
+      dateDebtExact,
+      cash,
+      session,
+      true,
+      false
+    );
+  }
+
+  private async rollbackDebtReportPairDelta(
+    fromRouteId: Types.ObjectId,
+    toRouteId: Types.ObjectId,
+    dateDebtExact: Date,
+    cash: number,
+    session: mongoose.ClientSession
+  ): Promise<void> {
+    await this.applyDebtReportPairDelta(fromRouteId, toRouteId, dateDebtExact, -cash, session);
   }
 
   async createDebtClearing(
@@ -863,7 +989,7 @@ export class DebtManagementService {
 
       const { dateDebtExact } = this.getDateDebtExactToday();
 
-      await this.validateDebtClearingBeforeCreate(
+      const clearingPlan = await this.validateDebtClearingBeforeCreate(
         sourceRouteIdObj,
         pivotRouteIdObj,
         targetRouteIdObj,
@@ -872,88 +998,64 @@ export class DebtManagementService {
         session
       );
 
+      const actualSourceRouteIdObj = clearingPlan.sourceRouteIdObj;
+      const actualPivotRouteIdObj = clearingPlan.pivotRouteIdObj;
+      const actualTargetRouteIdObj = clearingPlan.targetRouteIdObj;
+
       await this.rollbackDebtPairDelta(
-        pivotRouteIdObj,
-        targetRouteIdObj,
+        actualSourceRouteIdObj,
+        actualPivotRouteIdObj,
         dateDebtExact,
         data.cash,
-        session
+        session,
+        true
       );
 
       await this.rollbackDebtPairDelta(
-        sourceRouteIdObj,
-        pivotRouteIdObj,
+        actualPivotRouteIdObj,
+        actualTargetRouteIdObj,
         dateDebtExact,
         data.cash,
-        session
+        session,
+        true
       );
 
       await this.applyDebtPairDelta(
-        sourceRouteIdObj,
-        targetRouteIdObj,
+        actualSourceRouteIdObj,
+        actualTargetRouteIdObj,
         dateDebtExact,
         data.cash,
         session
       );
 
-      await this.debtReportService.updateDebtReport(
-        targetRouteIdObj,
-        dateDebtExact,
-        -data.cash,
-        session,
-        false,
-        true
-      );
-
-      await this.debtReportService.updateDebtReport(
-        pivotRouteIdObj,
-        dateDebtExact,
-        -data.cash,
-        session,
-        true,
-        false
-      );
-
-      await this.debtReportService.updateDebtReport(
-        pivotRouteIdObj,
-        dateDebtExact,
-        -data.cash,
-        session,
-        false,
-        true
-      );
-
-      await this.debtReportService.updateDebtReport(
-        sourceRouteIdObj,
-        dateDebtExact,
-        -data.cash,
-        session,
-        true,
-        false
-      );
-
-      await this.debtReportService.updateDebtReport(
-        targetRouteIdObj,
+      await this.rollbackDebtReportPairDelta(
+        actualSourceRouteIdObj,
+        actualPivotRouteIdObj,
         dateDebtExact,
         data.cash,
-        session,
-        false,
-        true
+        session
       );
 
-      await this.debtReportService.updateDebtReport(
-        sourceRouteIdObj,
+      await this.rollbackDebtReportPairDelta(
+        actualPivotRouteIdObj,
+        actualTargetRouteIdObj,
         dateDebtExact,
         data.cash,
-        session,
-        true,
-        false
+        session
+      );
+
+      await this.applyDebtReportPairDelta(
+        actualSourceRouteIdObj,
+        actualTargetRouteIdObj,
+        dateDebtExact,
+        data.cash,
+        session
       );
 
       const clearing = new DebtManagement({
-        fromRoute: sourceRouteIdObj,
-        toRoute: targetRouteIdObj,
-        pivotRoute: pivotRouteIdObj,
+        fromRoute: actualSourceRouteIdObj,
+        toRoute: actualTargetRouteIdObj,
+        pivotRoute: actualPivotRouteIdObj,
         cash: data.cash,
         cashDate: data.cashDate,
         content: data.content,
@@ -962,6 +1064,7 @@ export class DebtManagementService {
       });
 
       const result = await clearing.save({ session });
+
       await result.populate('fromRoute', 'name');
       await result.populate('toRoute', 'name');
       await result.populate('pivotRoute', 'name');
@@ -972,19 +1075,19 @@ export class DebtManagementService {
 
       const obj = result.toObject() as any;
 
-      const response: IDebtManagement = {
-        id: obj._id,
+      return {
+        id: String(obj._id),
         fromRoute: {
-          id: obj.fromRoute?._id || obj.fromRoute,
+          id: String(obj.fromRoute?._id || obj.fromRoute),
           name: obj.fromRoute?.name || '',
         },
         toRoute: {
-          id: obj.toRoute?._id || obj.toRoute,
+          id: String(obj.toRoute?._id || obj.toRoute),
           name: obj.toRoute?.name || '',
         },
         pivotRoute: obj.pivotRoute
           ? {
-              id: obj.pivotRoute?._id || obj.pivotRoute,
+              id: String(obj.pivotRoute?._id || obj.pivotRoute),
               name: obj.pivotRoute?.name || '',
             }
           : undefined,
@@ -998,13 +1101,11 @@ export class DebtManagementService {
         deletedAt: obj.deletedAt,
         __v: obj.__v,
         createdBy: {
-          id: obj.createdBy?._id || obj.createdBy,
+          id: String(obj.createdBy?._id || obj.createdBy),
           username: obj.createdBy?.username || '',
           name: obj.createdBy?.name || '',
         },
       };
-
-      return response;
     } catch (error) {
       await session.abortTransaction();
       await session.endSession();
@@ -1012,6 +1113,7 @@ export class DebtManagementService {
       if (error instanceof Error) {
         throw error;
       }
+
       throw new Error('create debt clearing failed');
     }
   }
@@ -1222,6 +1324,7 @@ export class DebtManagementService {
 
       if (type === DEBT_MANAGEMENT_TYPE.CLEARING) {
         const pivotRoute = (debtManagement as any).pivotRoute;
+
         if (!pivotRoute) {
           throw new Error('Clearing slip missing pivotRoute');
         }
@@ -1230,33 +1333,27 @@ export class DebtManagementService {
           new Types.ObjectId(String(fromRoute)),
           session
         );
+
         const targetRouteIdObj = await this.getRootRouteId(
           new Types.ObjectId(String(toRoute)),
           session
         );
+
         const pivotRouteIdObj = await this.getRootRouteId(
           new Types.ObjectId(String(pivotRoute)),
           session
         );
 
-        await DebtManagement.updateOne(
-          { _id: debtManagement._id, deleted: false },
-          {
-            deleted: true,
-            deletedAt: new Date(),
-            reason,
-          },
-          { session }
-        );
-
-        await this.rollbackDebtPairDelta(
+        // rollback khoản source -> target đã tạo khi gặt
+        await this.applyDebtPairDelta(
           sourceRouteIdObj,
           targetRouteIdObj,
           dateDebtExact,
-          cash,
+          -cash,
           session
         );
 
+        // restore lại source -> pivot
         await this.applyDebtPairDelta(
           sourceRouteIdObj,
           pivotRouteIdObj,
@@ -1265,6 +1362,7 @@ export class DebtManagementService {
           session
         );
 
+        // restore lại pivot -> target
         await this.applyDebtPairDelta(
           pivotRouteIdObj,
           targetRouteIdObj,
@@ -1273,62 +1371,39 @@ export class DebtManagementService {
           session
         );
 
-        await this.debtReportService.updateDebtReport(
-          targetRouteIdObj,
-          dateDebtExact,
-          -cash,
-          session,
-          false,
-          true
-        );
-
-        await this.debtReportService.updateDebtReport(
+        await this.rollbackDebtReportPairDelta(
           sourceRouteIdObj,
-          dateDebtExact,
-          -cash,
-          session,
-          true,
-          false
-        );
-
-        await this.debtReportService.updateDebtReport(
-          pivotRouteIdObj,
-          dateDebtExact,
-          cash,
-          session,
-          false,
-          true
-        );
-
-        await this.debtReportService.updateDebtReport(
-          sourceRouteIdObj,
-          dateDebtExact,
-          cash,
-          session,
-          true,
-          false
-        );
-
-        await this.debtReportService.updateDebtReport(
           targetRouteIdObj,
           dateDebtExact,
           cash,
-          session,
-          false,
-          true
+          session
         );
 
-        await this.debtReportService.updateDebtReport(
+        await this.applyDebtReportPairDelta(
+          sourceRouteIdObj,
           pivotRouteIdObj,
           dateDebtExact,
           cash,
-          session,
-          true,
-          false
+          session
         );
+
+        await this.applyDebtReportPairDelta(
+          pivotRouteIdObj,
+          targetRouteIdObj,
+          dateDebtExact,
+          cash,
+          session
+        );
+
+        debtManagement.deleted = true;
+        debtManagement.reason = reason;
+        debtManagement.deletedAt = new Date();
+
+        await debtManagement.save({ session });
 
         await session.commitTransaction();
         await session.endSession();
+
         return;
       }
 
