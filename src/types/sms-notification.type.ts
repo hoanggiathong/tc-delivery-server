@@ -164,6 +164,7 @@ export interface IDeliveryForSMSLean {
   quantity: number;
   quantityReturn: number;
   totalCost: number;
+  actualRevenue: number;
   senderName: string;
   receiverName: string;
   sender: {
