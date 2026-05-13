@@ -16,6 +16,7 @@ import returnDeliveriesRoutes from './return-deliveries.route';
 import returnMoneyDeliveriesRoutes from './return-money-deliveries.route';
 import reportRoutes from './report.routes';
 import smsNotificationRoutes from './sms-notification.routes';
+import shipmentLogRoutes from './shipment-log.routes';
 
 const router = Router();
 
@@ -36,5 +37,6 @@ router.use('/return-deliveries', returnDeliveriesRoutes);
 router.use('/return-money-deliveries', returnMoneyDeliveriesRoutes);
 router.use('/report', reportRoutes);
 router.use('/sms', smsNotificationRoutes);
+router.use('/shipment-logs', shipmentLogRoutes);
 
 export default router;
