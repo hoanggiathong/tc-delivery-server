@@ -1197,10 +1197,10 @@ export class DebtManagementService {
 
     try {
       const matchStage: Record<string, unknown> = {
-        pivotRoute: pivotRouteId,
         type: DEBT_MANAGEMENT_TYPE.CLEARING,
         createdAt: { $gte: start, $lte: endOfDay },
         deleted: false,
+        $or: [{ fromRoute: pivotRouteId }, { pivotRoute: pivotRouteId }, { toRoute: pivotRouteId }],
       };
 
       if (fromRouteId) {
