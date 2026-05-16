@@ -838,8 +838,8 @@ export class ReturnDeliveriesService {
 
     const where = {
       toRoute: selectedRouteId,
-      createdAt: { $gte: start, $lte: end },
-      // dateReturn: { $gte: start, $lte: end, $exists: true },
+      //createdAt: { $gte: start, $lte: end },
+      dateReturn: { $gte: start, $lte: end, $exists: true },
       isReturn: true,
     };
 
