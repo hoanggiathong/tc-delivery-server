@@ -47,6 +47,25 @@ export class DeliveryService {
     this.customerAddressHistoryService = new CustomerAddressHistoryService();
   }
 
+  private getVietnamTodayRangeUTC(): { startOfDay: Date; nextDay: Date } {
+    const now = new Date();
+
+    // Convert hiện tại UTC -> giờ Việt Nam bằng cách cộng 7 tiếng
+    const vietnamNow = new Date(now.getTime() + 7 * 60 * 60 * 1000);
+
+    const year = vietnamNow.getUTCFullYear();
+    const month = vietnamNow.getUTCMonth();
+    const date = vietnamNow.getUTCDate();
+
+    // 00:00 VN = 17:00 UTC ngày hôm trước
+    const startOfDay = new Date(Date.UTC(year, month, date, -7, 0, 0, 0));
+
+    // 00:00 VN ngày mai = 17:00 UTC ngày hiện tại
+    const nextDay = new Date(Date.UTC(year, month, date + 1, -7, 0, 0, 0));
+
+    return { startOfDay, nextDay };
+  }
+
   /**
    * Validate itemCost against shipping rates
    */
@@ -1119,25 +1138,7 @@ export class DeliveryService {
       }
 
       // Set today's date range (from start of day to end of day)
-      const today = new Date();
-      const startOfDay = new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        today.getDate(),
-        0,
-        0,
-        0,
-        0
-      );
-      const endOfDay = new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        today.getDate(),
-        23,
-        59,
-        59,
-        999
-      );
+      const { startOfDay, nextDay } = this.getVietnamTodayRangeUTC();
 
       // Build aggregation pipeline for today's deliveries
       const pipeline: PipelineStage[] = [
@@ -1147,7 +1148,7 @@ export class DeliveryService {
             fromRoute: new Types.ObjectId(selectedRouteId),
             createdAt: {
               $gte: startOfDay,
-              $lte: endOfDay,
+              $lt: nextDay,
             },
             isReturn: { $ne: true },
           },
