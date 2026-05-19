@@ -549,13 +549,16 @@ export class CustomerService {
    */
   async getCustomerBySenderPhone(phone: string): Promise<ICustomer | null> {
     try {
-      const customer = await Customer.findOne({ phone }).populate('bankId');
+      const customer = await Customer.findOne({ phone })
+        .populate('bankId')
+        .populate('routeId', 'name code');
 
       Logger.debug('Customer retrieved by sender phone with bank info', {
         phone,
         found: !!customer,
         customerId: customer?._id,
         hasBankInfo: !!(customer && customer.bankId),
+        routeName: (customer as any)?.routeId?.name,
       });
 
       return customer;
@@ -564,8 +567,11 @@ export class CustomerService {
         error: error instanceof Error ? error.message : error,
         phone,
       });
+
       throw new Error(
-        `Failed to get customer by sender phone: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Failed to get customer by sender phone: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`
       );
     }
   }
