@@ -1105,14 +1105,25 @@ export class ReturnDeliveriesService {
       const minutes = String(now.getMinutes()).padStart(2, '0');
       const returnDateString = `Đã trả hàng ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} ${hours}:${minutes}`;
       const existingNotes = typeof delivery.notes === 'string' ? delivery.notes : '';
+      const identityInfo = [identityCardName, identityCardNumber, address, identityCardIssuedDate]
+        .filter(Boolean)
+        .join(', ');
+
       const userNote = updateData.note?.trim();
-      if (userNote) {
-        delivery.notes = existingNotes
-          ? `${returnDateString}, ${userNote}, ${existingNotes}`
-          : `${returnDateString}, ${userNote}`;
-      } else {
-        delivery.notes = existingNotes ? `${returnDateString}, ${existingNotes}` : returnDateString;
+
+      const noteParts = [returnDateString];
+
+      if (identityInfo) {
+        noteParts.push(identityInfo);
       }
+
+      if (userNote) {
+        noteParts.push(userNote);
+      }
+
+      const newNote = noteParts.join(' | ');
+
+      delivery.notes = existingNotes ? `${newNote}, ${existingNotes}` : newNote;
       delivery.updatedAt = now;
       delivery.dateReturn = now;
       await delivery.save();
