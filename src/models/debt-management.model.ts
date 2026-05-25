@@ -16,6 +16,8 @@ export interface IDebtManagement extends Document {
   updatedAt: Date;
   deletedAt: Date;
   createdBy: ObjectId;
+  sourcePivotDirection?: 'FORWARD' | 'REVERSE';
+  pivotTargetDirection?: 'FORWARD' | 'REVERSE';
 }
 
 const debtManagementSchema = new Schema<IDebtManagement>(
@@ -70,6 +72,18 @@ const debtManagementSchema = new Schema<IDebtManagement>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: [true, 'Created by user is required'],
+    },
+    sourcePivotDirection: {
+      type: String,
+      enum: ['FORWARD', 'REVERSE'],
+      required: false,
+      default: null,
+    },
+    pivotTargetDirection: {
+      type: String,
+      enum: ['FORWARD', 'REVERSE'],
+      required: false,
+      default: null,
     },
   },
   {
