@@ -63,14 +63,18 @@ type DebtPairResult = {
     totalDebt: number;
   };
 };
-
 type DebtClearingDirection = 'FORWARD' | 'REVERSE';
+type DebtPairDirection = 'FORWARD' | 'REVERSE';
 
 type DebtClearingPlan = {
   direction: DebtClearingDirection;
+
   sourceRouteIdObj: Types.ObjectId;
   pivotRouteIdObj: Types.ObjectId;
   targetRouteIdObj: Types.ObjectId;
+
+  sourcePivotDirection: DebtPairDirection;
+  pivotTargetDirection: DebtPairDirection;
 };
 
 export class DebtManagementService {
@@ -524,8 +528,11 @@ export class DebtManagementService {
     const accountPayable2 = (currentDebt2.accountPayable ?? 0) + cash;
     const totalDebt2 = this.calcTotalDebtForReverse(currentDebt2, accountPayable2);
 
-    await Debt.findOneAndUpdate(
-      { _id: currentDebt1._id },
+    const updatedDebt1 = await Debt.findOneAndUpdate(
+      {
+        _id: currentDebt1._id,
+        receivable: currentDebt1.receivable ?? 0,
+      },
       {
         totalDebt: totalDebt1,
         receivable: receivable1,
@@ -533,11 +540,25 @@ export class DebtManagementService {
       { session, new: true, runValidators: true }
     );
 
-    await Debt.findOneAndUpdate(
-      { _id: currentDebt2._id },
-      { totalDebt: totalDebt2, accountPayable: accountPayable2 },
+    if (!updatedDebt1) {
+      throw new Error('Debt was changed by another request. Please retry.');
+    }
+
+    const updatedDebt2 = await Debt.findOneAndUpdate(
+      {
+        _id: currentDebt2._id,
+        accountPayable: currentDebt2.accountPayable ?? 0,
+      },
+      {
+        totalDebt: totalDebt2,
+        accountPayable: accountPayable2,
+      },
       { session, new: true, runValidators: true }
     );
+
+    if (!updatedDebt2) {
+      throw new Error('Debt was changed by another request. Please retry.');
+    }
 
     return {
       forward: { _id: currentDebt1._id, receivable: receivable1, totalDebt: totalDebt1 },
@@ -572,23 +593,49 @@ export class DebtManagementService {
     const rawReceivable1 = (currentDebt1.receivable ?? 0) - cash;
     const rawAccountPayable2 = (currentDebt2.accountPayable ?? 0) - cash;
 
+    if (!allowNegative) {
+      if (rawReceivable1 < 0 || rawAccountPayable2 < 0) {
+        throw new Error(`Rollback debt invalid: negative receivable/account payable detected`);
+      }
+    }
+
     const receivable1 = allowNegative ? rawReceivable1 : Math.max(0, rawReceivable1);
     const accountPayable2 = allowNegative ? rawAccountPayable2 : Math.max(0, rawAccountPayable2);
 
     const totalDebt1 = this.calcTotalDebtForForward(currentDebt1, receivable1);
     const totalDebt2 = this.calcTotalDebtForReverse(currentDebt2, accountPayable2);
 
-    await Debt.findOneAndUpdate(
-      { _id: currentDebt1._id },
-      { totalDebt: totalDebt1, receivable: receivable1 },
+    const updatedDebt1 = await Debt.findOneAndUpdate(
+      {
+        _id: currentDebt1._id,
+        receivable: currentDebt1.receivable ?? 0,
+      },
+      {
+        totalDebt: totalDebt1,
+        receivable: receivable1,
+      },
       { session, new: true, runValidators: true }
     );
 
-    await Debt.findOneAndUpdate(
-      { _id: currentDebt2._id },
-      { totalDebt: totalDebt2, accountPayable: accountPayable2 },
+    if (!updatedDebt1) {
+      throw new Error('Debt was changed by another request. Please retry.');
+    }
+
+    const updatedDebt2 = await Debt.findOneAndUpdate(
+      {
+        _id: currentDebt2._id,
+        accountPayable: currentDebt2.accountPayable ?? 0,
+      },
+      {
+        totalDebt: totalDebt2,
+        accountPayable: accountPayable2,
+      },
       { session, new: true, runValidators: true }
     );
+
+    if (!updatedDebt2) {
+      throw new Error('Debt was changed by another request. Please retry.');
+    }
 
     return {
       forward: { _id: currentDebt1._id, receivable: receivable1, totalDebt: totalDebt1 },
@@ -812,13 +859,40 @@ export class DebtManagementService {
       this.getDebtPair(pivotRouteIdObj, sourceRouteIdObj, dateDebtExact, session),
     ]);
 
-    const getDebtAmount = (pair: Awaited<ReturnType<typeof this.getDebtPair>>): number | null => {
+    const getDebtAmount = (
+      pair: Awaited<ReturnType<typeof this.getDebtPair>>
+    ): {
+      debt: number;
+      direction: 'FORWARD' | 'REVERSE';
+    } | null => {
       if (!pair.currentDebt1 || !pair.currentDebt2) {
         return null;
       }
 
-      // Công nợ thực tế đang hiển thị trên bảng nằm ở totalDebt.
-      return Math.max(0, pair.currentDebt1.totalDebt ?? 0);
+      const debt1 = pair.currentDebt1.totalDebt ?? 0;
+      const debt2 = pair.currentDebt2.totalDebt ?? 0;
+
+      if (debt1 > 0 && debt2 > 0) {
+        throw new Error(
+          `Debt pair invalid: both directions have positive debt (${debt1} / ${debt2})`
+        );
+      }
+
+      if (debt1 > 0) {
+        return {
+          debt: debt1,
+          direction: 'FORWARD',
+        };
+      }
+
+      if (debt2 > 0) {
+        return {
+          debt: debt2,
+          direction: 'REVERSE',
+        };
+      }
+
+      return null;
     };
 
     /**
@@ -854,57 +928,71 @@ export class DebtManagementService {
     const canForward =
       sourceToPivotDebt !== null &&
       pivotToTargetDebt !== null &&
-      sourceToPivotDebt > 0 &&
-      pivotToTargetDebt > 0;
+      sourceToPivotDebt.direction === 'FORWARD' &&
+      pivotToTargetDebt.direction === 'FORWARD' &&
+      sourceToPivotDebt.debt > 0 &&
+      pivotToTargetDebt.debt > 0;
 
     const canReverse =
       targetToPivotDebt !== null &&
       pivotToSourceDebt !== null &&
-      targetToPivotDebt > 0 &&
-      pivotToSourceDebt > 0;
+      targetToPivotDebt.direction === 'FORWARD' &&
+      pivotToSourceDebt.direction === 'FORWARD' &&
+      targetToPivotDebt.debt > 0 &&
+      pivotToSourceDebt.debt > 0;
 
-    if (canForward && cash <= sourceToPivotDebt && cash <= pivotToTargetDebt) {
+    if (canForward && cash <= sourceToPivotDebt.debt && cash <= pivotToTargetDebt.debt) {
+      const sourcePivot = sourceToPivotDebt;
+      const pivotTarget = pivotToTargetDebt;
+
       return {
         direction: 'FORWARD',
         sourceRouteIdObj,
         pivotRouteIdObj,
         targetRouteIdObj,
+        sourcePivotDirection: sourcePivot.direction,
+        pivotTargetDirection: pivotTarget.direction,
       };
     }
 
-    if (canReverse && cash <= targetToPivotDebt && cash <= pivotToSourceDebt) {
+    if (canReverse && cash <= targetToPivotDebt.debt && cash <= pivotToSourceDebt.debt) {
+      const targetPivot = targetToPivotDebt;
+      const pivotSource = pivotToSourceDebt;
+
       return {
         direction: 'REVERSE',
         sourceRouteIdObj: targetRouteIdObj,
         pivotRouteIdObj,
         targetRouteIdObj: sourceRouteIdObj,
+        sourcePivotDirection: targetPivot.direction,
+        pivotTargetDirection: pivotSource.direction,
       };
     }
 
     if (canForward) {
-      if (cash > sourceToPivotDebt) {
+      if (cash > sourceToPivotDebt.debt) {
         throw new Error(
-          `Số tiền gặt vượt quá công nợ từ trạm nguồn đến trạm trung gian (${sourceToPivotDebt.toLocaleString('vi-VN')}đ)`
+          `Số tiền gặt vượt quá công nợ từ trạm nguồn đến trạm trung gian (${sourceToPivotDebt.debt.toLocaleString('vi-VN')}đ)`
         );
       }
 
-      if (cash > pivotToTargetDebt) {
+      if (cash > pivotToTargetDebt.debt) {
         throw new Error(
-          `Số tiền gặt vượt quá công nợ từ trạm trung gian đến trạm đích (${pivotToTargetDebt.toLocaleString('vi-VN')}đ)`
+          `Số tiền gặt vượt quá công nợ từ trạm trung gian đến trạm đích (${pivotToTargetDebt.debt.toLocaleString('vi-VN')}đ)`
         );
       }
     }
 
     if (canReverse) {
-      if (cash > targetToPivotDebt) {
+      if (cash > targetToPivotDebt.debt) {
         throw new Error(
-          `Số tiền gặt vượt quá công nợ từ trạm đích đến trạm trung gian (${targetToPivotDebt.toLocaleString('vi-VN')}đ)`
+          `Số tiền gặt vượt quá công nợ từ trạm đích đến trạm trung gian (${targetToPivotDebt.debt.toLocaleString('vi-VN')}đ)`
         );
       }
 
-      if (cash > pivotToSourceDebt) {
+      if (cash > pivotToSourceDebt.debt) {
         throw new Error(
-          `Số tiền gặt vượt quá công nợ từ trạm trung gian đến trạm nguồn (${pivotToSourceDebt.toLocaleString('vi-VN')}đ)`
+          `Số tiền gặt vượt quá công nợ từ trạm trung gian đến trạm nguồn (${pivotToSourceDebt.debt.toLocaleString('vi-VN')}đ)`
         );
       }
     }
@@ -947,7 +1035,23 @@ export class DebtManagementService {
     cash: number,
     session: mongoose.ClientSession
   ): Promise<void> {
-    await this.applyDebtReportPairDelta(fromRouteId, toRouteId, dateDebtExact, -cash, session);
+    await this.debtReportService.updateDebtReport(
+      String(toRouteId),
+      dateDebtExact,
+      -cash,
+      session,
+      false,
+      true
+    );
+
+    await this.debtReportService.updateDebtReport(
+      String(fromRouteId),
+      dateDebtExact,
+      -cash,
+      session,
+      true,
+      false
+    );
   }
 
   async createDebtClearing(
@@ -1002,18 +1106,38 @@ export class DebtManagementService {
       const actualPivotRouteIdObj = clearingPlan.pivotRouteIdObj;
       const actualTargetRouteIdObj = clearingPlan.targetRouteIdObj;
 
+      const rollbackSourceRoute1 =
+        clearingPlan.sourcePivotDirection === 'FORWARD'
+          ? actualSourceRouteIdObj
+          : actualPivotRouteIdObj;
+
+      const rollbackTargetRoute1 =
+        clearingPlan.sourcePivotDirection === 'FORWARD'
+          ? actualPivotRouteIdObj
+          : actualSourceRouteIdObj;
+
       await this.rollbackDebtPairDelta(
-        actualSourceRouteIdObj,
-        actualPivotRouteIdObj,
+        rollbackSourceRoute1,
+        rollbackTargetRoute1,
         dateDebtExact,
         data.cash,
         session,
         true
       );
 
+      const rollbackSourceRoute2 =
+        clearingPlan.pivotTargetDirection === 'FORWARD'
+          ? actualPivotRouteIdObj
+          : actualTargetRouteIdObj;
+
+      const rollbackTargetRoute2 =
+        clearingPlan.pivotTargetDirection === 'FORWARD'
+          ? actualTargetRouteIdObj
+          : actualPivotRouteIdObj;
+
       await this.rollbackDebtPairDelta(
-        actualPivotRouteIdObj,
-        actualTargetRouteIdObj,
+        rollbackSourceRoute2,
+        rollbackTargetRoute2,
         dateDebtExact,
         data.cash,
         session,
@@ -1029,16 +1153,16 @@ export class DebtManagementService {
       );
 
       await this.rollbackDebtReportPairDelta(
-        actualSourceRouteIdObj,
-        actualPivotRouteIdObj,
+        rollbackSourceRoute1,
+        rollbackTargetRoute1,
         dateDebtExact,
         data.cash,
         session
       );
 
       await this.rollbackDebtReportPairDelta(
-        actualPivotRouteIdObj,
-        actualTargetRouteIdObj,
+        rollbackSourceRoute2,
+        rollbackTargetRoute2,
         dateDebtExact,
         data.cash,
         session
@@ -1056,6 +1180,10 @@ export class DebtManagementService {
         fromRoute: actualSourceRouteIdObj,
         toRoute: actualTargetRouteIdObj,
         pivotRoute: actualPivotRouteIdObj,
+
+        sourcePivotDirection: clearingPlan.sourcePivotDirection,
+        pivotTargetDirection: clearingPlan.pivotTargetDirection,
+
         cash: data.cash,
         cashDate: data.cashDate,
         content: data.content,
@@ -1319,6 +1447,8 @@ export class DebtManagementService {
       const toRoute = debtManagement.toRoute;
       const cashDate = debtManagement.cashDate;
       const type = debtManagement.type as string;
+      const sourcePivotDirection = (debtManagement as any).sourcePivotDirection;
+      const pivotTargetDirection = (debtManagement as any).pivotTargetDirection;
 
       const dateDebtExact = vnDateToDebtDateUtc(todayVn.year, todayVn.month, todayVn.date);
 
@@ -1345,27 +1475,38 @@ export class DebtManagementService {
         );
 
         // rollback khoản source -> target đã tạo khi gặt
-        await this.applyDebtPairDelta(
+        await this.rollbackDebtPairDelta(
           sourceRouteIdObj,
           targetRouteIdObj,
           dateDebtExact,
-          -cash,
-          session
+          cash,
+          session,
+          true
         );
 
-        // restore lại source -> pivot
+        const restoreSourceRoute1 =
+          sourcePivotDirection === 'FORWARD' ? sourceRouteIdObj : pivotRouteIdObj;
+
+        const restoreTargetRoute1 =
+          sourcePivotDirection === 'FORWARD' ? pivotRouteIdObj : sourceRouteIdObj;
+
         await this.applyDebtPairDelta(
-          sourceRouteIdObj,
-          pivotRouteIdObj,
+          restoreSourceRoute1,
+          restoreTargetRoute1,
           dateDebtExact,
           cash,
           session
         );
 
-        // restore lại pivot -> target
+        const restoreSourceRoute2 =
+          pivotTargetDirection === 'FORWARD' ? pivotRouteIdObj : targetRouteIdObj;
+
+        const restoreTargetRoute2 =
+          pivotTargetDirection === 'FORWARD' ? targetRouteIdObj : pivotRouteIdObj;
+
         await this.applyDebtPairDelta(
-          pivotRouteIdObj,
-          targetRouteIdObj,
+          restoreSourceRoute2,
+          restoreTargetRoute2,
           dateDebtExact,
           cash,
           session
@@ -1380,16 +1521,16 @@ export class DebtManagementService {
         );
 
         await this.applyDebtReportPairDelta(
-          sourceRouteIdObj,
-          pivotRouteIdObj,
+          restoreSourceRoute1,
+          restoreTargetRoute1,
           dateDebtExact,
           cash,
           session
         );
 
         await this.applyDebtReportPairDelta(
-          pivotRouteIdObj,
-          targetRouteIdObj,
+          restoreSourceRoute2,
+          restoreTargetRoute2,
           dateDebtExact,
           cash,
           session
