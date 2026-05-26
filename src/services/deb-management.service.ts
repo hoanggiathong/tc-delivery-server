@@ -804,6 +804,58 @@ export class DebtManagementService {
     };
   }
 
+  private async adjustDebtPairTotalOnly(
+    fromRouteId: Types.ObjectId,
+    toRouteId: Types.ObjectId,
+    dateDebtExact: Date,
+    deltaForDebt1: number,
+    session: mongoose.ClientSession
+  ): Promise<void> {
+    const { currentDebt1, currentDebt2 } = await this.getDebtPair(
+      fromRouteId,
+      toRouteId,
+      dateDebtExact,
+      session
+    );
+
+    if (!currentDebt1 || !currentDebt2) {
+      throw new Error('Không tìm thấy công nợ hôm nay. Vui lòng chạy cron công nợ trước.');
+    }
+
+    const nextTotalDebt1 = (currentDebt1.totalDebt ?? 0) + deltaForDebt1;
+    const nextTotalDebt2 = (currentDebt2.totalDebt ?? 0) - deltaForDebt1;
+
+    const updatedDebt1 = await Debt.findOneAndUpdate(
+      {
+        _id: currentDebt1._id,
+        totalDebt: currentDebt1.totalDebt ?? 0,
+      },
+      {
+        totalDebt: nextTotalDebt1,
+      },
+      { session, new: true, runValidators: true }
+    );
+
+    if (!updatedDebt1) {
+      throw new Error('Công nợ đã thay đổi bởi thao tác khác. Vui lòng thử lại.');
+    }
+
+    const updatedDebt2 = await Debt.findOneAndUpdate(
+      {
+        _id: currentDebt2._id,
+        totalDebt: currentDebt2.totalDebt ?? 0,
+      },
+      {
+        totalDebt: nextTotalDebt2,
+      },
+      { session, new: true, runValidators: true }
+    );
+
+    if (!updatedDebt2) {
+      throw new Error('Công nợ đã thay đổi bởi thao tác khác. Vui lòng thử lại.');
+    }
+  }
+
   private async rollbackDebtPairDelta(
     fromRouteId: Types.ObjectId,
     toRouteId: Types.ObjectId,
@@ -983,24 +1035,13 @@ export class DebtManagementService {
       const receiptResult = await receiptDebtManagement.save({ session });
       const paymentResult = await paymentDebtManagement.save({ session });
 
-      if (currentTotalDebt > 0) {
-        await this.rollbackDebtPairDelta(
-          fromRouteIdObj,
-          toRouteIdObj,
-          dateDebtExact,
-          data.cash,
-          session,
-          true
-        );
-      } else {
-        await this.applyDebtPairDelta(
-          fromRouteIdObj,
-          toRouteIdObj,
-          dateDebtExact,
-          data.cash,
-          session
-        );
-      }
+      await this.applyDebtPairDelta(
+        fromRouteIdObj,
+        toRouteIdObj,
+        dateDebtExact,
+        data.cash,
+        session
+      );
 
       await this.debtReportService.updateDebtReport(
         String(toRouteIdObj),
@@ -1882,20 +1923,14 @@ export class DebtManagementService {
         debtEffectAction = currentTotalDebt >= 0 ? 'ROLLBACK' : 'APPLY';
       }
 
-      if (debtEffectAction === 'ROLLBACK') {
-        await this.applyDebtPairDelta(fromRouteIdObj, toRouteIdObj, dateDebtExact, cash, session);
-      } else if (debtEffectAction === 'APPLY') {
-        await this.rollbackDebtPairDelta(
-          fromRouteIdObj,
-          toRouteIdObj,
-          dateDebtExact,
-          cash,
-          session,
-          true
-        );
-      } else {
-        throw new Error('Không xác định được chiều hoàn công nợ của phiếu thu.');
-      }
+      await this.rollbackDebtPairDelta(
+        fromRouteIdObj,
+        toRouteIdObj,
+        dateDebtExact,
+        cash,
+        session,
+        true
+      );
 
       await this.debtReportService.updateDebtReport(
         toRoute.toString(),
