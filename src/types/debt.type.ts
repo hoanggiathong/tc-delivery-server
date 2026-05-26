@@ -22,6 +22,9 @@ export interface IDebtRowDB {
   accountPayable: number;
   receivable: number;
 
+  clearingAccountPayable?: number;
+  clearingReceivable?: number;
+
   homeDeliveryFromRoute: number;
   homeDeliveryToRoute: number;
 
@@ -48,6 +51,8 @@ export interface IDebtRow {
   feeCODFromRoute: number;
   accountPayable: number;
   receivable: number;
+  clearingAccountPayable?: number;
+  clearingReceivable?: number;
   homeDeliveryFromRoute: number;
   homeDeliveryToRoute: number;
   surchargeToRoute: number;
@@ -71,6 +76,8 @@ export interface IDebtTotal {
   feeCODFromRoute: number;
   accountPayable: number;
   receivable: number;
+  clearingAccountPayable?: number;
+  clearingReceivable?: number;
   homeDeliveryFromRoute: number;
   homeDeliveryToRoute: number;
   surchargeToRoute: number;
@@ -127,6 +134,8 @@ export interface IExportTotalDebtRow {
   feeCODFromRoute: number;
   accountPayable: number;
   receivable: number;
+  clearingAccountPayable?: number;
+  clearingReceivable?: number;
   homeDeliveryFromRoute: number;
   homeDeliveryToRoute: number;
   surchargeToRoute: number;

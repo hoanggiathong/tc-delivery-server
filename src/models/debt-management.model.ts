@@ -18,6 +18,9 @@ export interface IDebtManagement extends Document {
   createdBy: ObjectId;
   sourcePivotDirection?: 'FORWARD' | 'REVERSE';
   pivotTargetDirection?: 'FORWARD' | 'REVERSE';
+  clearingReceivable?: number;
+  clearingAccountPayable?: number;
+  debtEffectAction?: 'ROLLBACK' | 'APPLY';
 }
 
 const debtManagementSchema = new Schema<IDebtManagement>(
@@ -82,6 +85,20 @@ const debtManagementSchema = new Schema<IDebtManagement>(
     pivotTargetDirection: {
       type: String,
       enum: ['FORWARD', 'REVERSE'],
+      required: false,
+      default: null,
+    },
+    clearingReceivable: {
+      type: Number,
+      default: 0,
+    },
+    clearingAccountPayable: {
+      type: Number,
+      default: 0,
+    },
+    debtEffectAction: {
+      type: String,
+      enum: ['ROLLBACK', 'APPLY'],
       required: false,
       default: null,
     },
