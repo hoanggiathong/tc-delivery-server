@@ -996,6 +996,8 @@ export class DebtManagementService {
       }
 
       const currentTotalDebt = currentDebt1.totalDebt ?? 0;
+
+      /*
       const absDebt = Math.abs(currentTotalDebt);
 
       if (absDebt <= 0) {
@@ -1007,7 +1009,8 @@ export class DebtManagementService {
           `Số tiền thu vượt quá công nợ hiện tại. Công nợ còn ${absDebt.toLocaleString('vi-VN')}đ.`
         );
       }
-
+      */
+     
       const debtEffectAction = currentTotalDebt > 0 ? 'ROLLBACK' : 'APPLY';
 
       const receiptDebtManagement = new DebtManagement({
