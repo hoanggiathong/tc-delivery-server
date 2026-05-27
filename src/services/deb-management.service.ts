@@ -4,7 +4,7 @@ import {
   SORT_BY,
 } from '@/const/debt-management.const';
 import { DebtManagement } from '@/models/debt-management.model';
-import { Debt } from '@/models/debt.model';
+import { Debt, type IDebt } from '@/models/debt.model';
 import { Route } from '@/models/route.model';
 import {
   ICreateDebtManagementRequest,
@@ -245,6 +245,180 @@ export class DebtManagementService {
     }
   }
 
+  private async rebuildDebtPairFromActiveManagements(
+    fromRouteId: Types.ObjectId,
+    toRouteId: Types.ObjectId,
+    dateDebtExact: Date,
+    session: mongoose.ClientSession
+  ): Promise<void> {
+    const todayVn = getTodayVn();
+    const todayRange = vnDateToUtcRange(todayVn.year, todayVn.month, todayVn.date);
+
+    const records = await DebtManagement.find({
+      createdAt: { $gte: todayRange.start, $lte: todayRange.end },
+      deleted: false,
+      type: DEBT_MANAGEMENT_TYPE.CLEARING,
+      $or: [
+        {
+          fromRoute: fromRouteId,
+          toRoute: toRouteId,
+        },
+        {
+          fromRoute: toRouteId,
+          toRoute: fromRouteId,
+        },
+
+        {
+          fromRoute: fromRouteId,
+          pivotRoute: toRouteId,
+        },
+        {
+          pivotRoute: fromRouteId,
+          toRoute: toRouteId,
+        },
+
+        {
+          fromRoute: toRouteId,
+          pivotRoute: fromRouteId,
+        },
+        {
+          pivotRoute: toRouteId,
+          toRoute: fromRouteId,
+        },
+      ],
+    })
+      .session(session)
+      .lean();
+
+    // paymentAmount không còn dùng để rebuild debt
+    let clearingAmount = 0;
+
+    const isSamePair = (effectFrom: unknown, effectTo: unknown) =>
+      String(effectFrom) === String(fromRouteId) && String(effectTo) === String(toRouteId);
+
+    const addClearingEffect = (effectFrom: unknown, effectTo: unknown, cash: number) => {
+      if (isSamePair(effectFrom, effectTo)) {
+        clearingAmount += cash;
+      }
+    };
+
+    for (const record of records as any[]) {
+      const cash = Number(record.cash || 0);
+
+      if (record.type === DEBT_MANAGEMENT_TYPE.CLEARING) {
+        if (!record.pivotRoute) {
+          continue;
+        }
+
+        const sourceRoute = record.fromRoute;
+        const targetRoute = record.toRoute;
+        const pivotRoute = record.pivotRoute;
+
+        const related =
+          isSamePair(sourceRoute, targetRoute) ||
+          isSamePair(targetRoute, sourceRoute) ||
+          isSamePair(sourceRoute, pivotRoute) ||
+          isSamePair(pivotRoute, sourceRoute) ||
+          isSamePair(pivotRoute, targetRoute) ||
+          isSamePair(targetRoute, pivotRoute);
+
+        if (!related) {
+          continue;
+        }
+
+        const pairEffect = isSamePair(sourceRoute, targetRoute)
+          ? cash
+          : isSamePair(targetRoute, sourceRoute)
+            ? -cash
+            : 0;
+
+        clearingAmount += pairEffect;
+
+        if (record.sourcePivotDirection === 'FORWARD') {
+          addClearingEffect(sourceRoute, pivotRoute, -cash);
+        } else {
+          addClearingEffect(pivotRoute, sourceRoute, -cash);
+        }
+
+        if (record.pivotTargetDirection === 'FORWARD') {
+          addClearingEffect(pivotRoute, targetRoute, -cash);
+        } else {
+          addClearingEffect(targetRoute, pivotRoute, -cash);
+        }
+      }
+    }
+
+    const { currentDebt1, currentDebt2 } = await this.getDebtPair(
+      fromRouteId,
+      toRouteId,
+      dateDebtExact,
+      session
+    );
+
+    if (!currentDebt1 || !currentDebt2) {
+      throw new Error('Debt record not found for rebuild');
+    }
+
+    // clearing pair có thể âm do rollback trung gian
+    const normalizedClearingAmount = clearingAmount;
+
+    const totalDebt1 = this.calcTotalDebtForForward(
+      currentDebt1,
+      currentDebt1.receivable ?? 0,
+      currentDebt1.accountPayable ?? 0,
+      normalizedClearingAmount,
+      0
+    );
+
+    const totalDebt2 = this.calcTotalDebtForReverse(
+      currentDebt2,
+      currentDebt2.accountPayable ?? 0,
+      currentDebt2.receivable ?? 0,
+      currentDebt2.clearingReceivable ?? 0,
+      normalizedClearingAmount
+    );
+
+    const updatedDebt1 = await Debt.findOneAndUpdate(
+      {
+        _id: currentDebt1._id,
+        $or: [
+          { clearingReceivable: currentDebt1.clearingReceivable ?? 0 },
+          { clearingReceivable: { $exists: false } },
+        ],
+      },
+      {
+        clearingReceivable: normalizedClearingAmount,
+        clearingAccountPayable: 0,
+        totalDebt: totalDebt1,
+      },
+      { session, new: true, runValidators: true }
+    );
+
+    if (!updatedDebt1) {
+      throw new Error('Debt was changed by another request. Please retry.');
+    }
+
+    const updatedDebt2 = await Debt.findOneAndUpdate(
+      {
+        _id: currentDebt2._id,
+        $or: [
+          { clearingAccountPayable: currentDebt2.clearingAccountPayable ?? 0 },
+          { clearingAccountPayable: { $exists: false } },
+        ],
+      },
+      {
+        clearingAccountPayable: normalizedClearingAmount,
+        clearingReceivable: 0,
+        totalDebt: totalDebt2,
+      },
+      { session, new: true, runValidators: true }
+    );
+
+    if (!updatedDebt2) {
+      throw new Error('Debt was changed by another request. Please retry.');
+    }
+  }
+
   async getListReceiptDebtMangement(
     req: Request,
     userId: string
@@ -423,7 +597,7 @@ export class DebtManagementService {
       })
         .sort({ createdAt: -1 })
         .session(session)
-        .lean(),
+        .lean<IDebt>(),
       Debt.findOne({
         fromRoute: toRouteId,
         toRoute: fromRouteId,
@@ -431,7 +605,7 @@ export class DebtManagementService {
       })
         .sort({ createdAt: -1 })
         .session(session)
-        .lean(),
+        .lean<IDebt>(),
     ]);
 
     return { currentDebt1, currentDebt2 };
@@ -440,7 +614,9 @@ export class DebtManagementService {
   private calcTotalDebtForForward(
     currentDebt: any,
     nextReceivable: number,
-    nextAccountPayable?: number
+    nextAccountPayable?: number,
+    nextClearingReceivable?: number,
+    nextClearingAccountPayable?: number
   ): number {
     const costFromRoute = currentDebt.costFromRoute ?? 0;
     const feeCODToRoute = currentDebt.feeCODToRoute ?? 0;
@@ -451,8 +627,19 @@ export class DebtManagementService {
     const feeCODFromRoute = currentDebt.feeCODFromRoute ?? 0;
     const homeDeliveryToRoute = currentDebt.homeDeliveryToRoute ?? 0;
     const surchargeToRoute = currentDebt.surchargeToRoute ?? 0;
+
     const accountPayable =
       nextAccountPayable !== undefined ? nextAccountPayable : (currentDebt.accountPayable ?? 0);
+
+    const clearingReceivable =
+      nextClearingReceivable !== undefined
+        ? nextClearingReceivable
+        : (currentDebt.clearingReceivable ?? 0);
+
+    const clearingAccountPayable =
+      nextClearingAccountPayable !== undefined
+        ? nextClearingAccountPayable
+        : (currentDebt.clearingAccountPayable ?? 0);
 
     const openingBalance =
       currentDebt.openingBalance !== null && currentDebt.openingBalance !== undefined
@@ -460,10 +647,20 @@ export class DebtManagementService {
         : 0;
 
     const A =
-      costFromRoute + feeCODToRoute + homeDeliveryFromRoute + surchargeFromRoute + nextReceivable;
+      costFromRoute +
+      feeCODToRoute +
+      homeDeliveryFromRoute +
+      surchargeFromRoute +
+      nextReceivable +
+      clearingReceivable;
 
     const B =
-      costToRoute + feeCODFromRoute + homeDeliveryToRoute + surchargeToRoute + accountPayable;
+      costToRoute +
+      feeCODFromRoute +
+      homeDeliveryToRoute +
+      surchargeToRoute +
+      accountPayable +
+      clearingAccountPayable;
 
     return A - B + openingBalance;
   }
@@ -471,12 +668,15 @@ export class DebtManagementService {
   private calcTotalDebtForReverse(
     currentDebt: any,
     nextAccountPayable: number,
-    nextReceivable?: number
+    nextReceivable?: number,
+    nextClearingReceivable?: number,
+    nextClearingAccountPayable?: number
   ): number {
     const costFromRoute = currentDebt.costFromRoute ?? 0;
     const feeCODToRoute = currentDebt.feeCODToRoute ?? 0;
     const homeDeliveryFromRoute = currentDebt.homeDeliveryFromRoute ?? 0;
     const surchargeFromRoute = currentDebt.surchargeFromRoute ?? 0;
+
     const receivable =
       nextReceivable !== undefined ? nextReceivable : (currentDebt.receivable ?? 0);
 
@@ -485,16 +685,36 @@ export class DebtManagementService {
     const homeDeliveryToRoute = currentDebt.homeDeliveryToRoute ?? 0;
     const surchargeToRoute = currentDebt.surchargeToRoute ?? 0;
 
+    const clearingReceivable =
+      nextClearingReceivable !== undefined
+        ? nextClearingReceivable
+        : (currentDebt.clearingReceivable ?? 0);
+
+    const clearingAccountPayable =
+      nextClearingAccountPayable !== undefined
+        ? nextClearingAccountPayable
+        : (currentDebt.clearingAccountPayable ?? 0);
+
     const openingBalance =
       currentDebt.openingBalance !== null && currentDebt.openingBalance !== undefined
         ? currentDebt.openingBalance
         : 0;
 
     const A =
-      costFromRoute + feeCODToRoute + homeDeliveryFromRoute + surchargeFromRoute + receivable;
+      costFromRoute +
+      feeCODToRoute +
+      homeDeliveryFromRoute +
+      surchargeFromRoute +
+      receivable +
+      clearingReceivable;
 
     const B =
-      costToRoute + feeCODFromRoute + homeDeliveryToRoute + surchargeToRoute + nextAccountPayable;
+      costToRoute +
+      feeCODFromRoute +
+      homeDeliveryToRoute +
+      surchargeToRoute +
+      nextAccountPayable +
+      clearingAccountPayable;
 
     return A - B + openingBalance;
   }
@@ -523,19 +743,35 @@ export class DebtManagementService {
     }
 
     const receivable1 = (currentDebt1.receivable ?? 0) + cash;
-    const totalDebt1 = this.calcTotalDebtForForward(currentDebt1, receivable1);
+
+    const totalDebt1 = this.calcTotalDebtForForward(
+      currentDebt1,
+      receivable1,
+      undefined,
+      currentDebt1.clearingReceivable ?? 0,
+      currentDebt1.clearingAccountPayable ?? 0
+    );
 
     const accountPayable2 = (currentDebt2.accountPayable ?? 0) + cash;
-    const totalDebt2 = this.calcTotalDebtForReverse(currentDebt2, accountPayable2);
+
+    const totalDebt2 = this.calcTotalDebtForReverse(
+      currentDebt2,
+      accountPayable2,
+      undefined,
+      currentDebt2.clearingReceivable ?? 0,
+      currentDebt2.clearingAccountPayable ?? 0
+    );
 
     const updatedDebt1 = await Debt.findOneAndUpdate(
       {
         _id: currentDebt1._id,
         receivable: currentDebt1.receivable ?? 0,
+        clearingReceivable: currentDebt1.clearingReceivable ?? 0,
       },
       {
         totalDebt: totalDebt1,
         receivable: receivable1,
+        accountPayable: 0,
       },
       { session, new: true, runValidators: true }
     );
@@ -548,10 +784,12 @@ export class DebtManagementService {
       {
         _id: currentDebt2._id,
         accountPayable: currentDebt2.accountPayable ?? 0,
+        clearingAccountPayable: currentDebt2.clearingAccountPayable ?? 0,
       },
       {
         totalDebt: totalDebt2,
         accountPayable: accountPayable2,
+        receivable: 0,
       },
       { session, new: true, runValidators: true }
     );
@@ -564,6 +802,58 @@ export class DebtManagementService {
       forward: { _id: currentDebt1._id, receivable: receivable1, totalDebt: totalDebt1 },
       reverse: { _id: currentDebt2._id, accountPayable: accountPayable2, totalDebt: totalDebt2 },
     };
+  }
+
+  private async adjustDebtPairTotalOnly(
+    fromRouteId: Types.ObjectId,
+    toRouteId: Types.ObjectId,
+    dateDebtExact: Date,
+    deltaForDebt1: number,
+    session: mongoose.ClientSession
+  ): Promise<void> {
+    const { currentDebt1, currentDebt2 } = await this.getDebtPair(
+      fromRouteId,
+      toRouteId,
+      dateDebtExact,
+      session
+    );
+
+    if (!currentDebt1 || !currentDebt2) {
+      throw new Error('Không tìm thấy công nợ hôm nay. Vui lòng chạy cron công nợ trước.');
+    }
+
+    const nextTotalDebt1 = (currentDebt1.totalDebt ?? 0) + deltaForDebt1;
+    const nextTotalDebt2 = (currentDebt2.totalDebt ?? 0) - deltaForDebt1;
+
+    const updatedDebt1 = await Debt.findOneAndUpdate(
+      {
+        _id: currentDebt1._id,
+        totalDebt: currentDebt1.totalDebt ?? 0,
+      },
+      {
+        totalDebt: nextTotalDebt1,
+      },
+      { session, new: true, runValidators: true }
+    );
+
+    if (!updatedDebt1) {
+      throw new Error('Công nợ đã thay đổi bởi thao tác khác. Vui lòng thử lại.');
+    }
+
+    const updatedDebt2 = await Debt.findOneAndUpdate(
+      {
+        _id: currentDebt2._id,
+        totalDebt: currentDebt2.totalDebt ?? 0,
+      },
+      {
+        totalDebt: nextTotalDebt2,
+      },
+      { session, new: true, runValidators: true }
+    );
+
+    if (!updatedDebt2) {
+      throw new Error('Công nợ đã thay đổi bởi thao tác khác. Vui lòng thử lại.');
+    }
   }
 
   private async rollbackDebtPairDelta(
@@ -592,27 +882,41 @@ export class DebtManagementService {
 
     const rawReceivable1 = (currentDebt1.receivable ?? 0) - cash;
     const rawAccountPayable2 = (currentDebt2.accountPayable ?? 0) - cash;
-
-    if (!allowNegative) {
-      if (rawReceivable1 < 0 || rawAccountPayable2 < 0) {
-        throw new Error(`Rollback debt invalid: negative receivable/account payable detected`);
-      }
+    if (!allowNegative && rawReceivable1 < 0) {
+      throw new Error('Số tiền thu vượt quá khoản phải thu hiện tại.');
     }
+    if (!allowNegative && rawAccountPayable2 < 0) {
+      throw new Error('Số tiền thu vượt quá khoản phải trả hiện tại.');
+    }
+    const receivable1 = rawReceivable1;
+    const accountPayable2 = rawAccountPayable2;
 
-    const receivable1 = allowNegative ? rawReceivable1 : Math.max(0, rawReceivable1);
-    const accountPayable2 = allowNegative ? rawAccountPayable2 : Math.max(0, rawAccountPayable2);
+    const totalDebt1 = this.calcTotalDebtForForward(
+      currentDebt1,
+      receivable1,
+      undefined,
+      currentDebt1.clearingReceivable ?? 0,
+      currentDebt1.clearingAccountPayable ?? 0
+    );
 
-    const totalDebt1 = this.calcTotalDebtForForward(currentDebt1, receivable1);
-    const totalDebt2 = this.calcTotalDebtForReverse(currentDebt2, accountPayable2);
+    const totalDebt2 = this.calcTotalDebtForReverse(
+      currentDebt2,
+      accountPayable2,
+      undefined,
+      currentDebt2.clearingReceivable ?? 0,
+      currentDebt2.clearingAccountPayable ?? 0
+    );
 
     const updatedDebt1 = await Debt.findOneAndUpdate(
       {
         _id: currentDebt1._id,
         receivable: currentDebt1.receivable ?? 0,
+        clearingReceivable: currentDebt1.clearingReceivable ?? 0,
       },
       {
         totalDebt: totalDebt1,
         receivable: receivable1,
+        accountPayable: 0,
       },
       { session, new: true, runValidators: true }
     );
@@ -625,10 +929,12 @@ export class DebtManagementService {
       {
         _id: currentDebt2._id,
         accountPayable: currentDebt2.accountPayable ?? 0,
+        clearingAccountPayable: currentDebt2.clearingAccountPayable ?? 0,
       },
       {
         totalDebt: totalDebt2,
         accountPayable: accountPayable2,
+        receivable: 0,
       },
       { session, new: true, runValidators: true }
     );
@@ -676,6 +982,34 @@ export class DebtManagementService {
         throw new Error('Cannot create debt management for the same route');
       }
 
+      const { dateDebtExact } = this.getDateDebtExactToday();
+
+      const { currentDebt1, currentDebt2 } = await this.getDebtPair(
+        fromRouteIdObj,
+        toRouteIdObj,
+        dateDebtExact,
+        session
+      );
+
+      if (!currentDebt1 || !currentDebt2) {
+        throw new Error('Không tìm thấy công nợ hôm nay. Vui lòng chạy cron công nợ trước.');
+      }
+
+      const currentTotalDebt = currentDebt1.totalDebt ?? 0;
+      const absDebt = Math.abs(currentTotalDebt);
+
+      if (absDebt <= 0) {
+        throw new Error('Tuyến này hiện không còn công nợ để thu.');
+      }
+
+      if (data.cash > absDebt) {
+        throw new Error(
+          `Số tiền thu vượt quá công nợ hiện tại. Công nợ còn ${absDebt.toLocaleString('vi-VN')}đ.`
+        );
+      }
+
+      const debtEffectAction = currentTotalDebt > 0 ? 'ROLLBACK' : 'APPLY';
+
       const receiptDebtManagement = new DebtManagement({
         fromRoute: fromRouteIdObj,
         toRoute: toRouteIdObj,
@@ -684,6 +1018,7 @@ export class DebtManagementService {
         content: data.content,
         type: DEBT_MANAGEMENT_TYPE.RECEIPT,
         createdBy: userId,
+        debtEffectAction,
       });
 
       const paymentDebtManagement = new DebtManagement({
@@ -694,12 +1029,11 @@ export class DebtManagementService {
         content: data.content,
         type: DEBT_MANAGEMENT_TYPE.PAYMENT,
         createdBy: userId,
+        debtEffectAction,
       });
 
       const receiptResult = await receiptDebtManagement.save({ session });
       const paymentResult = await paymentDebtManagement.save({ session });
-
-      const { dateDebtExact } = this.getDateDebtExactToday();
 
       await this.applyDebtPairDelta(
         fromRouteIdObj,
@@ -1116,15 +1450,6 @@ export class DebtManagementService {
           ? actualPivotRouteIdObj
           : actualSourceRouteIdObj;
 
-      await this.rollbackDebtPairDelta(
-        rollbackSourceRoute1,
-        rollbackTargetRoute1,
-        dateDebtExact,
-        data.cash,
-        session,
-        true
-      );
-
       const rollbackSourceRoute2 =
         clearingPlan.pivotTargetDirection === 'FORWARD'
           ? actualPivotRouteIdObj
@@ -1134,23 +1459,6 @@ export class DebtManagementService {
         clearingPlan.pivotTargetDirection === 'FORWARD'
           ? actualTargetRouteIdObj
           : actualPivotRouteIdObj;
-
-      await this.rollbackDebtPairDelta(
-        rollbackSourceRoute2,
-        rollbackTargetRoute2,
-        dateDebtExact,
-        data.cash,
-        session,
-        true
-      );
-
-      await this.applyDebtPairDelta(
-        actualSourceRouteIdObj,
-        actualTargetRouteIdObj,
-        dateDebtExact,
-        data.cash,
-        session
-      );
 
       await this.rollbackDebtReportPairDelta(
         rollbackSourceRoute1,
@@ -1192,6 +1500,27 @@ export class DebtManagementService {
       });
 
       const result = await clearing.save({ session });
+
+      await this.rebuildDebtPairFromActiveManagements(
+        actualSourceRouteIdObj,
+        actualTargetRouteIdObj,
+        dateDebtExact,
+        session
+      );
+
+      await this.rebuildDebtPairFromActiveManagements(
+        rollbackSourceRoute1,
+        rollbackTargetRoute1,
+        dateDebtExact,
+        session
+      );
+
+      await this.rebuildDebtPairFromActiveManagements(
+        rollbackSourceRoute2,
+        rollbackTargetRoute2,
+        dateDebtExact,
+        session
+      );
 
       await result.populate('fromRoute', 'name');
       await result.populate('toRoute', 'name');
@@ -1474,43 +1803,17 @@ export class DebtManagementService {
           session
         );
 
-        // rollback khoản source -> target đã tạo khi gặt
-        await this.rollbackDebtPairDelta(
-          sourceRouteIdObj,
-          targetRouteIdObj,
-          dateDebtExact,
-          cash,
-          session,
-          true
-        );
-
         const restoreSourceRoute1 =
           sourcePivotDirection === 'FORWARD' ? sourceRouteIdObj : pivotRouteIdObj;
 
         const restoreTargetRoute1 =
           sourcePivotDirection === 'FORWARD' ? pivotRouteIdObj : sourceRouteIdObj;
 
-        await this.applyDebtPairDelta(
-          restoreSourceRoute1,
-          restoreTargetRoute1,
-          dateDebtExact,
-          cash,
-          session
-        );
-
         const restoreSourceRoute2 =
           pivotTargetDirection === 'FORWARD' ? pivotRouteIdObj : targetRouteIdObj;
 
         const restoreTargetRoute2 =
           pivotTargetDirection === 'FORWARD' ? targetRouteIdObj : pivotRouteIdObj;
-
-        await this.applyDebtPairDelta(
-          restoreSourceRoute2,
-          restoreTargetRoute2,
-          dateDebtExact,
-          cash,
-          session
-        );
 
         await this.rollbackDebtReportPairDelta(
           sourceRouteIdObj,
@@ -1542,38 +1845,62 @@ export class DebtManagementService {
 
         await debtManagement.save({ session });
 
+        await this.rebuildDebtPairFromActiveManagements(
+          sourceRouteIdObj,
+          targetRouteIdObj,
+          dateDebtExact,
+          session
+        );
+
+        await this.rebuildDebtPairFromActiveManagements(
+          restoreSourceRoute1,
+          restoreTargetRoute1,
+          dateDebtExact,
+          session
+        );
+
+        await this.rebuildDebtPairFromActiveManagements(
+          restoreSourceRoute2,
+          restoreTargetRoute2,
+          dateDebtExact,
+          session
+        );
+
         await session.commitTransaction();
         await session.endSession();
 
         return;
       }
 
-      const debtManagementRecords = await DebtManagement.find({
-        fromRoute,
-        toRoute,
-        cash,
-        cashDate,
-        deleted: false,
-      })
-        .session(session)
-        .lean();
-
-      if (debtManagementRecords.length === 0) {
-        throw new Error('No matching Debt Management records found');
-      }
+      const oppositeType =
+        type === DEBT_MANAGEMENT_TYPE.RECEIPT
+          ? DEBT_MANAGEMENT_TYPE.PAYMENT
+          : DEBT_MANAGEMENT_TYPE.RECEIPT;
 
       await DebtManagement.updateMany(
         {
-          fromRoute,
-          toRoute,
-          cash,
-          cashDate,
-          deleted: false,
+          _id: {
+            $in: [
+              debtManagement._id,
+              ...(await DebtManagement.find({
+                fromRoute,
+                toRoute,
+                cash,
+                cashDate,
+                type: oppositeType,
+                deleted: false,
+              })
+                .session(session)
+                .distinct('_id')),
+            ],
+          },
         },
         {
-          deleted: true,
-          deletedAt: new Date(),
-          reason,
+          $set: {
+            deleted: true,
+            deletedAt: new Date(),
+            reason,
+          },
         },
         { session }
       );
@@ -1581,7 +1908,29 @@ export class DebtManagementService {
       const fromRouteIdObj = new Types.ObjectId(String(fromRoute));
       const toRouteIdObj = new Types.ObjectId(String(toRoute));
 
-      await this.rollbackDebtPairDelta(fromRouteIdObj, toRouteIdObj, dateDebtExact, cash, session);
+      let debtEffectAction = (debtManagement as any).debtEffectAction;
+
+      if (!debtEffectAction) {
+        const { currentDebt1 } = await this.getDebtPair(
+          fromRouteIdObj,
+          toRouteIdObj,
+          dateDebtExact,
+          session
+        );
+
+        const currentTotalDebt = currentDebt1?.totalDebt ?? 0;
+
+        debtEffectAction = currentTotalDebt >= 0 ? 'ROLLBACK' : 'APPLY';
+      }
+
+      await this.rollbackDebtPairDelta(
+        fromRouteIdObj,
+        toRouteIdObj,
+        dateDebtExact,
+        cash,
+        session,
+        true
+      );
 
       await this.debtReportService.updateDebtReport(
         toRoute.toString(),

@@ -51,6 +51,8 @@ type GroupedDebtReport = {
   feeCODFromRoute: number;
   accountPayable: number;
   receivable: number;
+  clearingAccountPayable: number;
+  clearingReceivable: number;
   homeDeliveryFromRoute: number;
   homeDeliveryToRoute: number;
   surchargeToRoute: number;
@@ -130,6 +132,8 @@ export class DebtReportService {
             feeCODFromRoute: 0,
             accountPayable: 0,
             receivable: 0,
+            clearingAccountPayable: 0,
+            clearingReceivable: 0,
             homeDeliveryFromRoute: 0,
             homeDeliveryToRoute: 0,
             surchargeToRoute: 0,
@@ -154,6 +158,8 @@ export class DebtReportService {
         grouped.feeCODFromRoute += debt.feeCODFromRoute ?? 0;
         grouped.accountPayable += debt.accountPayable ?? 0;
         grouped.receivable += debt.receivable ?? 0;
+        grouped.clearingAccountPayable += (debt as any).clearingAccountPayable ?? 0;
+        grouped.clearingReceivable += (debt as any).clearingReceivable ?? 0;
         grouped.homeDeliveryFromRoute += debt.homeDeliveryFromRoute ?? 0;
         grouped.homeDeliveryToRoute += debt.homeDeliveryToRoute ?? 0;
         grouped.surchargeToRoute += debt.surchargeToRoute ?? 0;
@@ -239,6 +245,8 @@ export class DebtReportService {
             feeCODFromRoute: 0,
             accountPayable: 0,
             receivable: 0,
+            clearingAccountPayable: 0,
+            clearingReceivable: 0,
             homeDeliveryFromRoute: 0,
             homeDeliveryToRoute: 0,
             surchargeToRoute: 0,
@@ -262,6 +270,8 @@ export class DebtReportService {
         grouped.feeCODFromRoute += debt.feeCODFromRoute ?? 0;
         grouped.accountPayable += debt.accountPayable ?? 0;
         grouped.receivable += debt.receivable ?? 0;
+        grouped.clearingAccountPayable += (debt as any).clearingAccountPayable ?? 0;
+        grouped.clearingReceivable += (debt as any).clearingReceivable ?? 0;
         grouped.homeDeliveryFromRoute += debt.homeDeliveryFromRoute ?? 0;
         grouped.homeDeliveryToRoute += debt.homeDeliveryToRoute ?? 0;
         grouped.surchargeToRoute += debt.surchargeToRoute ?? 0;
@@ -291,6 +301,8 @@ export class DebtReportService {
               feeCODFromRoute: grouped.feeCODFromRoute,
               accountPayable: grouped.accountPayable,
               receivable: grouped.receivable,
+              clearingAccountPayable: grouped.clearingAccountPayable,
+              clearingReceivable: grouped.clearingReceivable,
               homeDeliveryFromRoute: grouped.homeDeliveryFromRoute,
               homeDeliveryToRoute: grouped.homeDeliveryToRoute,
               surchargeToRoute: grouped.surchargeToRoute,
@@ -349,7 +361,10 @@ export class DebtReportService {
     cash: number,
     session?: mongoose.ClientSession,
     updateAccountPayable?: boolean,
-    updateReceivable?: boolean
+    updateReceivable?: boolean,
+
+    updateClearingAccountPayable?: boolean,
+    updateClearingReceivable?: boolean
   ): Promise<IDebtReport | null> {
     try {
       const toRouteObjId =
@@ -397,20 +412,30 @@ export class DebtReportService {
         ? (debtReport.receivable ?? 0) + cash
         : (debtReport.receivable ?? 0);
 
+      const newClearingAccountPayable = updateClearingAccountPayable
+        ? (debtReport.clearingAccountPayable ?? 0) + cash
+        : (debtReport.clearingAccountPayable ?? 0);
+
+      const newClearingReceivable = updateClearingReceivable
+        ? (debtReport.clearingReceivable ?? 0) + cash
+        : (debtReport.clearingReceivable ?? 0);
+
       // totalDebt của report phải cộng thêm revenueTotal
       const A =
         (debtReport.costFromRoute ?? 0) +
         (debtReport.feeCODToRoute ?? 0) +
         (debtReport.homeDeliveryFromRoute ?? 0) +
         (debtReport.surchargeFromRoute ?? 0) +
-        newReceivable;
+        newReceivable +
+        newClearingReceivable;
 
       const B =
         (debtReport.costToRoute ?? 0) +
         (debtReport.feeCODFromRoute ?? 0) +
         (debtReport.homeDeliveryToRoute ?? 0) +
         (debtReport.surchargeToRoute ?? 0) +
-        newAccountPayable;
+        newAccountPayable +
+        newClearingAccountPayable;
 
       const newTotalDebt =
         A - B + (debtReport.openingBalance ?? 0) + (debtReport.revenueTotal ?? 0);
@@ -418,8 +443,13 @@ export class DebtReportService {
       const updateQuery: mongoose.UpdateQuery<IDebtReport> = {
         $set: {
           updatedAt: new Date(),
+
           accountPayable: newAccountPayable,
           receivable: newReceivable,
+
+          clearingAccountPayable: newClearingAccountPayable,
+          clearingReceivable: newClearingReceivable,
+
           totalDebt: newTotalDebt,
         },
       };
@@ -493,6 +523,8 @@ export class DebtReportService {
         feeCODFromRoute: number;
         accountPayable: number;
         receivable: number;
+        clearingAccountPayable: number;
+        clearingReceivable: number;
         homeDeliveryFromRoute: number;
         homeDeliveryToRoute: number;
         surchargeToRoute: number;
@@ -509,6 +541,8 @@ export class DebtReportService {
         feeCODFromRoute: 0,
         accountPayable: 0,
         receivable: 0,
+        clearingAccountPayable: 0,
+        clearingReceivable: 0,
         homeDeliveryFromRoute: 0,
         homeDeliveryToRoute: 0,
         surchargeToRoute: 0,
@@ -527,6 +561,8 @@ export class DebtReportService {
         total.feeCODFromRoute += debtReport.feeCODFromRoute ?? 0;
         total.accountPayable += debtReport.accountPayable ?? 0;
         total.receivable += debtReport.receivable ?? 0;
+        total.clearingAccountPayable += (debtReport as any).clearingAccountPayable ?? 0;
+        total.clearingReceivable += (debtReport as any).clearingReceivable ?? 0;
         total.homeDeliveryFromRoute += debtReport.homeDeliveryFromRoute ?? 0;
         total.homeDeliveryToRoute += debtReport.homeDeliveryToRoute ?? 0;
         total.surchargeToRoute += debtReport.surchargeToRoute ?? 0;

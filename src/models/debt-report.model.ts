@@ -10,6 +10,8 @@ export interface IDebtReport extends Document {
   feeCODFromRoute: number; // no cuoc di
   accountPayable: number; // chuyen tien (khoan phai tra)
   receivable: number; // thu tien (khoan phai thu)
+  clearingAccountPayable: number; // gặt chi
+  clearingReceivable: number; // gặt thu
   homeDeliveryFromRoute: number; // GTN di
   homeDeliveryToRoute: number; // GTN ve
   surchargeToRoute: number; // phu phi di
@@ -62,6 +64,17 @@ const debtReportSchema = new Schema<IDebtReport>(
       default: 0,
     },
     receivable: {
+      type: Schema.Types.Number,
+      required: false,
+      default: 0,
+    },
+    clearingAccountPayable: {
+      type: Schema.Types.Number,
+      required: false,
+      default: 0,
+    },
+
+    clearingReceivable: {
       type: Schema.Types.Number,
       required: false,
       default: 0,
