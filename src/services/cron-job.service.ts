@@ -768,7 +768,15 @@ export class CronjobService {
 
       // Công nợ con -> K1 tính như owned -> SG:
       // Tồn đầu + Doanh thu + DT GTN nộp + DT phụ phí nộp
-      const childDebt = childOpeningBalance + revenueTotal + revenueHomeDelivery + revenueSurcharge;
+      //const childDebt = childOpeningBalance + revenueTotal + revenueHomeDelivery + revenueSurcharge;
+      const childDebt =
+        childOpeningBalance +
+        revenueTotal +
+        revenueHomeDelivery +
+        revenueSurcharge +
+        (reverseRow?.receivable ?? 0) +
+        (reverseRow?.clearingReceivable ?? 0) -
+        ((reverseRow?.accountPayable ?? 0) + (reverseRow?.clearingAccountPayable ?? 0));
 
       targetRow.openingBalance = -Math.abs(k1OpeningBalance);
 
@@ -823,10 +831,11 @@ export class CronjobService {
         reverseRow.homeDeliveryToRoute = 0;
         reverseRow.surchargeToRoute = 0;
 
-        reverseRow.accountPayable = 0;
-        reverseRow.receivable = 0;
-        reverseRow.clearingAccountPayable = 0;
-        reverseRow.clearingReceivable = 0;
+        // Đồng bộ Thu/Chi + Gặt cho chiều CON -> K1
+        reverseRow.accountPayable = fullRow.receivable ?? 0;
+        reverseRow.receivable = fullRow.accountPayable ?? 0;
+        reverseRow.clearingAccountPayable = fullRow.clearingReceivable ?? 0;
+        reverseRow.clearingReceivable = fullRow.clearingAccountPayable ?? 0;
 
         reverseRow.revenueTotal = revenueTotal;
         reverseRow.revenueHomeDelivery = revenueHomeDelivery;
