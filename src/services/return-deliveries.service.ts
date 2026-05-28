@@ -1082,8 +1082,8 @@ export class ReturnDeliveriesService {
         .populate([
           { path: 'sender', select: '_id name phone' },
           { path: 'receiver', select: '_id name phone' },
-          { path: 'fromRoute', select: '_id code name' },
-          { path: 'toRoute', select: '_id code name' },
+          { path: 'fromRoute', select: '_id code name phone' },
+          { path: 'toRoute', select: '_id code name phone' },
         ])
         .lean<IDeliveryLeanPopulated>();
 
@@ -1189,8 +1189,8 @@ export class ReturnDeliveriesService {
           .populate([
             { path: 'sender', select: '_id name phone' },
             { path: 'receiver', select: '_id name phone' },
-            { path: 'fromRoute', select: '_id code name' },
-            { path: 'toRoute', select: '_id code name' },
+            { path: 'fromRoute', select: '_id code name phone' },
+            { path: 'toRoute', select: '_id code name phone' },
           ])
           .lean<IDeliveryLeanPopulated>();
 
@@ -1275,6 +1275,12 @@ export class ReturnDeliveriesService {
   /**
    * Tạo money delivery cho thu dùm (collectForCustomer)
    */
+  /**
+   * Tạo money delivery cho thu dùm (collectForCustomer)
+   * Ví dụ mã hàng SGBT:
+   * - Giao hàng đi SG -> BT
+   * - Thu dùm tạo tiền: BT gửi SG
+   */
   private async createMoneyDeliveryForCollectForCustomer(
     typedDelivery: IDeliveryLeanPopulated,
     userId: string
@@ -1283,33 +1289,32 @@ export class ReturnDeliveriesService {
       return;
     }
 
-    const customerToRoute = await this.customerService.getInformationRouteCustomer(
-      typedDelivery.toRoute._id.toString()
-    );
+    const fromRoute = typedDelivery.toRoute; // trạm đang thu dùm
+    const toRoute = typedDelivery.fromRoute; // trạm nhận tiền về
 
-    if (!customerToRoute) {
-      throw new Error(
-        `Customer to route with ID ${typedDelivery.toRoute._id.toString()} not found`
-      );
+    if (!fromRoute?._id || !toRoute?._id) {
+      throw new Error(`Delivery ${typedDelivery.fullCode} missing fromRoute/toRoute`);
     }
 
-    const customerFromRoute = await this.customerService.getInformationRouteCustomer(
-      typedDelivery.fromRoute._id.toString()
-    );
+    if (!fromRoute.phone) {
+      throw new Error(`Route ${fromRoute.code} missing phone`);
+    }
 
-    if (!customerFromRoute) {
-      throw new Error(
-        `Customer from route with ID ${typedDelivery.fromRoute._id.toString()} not found`
-      );
+    if (!toRoute.phone) {
+      throw new Error(`Route ${toRoute.code} missing phone`);
     }
 
     await this.moneyDeliveryService.createMoneyDelivery(
       {
-        senderName: customerToRoute.name,
-        senderPhone: customerToRoute.phone,
-        receiverName: customerFromRoute.name,
-        receiverPhone: customerFromRoute.phone,
-        toRouteId: typedDelivery.fromRoute._id.toString(),
+        fromRouteId: fromRoute._id.toString(),
+        toRouteId: toRoute._id.toString(),
+
+        senderName: fromRoute.name,
+        senderPhone: fromRoute.phone,
+
+        receiverName: toRoute.name,
+        receiverPhone: toRoute.phone,
+
         sendMoneyAmount: typedDelivery.collectForCustomer,
         sendCost: 0,
         transferType: TransferType.REGULAR,
