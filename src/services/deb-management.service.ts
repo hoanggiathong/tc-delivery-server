@@ -19,6 +19,9 @@ import { DebtReportService } from './debt-report.service';
 import { DebtService } from './debt.service';
 import { UserService } from './user.service';
 
+const PARTNER_REPRESENTATIVE_ROUTE_CODE = 'K1';
+//const PARTNER_REPRESENTED_ROUTE_CODES = ['TN', 'VC', 'BO', 'TH', 'BK', 'LD', 'BH'];
+
 const VN_UTC_OFFSET_HOURS = 7;
 
 function getTodayVn(): { year: number; month: number; date: number } {
@@ -451,6 +454,10 @@ export class DebtManagementService {
       new Types.ObjectId(String(selectedRouteId))
     );
 
+    const selectedRoute = await Route.findById(toRouteRootId).lean();
+    const isK1Selected =
+      String(selectedRoute?.code || '').toUpperCase() === PARTNER_REPRESENTATIVE_ROUTE_CODE;
+
     let sort: Record<string, 1 | -1> = {};
 
     let typeSortValue: 1 | -1 | undefined = undefined;
@@ -486,10 +493,16 @@ export class DebtManagementService {
 
     try {
       const matchStage: Record<string, unknown> = {
-        toRoute: toRouteRootId,
         type: DEBT_MANAGEMENT_TYPE.RECEIPT,
         createdAt: { $gte: start, $lte: endOfDay },
         deleted: false,
+        ...(isK1Selected
+          ? {
+              $or: [{ toRoute: toRouteRootId }, { fromRoute: toRouteRootId }],
+            }
+          : {
+              toRoute: toRouteRootId,
+            }),
       };
 
       if (fromRouteId) {
@@ -770,6 +783,7 @@ export class DebtManagementService {
       },
       {
         totalDebt: totalDebt1,
+        netDebt: totalDebt1,
         receivable: receivable1,
         accountPayable: 0,
       },
@@ -788,6 +802,7 @@ export class DebtManagementService {
       },
       {
         totalDebt: totalDebt2,
+        netDebt: totalDebt2,
         accountPayable: accountPayable2,
         receivable: 0,
       },
@@ -1010,7 +1025,7 @@ export class DebtManagementService {
         );
       }
       */
-     
+
       const debtEffectAction = currentTotalDebt > 0 ? 'ROLLBACK' : 'APPLY';
 
       const receiptDebtManagement = new DebtManagement({
