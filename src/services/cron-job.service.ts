@@ -10,6 +10,7 @@ const VN_UTC_OFFSET_HOURS = 7;
 const COMPANY_ROUTE_CODE = 'SG';
 const PARTNER_REPRESENTATIVE_ROUTE_CODE = 'K1';
 const PARTNER_REPRESENTED_ROUTE_CODES = ['TN', 'VC', 'BO', 'TH', 'BK', 'LD', 'BH'];
+const ENABLE_K1_REPRESENTATIVE_WORKFLOW = false;
 
 type VnDate = { year: number; month: number; date: number };
 type RouteRelation = 'OWNED_OWNED' | 'OWNED_PARTNER' | 'PARTNER_OWNED' | 'PARTNER_PARTNER';
@@ -60,11 +61,15 @@ type PartnerRepresentativeChildMetric = {
 };
 
 function isPartnerRepresentativeRoute(route?: IRoute | null): boolean {
-  return (route?.code ?? '') === PARTNER_REPRESENTATIVE_ROUTE_CODE;
+  return (
+    ENABLE_K1_REPRESENTATIVE_WORKFLOW && (route?.code ?? '') === PARTNER_REPRESENTATIVE_ROUTE_CODE
+  );
 }
 
 function isPartnerRepresentedRoute(route?: IRoute | null): boolean {
-  return PARTNER_REPRESENTED_ROUTE_CODES.includes(route?.code ?? '');
+  return (
+    ENABLE_K1_REPRESENTATIVE_WORKFLOW && PARTNER_REPRESENTED_ROUTE_CODES.includes(route?.code ?? '')
+  );
 }
 
 function canFinalizeRevenueRoute(route?: IRoute | null): boolean {
