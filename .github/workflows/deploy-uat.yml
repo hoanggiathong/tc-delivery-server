@@ -20,16 +20,23 @@ jobs:
           node-version: '20.19.4'
 
       - name: Deploy to VPS
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USERNAME }}
-          password: ${{ secrets.VPS_PASSWORD }}
-          port: ${{ secrets.VPS_PORT }}
-          script: |
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY_B64 }}" | base64 -d > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          ssh-keyscan -p ${{ secrets.VPS_PORT }} ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+          ssh -T \
+            -i ~/.ssh/deploy_key \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=no \
+            -p ${{ secrets.VPS_PORT }} \
+            ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }} << 'EOF'
+
             set -e
 
-            cd dev/tc-delivery-server/
+            cd /root/dev/tc-delivery-server
 
             echo "===== Pull latest changes ====="
             git fetch origin dev
@@ -37,12 +44,13 @@ jobs:
 
             echo "===== Load Node/NVM ====="
             export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
 
             nvm use default
 
             echo "Current Node version:"
             node --version
+
             echo "Current NPM version:"
             npm --version
 
@@ -58,15 +66,13 @@ jobs:
             echo "===== Verify build output ====="
             if [ ! -f dist/src/index.js ]; then
               echo "Build failed: dist/src/index.js not found"
-              echo "Available index.js files:"
               find dist -name "index.js" -print || true
               exit 1
             fi
 
-            echo "Build OK: dist/src/index.js exists"
-
             echo "===== Restart UAT backend ====="
-            pm2 restart tc-delivery-server-uat --update-env || pm2 start ecosystem.config.js --only tc-delivery-server-uat --update-env
+            pm2 restart tc-delivery-server-uat --update-env || \
+            pm2 start ecosystem.config.js --only tc-delivery-server-uat --update-env
 
             echo "===== Restart cronjobs ====="
             pm2 delete tc-delivery-debt-calculator-uat || true
@@ -75,7 +81,6 @@ jobs:
             pm2 delete tc-delivery-sms-queue-uat || true
             pm2 start ecosystem.config.js --only tc-delivery-sms-queue-uat --update-env
 
-            echo "===== Save PM2 process list ====="
             pm2 save
 
             echo "===== PM2 status ====="
@@ -83,3 +88,5 @@ jobs:
 
             echo "===== Backend logs ====="
             pm2 logs tc-delivery-server-uat --lines 50 --nostream
+
+          EOF
