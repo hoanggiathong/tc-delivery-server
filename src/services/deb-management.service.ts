@@ -1119,7 +1119,7 @@ export class DebtManagementService {
         throw new Error('Không tìm thấy công nợ hôm nay. Vui lòng chạy cron công nợ trước.');
       }
 
-      const currentTotalDebt = currentDebt1.totalDebt ?? 0;
+      //const currentTotalDebt = currentDebt1.totalDebt ?? 0;
       /*
       const absDebt = Math.abs(currentTotalDebt);
 
@@ -1133,7 +1133,8 @@ export class DebtManagementService {
         );
       }
       */
-      const debtEffectAction = currentTotalDebt > 0 ? 'ROLLBACK' : 'APPLY';
+      //const debtEffectAction = currentTotalDebt > 0 ? 'ROLLBACK' : 'APPLY';
+      const debtEffectAction = 'APPLY';
 
       const receiptDebtManagement = new DebtManagement({
         fromRoute: fromRouteIdObj,
@@ -2094,6 +2095,7 @@ export class DebtManagementService {
       const fromRouteIdObj = new Types.ObjectId(String(fromRoute));
       const toRouteIdObj = new Types.ObjectId(String(toRoute));
 
+      /*
       let debtEffectAction = (debtManagement as any).debtEffectAction;
 
       if (!debtEffectAction) {
@@ -2108,6 +2110,7 @@ export class DebtManagementService {
 
         debtEffectAction = currentTotalDebt >= 0 ? 'ROLLBACK' : 'APPLY';
       }
+      */
 
       await this.rollbackDebtPairDelta(
         fromRouteIdObj,
