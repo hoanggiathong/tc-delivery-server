@@ -398,7 +398,7 @@ export class DebtManagementService {
     );
 
     if (!updatedDebt1) {
-      throw new Error('Debt was changed by another request. Please retry.');
+      throw new Error('Dữ liệu công nợ vừa thay đổi bởi người dùng khác. Vui lòng thử lại.');
     }
 
     const updatedDebt2 = await Debt.findOneAndUpdate(
@@ -418,7 +418,7 @@ export class DebtManagementService {
     );
 
     if (!updatedDebt2) {
-      throw new Error('Debt was changed by another request. Please retry.');
+      throw new Error('Dữ liệu công nợ vừa thay đổi bởi người dùng khác. Vui lòng thử lại.');
     }
   }
 
@@ -793,7 +793,7 @@ export class DebtManagementService {
     );
 
     if (!updatedDebt1) {
-      throw new Error('Debt was changed by another request. Please retry.');
+      throw new Error('Dữ liệu công nợ vừa thay đổi bởi người dùng khác. Vui lòng thử lại.');
     }
 
     const updatedDebt2 = await Debt.findOneAndUpdate(
@@ -812,7 +812,7 @@ export class DebtManagementService {
     );
 
     if (!updatedDebt2) {
-      throw new Error('Debt was changed by another request. Please retry.');
+      throw new Error('Dữ liệu công nợ vừa thay đổi bởi người dùng khác. Vui lòng thử lại.');
     }
 
     const [verifyDebt1, verifyDebt2] = await Promise.all([
@@ -959,7 +959,7 @@ export class DebtManagementService {
     );
 
     if (!updatedDebt1) {
-      throw new Error('Debt was changed by another request. Please retry.');
+      throw new Error('Dữ liệu công nợ vừa thay đổi bởi người dùng khác. Vui lòng thử lại.');
     }
 
     const updatedDebt2 = await Debt.findOneAndUpdate(
@@ -977,13 +977,101 @@ export class DebtManagementService {
     );
 
     if (!updatedDebt2) {
-      throw new Error('Debt was changed by another request. Please retry.');
+      throw new Error('Dữ liệu công nợ vừa thay đổi bởi người dùng khác. Vui lòng thử lại.');
     }
 
     return {
       forward: { _id: currentDebt1._id, receivable: receivable1, totalDebt: totalDebt1 },
       reverse: { _id: currentDebt2._id, accountPayable: accountPayable2, totalDebt: totalDebt2 },
     };
+  }
+
+  private async verifyClearingPairUpdated(
+    fromRouteId: Types.ObjectId,
+    toRouteId: Types.ObjectId,
+    dateDebtExact: Date,
+    session: mongoose.ClientSession
+  ): Promise<void> {
+    const todayVn = getTodayVn();
+    const todayRange = vnDateToUtcRange(todayVn.year, todayVn.month, todayVn.date);
+
+    const records = await DebtManagement.find({
+      createdAt: { $gte: todayRange.start, $lte: todayRange.end },
+      deleted: false,
+      type: DEBT_MANAGEMENT_TYPE.CLEARING,
+      $or: [
+        { fromRoute: fromRouteId, toRoute: toRouteId },
+        { fromRoute: toRouteId, toRoute: fromRouteId },
+        { fromRoute: fromRouteId, pivotRoute: toRouteId },
+        { pivotRoute: fromRouteId, toRoute: toRouteId },
+        { fromRoute: toRouteId, pivotRoute: fromRouteId },
+        { pivotRoute: toRouteId, toRoute: fromRouteId },
+      ],
+    })
+      .session(session)
+      .lean();
+
+    let expectedClearingAmount = 0;
+
+    const isSamePair = (effectFrom: unknown, effectTo: unknown) =>
+      String(effectFrom) === String(fromRouteId) && String(effectTo) === String(toRouteId);
+
+    const addClearingEffect = (effectFrom: unknown, effectTo: unknown, cash: number) => {
+      if (isSamePair(effectFrom, effectTo)) {
+        expectedClearingAmount += cash;
+      }
+    };
+
+    for (const record of records as any[]) {
+      const cash = Number(record.cash || 0);
+      if (!record.pivotRoute) {
+        continue;
+      }
+
+      const sourceRoute = record.fromRoute;
+      const targetRoute = record.toRoute;
+      const pivotRoute = record.pivotRoute;
+
+      expectedClearingAmount += isSamePair(sourceRoute, targetRoute)
+        ? cash
+        : isSamePair(targetRoute, sourceRoute)
+          ? -cash
+          : 0;
+
+      if (record.sourcePivotDirection === 'FORWARD') {
+        addClearingEffect(sourceRoute, pivotRoute, -cash);
+      } else {
+        addClearingEffect(pivotRoute, sourceRoute, -cash);
+      }
+
+      if (record.pivotTargetDirection === 'FORWARD') {
+        addClearingEffect(pivotRoute, targetRoute, -cash);
+      } else {
+        addClearingEffect(targetRoute, pivotRoute, -cash);
+      }
+    }
+
+    const { currentDebt1, currentDebt2 } = await this.getDebtPair(
+      fromRouteId,
+      toRouteId,
+      dateDebtExact,
+      session
+    );
+
+    if (!currentDebt1 || !currentDebt2) {
+      throw new Error('Clearing verification failed: debt pair not found.');
+    }
+
+    if (
+      (currentDebt1.clearingReceivable ?? 0) !== expectedClearingAmount ||
+      (currentDebt2.clearingAccountPayable ?? 0) !== expectedClearingAmount
+    ) {
+      throw new Error(
+        `Phiếu gặt chưa cập nhật đúng công nợ. Expected=${expectedClearingAmount}, ` +
+          `actualForward=${currentDebt1.clearingReceivable ?? 0}, ` +
+          `actualReverse=${currentDebt2.clearingAccountPayable ?? 0}.`
+      );
+    }
   }
 
   async createDebtManagement(
@@ -1578,6 +1666,27 @@ export class DebtManagementService {
         session
       );
 
+      await this.verifyClearingPairUpdated(
+        actualSourceRouteIdObj,
+        actualTargetRouteIdObj,
+        dateDebtExact,
+        session
+      );
+
+      await this.verifyClearingPairUpdated(
+        rollbackSourceRoute1,
+        rollbackTargetRoute1,
+        dateDebtExact,
+        session
+      );
+
+      await this.verifyClearingPairUpdated(
+        rollbackSourceRoute2,
+        rollbackTargetRoute2,
+        dateDebtExact,
+        session
+      );
+
       await result.populate('fromRoute', 'name');
       await result.populate('toRoute', 'name');
       await result.populate('pivotRoute', 'name');
@@ -1916,6 +2025,27 @@ export class DebtManagementService {
         );
 
         await this.rebuildDebtPairFromActiveManagements(
+          restoreSourceRoute2,
+          restoreTargetRoute2,
+          dateDebtExact,
+          session
+        );
+
+        await this.verifyClearingPairUpdated(
+          sourceRouteIdObj,
+          targetRouteIdObj,
+          dateDebtExact,
+          session
+        );
+
+        await this.verifyClearingPairUpdated(
+          restoreSourceRoute1,
+          restoreTargetRoute1,
+          dateDebtExact,
+          session
+        );
+
+        await this.verifyClearingPairUpdated(
           restoreSourceRoute2,
           restoreTargetRoute2,
           dateDebtExact,
