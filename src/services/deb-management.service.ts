@@ -755,7 +755,11 @@ export class DebtManagementService {
       );
     }
 
-    const receivable1 = (currentDebt1.receivable ?? 0) + cash;
+    const oldReceivable1 = currentDebt1.receivable ?? 0;
+    const oldAccountPayable2 = currentDebt2.accountPayable ?? 0;
+
+    const receivable1 = oldReceivable1 + cash;
+    const accountPayable2 = oldAccountPayable2 + cash;
 
     const totalDebt1 = this.calcTotalDebtForForward(
       currentDebt1,
@@ -764,8 +768,6 @@ export class DebtManagementService {
       currentDebt1.clearingReceivable ?? 0,
       currentDebt1.clearingAccountPayable ?? 0
     );
-
-    const accountPayable2 = (currentDebt2.accountPayable ?? 0) + cash;
 
     const totalDebt2 = this.calcTotalDebtForReverse(
       currentDebt2,
@@ -778,7 +780,7 @@ export class DebtManagementService {
     const updatedDebt1 = await Debt.findOneAndUpdate(
       {
         _id: currentDebt1._id,
-        receivable: currentDebt1.receivable ?? 0,
+        receivable: oldReceivable1,
         clearingReceivable: currentDebt1.clearingReceivable ?? 0,
       },
       {
@@ -797,7 +799,7 @@ export class DebtManagementService {
     const updatedDebt2 = await Debt.findOneAndUpdate(
       {
         _id: currentDebt2._id,
-        accountPayable: currentDebt2.accountPayable ?? 0,
+        accountPayable: oldAccountPayable2,
         clearingAccountPayable: currentDebt2.clearingAccountPayable ?? 0,
       },
       {
@@ -811,6 +813,26 @@ export class DebtManagementService {
 
     if (!updatedDebt2) {
       throw new Error('Debt was changed by another request. Please retry.');
+    }
+
+    const [verifyDebt1, verifyDebt2] = await Promise.all([
+      Debt.findById(currentDebt1._id).session(session).lean<IDebt>(),
+      Debt.findById(currentDebt2._id).session(session).lean<IDebt>(),
+    ]);
+
+    if (!verifyDebt1 || !verifyDebt2) {
+      throw new Error('Debt update verification failed: debt record not found after update.');
+    }
+
+    if (
+      (verifyDebt1.receivable ?? 0) !== receivable1 ||
+      (verifyDebt1.totalDebt ?? 0) !== totalDebt1 ||
+      (verifyDebt2.accountPayable ?? 0) !== accountPayable2 ||
+      (verifyDebt2.totalDebt ?? 0) !== totalDebt2
+    ) {
+      throw new Error(
+        `Phiếu thu chưa cập nhật đúng công nợ. Vui lòng thử lại. Expected receivable=${receivable1}, accountPayable=${accountPayable2}.`
+      );
     }
 
     return {
@@ -988,7 +1010,6 @@ export class DebtManagementService {
       if (!fromRoute) {
         throw new Error('From route not found');
       }
-
       if (!toRoute) {
         throw new Error('To route not found');
       }
@@ -1011,7 +1032,6 @@ export class DebtManagementService {
       }
 
       const currentTotalDebt = currentDebt1.totalDebt ?? 0;
-
       /*
       const absDebt = Math.abs(currentTotalDebt);
 
@@ -1025,7 +1045,6 @@ export class DebtManagementService {
         );
       }
       */
-
       const debtEffectAction = currentTotalDebt > 0 ? 'ROLLBACK' : 'APPLY';
 
       const receiptDebtManagement = new DebtManagement({
@@ -1053,7 +1072,7 @@ export class DebtManagementService {
       const receiptResult = await receiptDebtManagement.save({ session });
       const paymentResult = await paymentDebtManagement.save({ session });
 
-      await this.applyDebtPairDelta(
+      const debtUpdateResult = await this.applyDebtPairDelta(
         fromRouteIdObj,
         toRouteIdObj,
         dateDebtExact,
@@ -1079,6 +1098,24 @@ export class DebtManagementService {
         false
       );
 
+      const finalVerify = await this.getDebtPair(
+        fromRouteIdObj,
+        toRouteIdObj,
+        dateDebtExact,
+        session
+      );
+
+      if (
+        !finalVerify.currentDebt1 ||
+        !finalVerify.currentDebt2 ||
+        (finalVerify.currentDebt1.receivable ?? 0) !== debtUpdateResult.forward.receivable ||
+        (finalVerify.currentDebt2.accountPayable ?? 0) !== debtUpdateResult.reverse.accountPayable
+      ) {
+        throw new Error(
+          'Phiếu thu đã tạo nhưng Thu/Chi chưa cập nhật đúng. Transaction đã rollback.'
+        );
+      }
+
       await receiptResult.populate('fromRoute', 'name');
       await receiptResult.populate('toRoute', 'name');
       await receiptResult.populate('createdBy', 'username name');
@@ -1097,6 +1134,7 @@ export class DebtManagementService {
           | unknown;
         const fromRouteIdValue = (fromRouteObj as { _id?: unknown })?._id || fromRouteObj;
         const fromRouteNameValue = (fromRouteObj as { name?: string })?.name || '';
+
         const toRouteObj = populatedResult.toRoute as { _id?: unknown; name?: string } | unknown;
         const toRouteIdValue = (toRouteObj as { _id?: unknown })?._id || toRouteObj;
         const toRouteNameValue = (toRouteObj as { name?: string })?.name || '';
