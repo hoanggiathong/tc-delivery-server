@@ -837,10 +837,16 @@ export class CronjobService {
         reverseRow.surchargeToRoute = 0;
 
         // Đồng bộ Thu/Chi + Gặt cho chiều CON -> K1
-        reverseRow.accountPayable = fullRow.receivable ?? 0;
-        reverseRow.receivable = fullRow.accountPayable ?? 0;
-        reverseRow.clearingAccountPayable = fullRow.clearingReceivable ?? 0;
-        reverseRow.clearingReceivable = fullRow.clearingAccountPayable ?? 0;
+        //reverseRow.accountPayable = fullRow.receivable ?? 0;
+        //reverseRow.receivable = fullRow.accountPayable ?? 0;
+        //reverseRow.clearingAccountPayable = fullRow.clearingReceivable ?? 0;
+        //reverseRow.clearingReceivable = fullRow.clearingAccountPayable ?? 0;
+
+        // CON -> K1: không hiển thị cột THU/CHI và GẶT
+        reverseRow.accountPayable = 0;
+        reverseRow.receivable = 0;
+        reverseRow.clearingAccountPayable = 0;
+        reverseRow.clearingReceivable = 0;
 
         reverseRow.revenueTotal = revenueTotal;
         reverseRow.revenueHomeDelivery = revenueHomeDelivery;
