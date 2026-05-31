@@ -52,19 +52,19 @@ export const getListDebtSchema = z
       startDate: z
         .string()
         .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid start date in ISO format')
-        .transform(val => new Date(val))
-        .refine(val => {
-          const oneMonthAgo = new Date();
-          oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-          return val >= oneMonthAgo;
-        }, 'Start date cannot be more than 1 month in the past'),
+        .transform(val => new Date(val)),
+
       endDate: z
         .string()
         .refine(val => !isNaN(Date.parse(val)), 'Please provide a valid end date in ISO format')
         .transform(val => new Date(val)),
+
       keySort: keySortOptionalSchema,
+
       typeSort: typeSortOptionalSchema,
+
       key: z.string().trim().max(120).optional(),
+
       fromRouteId: fromRouteIdOptionalSchema,
     }),
   })
