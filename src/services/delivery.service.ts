@@ -1493,15 +1493,38 @@ export class DeliveryService {
     }
   }
 
+  private isSameVietnamDay(date: Date): boolean {
+    const now = new Date();
+
+    const vietnamNow = new Date(now.getTime() + 7 * 60 * 60 * 1000);
+    const vietnamDate = new Date(date.getTime() + 7 * 60 * 60 * 1000);
+
+    return (
+      vietnamNow.getUTCFullYear() === vietnamDate.getUTCFullYear() &&
+      vietnamNow.getUTCMonth() === vietnamDate.getUTCMonth() &&
+      vietnamNow.getUTCDate() === vietnamDate.getUTCDate()
+    );
+  }
+
   async recoveryDeliveryByFullCode(fullCode: string, note: string): Promise<void> {
     try {
       const delivery = await Delivery.findOne({
-        fullCode: fullCode,
+        fullCode,
         isReturn: true,
       });
 
       if (!delivery) {
-        throw new Error(`Delivery not found with fullCode: ${fullCode} and isReturn: true`);
+        throw new Error(`Không tìm thấy hàng đã trả với mã ${fullCode}`);
+      }
+
+      if (!delivery.dateReturn) {
+        throw new Error(`Hàng ${fullCode} chưa có ngày trả hàng, không thể khôi phục`);
+      }
+
+      if (!this.isSameVietnamDay(new Date(delivery.dateReturn))) {
+        throw new Error(
+          `Hàng ${fullCode} đã trả qua ngày, không thể khôi phục vì doanh thu ngày trả hàng đã được chốt`
+        );
       }
 
       const moneyDelivery = await MoneyDelivery.findOne({
@@ -1510,14 +1533,25 @@ export class DeliveryService {
 
       if (moneyDelivery) {
         if (moneyDelivery.status === MoneyDeliveryStatus.DONE) {
+          throw new Error(`Không thể khôi phục hàng ${fullCode} vì phiếu chuyển tiền đã hoàn tất`);
+        }
+
+        if (
+          moneyDelivery.dateReturn &&
+          !this.isSameVietnamDay(new Date(moneyDelivery.dateReturn))
+        ) {
           throw new Error(
-            `Cannot recover delivery ${fullCode} because associated money delivery has status DONE`
+            `Không thể khôi phục hàng ${fullCode} vì đơn tiền đã trả qua ngày, doanh thu đã được chốt`
           );
         }
 
-        if (moneyDelivery.status === MoneyDeliveryStatus.WAITING) {
-          await MoneyDelivery.findByIdAndDelete(moneyDelivery._id);
+        if (moneyDelivery.status !== MoneyDeliveryStatus.WAITING) {
+          throw new Error(
+            `Không thể khôi phục hàng ${fullCode} vì phiếu chuyển tiền đang ở trạng thái ${moneyDelivery.status}`
+          );
         }
+
+        await MoneyDelivery.findByIdAndDelete(moneyDelivery._id);
       }
 
       const existingNotes = typeof delivery.notes === 'string' ? delivery.notes : '';
@@ -1538,7 +1572,8 @@ export class DeliveryService {
       if (error instanceof Error) {
         throw error;
       }
-      throw new Error('Failed to recover delivery by fullCode');
+
+      throw new Error('Khôi phục hàng thất bại');
     }
   }
 
