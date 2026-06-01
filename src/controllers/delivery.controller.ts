@@ -1908,7 +1908,8 @@ export class DeliveryController {
 
       const { fullCode, note } = req.body;
 
-      await this.deliveryService.recoveryDeliveryByFullCode(fullCode, note);
+      //await this.deliveryService.recoveryDeliveryByFullCode(fullCode, note);
+      await this.deliveryService.recoveryDeliveryByFullCode(fullCode, note, req.user.userId);
 
       Logger.info(`Delivery recovered: ${fullCode}`, {
         userId: req.user.userId,

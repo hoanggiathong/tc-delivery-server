@@ -2040,7 +2040,8 @@ export class MoneyDeliveryService {
 
   async recoveryMoneyDeliveryWithTypeCollectByFullCodeAndStaffNameRecoveryMoney(
     fullCode: string,
-    staffNameRecoveryMoney: string
+    staffNameRecoveryMoney: string,
+    userId: string
   ): Promise<void> {
     try {
       const moneyDelivery = await MoneyDelivery.findOne({
@@ -2051,6 +2052,12 @@ export class MoneyDeliveryService {
 
       if (!moneyDelivery) {
         throw new Error(`Không tìm thấy mã thu hộ ${fullCode} đã hoàn tất`);
+      }
+
+      const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
+
+      if (moneyDelivery.toRoute.toString() !== selectedRouteId.toString()) {
+        throw new Error(`Chỉ trạm nhận tiền mới được phép khôi phục mã ${fullCode}`);
       }
 
       if (!moneyDelivery.dateReturn) {
@@ -2117,7 +2124,8 @@ export class MoneyDeliveryService {
 
   async recoveryMoneyDeliveryWithTypeNormalByFullCodeAndStaffNameRecoveryMoney(
     fullCode: string,
-    staffNameRecoveryMoney: string
+    staffNameRecoveryMoney: string,
+    userId: string
   ): Promise<void> {
     try {
       const moneyDelivery = await MoneyDelivery.findOne({
@@ -2128,6 +2136,12 @@ export class MoneyDeliveryService {
 
       if (!moneyDelivery) {
         throw new Error(`Không tìm thấy mã chuyển tiền ${fullCode} đã hoàn tất`);
+      }
+
+      const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
+
+      if (moneyDelivery.toRoute.toString() !== selectedRouteId.toString()) {
+        throw new Error(`Chỉ trạm nhận tiền mới được phép khôi phục mã ${fullCode}`);
       }
 
       if (!moneyDelivery.dateReturn) {
