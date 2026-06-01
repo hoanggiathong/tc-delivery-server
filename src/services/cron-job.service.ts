@@ -5,6 +5,8 @@ import { MoneyDelivery, MoneyDeliveryType } from '@/models/money-delivery.model'
 import { Route, IRoute } from '@/models/route.model';
 import { IDebtRowDB } from '@/types/debt.type';
 import { RouteType } from '@/types/route.type';
+import { DebtManagement } from '@/models/debt-management.model';
+import { DEBT_MANAGEMENT_TYPE } from '@/const/debt-management.const';
 
 const VN_UTC_OFFSET_HOURS = 7;
 const COMPANY_ROUTE_CODE = 'SG';
@@ -1123,11 +1125,43 @@ export class CronjobService {
 
         const row = getRow(fromRoot, toRoot);
         row.openingBalance = d.openingBalance ?? 0;
-        row.accountPayable = d.accountPayable ?? 0;
-        row.receivable = d.receivable ?? 0;
+        //row.accountPayable = d.accountPayable ?? 0;
+        //row.receivable = d.receivable ?? 0;
         row.clearingAccountPayable = (d as any).clearingAccountPayable ?? 0;
         row.clearingReceivable = (d as any).clearingReceivable ?? 0;
       }
+    }
+
+    const receiptQuery = DebtManagement.find({
+      type: DEBT_MANAGEMENT_TYPE.RECEIPT,
+      deleted: false,
+      createdAt: { $gte: range.start, $lte: range.end },
+    });
+
+    const receiptCursor = session ? receiptQuery.session(session).cursor() : receiptQuery.cursor();
+
+    for await (const receipt of receiptCursor) {
+      if (!receipt.fromRoute || !receipt.toRoute) {
+        continue;
+      }
+
+      const fromRoot = getRootRoute(toObjectId(receipt.fromRoute), rootRouteMap);
+      const toRoot = getRootRoute(toObjectId(receipt.toRoute), rootRouteMap);
+
+      if (fromRoot.equals(toRoot)) {
+        continue;
+      }
+
+      const cash = Number(receipt.cash || 0);
+      if (cash <= 0) {
+        continue;
+      }
+
+      const row = getRow(fromRoot, toRoot);
+      const reverseRow = getRow(toRoot, fromRoot);
+
+      row.receivable = (row.receivable ?? 0) + cash;
+      reverseRow.accountPayable = (reverseRow.accountPayable ?? 0) + cash;
     }
 
     const deliveryQuery = Delivery.find({
