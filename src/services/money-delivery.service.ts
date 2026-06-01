@@ -2044,13 +2044,23 @@ export class MoneyDeliveryService {
   ): Promise<void> {
     try {
       const moneyDelivery = await MoneyDelivery.findOne({
-        fullCode: fullCode,
+        fullCode,
         status: MoneyDeliveryStatus.DONE,
         type: MoneyDeliveryType.COLLECT,
       });
 
       if (!moneyDelivery) {
-        throw new Error(`Money delivery not found with fullCode: ${fullCode} and type: COLLECT`);
+        throw new Error(`Không tìm thấy mã thu hộ ${fullCode} đã hoàn tất`);
+      }
+
+      if (!moneyDelivery.dateReturn) {
+        throw new Error(`Mã thu hộ ${fullCode} chưa có ngày trả tiền, không thể khôi phục`);
+      }
+
+      if (!this.isSameVietnamDay(new Date(moneyDelivery.dateReturn))) {
+        throw new Error(
+          `Mã thu hộ ${fullCode} đã trả tiền qua ngày, không thể khôi phục vì doanh thu đã được chốt`
+        );
       }
 
       const note = `Khôi phục: mã thu hộ ${fullCode} bởi ${staffNameRecoveryMoney}`;
@@ -2062,7 +2072,7 @@ export class MoneyDeliveryService {
         {
           $set: {
             status: MoneyDeliveryStatus.WAITING,
-            staffNameRecoveryMoney: staffNameRecoveryMoney,
+            staffNameRecoveryMoney,
             notes: newNote,
             dateReturn: null,
             contentReturn: null,
@@ -2071,23 +2081,38 @@ export class MoneyDeliveryService {
         { runValidators: false }
       );
 
-      Logger.info(`Money delivery recovered: ${fullCode} by ${staffNameRecoveryMoney}`, {
+      Logger.info(`Khôi phục mã thu hộ ${fullCode} bởi ${staffNameRecoveryMoney}`, {
         moneyDeliveryId: moneyDelivery._id.toString(),
         fullCode,
         staffNameRecoveryMoney,
         type: MoneyDeliveryType.COLLECT,
       });
     } catch (error) {
-      Logger.error('Error recovering money delivery with type COLLECT', {
+      Logger.error('Lỗi khôi phục mã thu hộ', {
         error: error instanceof Error ? error.message : error,
         fullCode,
         staffNameRecoveryMoney,
       });
+
       if (error instanceof Error) {
         throw error;
       }
-      throw new Error('Failed to recover money delivery with type COLLECT');
+
+      throw new Error('Khôi phục mã thu hộ thất bại');
     }
+  }
+
+  private isSameVietnamDay(date: Date): boolean {
+    const now = new Date();
+
+    const vietnamNow = new Date(now.getTime() + 7 * 60 * 60 * 1000);
+    const vietnamDate = new Date(date.getTime() + 7 * 60 * 60 * 1000);
+
+    return (
+      vietnamNow.getUTCFullYear() === vietnamDate.getUTCFullYear() &&
+      vietnamNow.getUTCMonth() === vietnamDate.getUTCMonth() &&
+      vietnamNow.getUTCDate() === vietnamDate.getUTCDate()
+    );
   }
 
   async recoveryMoneyDeliveryWithTypeNormalByFullCodeAndStaffNameRecoveryMoney(
@@ -2096,13 +2121,23 @@ export class MoneyDeliveryService {
   ): Promise<void> {
     try {
       const moneyDelivery = await MoneyDelivery.findOne({
-        fullCode: fullCode,
+        fullCode,
         status: MoneyDeliveryStatus.DONE,
         type: MoneyDeliveryType.NORMAL,
       });
 
       if (!moneyDelivery) {
-        throw new Error(`Money delivery not found with fullCode: ${fullCode} and type: NORMAL`);
+        throw new Error(`Không tìm thấy mã chuyển tiền ${fullCode} đã hoàn tất`);
+      }
+
+      if (!moneyDelivery.dateReturn) {
+        throw new Error(`Mã chuyển tiền ${fullCode} chưa có ngày trả tiền, không thể khôi phục`);
+      }
+
+      if (!this.isSameVietnamDay(new Date(moneyDelivery.dateReturn))) {
+        throw new Error(
+          `Mã chuyển tiền ${fullCode} đã trả tiền qua ngày, không thể khôi phục vì doanh thu đã được chốt`
+        );
       }
 
       const note = `Khôi phục: mã chuyển tiền ${fullCode} bởi ${staffNameRecoveryMoney}`;
@@ -2114,7 +2149,7 @@ export class MoneyDeliveryService {
         {
           $set: {
             status: MoneyDeliveryStatus.WAITING,
-            staffNameRecoveryMoney: staffNameRecoveryMoney,
+            staffNameRecoveryMoney,
             notes: newNote,
             dateReturn: null,
             contentReturn: null,
@@ -2123,22 +2158,24 @@ export class MoneyDeliveryService {
         { runValidators: false }
       );
 
-      Logger.info(`Money delivery recovered: ${fullCode} by ${staffNameRecoveryMoney}`, {
+      Logger.info(`Khôi phục mã chuyển tiền ${fullCode} bởi ${staffNameRecoveryMoney}`, {
         moneyDeliveryId: moneyDelivery._id.toString(),
         fullCode,
         staffNameRecoveryMoney,
         type: MoneyDeliveryType.NORMAL,
       });
     } catch (error) {
-      Logger.error('Error recovering money delivery with type NORMAL', {
+      Logger.error('Lỗi khôi phục mã chuyển tiền', {
         error: error instanceof Error ? error.message : error,
         fullCode,
         staffNameRecoveryMoney,
       });
+
       if (error instanceof Error) {
         throw error;
       }
-      throw new Error('Failed to recover money delivery with type NORMAL');
+
+      throw new Error('Khôi phục mã chuyển tiền thất bại');
     }
   }
 }
