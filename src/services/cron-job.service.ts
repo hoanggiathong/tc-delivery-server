@@ -811,18 +811,31 @@ export class CronjobService {
       targetRow.paidOldDebtToday = 0;
       targetRow.minimumTransferToCompany = cashCollectedToday;
 
-      const k1Relation = getRouteRelation(k1Route, childRoute);
+      const k1PositiveSide =
+        (targetRow.costFromRoute ?? 0) +
+        (targetRow.feeCODToRoute ?? 0) +
+        (targetRow.homeDeliveryFromRoute ?? 0) +
+        (targetRow.surchargeFromRoute ?? 0) +
+        (targetRow.receivable ?? 0) +
+        (targetRow.clearingReceivable ?? 0);
+
+      const k1NegativeSide =
+        (targetRow.costToRoute ?? 0) +
+        (targetRow.feeCODFromRoute ?? 0) +
+        (targetRow.homeDeliveryToRoute ?? 0) +
+        (targetRow.surchargeToRoute ?? 0) +
+        (targetRow.accountPayable ?? 0) +
+        (targetRow.clearingAccountPayable ?? 0);
 
       const k1Debt =
-        computeBaseTotalDebt(targetRow, k1Relation) +
-        revenueTotal +
-        revenueHomeDelivery +
-        revenueSurcharge;
+        (targetRow.openingBalance ?? 0) -
+        (k1PositiveSide - k1NegativeSide) -
+        (targetRow.revenueHomeDelivery ?? 0) -
+        (targetRow.revenueSurcharge ?? 0) -
+        (targetRow.revenueTotal ?? 0);
 
-      const signedK1Debt = -Math.abs(k1Debt);
-
-      targetRow.totalDebt = signedK1Debt;
-      targetRow.netDebt = signedK1Debt;
+      targetRow.totalDebt = k1Debt;
+      targetRow.netDebt = k1Debt;
 
       if (reverseRow) {
         // reverseRow đang là row 5 cột cho bảng con -> K1 theo mapping hiện tại.
