@@ -2602,7 +2602,8 @@ export class MoneyDeliveryController {
 
       await this.moneyDeliveryService.recoveryMoneyDeliveryWithTypeCollectByFullCodeAndStaffNameRecoveryMoney(
         fullCode,
-        staffNameRecoveryMoney
+        staffNameRecoveryMoney,
+        req.user.userId
       );
 
       logger.info(`Money delivery recovered (COLLECT): ${fullCode} by ${staffNameRecoveryMoney}`, {
@@ -2782,7 +2783,8 @@ export class MoneyDeliveryController {
 
       await this.moneyDeliveryService.recoveryMoneyDeliveryWithTypeNormalByFullCodeAndStaffNameRecoveryMoney(
         fullCode,
-        staffNameRecoveryMoney
+        staffNameRecoveryMoney,
+        req.user.userId
       );
 
       logger.info(`Money delivery recovered (NORMAL): ${fullCode} by ${staffNameRecoveryMoney}`, {

@@ -1506,7 +1506,7 @@ export class DeliveryService {
     );
   }
 
-  async recoveryDeliveryByFullCode(fullCode: string, note: string): Promise<void> {
+  async recoveryDeliveryByFullCode(fullCode: string, note: string, userId: string): Promise<void> {
     try {
       const delivery = await Delivery.findOne({
         fullCode,
@@ -1515,6 +1515,12 @@ export class DeliveryService {
 
       if (!delivery) {
         throw new Error(`Không tìm thấy hàng đã trả với mã ${fullCode}`);
+      }
+
+      const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
+
+      if (delivery.toRoute.toString() !== selectedRouteId.toString()) {
+        throw new Error(`Chỉ trạm nhận hàng mới được phép khôi phục mã ${fullCode}`);
       }
 
       if (!delivery.dateReturn) {
