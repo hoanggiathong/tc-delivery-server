@@ -644,12 +644,14 @@ export class ReturnDeliveriesService {
             name: item.name,
             fullCode: item.fullCode,
             subCode: item.subCode,
+            senderName: item.senderName,
+            receiverName: item.receiverName,
             sender: {
-              name: item.sender.name,
+              name: item.senderName || item.sender.name,
               phone: item.sender.phone,
             },
             receiver: {
-              name: item.receiver.name,
+              name: item.receiverName || item.receiver.name,
               phone: item.receiver.phone,
             },
             toRoute: {
