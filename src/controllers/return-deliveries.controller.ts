@@ -1365,6 +1365,8 @@ export class ReturnDeliveriesController {
         returnDeliveryImages,
         identityCardName,
         notes,
+        expectedUpdatedAt,
+        expectedCollectCost,
       } = req.body;
       const filesObject = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
 
@@ -1426,6 +1428,9 @@ export class ReturnDeliveriesController {
           identityCardIssuedDate,
           identityCardNumber,
           note: notes,
+          expectedUpdatedAt,
+          expectedCollectCost:
+            expectedCollectCost !== undefined ? Number(expectedCollectCost) : undefined,
         },
         customerImagesData.length > 0 ? customerImagesData : undefined,
         returnDeliveryImagesData.length > 0 ? returnDeliveryImagesData : undefined

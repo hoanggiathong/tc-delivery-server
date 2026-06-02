@@ -966,11 +966,16 @@ export class MoneyDeliveryService {
                   fullCode: 1,
                   subCode: 1,
                   sender: {
-                    name: '$sender.name',
+                    name: {
+                      $ifNull: ['$senderName', '$sender.name'],
+                    },
                     phone: '$sender.phone',
                   },
+
                   receiver: {
-                    name: '$receiver.name',
+                    name: {
+                      $ifNull: ['$receiverName', '$receiver.name'],
+                    },
                     phone: '$receiver.phone',
                   },
                   toRoute: {
