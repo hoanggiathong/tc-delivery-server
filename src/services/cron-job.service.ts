@@ -12,7 +12,7 @@ const VN_UTC_OFFSET_HOURS = 7;
 const COMPANY_ROUTE_CODE = 'SG';
 const PARTNER_REPRESENTATIVE_ROUTE_CODE = 'K1';
 const PARTNER_REPRESENTED_ROUTE_CODES = ['TN', 'VC', 'BO', 'LD', 'BH'];
-const ENABLE_K1_REPRESENTATIVE_WORKFLOW = true;
+const ENABLE_K1_REPRESENTATIVE_WORKFLOW = false;
 
 type VnDate = { year: number; month: number; date: number };
 type RouteRelation = 'OWNED_OWNED' | 'OWNED_PARTNER' | 'PARTNER_OWNED' | 'PARTNER_PARTNER';
