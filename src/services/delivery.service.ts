@@ -338,19 +338,74 @@ export class DeliveryService {
       throw new Error('Delivery not found');
     }
 
+    if (delivery.isReturn) {
+      const allowedFieldsAfterReturn = ['notes'];
+
+      const invalidFields = Object.keys(data).filter(
+        key =>
+          !allowedFieldsAfterReturn.includes(key) &&
+          data[key as keyof IDeliveryUpdateRequest] !== undefined
+      );
+
+      if (invalidFields.length > 0) {
+        throw new Error('Đơn hàng đã trả. Chỉ được sửa ghi chú');
+      }
+
+      const newNote = mergeNotes(delivery.notes, data.notes);
+
+      const updatedDelivery = await Delivery.findByIdAndUpdate(
+        id,
+        {
+          $set: {
+            notes: newNote,
+            updatedAt: new Date(),
+          },
+        },
+        {
+          new: true,
+          runValidators: true,
+        }
+      )
+        .populate([
+          {
+            path: 'sender',
+            select: '_id phone routeId createdAt updatedAt',
+            populate: {
+              path: 'bankId',
+              select: '_id name bankName bankAccount bankBranch bankAddress',
+            },
+          },
+          { path: 'receiver', select: '_id phone routeId createdAt updatedAt' },
+          { path: 'fromRoute', select: '_id code name address phone' },
+          { path: 'toRoute', select: '_id code name address phone' },
+          { path: 'createdByUser', select: '_id username name' },
+        ])
+        .lean();
+
+      if (!updatedDelivery) {
+        throw new Error('Delivery not found');
+      }
+
+      return this.transformDeliveryToResponseOptimized(
+        this.toPopulatedDeliveryLean(updatedDelivery)
+      );
+    }
+
     const userSelectedRouteId = await this.userService.getUserSelectedRouteId(userId);
     const updateData: Record<string, unknown> = {};
 
-    // Handle sender update - always use userSelectedRouteId for sender
     if (data.senderName || data.senderPhone) {
       const senderName = data.senderName || delivery.sender.toString();
       const senderPhone = data.senderPhone || delivery.sender.toString();
+
       const sender = await this.customerService.findOrCreateCustomer(
         senderPhone,
         senderName,
         userSelectedRouteId
       );
+
       updateData.sender = sender.id;
+
       if (data.senderName) {
         updateData.senderName = data.senderName;
       }
@@ -358,19 +413,20 @@ export class DeliveryService {
       updateData.sender = delivery.sender;
     }
 
-    // Always ensure fromRoute is userSelectedRouteId
     updateData.fromRoute = userSelectedRouteId;
 
-    // Handle receiver update
     if (data.receiverName || data.receiverPhone) {
       const receiverName = data.receiverName || delivery.receiver.toString();
       const receiverPhone = data.receiverPhone || delivery.receiver.toString();
+
       const receiver = await this.customerService.findOrCreateCustomer(
         receiverPhone,
         receiverName,
         data.toRouteId || delivery.toRoute.toString()
       );
+
       updateData.receiver = receiver.id;
+
       if (data.receiverName) {
         updateData.receiverName = data.receiverName;
       }
@@ -383,24 +439,12 @@ export class DeliveryService {
       if (!toRoute) {
         throw new Error('To route not found');
       }
+
       updateData.toRoute = data.toRouteId;
     }
 
     const newNote = mergeNotes(delivery.notes, data.notes);
 
-    /*
-    const note = data.notes;
-    const existingNotes = typeof delivery.notes === 'string' ? delivery.notes : '';
-    const newNote = existingNotes ? `${note}, ${existingNotes}` : note;
-    */
-    /*const existingCollectForCustomerNote =
-      typeof delivery.collectForCustomerNote === 'string' ? delivery.collectForCustomerNote : '';
-    const newCollectForCustomerNote = existingCollectForCustomerNote
-      ? `${note}, ${existingCollectForCustomerNote}`
-      : note;
-    */
-
-    // Use lodash omitBy to filter out undefined values for optional fields
     const optionalFieldsUpdate = omitBy(
       {
         name: data.name,
@@ -425,14 +469,21 @@ export class DeliveryService {
       isUndefined
     );
 
-    // Merge optional fields into updateData
     Object.assign(updateData, optionalFieldsUpdate);
 
-    // Update delivery
-    await Delivery.findByIdAndUpdate(id, { $set: updateData }, { runValidators: true });
-
-    // Query the updated delivery with populate and lean
-    const populatedDelivery = await Delivery.findById(id)
+    const updatedDelivery = await Delivery.findOneAndUpdate(
+      {
+        _id: id,
+        isReturn: { $ne: true },
+      },
+      {
+        $set: updateData,
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    )
       .populate([
         {
           path: 'sender',
@@ -449,13 +500,11 @@ export class DeliveryService {
       ])
       .lean();
 
-    if (!populatedDelivery) {
-      throw new Error('Failed to retrieve updated delivery');
+    if (!updatedDelivery) {
+      throw new Error('Đơn hàng đã trả hoặc đang được xử lý trả hàng, vui lòng tải lại');
     }
 
-    return this.transformDeliveryToResponseOptimized(
-      this.toPopulatedDeliveryLean(populatedDelivery)
-    );
+    return this.transformDeliveryToResponseOptimized(this.toPopulatedDeliveryLean(updatedDelivery));
   }
 
   /**

@@ -1019,27 +1019,30 @@ export class ReturnDeliveriesService {
         identityCardNumber,
       } = updateData;
 
-      // Get delivery by ID
       const delivery = await Delivery.findById(deliveryId).populate([
         'sender',
         'receiver',
         'fromRoute',
         'toRoute',
       ]);
+
       if (!delivery) {
         throw new Error(`Delivery with ID ${deliveryId} not found`);
       }
 
-      // Get customer by ID
+      if (delivery.isReturn) {
+        throw new Error('Đơn hàng đã được trả trước đó, vui lòng tải lại');
+      }
+
       const customer = await this.customerService.getCustomerById(customerId);
       if (!customer) {
         throw new Error(`Customer with ID ${customerId} not found`);
       }
 
-      // Handle customer images upload if provided
       if (customerImagesData && customerImagesData.length > 0) {
         for (const imageData of customerImagesData) {
           const { index, buffer, originalName, rotate } = imageData;
+
           await this.customerService.uploadImageById(
             customerId,
             index,
@@ -1050,28 +1053,30 @@ export class ReturnDeliveriesService {
         }
       }
 
-      // Handle return delivery images upload if provided
       if (returnDeliveryImagesData && returnDeliveryImagesData.length > 0) {
         const uploadedImages = await this.handleUploadImagesReturnDelivery(
           delivery,
           returnDeliveryImagesData
         );
+
         delivery.returnDeliveryImages = uploadedImages;
       }
 
-      // Update customer information if provided
       if (address || identityCardName || identityCardIssuedDate || identityCardNumber) {
         const updateCustomerData: Record<string, unknown> = {};
 
         if (address) {
           updateCustomerData.address = address;
         }
+
         if (identityCardName) {
           updateCustomerData.identityCardName = identityCardName;
         }
+
         if (identityCardIssuedDate) {
           updateCustomerData.identityCardIssuedDate = identityCardIssuedDate;
         }
+
         if (identityCardNumber) {
           updateCustomerData.identityCardNumber = identityCardNumber;
         }
@@ -1079,40 +1084,17 @@ export class ReturnDeliveriesService {
         await this.customerService.updateCustomer(customerId, updateCustomerData);
       }
 
-      // Get populated delivery data for money delivery creation
-      const populatedDeliveryData = await Delivery.findById(deliveryId)
-        .populate([
-          { path: 'sender', select: '_id name phone' },
-          { path: 'receiver', select: '_id name phone' },
-          { path: 'fromRoute', select: '_id code name phone' },
-          { path: 'toRoute', select: '_id code name phone' },
-        ])
-        .lean<IDeliveryLeanPopulated>();
-
-      if (populatedDeliveryData) {
-        const typedDelivery = populatedDeliveryData;
-
-        // Tạo money delivery cho thu hộ (collectCost)
-        await this.createMoneyDeliveryForCollect(typedDelivery, userId);
-
-        // Tạo money delivery cho thu dùm (collectForCustomer)
-        await this.createMoneyDeliveryForCollectForCustomer(typedDelivery, userId);
-      }
-
-      // Then update status return delivery with field isReturn = true
-      delivery.isReturn = true;
-      delivery.returnedByUser = new mongoose.Types.ObjectId(userId);
       const now = new Date();
       const hours = String(now.getHours()).padStart(2, '0');
       const minutes = String(now.getMinutes()).padStart(2, '0');
       const returnDateString = `Đã trả hàng ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} ${hours}:${minutes}`;
+
       const existingNotes = typeof delivery.notes === 'string' ? delivery.notes : '';
       const identityInfo = [identityCardName, identityCardNumber, address, identityCardIssuedDate]
         .filter(Boolean)
         .join(', ');
 
       const userNote = updateData.note?.trim();
-
       const noteParts = [returnDateString];
 
       if (identityInfo) {
@@ -1125,10 +1107,40 @@ export class ReturnDeliveriesService {
 
       const newNote = noteParts.join(' | ');
 
-      delivery.notes = existingNotes ? `${newNote}, ${existingNotes}` : newNote;
-      delivery.updatedAt = now;
-      delivery.dateReturn = now;
-      await delivery.save();
+      const lockedDelivery = await Delivery.findOneAndUpdate(
+        {
+          _id: deliveryId,
+          isReturn: { $ne: true },
+        },
+        {
+          $set: {
+            isReturn: true,
+            returnedByUser: new mongoose.Types.ObjectId(userId),
+            notes: existingNotes ? `${newNote}, ${existingNotes}` : newNote,
+            updatedAt: now,
+            dateReturn: now,
+            returnDeliveryImages: delivery.returnDeliveryImages || [],
+          },
+        },
+        {
+          new: true,
+          runValidators: true,
+        }
+      )
+        .populate([
+          { path: 'sender', select: '_id name phone' },
+          { path: 'receiver', select: '_id name phone' },
+          { path: 'fromRoute', select: '_id code name phone' },
+          { path: 'toRoute', select: '_id code name phone' },
+        ])
+        .lean<IDeliveryLeanPopulated>();
+
+      if (!lockedDelivery) {
+        throw new Error('Đơn hàng đã được trả hoặc đang được xử lý, vui lòng tải lại');
+      }
+
+      await this.createMoneyDeliveryForCollect(lockedDelivery, userId);
+      await this.createMoneyDeliveryForCollectForCustomer(lockedDelivery, userId);
 
       Logger.info('Return delivery status updated with images successfully', {
         deliveryId,
@@ -1138,7 +1150,7 @@ export class ReturnDeliveriesService {
         timestamp: now,
       });
 
-      return delivery;
+      return lockedDelivery as unknown as IDelivery;
     } catch (error) {
       Logger.error('Failed to update return delivery status with images', {
         error: error instanceof Error ? error.message : error,
@@ -1147,10 +1159,10 @@ export class ReturnDeliveriesService {
         stack: error instanceof Error ? error.stack : undefined,
       });
 
-      // Re-throw the original error with its message for better debugging
       if (error instanceof Error) {
         throw error;
       }
+
       throw new Error('update status return delivery with images failed');
     }
   }
@@ -1162,32 +1174,48 @@ export class ReturnDeliveriesService {
     try {
       const { arrayListReturnDelivery } = updateData;
 
-      // Check array return delivery
       if (!arrayListReturnDelivery || arrayListReturnDelivery.length === 0) {
         throw new Error('Array list return delivery is empty');
       }
 
-      // format now with format dd/mm/yyyy hh:mm
       const now = new Date();
       const hours = String(now.getHours()).padStart(2, '0');
       const minutes = String(now.getMinutes()).padStart(2, '0');
       const returnDateString = `Đã trả hàng ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} ${hours}:${minutes}`;
 
-      // Handle multiple return deliveries (without images)
       for (const item of arrayListReturnDelivery) {
-        // Get delivery by ID
-        const delivery = await Delivery.findById(item.deliveryId).populate([
-          'sender',
-          'receiver',
-          'fromRoute',
-          'toRoute',
-        ]);
-        if (!delivery) {
+        const currentDelivery = await Delivery.findById(item.deliveryId).select('notes isReturn');
+
+        if (!currentDelivery) {
           throw new Error(`Delivery with ID ${item.deliveryId} not found`);
         }
 
-        // Get populated delivery data for money delivery creation
-        const populatedDeliveryData = await Delivery.findById(item.deliveryId)
+        if (currentDelivery.isReturn) {
+          throw new Error(`Đơn hàng ${item.deliveryId} đã được trả trước đó, vui lòng tải lại`);
+        }
+
+        const existingNotes =
+          typeof currentDelivery.notes === 'string' ? currentDelivery.notes : '';
+
+        const lockedDelivery = await Delivery.findOneAndUpdate(
+          {
+            _id: item.deliveryId,
+            isReturn: { $ne: true },
+          },
+          {
+            $set: {
+              isReturn: true,
+              returnedByUser: new mongoose.Types.ObjectId(userId),
+              notes: existingNotes ? `${returnDateString}, ${existingNotes}` : returnDateString,
+              updatedAt: now,
+              dateReturn: now,
+            },
+          },
+          {
+            new: true,
+            runValidators: true,
+          }
+        )
           .populate([
             { path: 'sender', select: '_id name phone' },
             { path: 'receiver', select: '_id name phone' },
@@ -1196,24 +1224,12 @@ export class ReturnDeliveriesService {
           ])
           .lean<IDeliveryLeanPopulated>();
 
-        if (populatedDeliveryData) {
-          const typedDelivery = populatedDeliveryData;
-
-          // Tạo money delivery cho thu hộ (collectCost)
-          await this.createMoneyDeliveryForCollect(typedDelivery, userId);
-
-          // Tạo money delivery cho thu dùm (collectForCustomer) với useRouteCustomer = true
-          await this.createMoneyDeliveryForCollectForCustomer(typedDelivery, userId);
+        if (!lockedDelivery) {
+          throw new Error(`Đơn hàng ${item.deliveryId} đã được trả hoặc đang được xử lý`);
         }
 
-        // Then update status return delivery with field isReturn = true
-        delivery.isReturn = true;
-        delivery.returnedByUser = new mongoose.Types.ObjectId(userId);
-        // Update field note with string 'Đã trả hàng + now date' + old value of note
-        delivery.notes = `${returnDateString}, ${delivery.notes}`;
-        delivery.updatedAt = now;
-        delivery.dateReturn = now;
-        await delivery.save();
+        await this.createMoneyDeliveryForCollect(lockedDelivery, userId);
+        await this.createMoneyDeliveryForCollectForCustomer(lockedDelivery, userId);
       }
 
       Logger.info('Return delivery status updated without images successfully', {
@@ -1225,10 +1241,11 @@ export class ReturnDeliveriesService {
         error: error instanceof Error ? error.message : error,
         stack: error instanceof Error ? error.stack : undefined,
       });
-      // Re-throw the original error with its message for better debugging
+
       if (error instanceof Error) {
         throw error;
       }
+
       throw new Error('update status return delivery without images failed');
     }
   }
