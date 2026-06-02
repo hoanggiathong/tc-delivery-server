@@ -995,6 +995,8 @@ export class ReturnDeliveriesService {
       identityCardIssuedDate?: string;
       identityCardNumber?: string;
       note?: string;
+      expectedUpdatedAt?: string;
+      expectedCollectCost?: number;
     },
     customerImagesData?: Array<{
       index: number;
@@ -1032,6 +1034,27 @@ export class ReturnDeliveriesService {
 
       if (delivery.isReturn) {
         throw new Error('Đơn hàng đã được trả trước đó, vui lòng tải lại');
+      }
+
+      if (!updateData.expectedUpdatedAt) {
+        throw new Error('Thiếu expectedUpdatedAt. Vui lòng tải lại đơn hàng trước khi trả hàng');
+      }
+
+      const expectedUpdatedAt = new Date(updateData.expectedUpdatedAt).getTime();
+      const currentUpdatedAt = new Date(delivery.updatedAt).getTime();
+
+      if (expectedUpdatedAt !== currentUpdatedAt) {
+        throw new Error('Đơn hàng vừa được cập nhật. Vui lòng tải lại đơn hàng trước khi trả hàng');
+      }
+
+      if (updateData.expectedCollectCost !== undefined && updateData.expectedCollectCost !== null) {
+        const expectedCollectCost = Number(updateData.expectedCollectCost || 0);
+
+        const currentCollectCost = Number(delivery.collectCost || 0);
+
+        if (currentCollectCost !== expectedCollectCost) {
+          throw new Error('Đơn hàng đã thay đổi thu hộ. Vui lòng tải lại đơn hàng.');
+        }
       }
 
       const customer = await this.customerService.getCustomerById(customerId);
@@ -1111,6 +1134,9 @@ export class ReturnDeliveriesService {
         {
           _id: deliveryId,
           isReturn: { $ne: true },
+          ...(updateData.expectedUpdatedAt
+            ? { updatedAt: new Date(updateData.expectedUpdatedAt) }
+            : {}),
         },
         {
           $set: {
@@ -1184,7 +1210,9 @@ export class ReturnDeliveriesService {
       const returnDateString = `Đã trả hàng ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} ${hours}:${minutes}`;
 
       for (const item of arrayListReturnDelivery) {
-        const currentDelivery = await Delivery.findById(item.deliveryId).select('notes isReturn');
+        const currentDelivery = await Delivery.findById(item.deliveryId).select(
+          'notes isReturn updatedAt collectCost'
+        );
 
         if (!currentDelivery) {
           throw new Error(`Delivery with ID ${item.deliveryId} not found`);
@@ -1194,6 +1222,26 @@ export class ReturnDeliveriesService {
           throw new Error(`Đơn hàng ${item.deliveryId} đã được trả trước đó, vui lòng tải lại`);
         }
 
+        if (item.expectedUpdatedAt) {
+          const expectedUpdatedAt = new Date(item.expectedUpdatedAt).getTime();
+          const currentUpdatedAt = new Date(currentDelivery.updatedAt).getTime();
+
+          if (expectedUpdatedAt !== currentUpdatedAt) {
+            throw new Error(
+              'Đơn hàng vừa được cập nhật bởi trạm gửi. Vui lòng tải lại đơn hàng và kiểm tra lại tiền thu hộ trước khi trả hàng'
+            );
+          }
+        }
+
+        if (
+          item.expectedCollectCost !== undefined &&
+          Number(item.expectedCollectCost || 0) !== Number(currentDelivery.collectCost || 0)
+        ) {
+          throw new Error(
+            'Tiền thu hộ của đơn hàng vừa thay đổi. Vui lòng tải lại đơn hàng và thu đúng số tiền mới trước khi xác nhận'
+          );
+        }
+
         const existingNotes =
           typeof currentDelivery.notes === 'string' ? currentDelivery.notes : '';
 
@@ -1201,6 +1249,7 @@ export class ReturnDeliveriesService {
           {
             _id: item.deliveryId,
             isReturn: { $ne: true },
+            ...(item.expectedUpdatedAt ? { updatedAt: new Date(item.expectedUpdatedAt) } : {}),
           },
           {
             $set: {
@@ -1225,7 +1274,9 @@ export class ReturnDeliveriesService {
           .lean<IDeliveryLeanPopulated>();
 
         if (!lockedDelivery) {
-          throw new Error(`Đơn hàng ${item.deliveryId} đã được trả hoặc đang được xử lý`);
+          throw new Error(
+            `Đơn hàng ${item.deliveryId} đã được cập nhật, đã trả hoặc đang được xử lý. Vui lòng tải lại`
+          );
         }
 
         await this.createMoneyDeliveryForCollect(lockedDelivery, userId);

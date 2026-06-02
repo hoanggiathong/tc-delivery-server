@@ -162,6 +162,8 @@ export interface IReturnDeliveryLeanPopulated {
 export interface IReturnDeliveryUpdateItem {
   deliveryId: string;
   customerId: string;
+  expectedUpdatedAt?: string;
+  expectedCollectCost?: number;
   images?: Array<{
     url: string;
     rotate?: number;

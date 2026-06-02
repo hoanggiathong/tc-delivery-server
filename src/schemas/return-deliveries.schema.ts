@@ -225,6 +225,10 @@ export const updateStatusWithImagesSchema = z.object({
     identityCardIssuedDate: z.string().optional(),
     identityCardNumber: z.string().optional(),
     notes: z.string().optional(),
+    expectedUpdatedAt: z
+      .string()
+      .refine(val => !isNaN(Date.parse(val)), 'Invalid expectedUpdatedAt'),
+    expectedCollectCost: z.coerce.number().min(0),
     // Customer images
     customerImages: z
       .preprocess(
@@ -302,6 +306,11 @@ export const updateStatusWithoutImagesSchema = z.object({
             .string()
             .min(1, 'Delivery ID is required')
             .regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format'),
+          expectedUpdatedAt: z
+            .string()
+            .refine(val => !isNaN(Date.parse(val)), 'Invalid expectedUpdatedAt'),
+
+          expectedCollectCost: z.coerce.number().min(0),
           // customerId: z
           //   .string()
           //   .min(1, 'Customer ID is required')
