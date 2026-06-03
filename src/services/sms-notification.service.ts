@@ -288,7 +288,7 @@ export class SMSNotificationService {
     const toRoute = delivery.toRoute;
     const templateData = {
       ten_khach_hang: delivery.receiverName,
-      chi_nhanh: ((toRoute.name || '') + ' (Tô Châu Cũ)').replace(/\./g, '-'),
+      chi_nhanh: (toRoute.name || '').replace(/\./g, '-'),
       ma_van_don: this.maskCode(delivery.fullCode),
       nguoi_gui: delivery.senderName,
       buu_pham: (delivery.name || '').replace(/\./g, '-'),
