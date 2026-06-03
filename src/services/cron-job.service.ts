@@ -11,8 +11,8 @@ import { DEBT_MANAGEMENT_TYPE } from '@/const/debt-management.const';
 const VN_UTC_OFFSET_HOURS = 7;
 const COMPANY_ROUTE_CODE = 'SG';
 const PARTNER_REPRESENTATIVE_ROUTE_CODE = 'K1';
-const PARTNER_REPRESENTED_ROUTE_CODES = ['TN', 'VC', 'BO', 'LD', 'BH'];
-const ENABLE_K1_REPRESENTATIVE_WORKFLOW = false;
+const PARTNER_REPRESENTED_ROUTE_CODES = ['TN', 'VC', 'BO', 'LD', 'BH', 'TH'];
+const ENABLE_K1_REPRESENTATIVE_WORKFLOW = true;
 
 type VnDate = { year: number; month: number; date: number };
 type RouteRelation = 'OWNED_OWNED' | 'OWNED_PARTNER' | 'PARTNER_OWNED' | 'PARTNER_PARTNER';
@@ -668,212 +668,58 @@ export class CronjobService {
     debtMap: Record<string, DebtRowExt>,
     routeMap: Map<string, IRoute>
   ) {
-    const k1Route = Array.from(routeMap.values()).find(isPartnerRepresentativeRoute);
-    if (!k1Route) {
-      return;
-    }
+    for (const row of Object.values(debtMap)) {
+      const fromRoute = routeMap.get(row.fromRoute.toString());
+      const toRoute = routeMap.get(row.toRoute.toString());
 
-    const k1Id = toObjectId(k1Route._id).toString();
-
-    for (const childRoute of routeMap.values()) {
-      if (!isPartnerRepresentedRoute(childRoute)) {
+      if (!fromRoute || !toRoute) {
         continue;
       }
 
-      const childId = toObjectId(childRoute._id).toString();
+      const isChildToK1 =
+        isPartnerRepresentedRoute(fromRoute) && isPartnerRepresentativeRoute(toRoute);
 
-      const targetRow = debtMap[`${childId}_${k1Id}`];
-      const reverseRow = debtMap[`${k1Id}_${childId}`];
-
-      if (!targetRow) {
+      if (!isChildToK1) {
         continue;
       }
 
-      const k1OpeningBalance = targetRow.openingBalance ?? 0;
-      const childOpeningBalance = reverseRow?.openingBalance ?? -k1OpeningBalance;
+      const childToK1Row = row; // FE K1 đang đọc row này
+      const k1ToChildRow = debtMap[`${row.toRoute.toString()}_${row.fromRoute.toString()}`];
 
-      const directAccountPayable = targetRow.accountPayable ?? 0;
-      const directReceivable = targetRow.receivable ?? 0;
-      const directClearingAccountPayable = targetRow.clearingAccountPayable ?? 0;
-      const directClearingReceivable = targetRow.clearingReceivable ?? 0;
+      const revenueTotal = childToK1Row.revenueTotal ?? 0;
+      const revenueHomeDelivery = childToK1Row.revenueHomeDelivery ?? 0;
+      const revenueSurcharge = childToK1Row.revenueSurcharge ?? 0;
 
-      const revenueTotal =
-        (targetRow.revDebtAmount ?? 0) +
-        (targetRow.revPaidAmount ?? 0) +
-        (targetRow.revNormalSendCost ?? 0) +
-        (targetRow.revCollectSendCost ?? 0);
+      const revenueDebt = revenueTotal + revenueHomeDelivery + revenueSurcharge;
 
-      const revenueHomeDelivery = targetRow.revenueHomeDelivery ?? 0;
-      const revenueSurcharge = targetRow.revenueSurcharge ?? 0;
+      // K1 view:
+      // Tồn đầu đang âm nghĩa là Con còn nợ K1.
+      // Doanh thu mới làm Con nợ K1 thêm => trừ.
+      // Thu/Gặt Thu làm giảm nợ => cộng.
+      // Chi/Gặt Chi làm tăng nợ chiều ngược => trừ.
+      const k1ViewDebt =
+        (childToK1Row.openingBalance ?? 0) -
+        revenueDebt +
+        (childToK1Row.receivable ?? 0) +
+        (childToK1Row.clearingReceivable ?? 0) -
+        (childToK1Row.accountPayable ?? 0) -
+        (childToK1Row.clearingAccountPayable ?? 0);
 
-      const cashCollectedToday =
-        (targetRow.revPaidAmount ?? 0) +
-        (targetRow.revNormalSendCost ?? 0) +
-        (targetRow.revCollectSendCost ?? 0) +
-        revenueHomeDelivery +
-        revenueSurcharge;
+      childToK1Row.totalDebt = k1ViewDebt;
+      childToK1Row.netDebt = k1ViewDebt;
 
-      const fullRow = this.createDebtRow(
-        toObjectId(childRoute._id),
-        toObjectId(k1Route._id),
-        targetRow.dateDebt as Date
-      );
+      if (k1ToChildRow) {
+        k1ToChildRow.revenueTotal = revenueTotal;
+        k1ToChildRow.revenueHomeDelivery = revenueHomeDelivery;
+        k1ToChildRow.revenueSurcharge = revenueSurcharge;
 
-      fullRow.openingBalance = childOpeningBalance;
-      fullRow.accountPayable = directAccountPayable;
-      fullRow.receivable = directReceivable;
-      fullRow.clearingAccountPayable = directClearingAccountPayable;
-      fullRow.clearingReceivable = directClearingReceivable;
+        k1ToChildRow.cashCollectedToday = childToK1Row.cashCollectedToday ?? 0;
+        k1ToChildRow.newDebtFreightToday = childToK1Row.newDebtFreightToday ?? 0;
+        k1ToChildRow.paidOldDebtToday = childToK1Row.paidOldDebtToday ?? 0;
+        k1ToChildRow.minimumTransferToCompany = childToK1Row.minimumTransferToCompany ?? 0;
 
-      const processedPairs = new Set<string>();
-
-      for (const row of Object.values(debtMap)) {
-        const fromId = row.fromRoute.toString();
-        const toId = row.toRoute.toString();
-
-        if (fromId === k1Id || toId === k1Id) {
-          continue;
-        }
-        if (fromId !== childId && toId !== childId) {
-          continue;
-        }
-
-        const pairKey = [fromId, toId].sort().join('__');
-        if (processedPairs.has(pairKey)) {
-          continue;
-        }
-        processedPairs.add(pairKey);
-
-        const childViewRow = toId === childId ? row : debtMap[`${toId}_${fromId}`];
-        if (!childViewRow) {
-          continue;
-        }
-
-        fullRow.costFromRoute += childViewRow.costFromRoute ?? 0;
-        fullRow.feeCODToRoute += childViewRow.feeCODToRoute ?? 0;
-        fullRow.homeDeliveryFromRoute += childViewRow.homeDeliveryFromRoute ?? 0;
-        fullRow.surchargeFromRoute += childViewRow.surchargeFromRoute ?? 0;
-
-        fullRow.costToRoute += childViewRow.costToRoute ?? 0;
-        fullRow.feeCODFromRoute += childViewRow.feeCODFromRoute ?? 0;
-        fullRow.homeDeliveryToRoute += childViewRow.homeDeliveryToRoute ?? 0;
-        fullRow.surchargeToRoute += childViewRow.surchargeToRoute ?? 0;
-
-        fullRow.accountPayable += childViewRow.accountPayable ?? 0;
-        fullRow.receivable += childViewRow.receivable ?? 0;
-        fullRow.clearingAccountPayable += childViewRow.clearingAccountPayable ?? 0;
-        fullRow.clearingReceivable += childViewRow.clearingReceivable ?? 0;
-      }
-
-      fullRow.revenueTotal = revenueTotal;
-      fullRow.revenueHomeDelivery = revenueHomeDelivery;
-      fullRow.revenueSurcharge = revenueSurcharge;
-      fullRow.cashCollectedToday = cashCollectedToday;
-      fullRow.newDebtFreightToday = targetRow.revDebtAmount ?? 0;
-      fullRow.paidOldDebtToday = 0;
-      fullRow.minimumTransferToCompany = cashCollectedToday;
-
-      // Công nợ con -> K1 tính như owned -> SG:
-      // Tồn đầu + Doanh thu + DT GTN nộp + DT phụ phí nộp
-      //const childDebt = childOpeningBalance + revenueTotal + revenueHomeDelivery + revenueSurcharge;
-      const childDebt =
-        childOpeningBalance +
-        revenueTotal +
-        revenueHomeDelivery +
-        revenueSurcharge +
-        (reverseRow?.receivable ?? 0) +
-        (reverseRow?.clearingReceivable ?? 0) -
-        ((reverseRow?.accountPayable ?? 0) + (reverseRow?.clearingAccountPayable ?? 0));
-
-      targetRow.openingBalance = -Math.abs(k1OpeningBalance);
-
-      targetRow.costFromRoute = fullRow.costFromRoute;
-      targetRow.feeCODToRoute = fullRow.feeCODToRoute;
-      targetRow.homeDeliveryFromRoute = fullRow.homeDeliveryFromRoute;
-      targetRow.surchargeFromRoute = fullRow.surchargeFromRoute;
-
-      targetRow.costToRoute = fullRow.costToRoute;
-      targetRow.feeCODFromRoute = fullRow.feeCODFromRoute;
-      targetRow.homeDeliveryToRoute = fullRow.homeDeliveryToRoute;
-      targetRow.surchargeToRoute = fullRow.surchargeToRoute;
-
-      targetRow.accountPayable = fullRow.accountPayable;
-      targetRow.receivable = fullRow.receivable;
-      targetRow.clearingAccountPayable = fullRow.clearingAccountPayable;
-      targetRow.clearingReceivable = fullRow.clearingReceivable;
-
-      targetRow.revenueTotal = revenueTotal;
-      targetRow.revenueHomeDelivery = revenueHomeDelivery;
-      targetRow.revenueSurcharge = revenueSurcharge;
-
-      targetRow.cashCollectedToday = cashCollectedToday;
-      targetRow.newDebtFreightToday = fullRow.newDebtFreightToday ?? 0;
-      targetRow.paidOldDebtToday = 0;
-      targetRow.minimumTransferToCompany = cashCollectedToday;
-
-      const k1PositiveSide =
-        (targetRow.costFromRoute ?? 0) +
-        (targetRow.feeCODToRoute ?? 0) +
-        (targetRow.homeDeliveryFromRoute ?? 0) +
-        (targetRow.surchargeFromRoute ?? 0) +
-        (targetRow.receivable ?? 0) +
-        (targetRow.clearingReceivable ?? 0);
-
-      const k1NegativeSide =
-        (targetRow.costToRoute ?? 0) +
-        (targetRow.feeCODFromRoute ?? 0) +
-        (targetRow.homeDeliveryToRoute ?? 0) +
-        (targetRow.surchargeToRoute ?? 0) +
-        (targetRow.accountPayable ?? 0) +
-        (targetRow.clearingAccountPayable ?? 0);
-
-      const k1Debt =
-        (targetRow.openingBalance ?? 0) -
-        (k1PositiveSide - k1NegativeSide) -
-        (targetRow.revenueHomeDelivery ?? 0) -
-        (targetRow.revenueSurcharge ?? 0) -
-        (targetRow.revenueTotal ?? 0);
-
-      targetRow.totalDebt = k1Debt;
-      targetRow.netDebt = k1Debt;
-
-      if (reverseRow) {
-        // reverseRow đang là row 5 cột cho bảng con -> K1 theo mapping hiện tại.
-        reverseRow.openingBalance = childOpeningBalance;
-
-        reverseRow.costFromRoute = 0;
-        reverseRow.feeCODToRoute = 0;
-        reverseRow.homeDeliveryFromRoute = 0;
-        reverseRow.surchargeFromRoute = 0;
-
-        reverseRow.costToRoute = 0;
-        reverseRow.feeCODFromRoute = 0;
-        reverseRow.homeDeliveryToRoute = 0;
-        reverseRow.surchargeToRoute = 0;
-
-        // Đồng bộ Thu/Chi + Gặt cho chiều CON -> K1
-        //reverseRow.accountPayable = fullRow.receivable ?? 0;
-        //reverseRow.receivable = fullRow.accountPayable ?? 0;
-        //reverseRow.clearingAccountPayable = fullRow.clearingReceivable ?? 0;
-        //reverseRow.clearingReceivable = fullRow.clearingAccountPayable ?? 0;
-
-        // CON -> K1: không hiển thị cột THU/CHI và GẶT
-        reverseRow.accountPayable = 0;
-        reverseRow.receivable = 0;
-        reverseRow.clearingAccountPayable = 0;
-        reverseRow.clearingReceivable = 0;
-
-        reverseRow.revenueTotal = revenueTotal;
-        reverseRow.revenueHomeDelivery = revenueHomeDelivery;
-        reverseRow.revenueSurcharge = revenueSurcharge;
-
-        reverseRow.cashCollectedToday = cashCollectedToday;
-        reverseRow.newDebtFreightToday = fullRow.newDebtFreightToday ?? 0;
-        reverseRow.paidOldDebtToday = 0;
-        reverseRow.minimumTransferToCompany = cashCollectedToday;
-
-        reverseRow.totalDebt = childDebt;
-        reverseRow.netDebt = childDebt;
+        k1ToChildRow.totalDebt = -k1ViewDebt;
+        k1ToChildRow.netDebt = -k1ViewDebt;
       }
     }
   }
@@ -1444,7 +1290,6 @@ export class CronjobService {
 
     const k1Route = Array.from(rootRouteInfoMap.values()).find(isPartnerRepresentativeRoute);
 
-    // Gắn doanh thu của K1 representative về các route con để hiển thị trên view route, không gắn về route K1 representative vì route này không hiển thị trên view route
     if (k1Route) {
       const k1Id = toObjectId(k1Route._id);
 
@@ -1456,7 +1301,6 @@ export class CronjobService {
 
       for (const childRouteId of childRouteIds) {
         const childRoute = rootRouteInfoMap.get(childRouteId);
-
         if (!childRoute) {
           continue;
         }
@@ -1473,36 +1317,21 @@ export class CronjobService {
             bucket.revNormalSendCost +
             bucket.revCollectSendCost;
 
+          const metric = partnerRepresentativeMetricMap.get(childRouteId);
+
+          row.revenueHomeDelivery = metric?.revenueHomeDelivery ?? 0;
+          row.revenueSurcharge = metric?.revenueSurcharge ?? 0;
+
           row.cashCollectedToday =
-            bucket.revPaidAmount + bucket.revNormalSendCost + bucket.revCollectSendCost;
+            bucket.revPaidAmount +
+            bucket.revNormalSendCost +
+            bucket.revCollectSendCost +
+            bucket.revPaidHomeDelivery +
+            bucket.revPaidCollectForCustomer;
 
           row.newDebtFreightToday = bucket.revDebtAmount;
+          row.minimumTransferToCompany = row.cashCollectedToday ?? 0;
         }
-
-        const metric = partnerRepresentativeMetricMap.get(childRouteId);
-        if (metric) {
-          row.costFromRoute = metric.costFromRoute;
-          row.feeCODToRoute = metric.feeCODToRoute;
-          row.homeDeliveryFromRoute = metric.homeDeliveryFromRoute;
-          row.surchargeFromRoute = metric.surchargeFromRoute;
-
-          row.costToRoute = metric.costToRoute;
-          row.feeCODFromRoute = metric.feeCODFromRoute;
-          row.homeDeliveryToRoute = metric.homeDeliveryToRoute;
-          row.surchargeToRoute = metric.surchargeToRoute;
-
-          // Công thức mới:
-          // DT GTN NỘP = GTN về đã trả + GTN về nợ cước
-          row.revenueHomeDelivery = metric.revenueHomeDelivery;
-
-          // DT PHỤ PHÍ NỘP = PP về đã trả + PP về nợ cước
-          row.revenueSurcharge = metric.revenueSurcharge;
-
-          row.cashCollectedToday =
-            (row.cashCollectedToday ?? 0) + metric.homeDeliveryToRoute + metric.surchargeToRoute;
-        }
-
-        row.minimumTransferToCompany = row.cashCollectedToday ?? 0;
       }
     }
 
