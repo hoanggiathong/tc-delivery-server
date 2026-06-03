@@ -787,7 +787,7 @@ export class DebtManagementService {
         totalDebt: totalDebt1,
         netDebt: totalDebt1,
         receivable: receivable1,
-        accountPayable: 0,
+        //accountPayable: 0,
       },
       { session, new: true, runValidators: true }
     );
@@ -806,7 +806,7 @@ export class DebtManagementService {
         totalDebt: totalDebt2,
         netDebt: totalDebt2,
         accountPayable: accountPayable2,
-        receivable: 0,
+        //receivable: 0,
       },
       { session, new: true, runValidators: true }
     );
@@ -893,13 +893,136 @@ export class DebtManagementService {
     }
   }
 
+  private async rebuildReceiptPaymentDebtPairFromActiveManagements(
+    fromRouteId: Types.ObjectId,
+    toRouteId: Types.ObjectId,
+    dateDebtExact: Date,
+    session: mongoose.ClientSession
+  ): Promise<DebtPairResult> {
+    const todayVn = getTodayVn();
+    const todayRange = vnDateToUtcRange(todayVn.year, todayVn.month, todayVn.date);
+
+    const [forwardReceiptAgg, reverseReceiptAgg] = await Promise.all([
+      DebtManagement.aggregate([
+        {
+          $match: {
+            fromRoute: fromRouteId,
+            toRoute: toRouteId,
+            type: DEBT_MANAGEMENT_TYPE.RECEIPT,
+            deleted: false,
+            createdAt: { $gte: todayRange.start, $lte: todayRange.end },
+          },
+        },
+        { $group: { _id: null, total: { $sum: '$cash' } } },
+      ]).session(session),
+
+      DebtManagement.aggregate([
+        {
+          $match: {
+            fromRoute: toRouteId,
+            toRoute: fromRouteId,
+            type: DEBT_MANAGEMENT_TYPE.RECEIPT,
+            deleted: false,
+            createdAt: { $gte: todayRange.start, $lte: todayRange.end },
+          },
+        },
+        { $group: { _id: null, total: { $sum: '$cash' } } },
+      ]).session(session),
+    ]);
+
+    const forwardReceiptTotal = Number(forwardReceiptAgg?.[0]?.total || 0);
+    const reverseReceiptTotal = Number(reverseReceiptAgg?.[0]?.total || 0);
+
+    const { currentDebt1, currentDebt2 } = await this.getDebtPair(
+      fromRouteId,
+      toRouteId,
+      dateDebtExact,
+      session
+    );
+
+    if (!currentDebt1 || !currentDebt2) {
+      throw new Error('Không tìm thấy công nợ hôm nay. Vui lòng chạy cron công nợ trước.');
+    }
+
+    const receivable1 = forwardReceiptTotal;
+    const accountPayable1 = reverseReceiptTotal;
+
+    const receivable2 = reverseReceiptTotal;
+    const accountPayable2 = forwardReceiptTotal;
+
+    const totalDebt1 = this.calcTotalDebtForForward(
+      currentDebt1,
+      receivable1,
+      accountPayable1,
+      currentDebt1.clearingReceivable ?? 0,
+      currentDebt1.clearingAccountPayable ?? 0
+    );
+
+    const totalDebt2 = this.calcTotalDebtForForward(
+      currentDebt2,
+      receivable2,
+      accountPayable2,
+      currentDebt2.clearingReceivable ?? 0,
+      currentDebt2.clearingAccountPayable ?? 0
+    );
+
+    const updatedDebt1 = await Debt.findOneAndUpdate(
+      { _id: currentDebt1._id },
+      {
+        receivable: receivable1,
+        accountPayable: accountPayable1,
+        totalDebt: totalDebt1,
+        netDebt: totalDebt1,
+      },
+      { session, new: true, runValidators: true }
+    );
+
+    if (!updatedDebt1) {
+      throw new Error('Dữ liệu công nợ vừa thay đổi bởi người dùng khác. Vui lòng thử lại.');
+    }
+
+    const updatedDebt2 = await Debt.findOneAndUpdate(
+      { _id: currentDebt2._id },
+      {
+        receivable: receivable2,
+        accountPayable: accountPayable2,
+        totalDebt: totalDebt2,
+        netDebt: totalDebt2,
+      },
+      { session, new: true, runValidators: true }
+    );
+
+    if (!updatedDebt2) {
+      throw new Error('Dữ liệu công nợ vừa thay đổi bởi người dùng khác. Vui lòng thử lại.');
+    }
+
+    return {
+      forward: {
+        _id: currentDebt1._id,
+        receivable: receivable1,
+        totalDebt: totalDebt1,
+      },
+      reverse: {
+        _id: currentDebt2._id,
+        accountPayable: accountPayable2,
+        totalDebt: totalDebt2,
+      },
+    };
+  }
+
+  /**
+   * Nghiệp vụ:
+   * - Thu/Chi = tổng tiền phiếu phát sinh trong ngày
+   * - Thu/Chi không đại diện cho công nợ âm/dương
+   * - Công nợ được phép đổi chiều khi thu vượt
+   * - Nhưng Thu/Chi không được âm khi rollback/xóa phiếu
+   */
   private async rollbackDebtPairDelta(
     fromRouteId: Types.ObjectId,
     toRouteId: Types.ObjectId,
     dateDebtExact: Date,
     cash: number,
-    session: mongoose.ClientSession,
-    allowNegative = false
+    session: mongoose.ClientSession
   ): Promise<DebtPairResult> {
     const { currentDebt1, currentDebt2 } = await this.getDebtPair(
       fromRouteId,
@@ -917,17 +1040,28 @@ export class DebtManagementService {
       );
     }
 
+    /**
+     * Thu/Chi chỉ đại diện tổng phiếu phát sinh trong ngày
+     * Không được rollback xuống âm
+     */
     const rawReceivable1 = (currentDebt1.receivable ?? 0) - cash;
     const rawAccountPayable2 = (currentDebt2.accountPayable ?? 0) - cash;
-    if (!allowNegative && rawReceivable1 < 0) {
-      throw new Error('Số tiền thu vượt quá khoản phải thu hiện tại.');
+
+    if (rawReceivable1 < 0) {
+      throw new Error('Không thể xóa phiếu thu vì cột Thu hiện tại nhỏ hơn số tiền rollback.');
     }
-    if (!allowNegative && rawAccountPayable2 < 0) {
-      throw new Error('Số tiền thu vượt quá khoản phải trả hiện tại.');
+
+    if (rawAccountPayable2 < 0) {
+      throw new Error('Không thể xóa phiếu thu vì cột Chi hiện tại nhỏ hơn số tiền rollback.');
     }
+
     const receivable1 = rawReceivable1;
     const accountPayable2 = rawAccountPayable2;
 
+    /**
+     * Công nợ vẫn được phép âm/dương bình thường
+     * Chỉ khóa Thu/Chi không âm
+     */
     const totalDebt1 = this.calcTotalDebtForForward(
       currentDebt1,
       receivable1,
@@ -952,8 +1086,9 @@ export class DebtManagementService {
       },
       {
         totalDebt: totalDebt1,
+        netDebt: totalDebt1,
         receivable: receivable1,
-        accountPayable: 0,
+        //accountPayable: 0,
       },
       { session, new: true, runValidators: true }
     );
@@ -970,8 +1105,9 @@ export class DebtManagementService {
       },
       {
         totalDebt: totalDebt2,
+        netDebt: totalDebt2,
         accountPayable: accountPayable2,
-        receivable: 0,
+        //receivable: 0,
       },
       { session, new: true, runValidators: true }
     );
@@ -981,8 +1117,16 @@ export class DebtManagementService {
     }
 
     return {
-      forward: { _id: currentDebt1._id, receivable: receivable1, totalDebt: totalDebt1 },
-      reverse: { _id: currentDebt2._id, accountPayable: accountPayable2, totalDebt: totalDebt2 },
+      forward: {
+        _id: currentDebt1._id,
+        receivable: receivable1,
+        totalDebt: totalDebt1,
+      },
+      reverse: {
+        _id: currentDebt2._id,
+        accountPayable: accountPayable2,
+        totalDebt: totalDebt2,
+      },
     };
   }
 
@@ -1161,11 +1305,10 @@ export class DebtManagementService {
       const receiptResult = await receiptDebtManagement.save({ session });
       const paymentResult = await paymentDebtManagement.save({ session });
 
-      const debtUpdateResult = await this.applyDebtPairDelta(
+      const debtUpdateResult = await this.rebuildReceiptPaymentDebtPairFromActiveManagements(
         fromRouteIdObj,
         toRouteIdObj,
         dateDebtExact,
-        data.cash,
         session
       );
 
@@ -2112,13 +2255,11 @@ export class DebtManagementService {
       }
       */
 
-      await this.rollbackDebtPairDelta(
+      await this.rebuildReceiptPaymentDebtPairFromActiveManagements(
         fromRouteIdObj,
         toRouteIdObj,
         dateDebtExact,
-        cash,
-        session,
-        true
+        session
       );
 
       await this.debtReportService.updateDebtReport(
