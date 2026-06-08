@@ -2322,10 +2322,10 @@ export class DebtManagementService {
 
       switch (type) {
         case DEBT_MANAGEMENT_TYPE_REPORT.PAYMENT:
-          return await this.getListPaymentDebtMangement(mockReq, userId);
+          return await this.getListReceiptDebtMangement(mockReq, userId);
 
         case DEBT_MANAGEMENT_TYPE_REPORT.RECEIPT:
-          return await this.getListReceiptDebtMangement(mockReq, userId);
+          return await this.getListPaymentDebtMangement(mockReq, userId);
 
         case DEBT_MANAGEMENT_TYPE_REPORT.DEBT:
           return await this.debtService.getListDebt(mockReq, userId);
