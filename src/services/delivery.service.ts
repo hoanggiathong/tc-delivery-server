@@ -392,6 +392,9 @@ export class DeliveryService {
     }
 
     const userSelectedRouteId = await this.userService.getUserSelectedRouteId(userId);
+    if (delivery.fromRoute.toString() !== userSelectedRouteId.toString()) {
+      throw new Error('Chỉ trạm tạo đơn mới được phép sửa đơn hàng');
+    }
     const updateData: Record<string, unknown> = {};
 
     if (data.senderName || data.senderPhone) {
@@ -413,7 +416,7 @@ export class DeliveryService {
       updateData.sender = delivery.sender;
     }
 
-    updateData.fromRoute = userSelectedRouteId;
+    //updateData.fromRoute = userSelectedRouteId;
 
     if (data.receiverName || data.receiverPhone) {
       const receiverName = data.receiverName || delivery.receiver.toString();
