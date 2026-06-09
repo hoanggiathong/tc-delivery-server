@@ -615,7 +615,15 @@ export class CustomerService {
         Logger.debug('Existing customer found for bank update', {
           customerId: customer._id,
           phone,
+          oldRouteId: customer.routeId,
+          newRouteId: routeId,
         });
+
+        // Nếu customer đã tồn tại nhưng thêm/cập nhật thông tin ngân hàng
+        // thì cập nhật lại routeId theo User Selected hiện tại
+        if (bankInfo && routeId && customer.routeId?.toString() !== routeId.toString()) {
+          customer.routeId = new Types.ObjectId(routeId);
+        }
       }
 
       // Ensure customer is not null at this point
