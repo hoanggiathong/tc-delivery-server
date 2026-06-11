@@ -48,23 +48,26 @@ const draftDeliverySchema = new Schema<IDraftDelivery>(
     // Draft info - not using references to allow flexibility
     senderName: {
       type: String,
-      required: [true, 'Sender name is required'],
       trim: true,
+      default: '',
     },
+
     senderPhone: {
       type: String,
-      required: [true, 'Sender phone is required'],
       trim: true,
+      default: '',
     },
+
     receiverName: {
       type: String,
-      required: [true, 'Receiver name is required'],
       trim: true,
+      default: '',
     },
+
     receiverPhone: {
       type: String,
-      required: [true, 'Receiver phone is required'],
       trim: true,
+      default: '',
     },
     fromRoute: {
       type: Schema.Types.ObjectId,
@@ -74,12 +77,12 @@ const draftDeliverySchema = new Schema<IDraftDelivery>(
     toRoute: {
       type: Schema.Types.ObjectId,
       ref: 'Route',
-      required: [true, 'To route is required'],
+      required: false,
     },
     name: {
       type: String,
-      required: [true, 'Item name is required'],
       trim: true,
+      default: '',
     },
     quantity: {
       type: Number,
