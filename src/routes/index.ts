@@ -19,6 +19,7 @@ import smsNotificationRoutes from './sms-notification.routes';
 import shipmentLogRoutes from './shipment-log.routes';
 import homeDeliveryPriceRoutes from './home-delivery-price.routes';
 import homeDeliveryCalculatorRoutes from './home-delivery-calculator.routes';
+import vietQrRoutes from './vietqr.routes';
 
 const router = Router();
 
@@ -42,5 +43,6 @@ router.use('/sms', smsNotificationRoutes);
 router.use('/shipment-logs', shipmentLogRoutes);
 router.use('/home-delivery-prices', homeDeliveryPriceRoutes);
 router.use('/home-delivery-calculator', homeDeliveryCalculatorRoutes);
+router.use('/vietqr', vietQrRoutes);
 
 export default router;
