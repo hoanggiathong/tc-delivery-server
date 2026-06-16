@@ -751,4 +751,21 @@ export class RouteController {
       res.status(500).json(response);
     }
   };
+
+  updateRouteCoordinates = async (req: Request, res: Response) => {
+    try {
+      const result = await this.routeService.updateRouteCoordinates(req.params.id, req.body);
+
+      res.json({
+        success: true,
+        data: result,
+        message: 'Cập nhật tọa độ trạm thành công',
+      });
+    } catch (error) {
+      res.status(400).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Cập nhật tọa độ trạm thất bại',
+      });
+    }
+  };
 }

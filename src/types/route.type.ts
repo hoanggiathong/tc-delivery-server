@@ -10,6 +10,8 @@ export interface IRouteResponse extends BaseEntity {
   code: string;
   name: string;
   address?: string;
+  lat?: number | null;
+  lon?: number | null;
   distance?: number;
   surcharge?: number;
   surchargeUnit?: SurchargeUnit;
@@ -22,6 +24,8 @@ export interface IRouteCreateRequest {
   code: string;
   name: string;
   address?: string;
+  lat?: number | null;
+  lon?: number | null;
   distance?: number;
   surcharge?: number;
   surchargeUnit?: SurchargeUnit;
@@ -33,6 +37,8 @@ export interface IRouteUpdateRequest {
   code?: string;
   name?: string;
   address?: string;
+  lat?: number | null;
+  lon?: number | null;
   distance?: number;
   surcharge?: number;
   surchargeUnit?: SurchargeUnit;
@@ -45,6 +51,8 @@ export interface IRouteLean {
   code: string;
   name: string;
   address?: string;
+  lat?: number | null;
+  lon?: number | null;
   distance?: number;
   surcharge?: number;
   surchargeUnit?: SurchargeUnit;

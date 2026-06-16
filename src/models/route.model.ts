@@ -11,6 +11,8 @@ export interface IRoute extends Document {
   code: string;
   name: string;
   address?: string;
+  lat?: number | null;
+  lon?: number | null;
   distance?: number;
   surcharge?: number;
   surchargeUnit?: SurchargeUnit;
@@ -42,6 +44,17 @@ const routeSchema = new Schema<IRoute>(
       required: false,
       trim: true,
       maxlength: [200, 'Address must not exceed 200 characters'],
+    },
+    lat: {
+      type: Number,
+      required: false,
+      default: null,
+    },
+
+    lon: {
+      type: Number,
+      required: false,
+      default: null,
     },
     distance: {
       type: Number,

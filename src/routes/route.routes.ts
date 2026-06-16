@@ -96,5 +96,6 @@ router.delete(
 router.get('/code/:code', routeController.getRouteByCode);
 router.get('/:id', validate(routeParamsSchema), routeController.getRouteById);
 router.get('/', routeController.getAllRoutes);
+router.patch('/:id/coordinates', authenticateToken, routeController.updateRouteCoordinates);
 
 export default router;

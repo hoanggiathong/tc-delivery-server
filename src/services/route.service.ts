@@ -1,4 +1,4 @@
-import { FilterQuery } from 'mongoose';
+import { FilterQuery, Types } from 'mongoose';
 import { Route, IRoute } from '@/models/route.model';
 import { IRouteResponse, IRouteLean, RouteType } from '@/types/route.type';
 import { CreateRouteRequest, UpdateRouteRequest } from '@/schemas/route.schema';
@@ -14,6 +14,8 @@ export class RouteService {
       code: route.code,
       name: route.name,
       address: route.address,
+      lat: route.lat ?? null,
+      lon: route.lon ?? null,
       distance: route.distance,
       surcharge: route.surcharge,
       surchargeUnit: route.surchargeUnit,
@@ -34,6 +36,8 @@ export class RouteService {
       name: route.name,
       address: route.address,
       distance: route.distance,
+      lat: route.lat ?? null,
+      lon: route.lon ?? null,
       surcharge: route.surcharge,
       surchargeUnit: route.surchargeUnit,
       phone: route.phone,
@@ -195,5 +199,38 @@ export class RouteService {
       }
       throw new Error('Failed to delete route');
     }
+  }
+
+  async updateRouteCoordinates(id: string, payload: { lat: number; lon: number }) {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new Error('Trạm không hợp lệ');
+    }
+
+    const lat = Number(payload.lat);
+    const lon = Number(payload.lon);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+      throw new Error('Tọa độ không hợp lệ');
+    }
+
+    const route = await Route.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          lat,
+          lon,
+        },
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    ).lean();
+
+    if (!route) {
+      throw new Error('Không tìm thấy trạm');
+    }
+
+    return route;
   }
 }
