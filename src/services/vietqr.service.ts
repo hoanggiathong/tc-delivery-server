@@ -10,23 +10,137 @@ export interface GenerateVietQrPayload {
 
 export class VietQrService {
   private readonly bankBinMap: Record<string, string> = {
-    acb: '970416',
-    vietinbank: '970415',
+    // Vietcombank
     vietcombank: '970436',
     vcb: '970436',
+
+    // VietinBank
+    vietinbank: '970415',
+    ctg: '970415',
+
+    // BIDV
     bidv: '970418',
+
+    // Agribank
+    agribank: '970405',
+
+    // MB Bank
     mbbank: '970422',
     mb: '970422',
+
+    // ACB
+    acb: '970416',
+
+    // Techcombank
     techcombank: '970407',
     tcb: '970407',
+
+    // Sacombank
     sacombank: '970403',
+
+    // VPBank
     vpbank: '970432',
-    agribank: '970405',
+
+    // TPBank
     tpbank: '970423',
+
+    // HDBank
     hdbank: '970437',
+
+    // SHB
     shb: '970443',
+
+    // LPBank
     lpbank: '970449',
     lienvietpostbank: '970449',
+
+    // VIB
+    vib: '970441',
+
+    // OCB
+    ocb: '970448',
+
+    // MSB
+    msb: '970426',
+    maritimebank: '970426',
+
+    // SeABank
+    seabank: '970440',
+
+    // Eximbank
+    eximbank: '970431',
+    eib: '970431',
+
+    // ABBank
+    abbank: '970425',
+
+    // Nam A Bank
+    namabank: '970428',
+
+    // VietABank
+    vietabank: '970427',
+
+    // VietBank
+    vietbank: '970433',
+
+    // BaoViet Bank
+    baovietbank: '970438',
+    bvbank: '970438',
+
+    // Bac A Bank
+    bacabank: '970409',
+
+    // KienlongBank
+    kienlongbank: '970452',
+
+    // PGBank
+    pgbank: '970430',
+
+    // Saigonbank
+    saigonbank: '970400',
+
+    // NCB
+    ncb: '970419',
+    nationalcitizenbank: '970419',
+
+    // OceanBank
+    oceanbank: '970414',
+
+    // CBBank
+    cbbank: '970444',
+
+    // GPBank
+    gpbank: '970408',
+
+    // DongA Bank
+    dongabank: '970406',
+
+    // PVcomBank
+    pvcombank: '970412',
+
+    // VRB
+    vrb: '970421',
+
+    // Woori Bank
+    wooribank: '970457',
+
+    // UOB
+    uob: '970458',
+
+    // CIMB
+    cimb: '422589',
+
+    // HSBC VN
+    hsbc: '458761',
+
+    // Standard Chartered
+    standardchartered: '970410',
+
+    // Public Bank
+    publicbank: '970439',
+
+    // Hong Leong
+    hongleongbank: '970442',
   };
 
   async generateQrBase64(payload: GenerateVietQrPayload): Promise<string> {
