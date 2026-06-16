@@ -17,6 +17,8 @@ import returnMoneyDeliveriesRoutes from './return-money-deliveries.route';
 import reportRoutes from './report.routes';
 import smsNotificationRoutes from './sms-notification.routes';
 import shipmentLogRoutes from './shipment-log.routes';
+import homeDeliveryPriceRoutes from './home-delivery-price.routes';
+import homeDeliveryCalculatorRoutes from './home-delivery-calculator.routes';
 
 const router = Router();
 
@@ -38,5 +40,7 @@ router.use('/return-money-deliveries', returnMoneyDeliveriesRoutes);
 router.use('/report', reportRoutes);
 router.use('/sms', smsNotificationRoutes);
 router.use('/shipment-logs', shipmentLogRoutes);
+router.use('/home-delivery-prices', homeDeliveryPriceRoutes);
+router.use('/home-delivery-calculator', homeDeliveryCalculatorRoutes);
 
 export default router;
