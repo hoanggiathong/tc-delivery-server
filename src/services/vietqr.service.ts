@@ -114,6 +114,8 @@ export class VietQrService {
 
     // DongA Bank
     dongabank: '970406',
+    donga: '970406',
+    vikki: '970406',
 
     // PVcomBank
     pvcombank: '970412',
@@ -152,8 +154,14 @@ export class VietQrService {
         .trim()
         .slice(0, 99);
 
-      if (!bankBin || !accountNumber) {
-        throw new Error('Thiếu thông tin ngân hàng hoặc số tài khoản.');
+      if (!bankBin) {
+        throw new Error(
+          `Ngân hàng chưa được hỗ trợ: ${payload.bankName || 'Không có tên ngân hàng'}`
+        );
+      }
+
+      if (!accountNumber) {
+        throw new Error('Thiếu số tài khoản.');
       }
 
       const vietQrPayload = this.buildVietQrPayload({
@@ -190,9 +198,18 @@ export class VietQrService {
 
   private normalizeBankBin(bankName: string): string {
     const raw = String(bankName || '').trim();
-    const key = raw.toLowerCase().replace(/\s+/g, '');
 
-    return this.bankBinMap[key] || raw.replace(/\D/g, '');
+    if (/^\d{6}$/.test(raw)) {
+      return raw;
+    }
+
+    const key = raw
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]/g, '');
+
+    return this.bankBinMap[key] || '';
   }
 
   private buildVietQrPayload(params: {
