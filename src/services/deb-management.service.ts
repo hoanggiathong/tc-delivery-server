@@ -428,6 +428,9 @@ export class DebtManagementService {
     const updatedDebt1 = await Debt.findOneAndUpdate(
       {
         _id: currentDebt1._id,
+        totalDebt: currentDebt1.totalDebt ?? 0,
+        receivable: currentDebt1.receivable ?? 0,
+        accountPayable: currentDebt1.accountPayable ?? 0,
         clearingReceivable: currentDebt1.clearingReceivable ?? 0,
         clearingAccountPayable: currentDebt1.clearingAccountPayable ?? 0,
       },
@@ -447,6 +450,9 @@ export class DebtManagementService {
     const updatedDebt2 = await Debt.findOneAndUpdate(
       {
         _id: currentDebt2._id,
+        totalDebt: currentDebt2.totalDebt ?? 0,
+        receivable: currentDebt2.receivable ?? 0,
+        accountPayable: currentDebt2.accountPayable ?? 0,
         clearingReceivable: currentDebt2.clearingReceivable ?? 0,
         clearingAccountPayable: currentDebt2.clearingAccountPayable ?? 0,
       },
