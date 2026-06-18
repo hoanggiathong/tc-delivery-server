@@ -21,6 +21,7 @@ export interface IDebtManagement extends Document {
   clearingReceivable?: number;
   clearingAccountPayable?: number;
   debtEffectAction?: 'ROLLBACK' | 'APPLY';
+  clearingEffectPayload?: string | null;
 }
 
 const debtManagementSchema = new Schema<IDebtManagement>(
@@ -99,6 +100,11 @@ const debtManagementSchema = new Schema<IDebtManagement>(
     debtEffectAction: {
       type: String,
       enum: ['ROLLBACK', 'APPLY'],
+      required: false,
+      default: null,
+    },
+    clearingEffectPayload: {
+      type: String,
       required: false,
       default: null,
     },
