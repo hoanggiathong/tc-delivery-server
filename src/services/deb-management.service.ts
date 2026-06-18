@@ -248,100 +248,157 @@ export class DebtManagementService {
     }
   }
 
-  private normalizeClearingAmount(clearingAmount: number): {
-    forwardClearingReceivable: number;
-    forwardClearingAccountPayable: number;
-    reverseClearingReceivable: number;
-    reverseClearingAccountPayable: number;
-  } {
-    return {
-      forwardClearingReceivable: clearingAmount > 0 ? clearingAmount : 0,
-      forwardClearingAccountPayable: clearingAmount < 0 ? Math.abs(clearingAmount) : 0,
-      reverseClearingReceivable: clearingAmount < 0 ? Math.abs(clearingAmount) : 0,
-      reverseClearingAccountPayable: clearingAmount > 0 ? clearingAmount : 0,
-    };
+  private buildClearingEffectPayload(
+    effects: Array<{
+      fromRoute: Types.ObjectId;
+      toRoute: Types.ObjectId;
+      clearingReceivable: number;
+      clearingAccountPayable: number;
+    }>
+  ): string {
+    return JSON.stringify({
+      version: 'CLEARING_EFFECTS_V1',
+      effects: effects.map(effect => ({
+        fromRoute: String(effect.fromRoute),
+        toRoute: String(effect.toRoute),
+        clearingReceivable: effect.clearingReceivable,
+        clearingAccountPayable: effect.clearingAccountPayable,
+      })),
+    });
   }
 
-  private calculateSingleClearingRecordEffect(
-    record: any,
-    fromRouteId: Types.ObjectId,
-    toRouteId: Types.ObjectId
-  ): number {
-    if (!record || !record.pivotRoute) {
-      return 0;
+  private parseClearingEffectPayload(record: any): Array<{
+    fromRoute: string;
+    toRoute: string;
+    clearingReceivable: number;
+    clearingAccountPayable: number;
+  }> {
+    if (!record?.clearingEffectPayload || typeof record.clearingEffectPayload !== 'string') {
+      return [];
     }
 
-    const cash = Number(record.cash || 0);
-    const sourceRoute = record.fromRoute;
-    const targetRoute = record.toRoute;
-    const pivotRoute = record.pivotRoute;
+    try {
+      const parsed = JSON.parse(record.clearingEffectPayload);
 
-    const isSamePair = (effectFrom: unknown, effectTo: unknown) =>
-      String(effectFrom) === String(fromRouteId) && String(effectTo) === String(toRouteId);
-
-    let effect = 0;
-
-    effect += isSamePair(sourceRoute, targetRoute)
-      ? cash
-      : isSamePair(targetRoute, sourceRoute)
-        ? -cash
-        : 0;
-
-    if (record.sourcePivotDirection === 'FORWARD') {
-      if (isSamePair(sourceRoute, pivotRoute)) {
-        effect -= cash;
+      if (parsed?.version !== 'CLEARING_EFFECTS_V1' || !Array.isArray(parsed.effects)) {
+        return [];
       }
-    } else {
-      if (isSamePair(pivotRoute, sourceRoute)) {
-        effect -= cash;
-      }
-    }
 
-    if (record.pivotTargetDirection === 'FORWARD') {
-      if (isSamePair(pivotRoute, targetRoute)) {
-        effect -= cash;
-      }
-    } else {
-      if (isSamePair(targetRoute, pivotRoute)) {
-        effect -= cash;
-      }
-    }
-
-    return effect;
-  }
-
-  private async verifyNewClearingEffectOrFail(
-    clearingId: unknown,
-    checks: Array<{
-      fromRouteId: Types.ObjectId;
-      toRouteId: Types.ObjectId;
-      expectedEffect: number;
-      label: string;
-    }>,
-    session: mongoose.ClientSession
-  ): Promise<void> {
-    const record = await DebtManagement.findById(new Types.ObjectId(String(clearingId)))
-      .session(session)
-      .lean();
-
-    if (!record || record.deleted || record.type !== DEBT_MANAGEMENT_TYPE.CLEARING) {
-      throw new Error('Phiếu gặt vừa tạo không hợp lệ. Transaction đã rollback.');
-    }
-
-    for (const check of checks) {
-      const actualEffect = this.calculateSingleClearingRecordEffect(
-        record,
-        check.fromRouteId,
-        check.toRouteId
-      );
-
-      if (actualEffect !== check.expectedEffect) {
-        throw new Error(
-          `Phiếu gặt chưa tạo đúng hiệu ứng ${check.label}. ` +
-            `Expected=${check.expectedEffect}, actual=${actualEffect}. Transaction đã rollback.`
+      return parsed.effects
+        .map((effect: any) => ({
+          fromRoute: String(effect.fromRoute),
+          toRoute: String(effect.toRoute),
+          clearingReceivable: Number(effect.clearingReceivable || 0),
+          clearingAccountPayable: Number(effect.clearingAccountPayable || 0),
+        }))
+        .filter(
+          (effect: any) =>
+            effect.fromRoute &&
+            effect.toRoute &&
+            (effect.clearingReceivable > 0 || effect.clearingAccountPayable > 0)
         );
-      }
+    } catch {
+      return [];
     }
+  }
+
+  private async buildReduceDebtClearingEffects(
+    fromRouteId: Types.ObjectId,
+    toRouteId: Types.ObjectId,
+    dateDebtExact: Date,
+    cash: number,
+    session: mongoose.ClientSession
+  ): Promise<
+    Array<{
+      fromRoute: Types.ObjectId;
+      toRoute: Types.ObjectId;
+      clearingReceivable: number;
+      clearingAccountPayable: number;
+    }>
+  > {
+    const { currentDebt1, currentDebt2 } = await this.getDebtPair(
+      fromRouteId,
+      toRouteId,
+      dateDebtExact,
+      session
+    );
+
+    if (!currentDebt1 || !currentDebt2) {
+      throw new Error('Không tìm thấy cặp công nợ để tạo hiệu ứng gặt.');
+    }
+
+    const debt1 = currentDebt1.totalDebt ?? 0;
+    const debt2 = currentDebt2.totalDebt ?? 0;
+
+    if (debt1 > 0 && debt2 > 0) {
+      throw new Error(`Cặp công nợ không hợp lệ, cả 2 chiều đều dương: ${debt1}/${debt2}`);
+    }
+
+    if (debt1 > 0) {
+      return [
+        {
+          fromRoute: fromRouteId,
+          toRoute: toRouteId,
+          clearingReceivable: 0,
+          clearingAccountPayable: cash,
+        },
+        {
+          fromRoute: toRouteId,
+          toRoute: fromRouteId,
+          clearingReceivable: cash,
+          clearingAccountPayable: 0,
+        },
+      ];
+    }
+
+    if (debt2 > 0) {
+      return [
+        {
+          fromRoute: fromRouteId,
+          toRoute: toRouteId,
+          clearingReceivable: cash,
+          clearingAccountPayable: 0,
+        },
+        {
+          fromRoute: toRouteId,
+          toRoute: fromRouteId,
+          clearingReceivable: 0,
+          clearingAccountPayable: cash,
+        },
+      ];
+    }
+
+    throw new Error('Không thể tạo phiếu gặt vì cặp trung gian không còn công nợ.');
+  }
+
+  private buildApplyDebtClearingEffects(
+    debtorRouteId: Types.ObjectId,
+    creditorRouteId: Types.ObjectId,
+    cash: number
+  ): Array<{
+    fromRoute: Types.ObjectId;
+    toRoute: Types.ObjectId;
+    clearingReceivable: number;
+    clearingAccountPayable: number;
+  }> {
+    return [
+      {
+        // debtor -> creditor: phát sinh nợ mới
+        // VD: VL -> TD = +40
+        fromRoute: debtorRouteId,
+        toRoute: creditorRouteId,
+        clearingReceivable: cash,
+        clearingAccountPayable: 0,
+      },
+      {
+        // creditor -> debtor: chiều đối ứng
+        // VD: TD -> VL = -40
+        fromRoute: creditorRouteId,
+        toRoute: debtorRouteId,
+        clearingReceivable: 0,
+        clearingAccountPayable: cash,
+      },
+    ];
   }
 
   private async rebuildDebtPairFromActiveManagements(
@@ -357,39 +414,32 @@ export class DebtManagementService {
       createdAt: { $gte: todayRange.start, $lte: todayRange.end },
       deleted: false,
       type: DEBT_MANAGEMENT_TYPE.CLEARING,
+      clearingEffectPayload: { $regex: 'CLEARING_EFFECTS_V1' },
       $or: [
-        { fromRoute: fromRouteId, toRoute: toRouteId },
-        { fromRoute: toRouteId, toRoute: fromRouteId },
-        { fromRoute: fromRouteId, pivotRoute: toRouteId },
-        { pivotRoute: fromRouteId, toRoute: toRouteId },
-        { fromRoute: toRouteId, pivotRoute: fromRouteId },
-        { pivotRoute: toRouteId, toRoute: fromRouteId },
+        { fromRoute: fromRouteId },
+        { toRoute: fromRouteId },
+        { pivotRoute: fromRouteId },
+        { fromRoute: toRouteId },
+        { toRoute: toRouteId },
+        { pivotRoute: toRouteId },
       ],
     })
       .session(session)
       .lean();
 
-    let forwardClearingAmount = 0;
-    let reverseClearingAmount = 0;
+    let clearingReceivable = 0;
+    let clearingAccountPayable = 0;
 
     for (const record of records as any[]) {
-      forwardClearingAmount += this.calculateSingleClearingRecordEffect(
-        record,
-        fromRouteId,
-        toRouteId
-      );
+      const effects = this.parseClearingEffectPayload(record);
 
-      reverseClearingAmount += this.calculateSingleClearingRecordEffect(
-        record,
-        toRouteId,
-        fromRouteId
-      );
+      for (const effect of effects) {
+        if (effect.fromRoute === String(fromRouteId) && effect.toRoute === String(toRouteId)) {
+          clearingReceivable += effect.clearingReceivable;
+          clearingAccountPayable += effect.clearingAccountPayable;
+        }
+      }
     }
-
-    const clearingAmount =
-      Math.abs(reverseClearingAmount) > Math.abs(forwardClearingAmount)
-        ? -reverseClearingAmount
-        : forwardClearingAmount;
 
     const { currentDebt1, currentDebt2 } = await this.getDebtPair(
       fromRouteId,
@@ -402,19 +452,15 @@ export class DebtManagementService {
       throw new Error('Debt record not found for rebuild');
     }
 
-    const {
-      forwardClearingReceivable,
-      forwardClearingAccountPayable,
-      reverseClearingReceivable,
-      reverseClearingAccountPayable,
-    } = this.normalizeClearingAmount(clearingAmount);
+    const reverseClearingReceivable = clearingAccountPayable;
+    const reverseClearingAccountPayable = clearingReceivable;
 
     const totalDebt1 = this.calcTotalDebtForForward(
       currentDebt1,
       currentDebt1.receivable ?? 0,
       currentDebt1.accountPayable ?? 0,
-      forwardClearingReceivable,
-      forwardClearingAccountPayable
+      clearingReceivable,
+      clearingAccountPayable
     );
 
     const totalDebt2 = this.calcTotalDebtForForward(
@@ -435,8 +481,8 @@ export class DebtManagementService {
         clearingAccountPayable: currentDebt1.clearingAccountPayable ?? 0,
       },
       {
-        clearingReceivable: forwardClearingReceivable,
-        clearingAccountPayable: forwardClearingAccountPayable,
+        clearingReceivable,
+        clearingAccountPayable,
         totalDebt: totalDebt1,
         netDebt: totalDebt1,
       },
@@ -1191,39 +1237,32 @@ export class DebtManagementService {
       createdAt: { $gte: todayRange.start, $lte: todayRange.end },
       deleted: false,
       type: DEBT_MANAGEMENT_TYPE.CLEARING,
+      clearingEffectPayload: { $regex: 'CLEARING_EFFECTS_V1' },
       $or: [
-        { fromRoute: fromRouteId, toRoute: toRouteId },
-        { fromRoute: toRouteId, toRoute: fromRouteId },
-        { fromRoute: fromRouteId, pivotRoute: toRouteId },
-        { pivotRoute: fromRouteId, toRoute: toRouteId },
-        { fromRoute: toRouteId, pivotRoute: fromRouteId },
-        { pivotRoute: toRouteId, toRoute: fromRouteId },
+        { fromRoute: fromRouteId },
+        { toRoute: fromRouteId },
+        { pivotRoute: fromRouteId },
+        { fromRoute: toRouteId },
+        { toRoute: toRouteId },
+        { pivotRoute: toRouteId },
       ],
     })
       .session(session)
       .lean();
 
-    let forwardExpectedClearingAmount = 0;
-    let reverseExpectedClearingAmount = 0;
+    let expectedClearingReceivable = 0;
+    let expectedClearingAccountPayable = 0;
 
     for (const record of records as any[]) {
-      forwardExpectedClearingAmount += this.calculateSingleClearingRecordEffect(
-        record,
-        fromRouteId,
-        toRouteId
-      );
+      const effects = this.parseClearingEffectPayload(record);
 
-      reverseExpectedClearingAmount += this.calculateSingleClearingRecordEffect(
-        record,
-        toRouteId,
-        fromRouteId
-      );
+      for (const effect of effects) {
+        if (effect.fromRoute === String(fromRouteId) && effect.toRoute === String(toRouteId)) {
+          expectedClearingReceivable += effect.clearingReceivable;
+          expectedClearingAccountPayable += effect.clearingAccountPayable;
+        }
+      }
     }
-
-    const expectedClearingAmount =
-      Math.abs(reverseExpectedClearingAmount) > Math.abs(forwardExpectedClearingAmount)
-        ? -reverseExpectedClearingAmount
-        : forwardExpectedClearingAmount;
 
     const { currentDebt1, currentDebt2 } = await this.getDebtPair(
       fromRouteId,
@@ -1236,24 +1275,19 @@ export class DebtManagementService {
       throw new Error('Clearing verification failed: debt pair not found.');
     }
 
-    const {
-      forwardClearingReceivable,
-      forwardClearingAccountPayable,
-      reverseClearingReceivable,
-      reverseClearingAccountPayable,
-    } = this.normalizeClearingAmount(expectedClearingAmount);
+    const expectedReverseClearingReceivable = expectedClearingAccountPayable;
+    const expectedReverseClearingAccountPayable = expectedClearingReceivable;
 
     if (
-      (currentDebt1.clearingReceivable ?? 0) !== forwardClearingReceivable ||
-      (currentDebt1.clearingAccountPayable ?? 0) !== forwardClearingAccountPayable ||
-      (currentDebt2.clearingReceivable ?? 0) !== reverseClearingReceivable ||
-      (currentDebt2.clearingAccountPayable ?? 0) !== reverseClearingAccountPayable
+      (currentDebt1.clearingReceivable ?? 0) !== expectedClearingReceivable ||
+      (currentDebt1.clearingAccountPayable ?? 0) !== expectedClearingAccountPayable ||
+      (currentDebt2.clearingReceivable ?? 0) !== expectedReverseClearingReceivable ||
+      (currentDebt2.clearingAccountPayable ?? 0) !== expectedReverseClearingAccountPayable
     ) {
       throw new Error(
-        `Phiếu gặt chưa cập nhật đúng công nợ. Expected=${expectedClearingAmount}, ` +
-          `forwardRaw=${forwardExpectedClearingAmount}, reverseRaw=${reverseExpectedClearingAmount}, ` +
-          `forwardCR=${forwardClearingReceivable}, forwardCP=${forwardClearingAccountPayable}, ` +
-          `reverseCR=${reverseClearingReceivable}, reverseCP=${reverseClearingAccountPayable}.`
+        `Phiếu gặt chưa cập nhật đúng công nợ. ` +
+          `forwardCR=${expectedClearingReceivable}, forwardCP=${expectedClearingAccountPayable}, ` +
+          `reverseCR=${expectedReverseClearingReceivable}, reverseCP=${expectedReverseClearingAccountPayable}.`
       );
     }
   }
@@ -1812,6 +1846,36 @@ export class DebtManagementService {
         session
       );
 
+      const businessSourceRouteIdObj =
+        clearingPlan.direction === 'FORWARD' ? sourceRouteIdObj : targetRouteIdObj;
+
+      const businessPivotRouteIdObj = pivotRouteIdObj;
+
+      const businessTargetRouteIdObj =
+        clearingPlan.direction === 'FORWARD' ? targetRouteIdObj : sourceRouteIdObj;
+
+      const clearingEffects = [
+        ...(await this.buildReduceDebtClearingEffects(
+          businessSourceRouteIdObj,
+          businessPivotRouteIdObj,
+          dateDebtExact,
+          data.cash,
+          session
+        )),
+        ...(await this.buildReduceDebtClearingEffects(
+          businessPivotRouteIdObj,
+          businessTargetRouteIdObj,
+          dateDebtExact,
+          data.cash,
+          session
+        )),
+        ...this.buildApplyDebtClearingEffects(
+          businessSourceRouteIdObj,
+          businessTargetRouteIdObj,
+          data.cash
+        ),
+      ];
+
       const clearing = new DebtManagement({
         fromRoute: actualSourceRouteIdObj,
         toRoute: actualTargetRouteIdObj,
@@ -1825,34 +1889,10 @@ export class DebtManagementService {
         content: data.content,
         type: DEBT_MANAGEMENT_TYPE.CLEARING,
         createdBy: userId,
+        clearingEffectPayload: this.buildClearingEffectPayload(clearingEffects),
       });
 
       const result = await clearing.save({ session });
-
-      await this.verifyNewClearingEffectOrFail(
-        result._id,
-        [
-          {
-            fromRouteId: actualSourceRouteIdObj,
-            toRouteId: actualTargetRouteIdObj,
-            expectedEffect: data.cash,
-            label: 'cặp đích',
-          },
-          {
-            fromRouteId: rollbackSourceRoute1,
-            toRouteId: rollbackTargetRoute1,
-            expectedEffect: -data.cash,
-            label: 'cặp nguồn - trung gian',
-          },
-          {
-            fromRouteId: rollbackSourceRoute2,
-            toRouteId: rollbackTargetRoute2,
-            expectedEffect: -data.cash,
-            label: 'cặp trung gian - đích',
-          },
-        ],
-        session
-      );
 
       await this.rebuildDebtPairFromActiveManagements(
         actualSourceRouteIdObj,
