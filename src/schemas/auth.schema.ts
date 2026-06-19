@@ -11,6 +11,11 @@ export const loginSchema = z.object({
       .string()
       .min(6, 'Password must be at least 6 characters')
       .max(100, 'Password must not exceed 100 characters'),
+
+    deviceId: z.string().min(1).max(200).optional(),
+    deviceName: z.string().max(200).optional(),
+    browser: z.string().max(1000).optional(),
+    os: z.string().max(100).optional(),
   }),
 });
 
