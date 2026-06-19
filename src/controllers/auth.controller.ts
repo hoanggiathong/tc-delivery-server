@@ -212,11 +212,17 @@ export class AuthController {
   login = async (req: Request, res: Response): Promise<void> => {
     try {
       const data: LoginRequest = req.body;
-      const result = await this.authService.login(data);
+      const result = await this.authService.login(data, {
+        ipAddress:
+          (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+          req.socket.remoteAddress ||
+          '',
+        userAgent: req.headers['user-agent'] || '',
+      });
 
       const response: ApiResponse = {
         success: true,
-        message: 'Login successful',
+        message: 'Đăng nhập thành công',
         data: result,
       };
 
@@ -224,12 +230,18 @@ export class AuthController {
     } catch (error) {
       console.error('Login error:', error);
 
-      const message = error instanceof Error ? error.message : 'Login failed';
+      const message = error instanceof Error ? error.message : 'Đăng nhập thất bại';
 
-      const response: ApiResponse = {
+      const response: ApiResponse & {
+        code?: string;
+      } = {
         success: false,
         message,
       };
+
+      if (message === 'Thiết bị này đã bị khóa bởi quản trị viên.') {
+        response.code = 'DEVICE_FORCE_LOGOUT';
+      }
 
       res.status(401).json(response);
     }

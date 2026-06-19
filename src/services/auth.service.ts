@@ -16,14 +16,21 @@ import {
   CreateUserRequest,
   UpdateSelectedRouteRequest,
 } from '@/schemas/auth.schema';
+import { UserDeviceService } from '@/services/user-device.service';
 
 export class AuthService {
+  private userDeviceService: UserDeviceService;
+
+  constructor() {
+    this.userDeviceService = new UserDeviceService();
+  }
+
   async register(data: RegisterRequest): Promise<{ user: IUserResponse }> {
     try {
       // Check if username already exists
       const existingUser = await User.findOne({ username: data.username });
       if (existingUser) {
-        throw new Error('Username already exists');
+        throw new Error('Tên đăng nhập đã tồn tại');
       }
 
       // Create new user
@@ -41,7 +48,7 @@ export class AuthService {
       if (error instanceof Error) {
         throw error;
       }
-      throw new Error('Registration failed');
+      throw new Error('Đăng ký tài khoản thất bại');
     }
   }
 
@@ -68,22 +75,25 @@ export class AuthService {
       if (error instanceof Error) {
         throw error;
       }
-      throw new Error('User creation failed');
+      throw new Error('Tạo tài khoản thất bại');
     }
   }
 
-  async login(data: LoginRequest): Promise<{ user: IUserResponse; token: string }> {
+  async login(
+    data: LoginRequest,
+    meta?: { ipAddress?: string; userAgent?: string }
+  ): Promise<{ user: IUserResponse; token: string }> {
     try {
       // Find user and include password to verify
       const user = await User.findOne({ username: data.username }, '+password');
       if (!user) {
-        throw new Error('Invalid credentials');
+        throw new Error('Tên đăng nhập hoặc mật khẩu không đúng');
       }
 
       // Check password
       const isPasswordValid = await user.comparePassword(data.password);
       if (!isPasswordValid) {
-        throw new Error('Invalid credentials');
+        throw new Error('Tên đăng nhập hoặc mật khẩu không đúng');
       }
 
       // If user has no selectedRouteId, try to auto-assign from USER_ROUTES
@@ -109,7 +119,7 @@ export class AuthService {
 
       const secretKey = process.env.JWT_SECRET;
       if (!secretKey) {
-        throw new Error('JWT_SECRET is not defined');
+        throw new Error('Hệ thống chưa cấu hình JWT_SECRET');
       }
 
       // Use explicit typing
@@ -120,12 +130,34 @@ export class AuthService {
 
       const token = jwt.sign(payload, secretKey, signOptions);
 
+      try {
+        await this.userDeviceService.trackLogin({
+          userId: user._id.toString(),
+          deviceId: data.deviceId,
+          deviceName: data.deviceName,
+          browser: data.browser,
+          os: data.os,
+          ipAddress: meta?.ipAddress,
+          userAgent: meta?.userAgent,
+          currentRouteId: user.selectedRouteId?.toString() || null,
+        });
+      } catch (deviceError) {
+        if (
+          deviceError instanceof Error &&
+          deviceError.message === 'Thiết bị này đã bị khóa bởi quản trị viên.'
+        ) {
+          throw deviceError;
+        }
+
+        console.warn('Track login device failed:', deviceError);
+      }
+
       return { user: transformUserToResponse(user), token };
     } catch (error) {
       if (error instanceof Error) {
         throw error;
       }
-      throw new Error('Login failed');
+      throw new Error('Đăng nhập thất bại');
     }
   }
 
@@ -137,7 +169,7 @@ export class AuthService {
       const users = await User.find({}).select('-password').sort({ createdAt: -1 }).lean();
       return transformUsersLeanToResponse(users as IUserLean[]);
     } catch (error) {
-      throw new Error('Failed to get all users');
+      throw new Error('Không thể lấy danh sách tài khoản');
     }
   }
 
@@ -149,7 +181,7 @@ export class AuthService {
       const user = await User.findById(userId).select('-password').lean();
       return user ? transformUserLeanToResponse(user as IUserLean) : null;
     } catch (error) {
-      throw new Error('Failed to get user by ID');
+      throw new Error('Không thể lấy thông tin tài khoản');
     }
   }
 
@@ -164,7 +196,7 @@ export class AuthService {
         .lean();
       return transformUsersLeanToResponse(users as IUserLean[]);
     } catch (error) {
-      throw new Error('Failed to get users by roles');
+      throw new Error('Không thể lấy danh sách tài khoản theo quyền');
     }
   }
 
@@ -185,7 +217,7 @@ export class AuthService {
           }).lean();
 
           if (!userRoute) {
-            throw new Error('Route not assigned to user');
+            throw new Error('Tuyến đường chưa được cấp cho tài khoản này');
           }
         }
       }
@@ -197,7 +229,7 @@ export class AuthService {
       ).select('-password');
 
       if (!user) {
-        throw new Error('User not found');
+        throw new Error('Không tìm thấy tài khoản');
       }
 
       return { user: transformUserToResponse(user) };
@@ -205,7 +237,7 @@ export class AuthService {
       if (error instanceof Error) {
         throw error;
       }
-      throw new Error('Failed to update selected route');
+      throw new Error('Cập nhật tuyến đường thất bại');
     }
   }
 }
