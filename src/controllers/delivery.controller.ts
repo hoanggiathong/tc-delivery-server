@@ -1287,6 +1287,46 @@ export class DeliveryController {
     }
   };
 
+  getDeliveryByFullCodeForTransfer = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          message: 'Phiên đăng nhập đã hết hạn',
+        });
+        return;
+      }
+
+      const { fullCode } = req.params;
+
+      const delivery = await this.deliveryService.getDeliveryByFullCodeForTransfer(
+        fullCode,
+        req.user.userId
+      );
+
+      if (!delivery) {
+        res.status(404).json({
+          success: false,
+          message: 'Không tìm thấy mã hàng hoặc mã hàng không thuộc trạm hiện tại',
+        });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Tìm thấy đơn hàng và đã điền thông tin vào form',
+        data: { delivery },
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Không thể lấy thông tin mã hàng';
+
+      res.status(400).json({
+        success: false,
+        message,
+      });
+    }
+  };
+
   /**
    * @swagger
    * /api/delivery/frequent-customers/{senderIdentifier}:
