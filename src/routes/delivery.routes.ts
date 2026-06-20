@@ -235,6 +235,12 @@ router.get(
   deliveryController.getDeliveryByFullCodeFromUserRoute
 );
 
+router.get(
+  '/transfer/search/:fullCode',
+  validate(deliveryFullCodeSchema),
+  deliveryController.getDeliveryByFullCodeForTransfer
+);
+
 // Parameterized routes should come after specific routes
 router.get('/:id', validate(deliveryParamsSchema), deliveryController.getDeliveryById);
 

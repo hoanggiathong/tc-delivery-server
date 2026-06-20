@@ -825,6 +825,69 @@ export class DeliveryService {
     return this.transformDeliveryToResponseOptimized(this.toPopulatedDeliveryLean(delivery));
   }
 
+  async getDeliveryByFullCodeForTransfer(
+    fullCode: string,
+    userId: string
+  ): Promise<IDeliveryResponse | null> {
+    const normalizedFullCode = fullCode.trim().toUpperCase();
+
+    const parsed = this.parseDeliveryIdentifier(normalizedFullCode);
+    if (!parsed) {
+      throw new Error(
+        'Invalid delivery identifier format. Expected: codeFromRouteToRoute (e.g., 0907250001T4T1)'
+      );
+    }
+
+    const { fromRouteCode, toRouteCode } = parsed;
+
+    const userRouteInfo = await this.userService.getUserSelectedRoute(userId);
+
+    const userSelectedRoute = await Route.findById(userRouteInfo.selectedRouteId).select('code');
+    if (!userSelectedRoute) {
+      throw new Error('User selected route not found');
+    }
+
+    const isRelatedRoute =
+      userSelectedRoute.code === fromRouteCode || userSelectedRoute.code === toRouteCode;
+
+    if (!isRelatedRoute) {
+      return null;
+    }
+
+    const delivery = await Delivery.findOne({
+      fullCode: normalizedFullCode,
+      $or: [
+        { fromRoute: userRouteInfo.selectedRouteId },
+        { toRoute: userRouteInfo.selectedRouteId },
+      ],
+    })
+      .populate([
+        {
+          path: 'sender',
+          select: '_id name phone bankId',
+          populate: {
+            path: 'bankId',
+            select: '_id name bankName bankAccount bankBranch bankAddress',
+          },
+        },
+        { path: 'receiver', select: '_id name phone' },
+        { path: 'fromRoute', select: '_id code name address phone' },
+        { path: 'toRoute', select: '_id code name address phone' },
+        { path: 'createdByUser', select: '_id username name' },
+      ])
+      .lean();
+
+    if (!delivery) {
+      return null;
+    }
+
+    if (delivery.isReturn) {
+      throw new Error('Mã hàng đã trả, không được phép chuyển mã');
+    }
+
+    return this.transformDeliveryToResponseOptimized(this.toPopulatedDeliveryLean(delivery));
+  }
+
   /**
    * Parse delivery identifier to extract code and route codes
    * @param deliveryIdentifier - Format: codeFromRouteToRoute (e.g., 0907250001T4T1)
