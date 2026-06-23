@@ -85,7 +85,13 @@ export class VietQrService {
 
     // BaoViet Bank
     baovietbank: '970438',
-    bvbank: '970438',
+    baoviet: '970438',
+
+    // BVBank / Bản Việt / Viet Capital Bank
+    bvbank: '970454',
+    banviet: '970454',
+    vietcapitalbank: '970454',
+    bvb: '970454',
 
     // Bac A Bank
     bacabank: '970409',
