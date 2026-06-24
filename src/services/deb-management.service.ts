@@ -590,13 +590,7 @@ export class DebtManagementService {
         type: DEBT_MANAGEMENT_TYPE.RECEIPT,
         createdAt: { $gte: start, $lte: endOfDay },
         deleted: false,
-        ...(isK1Selected
-          ? {
-              $or: [{ toRoute: toRouteRootId }, { fromRoute: toRouteRootId }],
-            }
-          : {
-              toRoute: toRouteRootId,
-            }),
+        toRoute: toRouteRootId,
       };
 
       if (fromRouteId) {
