@@ -165,13 +165,14 @@ export class UserDeviceService {
       return getObjectIdString(device.userId?._id || device.userId);
     };
 
-    const getCurrentRouteIdString = (device: any): string => {
-      return getObjectIdString(device.currentRouteId?._id || device.currentRouteId);
-    };
+    /**
+     * Đếm theo "phiên thiết bị vật lý tương đối":
+     * - Cùng user + IP + userAgent + OS + deviceName => xem như cùng 1 máy/phiên.
+     * - Khác key này mới tính là tài khoản đang ở nhiều thiết bị/môi trường.
+     */
 
     const getSameInfoKey = (device: any): string => {
       const userId = getUserIdString(device);
-      const routeId = getCurrentRouteIdString(device);
 
       return [
         userId,
@@ -179,7 +180,6 @@ export class UserDeviceService {
         device.userAgent || device.browser || '',
         device.os || '',
         device.deviceName || '',
-        routeId,
       ].join('|');
     };
 
