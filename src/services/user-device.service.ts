@@ -136,9 +136,54 @@ export class UserDeviceService {
       .sort({ lastActiveAt: -1 })
       .lean();
 
-    const userIds = [
-      ...new Set(devices.map((d: any) => d.userId?._id?.toString()).filter(Boolean)),
-    ];
+    const isDeviceOnline = (device: any): boolean => {
+      return Boolean(
+        !device.forceLogout &&
+          !device.lastLogoutAt &&
+          device.lastActiveAt &&
+          new Date(device.lastActiveAt) >= onlineSince
+      );
+    };
+
+    const getObjectIdString = (value: any): string => {
+      if (!value) {
+        return '';
+      }
+
+      if (typeof value === 'string') {
+        return value;
+      }
+
+      if (value._id) {
+        return value._id.toString();
+      }
+
+      return value.toString?.() || '';
+    };
+
+    const getUserIdString = (device: any): string => {
+      return getObjectIdString(device.userId?._id || device.userId);
+    };
+
+    const getCurrentRouteIdString = (device: any): string => {
+      return getObjectIdString(device.currentRouteId?._id || device.currentRouteId);
+    };
+
+    const getSameInfoKey = (device: any): string => {
+      const userId = getUserIdString(device);
+      const routeId = getCurrentRouteIdString(device);
+
+      return [
+        userId,
+        device.ipAddress || '',
+        device.userAgent || device.browser || '',
+        device.os || '',
+        device.deviceName || '',
+        routeId,
+      ].join('|');
+    };
+
+    const userIds = [...new Set(devices.map((d: any) => getUserIdString(d)).filter(Boolean))];
 
     const userRoutes = await UserRoute.find({
       userId: { $in: userIds.map(id => new mongoose.Types.ObjectId(id)) },
@@ -150,6 +195,7 @@ export class UserDeviceService {
 
     for (const item of userRoutes as any[]) {
       const key = item.userId.toString();
+
       const route = item.routeId
         ? {
             id: item.routeId._id.toString(),
@@ -171,33 +217,63 @@ export class UserDeviceService {
       allowedRouteMap.set(key, existingRoutes);
     }
 
-    const activeDeviceCountByUser = new Map<string, number>();
+    /**
+     * Đếm theo "phiên thiết bị vật lý tương đối":
+     * - Cùng user + IP + userAgent + OS + deviceName + currentRoute => xem như cùng 1 máy/phiên.
+     * - Khác key này mới tính là tài khoản thật sự đang ở nhiều thiết bị/môi trường.
+     */
+    const activeSessionKeysByUser = new Map<string, Set<string>>();
+
+    /**
+     * Đếm trường hợp cùng 1 deviceId nhưng nhiều user đang online.
+     */
     const activeUserCountByDevice = new Map<string, Set<string>>();
 
+    /**
+     * Đếm trường hợp cùng thông tin máy nhưng phát sinh nhiều deviceId.
+     * Đây là dấu hiệu FE bị tạo lại x-device-id.
+     */
+    const activeDeviceIdsBySameInfo = new Map<string, Set<string>>();
+
     for (const device of devices as any[]) {
-      const userId = device.userId?._id?.toString();
-      const isOnline = device.lastActiveAt && new Date(device.lastActiveAt) >= onlineSince;
+      const userId = getUserIdString(device);
+      const isOnline = isDeviceOnline(device);
 
       if (!userId || !isOnline) {
         continue;
       }
 
-      activeDeviceCountByUser.set(userId, (activeDeviceCountByUser.get(userId) || 0) + 1);
+      const sameInfoKey = getSameInfoKey(device);
 
-      if (!activeUserCountByDevice.has(device.deviceId)) {
-        activeUserCountByDevice.set(device.deviceId, new Set());
+      if (!activeSessionKeysByUser.has(userId)) {
+        activeSessionKeysByUser.set(userId, new Set<string>());
       }
 
-      const activeUsers = activeUserCountByDevice.get(device.deviceId) || new Set<string>();
-      activeUsers.add(userId);
-      activeUserCountByDevice.set(device.deviceId, activeUsers);
+      activeSessionKeysByUser.get(userId)?.add(sameInfoKey);
+
+      if (device.deviceId) {
+        if (!activeUserCountByDevice.has(device.deviceId)) {
+          activeUserCountByDevice.set(device.deviceId, new Set<string>());
+        }
+
+        activeUserCountByDevice.get(device.deviceId)?.add(userId);
+
+        if (!activeDeviceIdsBySameInfo.has(sameInfoKey)) {
+          activeDeviceIdsBySameInfo.set(sameInfoKey, new Set<string>());
+        }
+
+        activeDeviceIdsBySameInfo.get(sameInfoKey)?.add(device.deviceId);
+      }
     }
 
     return (devices as any[]).map(device => {
-      const userId = device.userId?._id?.toString() || '';
-      const isOnline = device.lastActiveAt && new Date(device.lastActiveAt) >= onlineSince;
-      const activeDeviceCount = activeDeviceCountByUser.get(userId) || 0;
+      const userId = getUserIdString(device);
+      const isOnline = isDeviceOnline(device);
+      const sameInfoKey = getSameInfoKey(device);
+
+      const activeSessionCount = activeSessionKeysByUser.get(userId)?.size || 0;
       const activeUsersOnDevice = activeUserCountByDevice.get(device.deviceId)?.size || 0;
+      const sameInfoDeviceCount = activeDeviceIdsBySameInfo.get(sameInfoKey)?.size || 0;
 
       return {
         id: device._id.toString(),
@@ -229,8 +305,9 @@ export class UserDeviceService {
         forceLogout: device.forceLogout,
         isOnline,
         warnings: {
-          multipleDevicesBySameUser: activeDeviceCount > 1,
-          sameDeviceMultipleUsers: activeUsersOnDevice > 1,
+          multipleDevicesBySameUser: isOnline && activeSessionCount > 1,
+          sameDeviceMultipleUsers: isOnline && activeUsersOnDevice > 1,
+          sameInfoDifferentDeviceId: isOnline && sameInfoDeviceCount > 1,
         },
       };
     });
