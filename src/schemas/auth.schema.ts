@@ -12,7 +12,14 @@ export const loginSchema = z.object({
       .min(6, 'Password must be at least 6 characters')
       .max(100, 'Password must not exceed 100 characters'),
 
-    deviceId: z.string().min(1).max(200).optional(),
+    deviceId: z
+      .string({
+        required_error: 'Thiếu mã thiết bị đăng nhập',
+      })
+      .trim()
+      .min(1, 'Thiếu mã thiết bị đăng nhập')
+      .max(200, 'Mã thiết bị đăng nhập không hợp lệ'),
+
     deviceName: z.string().max(200).optional(),
     browser: z.string().max(1000).optional(),
     os: z.string().max(100).optional(),

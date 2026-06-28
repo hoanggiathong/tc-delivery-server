@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { UserDevice } from '@/models/user-device.model';
-//import { User } from '@/models/user.model';
+import { User } from '@/models/user.model';
 import { UserRoute } from '@/models/user-route.model';
 import { UserRole } from '@/types/user.type';
 
@@ -18,23 +18,18 @@ export interface TrackDevicePayload {
 export class UserDeviceService {
   private readonly ONLINE_WINDOW_MINUTES = 10;
 
-  async trackLogin(payload: TrackDevicePayload): Promise<void> {
+  private async getUserRole(userId: string): Promise<UserRole | null> {
+    const user = await User.findById(userId).select('role').lean();
+
+    return (user?.role as UserRole) || null;
+  }
+
+  private async saveBlockedLoginDevice(payload: TrackDevicePayload): Promise<void> {
     if (!payload.deviceId) {
       return;
     }
 
     const now = new Date();
-
-    const existingDevice = await UserDevice.findOne({
-      userId: new mongoose.Types.ObjectId(payload.userId),
-      deviceId: payload.deviceId,
-    })
-      .select('forceLogout')
-      .lean();
-
-    if (existingDevice?.forceLogout) {
-      throw new Error('Thiết bị này đã bị khóa bởi quản trị viên.');
-    }
 
     await UserDevice.findOneAndUpdate(
       {
@@ -56,8 +51,85 @@ export class UserDeviceService {
             : null,
           lastLoginAt: now,
           lastActiveAt: now,
+          lastLogoutAt: now,
+          forceLogout: true,
+        },
+      },
+      {
+        upsert: true,
+        new: true,
+      }
+    );
+  }
+
+  async trackLogin(payload: TrackDevicePayload): Promise<void> {
+    if (!payload.deviceId) {
+      return;
+    }
+
+    const now = new Date();
+    const userObjectId = new mongoose.Types.ObjectId(payload.userId);
+
+    const existingDevice = await UserDevice.findOne({
+      userId: userObjectId,
+      deviceId: payload.deviceId,
+    })
+      .select('forceLogout')
+      .lean();
+
+    if (existingDevice?.forceLogout) {
+      throw new Error('Thiết bị này chưa được cấp phép đăng nhập. Vui lòng liên hệ quản trị viên.');
+    }
+
+    const role = await this.getUserRole(payload.userId);
+
+    /**
+     * Nghiệp vụ mới:
+     * - Role USER chỉ được có 1 thiết bị được cấp quyền.
+     * - Nếu login từ thiết bị mới khi vẫn còn thiết bị cũ chưa bị admin đăng xuất/khóa:
+     *   + Lưu thiết bị mới ở trạng thái forceLogout=true để admin thấy.
+     *   + Không cho đăng nhập.
+     */
+    if (role === UserRole.USER && !existingDevice) {
+      const activeAuthorizedDevice = await UserDevice.findOne({
+        userId: userObjectId,
+        deviceId: { $ne: payload.deviceId },
+        forceLogout: { $ne: true },
+      })
+        .select('_id deviceName ipAddress lastActiveAt')
+        .lean();
+
+      if (activeAuthorizedDevice) {
+        await this.saveBlockedLoginDevice(payload);
+
+        throw new Error(
+          'Tài khoản này chỉ được đăng nhập trên 1 thiết bị. Vui lòng yêu cầu quản trị viên đăng xuất thiết bị cũ và cấp phép thiết bị mới.'
+        );
+      }
+    }
+
+    await UserDevice.findOneAndUpdate(
+      {
+        userId: userObjectId,
+        deviceId: payload.deviceId,
+      },
+      {
+        $setOnInsert: {
+          firstLoginAt: now,
+          forceLogout: false,
+        },
+        $set: {
+          deviceName: payload.deviceName || '',
+          browser: payload.browser || '',
+          os: payload.os || '',
+          ipAddress: payload.ipAddress || '',
+          userAgent: payload.userAgent || '',
+          currentRouteId: payload.currentRouteId
+            ? new mongoose.Types.ObjectId(payload.currentRouteId)
+            : null,
+          lastLoginAt: now,
+          lastActiveAt: now,
           lastLogoutAt: null,
-          //forceLogout: false,
         },
       },
       {
@@ -68,6 +140,30 @@ export class UserDeviceService {
   }
 
   async unlockDevice(deviceId: string): Promise<void> {
+    const targetDevice = await UserDevice.findById(deviceId).select('userId deviceId').lean();
+
+    if (!targetDevice) {
+      throw new Error('Không tìm thấy thiết bị.');
+    }
+
+    const role = await this.getUserRole(targetDevice.userId.toString());
+
+    if (role === UserRole.USER) {
+      const otherAuthorizedDevice = await UserDevice.findOne({
+        _id: { $ne: targetDevice._id },
+        userId: targetDevice.userId,
+        forceLogout: { $ne: true },
+      })
+        .select('_id deviceName ipAddress lastActiveAt')
+        .lean();
+
+      if (otherAuthorizedDevice) {
+        throw new Error(
+          'Tài khoản user này vẫn còn thiết bị cũ đang được cấp quyền. Vui lòng đăng xuất thiết bị cũ trước khi mở khóa thiết bị mới.'
+        );
+      }
+    }
+
     await UserDevice.findByIdAndUpdate(deviceId, {
       $set: {
         forceLogout: false,
@@ -166,9 +262,11 @@ export class UserDeviceService {
     };
 
     /**
-     * Đếm theo "phiên thiết bị vật lý tương đối":
-     * - Cùng user + IP + userAgent + OS + deviceName => xem như cùng 1 máy/phiên.
-     * - Khác key này mới tính là tài khoản đang ở nhiều thiết bị/môi trường.
+     * Các cảnh báo này chỉ dùng để hỗ trợ admin quan sát.
+     * Nghiệp vụ khóa đăng nhập chính thức của role USER dựa trên:
+     * - userId
+     * - deviceId
+     * - forceLogout
      */
 
     const getSameInfoKey = (device: any): string => {
@@ -218,9 +316,8 @@ export class UserDeviceService {
     }
 
     /**
-     * Đếm theo "phiên thiết bị vật lý tương đối":
-     * - Cùng user + IP + userAgent + OS + deviceName + currentRoute => xem như cùng 1 máy/phiên.
-     * - Khác key này mới tính là tài khoản thật sự đang ở nhiều thiết bị/môi trường.
+     * Đếm cảnh báo phụ để admin quan sát các phiên online đáng chú ý.
+     * Không dùng các cảnh báo này để quyết định chặn/cho đăng nhập role USER.
      */
     const activeSessionKeysByUser = new Map<string, Set<string>>();
 
@@ -228,12 +325,6 @@ export class UserDeviceService {
      * Đếm trường hợp cùng 1 deviceId nhưng nhiều user đang online.
      */
     const activeUserCountByDevice = new Map<string, Set<string>>();
-
-    /**
-     * Đếm trường hợp cùng thông tin máy nhưng phát sinh nhiều deviceId.
-     * Đây là dấu hiệu FE bị tạo lại x-device-id.
-     */
-    const activeDeviceIdsBySameInfo = new Map<string, Set<string>>();
 
     for (const device of devices as any[]) {
       const userId = getUserIdString(device);
@@ -257,23 +348,15 @@ export class UserDeviceService {
         }
 
         activeUserCountByDevice.get(device.deviceId)?.add(userId);
-
-        if (!activeDeviceIdsBySameInfo.has(sameInfoKey)) {
-          activeDeviceIdsBySameInfo.set(sameInfoKey, new Set<string>());
-        }
-
-        activeDeviceIdsBySameInfo.get(sameInfoKey)?.add(device.deviceId);
       }
     }
 
     return (devices as any[]).map(device => {
       const userId = getUserIdString(device);
       const isOnline = isDeviceOnline(device);
-      const sameInfoKey = getSameInfoKey(device);
 
       const activeSessionCount = activeSessionKeysByUser.get(userId)?.size || 0;
       const activeUsersOnDevice = activeUserCountByDevice.get(device.deviceId)?.size || 0;
-      const sameInfoDeviceCount = activeDeviceIdsBySameInfo.get(sameInfoKey)?.size || 0;
 
       return {
         id: device._id.toString(),
@@ -307,7 +390,7 @@ export class UserDeviceService {
         warnings: {
           multipleDevicesBySameUser: isOnline && activeSessionCount > 1,
           sameDeviceMultipleUsers: isOnline && activeUsersOnDevice > 1,
-          sameInfoDifferentDeviceId: isOnline && sameInfoDeviceCount > 1,
+          waitingAdminApproval: Boolean(device.forceLogout),
         },
       };
     });
