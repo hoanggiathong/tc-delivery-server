@@ -110,6 +110,22 @@ export class AuthService {
         }
       }
 
+      if (!data.deviceId) {
+        throw new Error('Thiếu mã thiết bị đăng nhập. Vui lòng tải lại trang và đăng nhập lại.');
+      }
+
+      // Check and track login device before issuing JWT
+      await this.userDeviceService.trackLogin({
+        userId: user._id.toString(),
+        deviceId: data.deviceId,
+        deviceName: data.deviceName,
+        browser: data.browser,
+        os: data.os,
+        ipAddress: meta?.ipAddress,
+        userAgent: meta?.userAgent,
+        currentRouteId: user.selectedRouteId?.toString() || null,
+      });
+
       // Alternative JWT signing approach
       const payload: JWTPayload = {
         userId: user._id.toString(),
@@ -129,28 +145,6 @@ export class AuthService {
       };
 
       const token = jwt.sign(payload, secretKey, signOptions);
-
-      try {
-        await this.userDeviceService.trackLogin({
-          userId: user._id.toString(),
-          deviceId: data.deviceId,
-          deviceName: data.deviceName,
-          browser: data.browser,
-          os: data.os,
-          ipAddress: meta?.ipAddress,
-          userAgent: meta?.userAgent,
-          currentRouteId: user.selectedRouteId?.toString() || null,
-        });
-      } catch (deviceError) {
-        if (
-          deviceError instanceof Error &&
-          deviceError.message === 'Thiết bị này đã bị khóa bởi quản trị viên.'
-        ) {
-          throw deviceError;
-        }
-
-        console.warn('Track login device failed:', deviceError);
-      }
 
       return { user: transformUserToResponse(user), token };
     } catch (error) {
