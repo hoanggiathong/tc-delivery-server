@@ -23,4 +23,10 @@ router.patch(
   userDeviceController.unlockDevice
 );
 
+router.delete(
+  '/:id',
+  requireRole([UserRole.ADMIN, UserRole.SUPERADMIN]),
+  userDeviceController.deleteLockedDevice
+);
+
 export default router;

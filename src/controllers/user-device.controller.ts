@@ -84,18 +84,70 @@ export class UserDeviceController {
 
   unlockDevice = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          message: 'Unauthorized',
+        });
+        return;
+      }
+
+      if (!this.userDeviceService.canManageDevices(req.user.role as UserRole)) {
+        res.status(403).json({
+          success: false,
+          message: 'Bạn không có quyền cấp phép thiết bị.',
+        });
+        return;
+      }
+
       const { id } = req.params;
 
       await this.userDeviceService.unlockDevice(id);
 
       res.status(200).json({
         success: true,
-        message: 'Đã mở khóa thiết bị.',
+        message: 'Đã cấp phép thiết bị.',
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unlock device failed';
+      const message = error instanceof Error ? error.message : 'Cấp phép thiết bị thất bại.';
 
-      res.status(500).json({
+      res.status(400).json({
+        success: false,
+        message,
+      });
+    }
+  };
+
+  deleteLockedDevice = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          message: 'Unauthorized',
+        });
+        return;
+      }
+
+      if (!this.userDeviceService.canManageDevices(req.user.role as UserRole)) {
+        res.status(403).json({
+          success: false,
+          message: 'Bạn không có quyền xóa thiết bị.',
+        });
+        return;
+      }
+
+      const { id } = req.params;
+
+      await this.userDeviceService.deleteLockedDevice(id);
+
+      res.status(200).json({
+        success: true,
+        message: 'Đã xóa thiết bị.',
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Xóa thiết bị thất bại.';
+
+      res.status(400).json({
         success: false,
         message,
       });
