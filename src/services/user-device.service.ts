@@ -221,6 +221,20 @@ export class UserDeviceService {
     });
   }
 
+  async deleteLockedDevice(deviceId: string): Promise<void> {
+    const device = await UserDevice.findById(deviceId).select('forceLogout userId deviceId').lean();
+
+    if (!device) {
+      throw new Error('Không tìm thấy thiết bị.');
+    }
+
+    if (!device.forceLogout) {
+      throw new Error('Chỉ được xóa thiết bị đã khóa hoặc đang chờ cấp phép.');
+    }
+
+    await UserDevice.findByIdAndDelete(deviceId);
+  }
+
   async getAdminDeviceList() {
     const onlineSince = new Date(Date.now() - this.ONLINE_WINDOW_MINUTES * 60 * 1000);
 
