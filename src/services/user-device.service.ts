@@ -64,11 +64,53 @@ export class UserDeviceService {
 
   async trackLogin(payload: TrackDevicePayload): Promise<void> {
     if (!payload.deviceId) {
-      return;
+      throw new Error('Thiếu mã thiết bị đăng nhập. Vui lòng tải lại trang và đăng nhập lại.');
     }
 
     const now = new Date();
     const userObjectId = new mongoose.Types.ObjectId(payload.userId);
+
+    const role = await this.getUserRole(payload.userId);
+
+    /**
+     * ADMIN / SUPERADMIN:
+     * - Không cần cấp phép thiết bị.
+     * - Thiết bị mới tự được ghi nhận là đã cấp phép.
+     */
+    if (role === UserRole.ADMIN || role === UserRole.SUPERADMIN) {
+      await UserDevice.findOneAndUpdate(
+        {
+          userId: userObjectId,
+          deviceId: payload.deviceId,
+        },
+        {
+          $setOnInsert: {
+            firstLoginAt: now,
+            forceLogout: false,
+          },
+          $set: {
+            deviceName: payload.deviceName || '',
+            browser: payload.browser || '',
+            os: payload.os || '',
+            ipAddress: payload.ipAddress || '',
+            userAgent: payload.userAgent || '',
+            currentRouteId: payload.currentRouteId
+              ? new mongoose.Types.ObjectId(payload.currentRouteId)
+              : null,
+            lastLoginAt: now,
+            lastActiveAt: now,
+            lastLogoutAt: null,
+            forceLogout: false,
+          },
+        },
+        {
+          upsert: true,
+          new: true,
+        }
+      );
+
+      return;
+    }
 
     const existingDevice = await UserDevice.findOne({
       userId: userObjectId,
@@ -77,35 +119,20 @@ export class UserDeviceService {
       .select('forceLogout')
       .lean();
 
-    if (existingDevice?.forceLogout) {
+    /**
+     * Các role còn lại:
+     * - Thiết bị mới chưa có record => lưu lại trạng thái chờ cấp phép và chặn login.
+     * - Thiết bị đã bị khóa / chờ cấp phép => chặn login.
+     * - Chỉ thiết bị forceLogout=false mới được login.
+     */
+    if (!existingDevice) {
+      await this.saveBlockedLoginDevice(payload);
+
       throw new Error('Thiết bị này chưa được cấp phép đăng nhập. Vui lòng liên hệ quản trị viên.');
     }
 
-    const role = await this.getUserRole(payload.userId);
-
-    /**
-     * Nghiệp vụ mới:
-     * - Role USER chỉ được có 1 thiết bị được cấp quyền.
-     * - Nếu login từ thiết bị mới khi vẫn còn thiết bị cũ chưa bị admin đăng xuất/khóa:
-     *   + Lưu thiết bị mới ở trạng thái forceLogout=true để admin thấy.
-     *   + Không cho đăng nhập.
-     */
-    if (role === UserRole.USER && !existingDevice) {
-      const activeAuthorizedDevice = await UserDevice.findOne({
-        userId: userObjectId,
-        deviceId: { $ne: payload.deviceId },
-        forceLogout: { $ne: true },
-      })
-        .select('_id deviceName ipAddress lastActiveAt')
-        .lean();
-
-      if (activeAuthorizedDevice) {
-        await this.saveBlockedLoginDevice(payload);
-
-        throw new Error(
-          'Tài khoản này chỉ được đăng nhập trên 1 thiết bị. Vui lòng yêu cầu quản trị viên đăng xuất thiết bị cũ và cấp phép thiết bị mới.'
-        );
-      }
+    if (existingDevice.forceLogout) {
+      throw new Error('Thiết bị này chưa được cấp phép đăng nhập. Vui lòng liên hệ quản trị viên.');
     }
 
     await UserDevice.findOneAndUpdate(
@@ -114,10 +141,6 @@ export class UserDeviceService {
         deviceId: payload.deviceId,
       },
       {
-        $setOnInsert: {
-          firstLoginAt: now,
-          forceLogout: false,
-        },
         $set: {
           deviceName: payload.deviceName || '',
           browser: payload.browser || '',
@@ -131,10 +154,6 @@ export class UserDeviceService {
           lastActiveAt: now,
           lastLogoutAt: null,
         },
-      },
-      {
-        upsert: true,
-        new: true,
       }
     );
   }
@@ -148,7 +167,7 @@ export class UserDeviceService {
 
     const role = await this.getUserRole(targetDevice.userId.toString());
 
-    if (role === UserRole.USER) {
+    if (role !== UserRole.ADMIN && role !== UserRole.SUPERADMIN) {
       const otherAuthorizedDevice = await UserDevice.findOne({
         _id: { $ne: targetDevice._id },
         userId: targetDevice.userId,
@@ -159,7 +178,7 @@ export class UserDeviceService {
 
       if (otherAuthorizedDevice) {
         throw new Error(
-          'Tài khoản user này vẫn còn thiết bị cũ đang được cấp quyền. Vui lòng đăng xuất thiết bị cũ trước khi mở khóa thiết bị mới.'
+          'Tài khoản này vẫn còn thiết bị cũ đang được cấp quyền. Vui lòng khóa thiết bị cũ trước khi cấp phép thiết bị mới.'
         );
       }
     }
@@ -277,10 +296,9 @@ export class UserDeviceService {
 
     /**
      * Các cảnh báo này chỉ dùng để hỗ trợ admin quan sát.
-     * Nghiệp vụ khóa đăng nhập chính thức của role USER dựa trên:
-     * - userId
-     * - deviceId
-     * - forceLogout
+     * Nghiệp vụ khóa đăng nhập chính thức:
+     * - ADMIN / SUPERADMIN không cần cấp phép thiết bị.
+     * - Các role còn lại dựa trên userId + deviceId + forceLogout.
      */
 
     const getSameInfoKey = (device: any): string => {
