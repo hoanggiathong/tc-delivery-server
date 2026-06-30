@@ -167,7 +167,7 @@ export class UserDeviceService {
 
     const role = await this.getUserRole(targetDevice.userId.toString());
 
-    if (role !== UserRole.ADMIN && role !== UserRole.SUPERADMIN) {
+    if (role === UserRole.USER) {
       const otherAuthorizedDevice = await UserDevice.findOne({
         _id: { $ne: targetDevice._id },
         userId: targetDevice.userId,
@@ -178,7 +178,7 @@ export class UserDeviceService {
 
       if (otherAuthorizedDevice) {
         throw new Error(
-          'Tài khoản này vẫn còn thiết bị cũ đang được cấp quyền. Vui lòng khóa thiết bị cũ trước khi cấp phép thiết bị mới.'
+          'Tài khoản user này vẫn còn thiết bị cũ đang được cấp quyền. Vui lòng khóa thiết bị cũ trước khi cấp phép thiết bị mới.'
         );
       }
     }
