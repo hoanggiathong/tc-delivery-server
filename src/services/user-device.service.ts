@@ -86,7 +86,6 @@ export class UserDeviceService {
         {
           $setOnInsert: {
             firstLoginAt: now,
-            forceLogout: false,
           },
           $set: {
             deviceName: payload.deviceName || '',
@@ -349,7 +348,8 @@ export class UserDeviceService {
 
     /**
      * Đếm cảnh báo phụ để admin quan sát các phiên online đáng chú ý.
-     * Không dùng các cảnh báo này để quyết định chặn/cho đăng nhập role USER.
+     * Không dùng các cảnh báo này để quyết định chặn/cho đăng nhập.
+     * Quyết định đăng nhập nằm ở trackLogin() và trạng thái forceLogout.
      */
     const activeSessionKeysByUser = new Map<string, Set<string>>();
 
