@@ -387,6 +387,23 @@ export class ReportService {
         });
       }
 
+      // Sort trạm theo Alphabet A-Z theo tên trạm, nếu trùng tên thì sort tiếp theo mã tuyến
+      routes.sort((a, b) => {
+        const byName = (a.routeName || '').localeCompare(b.routeName || '', 'vi', {
+          sensitivity: 'base',
+          numeric: true,
+        });
+
+        if (byName !== 0) {
+          return byName;
+        }
+
+        return (a.routeCode || '').localeCompare(b.routeCode || '', 'vi', {
+          sensitivity: 'base',
+          numeric: true,
+        });
+      });
+
       // Calculate grand totals
 
       // Tổng tiền gửi các trạm = tiền gửi thường + tiền gửi nhanh (KHÔNG bao gồm thu hộ giữ)
