@@ -12,6 +12,7 @@ import {
 import { SMSStatus } from '@/types/sms-notification.type';
 import { SMSNotificationService } from '@/services/sms-notification.service';
 import Logger from '@/utils/logger';
+import { UserService } from '@/services/user.service';
 
 /**
  * SMS Queue Service
@@ -20,8 +21,11 @@ import Logger from '@/utils/logger';
 export class SMSQueueService {
   private smsNotificationService: SMSNotificationService;
 
+  private userService: UserService;
+
   constructor() {
     this.smsNotificationService = new SMSNotificationService();
+    this.userService = new UserService();
   }
 
   /**
@@ -51,6 +55,38 @@ export class SMSQueueService {
     return queueItem;
   }
 
+  escapeRegex = (value: string): string => {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  };
+
+  getDestinationDownQuantity = (downItems: unknown, routeCode?: string): number => {
+    if (!routeCode || typeof downItems !== 'string' || !downItems.trim()) {
+      return 0;
+    }
+
+    const normalizedDownItems = downItems.toUpperCase();
+    const normalizedRouteCode = routeCode.toUpperCase();
+
+    /**
+     * Match tất cả mã xuống hàng thuộc đúng trạm đích.
+     *
+     * Ví dụ routeCode = LX:
+     * - LX000436[2] => +2
+     * - LX000437[2] => +2
+     * - CT000434[2] => bỏ qua
+     */
+    const regex = new RegExp(`${this.escapeRegex(normalizedRouteCode)}\\d+\\[(\\d+)\\]`, 'g');
+
+    let total = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = regex.exec(normalizedDownItems)) !== null) {
+      total += Number(match[1] || 0);
+    }
+
+    return total;
+  };
+
   /**
    * Add multiple deliveries to queue
    */
@@ -58,47 +94,81 @@ export class SMSQueueService {
     deliveryIds: string[],
     userId: string
   ): Promise<{ added: number; skipped: number }> {
+    const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
     // Step 1: Find deliveries with valid smsStatus
     const validStatusDeliveries = await Delivery.find({
       _id: { $in: deliveryIds },
+      toRoute: selectedRouteId,
       $or: [
         { smsStatus: null },
         { smsStatus: SMSStatus.NOT_SENT },
         { smsStatus: SMSStatus.PHONE_ERROR },
       ],
     })
-      .select('_id quantity quantityReturn isQuantityChecked')
+      .select('_id quantity downItems toRoute isQuantityChecked')
+      .populate({
+        path: 'toRoute',
+        select: 'code name',
+      })
       .lean();
 
     if (validStatusDeliveries.length === 0) {
       return { added: 0, skipped: deliveryIds.length };
     }
 
-    // Step 1.1: Separate deliveries that need quantity check vs eligible
-    const needsQuantityCheck: string[] = [];
     const eligibleIds: string[] = [];
+    const notArrivedDestinationIds: string[] = [];
+    const needsQuantityCheckIds: string[] = [];
 
     for (const d of validStatusDeliveries) {
-      const hasQuantityMismatch = d.quantityReturn !== null && d.quantity !== d.quantityReturn;
+      const quantity = Number(d.quantity || 0);
 
-      if (hasQuantityMismatch && d.isQuantityChecked !== true) {
-        // Needs quantity check - don't add to queue
-        needsQuantityCheck.push(d._id.toString());
-      } else if (d.quantityReturn !== null) {
-        // Eligible for queue (quantity === quantityReturn OR isQuantityChecked === true)
-        eligibleIds.push(d._id.toString());
+      const toRoute = d.toRoute as unknown as {
+        _id?: unknown;
+        code?: string;
+        name?: string;
+      };
+
+      const toRouteCode = toRoute?.code;
+      const destinationDownQuantity = this.getDestinationDownQuantity(d.downItems, toRouteCode);
+
+      // Chưa có mã xuống hàng đúng trạm đích
+      if (destinationDownQuantity <= 0) {
+        notArrivedDestinationIds.push(d._id.toString());
+        continue;
       }
+
+      /**
+       * Đã xuống đúng trạm đích nhưng chưa đủ số lượng:
+       * - Nếu chưa xác nhận kiểm kê => đưa vào danh sách kiểm kê, không gửi SMS
+       * - Nếu đã xác nhận kiểm kê => cho gửi SMS
+       */
+      if (destinationDownQuantity < quantity && d.isQuantityChecked !== true) {
+        needsQuantityCheckIds.push(d._id.toString());
+        continue;
+      }
+
+      // Đủ điều kiện gửi SMS:
+      // - xuống đủ số lượng tại trạm đích
+      // - hoặc thiếu số lượng nhưng đã xác nhận kiểm kê
+      eligibleIds.push(d._id.toString());
     }
 
-    // Update isQuantityChecked = false for deliveries needing check (không add vào queue)
-    if (needsQuantityCheck.length > 0) {
+    // Quan trọng: đảm bảo đơn thiếu số lượng sẽ hiện ở API kiểm kê
+    if (needsQuantityCheckIds.length > 0) {
       await Delivery.updateMany(
-        { _id: { $in: needsQuantityCheck } },
+        { _id: { $in: needsQuantityCheckIds } },
         { $set: { isQuantityChecked: false } }
       );
     }
 
     if (eligibleIds.length === 0) {
+      Logger.warn('No deliveries eligible for SMS queue after checking destination downItems', {
+        total: deliveryIds.length,
+        notArrivedDestination: notArrivedDestinationIds.length,
+        needsQuantityCheck: needsQuantityCheckIds.length,
+      });
+
       return { added: 0, skipped: deliveryIds.length };
     }
 
@@ -136,7 +206,14 @@ export class SMSQueueService {
     const added = idsToAdd.length;
     const skipped = deliveryIds.length - added;
 
-    Logger.info('Bulk add to SMS queue completed', { added, skipped, total: deliveryIds.length });
+    Logger.info('Bulk add to SMS queue completed', {
+      added,
+      skipped,
+      total: deliveryIds.length,
+      notArrivedDestination: notArrivedDestinationIds.length,
+      needsQuantityCheck: needsQuantityCheckIds.length,
+    });
+
     return { added, skipped };
   }
 
