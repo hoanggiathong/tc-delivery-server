@@ -145,7 +145,7 @@ export class SMSNotificationService {
     const query: Record<string, unknown> = {
       toRoute: selectedRouteId,
       isReturn: { $ne: true },
-      isQuantityChecked: { $eq: false },
+      isQuantityChecked: { $ne: true },
       $or: [{ smsStatus: null }, { smsStatus: SMSStatus.NOT_SENT }],
     };
 
@@ -167,8 +167,30 @@ export class SMSNotificationService {
       .populate('toRoute', '_id code name address phone')
       .lean<IDeliveryForSMSLean[]>();
 
+    const incompleteDeliveries = deliveries.filter(delivery => {
+      const quantity = Number(delivery.quantity || 0);
+
+      const toRoute = delivery.toRoute as unknown as {
+        _id?: unknown;
+        code?: string;
+        name?: string;
+      };
+
+      const destinationDownQuantity = this.getDestinationDownQuantity(
+        delivery.downItems,
+        toRoute?.code
+      );
+
+      /**
+       * Chỉ hiện kiểm kê khi:
+       * - Đã xuống đúng trạm đích
+       * - Nhưng tổng số lượng trong [] tại trạm đích chưa đủ quantity
+       */
+      return destinationDownQuantity > 0 && destinationDownQuantity < quantity;
+    });
+
     // Get messageTime (latest sentAt) from SMS logs for all deliveries
-    const deliveryIds = deliveries.map(d => d._id.toString());
+    const deliveryIds = incompleteDeliveries.map(d => d._id.toString());
     const objectIds = deliveryIds.map(id => new mongoose.Types.ObjectId(id));
     const smsLogs = await SMSLog.aggregate([
       { $match: { deliveryId: { $in: objectIds } } },
@@ -187,7 +209,7 @@ export class SMSNotificationService {
       messageTimeMap.set(log._id.toString(), log.latestSentAt);
     }
 
-    return deliveries.map(delivery => ({
+    return incompleteDeliveries.map(delivery => ({
       _id: delivery._id.toString(),
       fullCode: delivery.fullCode,
       receiverName: delivery.receiver.name,
@@ -461,6 +483,30 @@ export class SMSNotificationService {
     return this.sendNotification(deliveryId, userId);
   }
 
+  private escapeRegex(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  private getDestinationDownQuantity(downItems: unknown, routeCode?: string): number {
+    if (!routeCode || typeof downItems !== 'string' || !downItems.trim()) {
+      return 0;
+    }
+
+    const normalizedDownItems = downItems.toUpperCase();
+    const normalizedRouteCode = routeCode.toUpperCase();
+
+    const regex = new RegExp(`${this.escapeRegex(normalizedRouteCode)}\\d+\\[(\\d+)\\]`, 'g');
+
+    let total = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = regex.exec(normalizedDownItems)) !== null) {
+      total += Number(match[1] || 0);
+    }
+
+    return total;
+  }
+
   /**
    * Update SMS status manually
    */
@@ -476,9 +522,65 @@ export class SMSNotificationService {
   async markQuantityChecked(deliveryIds: string[], userId: string): Promise<number> {
     const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
 
+    const deliveries = await Delivery.find({
+      _id: { $in: deliveryIds },
+      toRoute: selectedRouteId,
+      isReturn: { $ne: true },
+      $or: [{ smsStatus: null }, { smsStatus: SMSStatus.NOT_SENT }],
+    })
+      .select('_id quantity downItems toRoute isQuantityChecked')
+      .populate('toRoute', '_id code name')
+      .lean<IDeliveryForSMSLean[]>();
+
+    const validCheckedIds: string[] = [];
+
+    for (const delivery of deliveries) {
+      const quantity = Number(delivery.quantity || 0);
+
+      const toRoute = delivery.toRoute as unknown as {
+        _id?: unknown;
+        code?: string;
+        name?: string;
+      };
+
+      const destinationDownQuantity = this.getDestinationDownQuantity(
+        delivery.downItems,
+        toRoute?.code
+      );
+
+      /**
+       * Chỉ cho xác nhận kiểm kê khi:
+       * - Đã xuống đúng trạm đích
+       * - Nhưng chưa đủ số lượng
+       *
+       * Ví dụ:
+       * quantity = 4
+       * downItems = CT000434[2], LX000436[2]
+       * => được xác nhận kiểm kê
+       *
+       * downItems = CT000434[2]
+       * => chưa xuống LX, không cho xác nhận
+       */
+      if (destinationDownQuantity > 0 && destinationDownQuantity < quantity) {
+        validCheckedIds.push(delivery._id.toString());
+      }
+    }
+
+    if (validCheckedIds.length === 0) {
+      return 0;
+    }
+
     const result = await Delivery.updateMany(
-      { _id: { $in: deliveryIds }, toRoute: selectedRouteId },
-      { isQuantityChecked: true, quantityCheckedBy: userId }
+      {
+        _id: { $in: validCheckedIds },
+        toRoute: selectedRouteId,
+      },
+      {
+        $set: {
+          isQuantityChecked: true,
+          quantityCheckedBy: userId,
+        },
+      }
     );
 
     return result.modifiedCount;
