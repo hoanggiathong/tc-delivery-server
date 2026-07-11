@@ -33,18 +33,123 @@ import { PaymentType, RouteType } from '@/types';
 import { PAYMENT_TYPE } from '@/const/money-deliveries.const';
 import { DELIVERY_IDENTIFIER_PARSE_PATTERN } from '@/utils/validation-patterns';
 import { mergeNotes } from '@/utils/merge-notes';
+import { EditHistoryEntity } from '@/models/edit-history.model';
+import { EditHistoryService } from '@/services/edit-history.service';
 
 export class DeliveryService {
   private customerService: CustomerService;
   private settingsService: SettingsService;
   private userService: UserService;
   private customerAddressHistoryService: CustomerAddressHistoryService;
+  private editHistoryService: EditHistoryService;
 
   constructor() {
     this.customerService = new CustomerService();
     this.settingsService = new SettingsService();
     this.userService = new UserService();
     this.customerAddressHistoryService = new CustomerAddressHistoryService();
+    this.editHistoryService = new EditHistoryService();
+  }
+
+  private getAuditReferenceId(value: unknown): string | Types.ObjectId | null {
+    if (value instanceof Types.ObjectId || typeof value === 'string') {
+      return value;
+    }
+
+    if (value && typeof value === 'object' && '_id' in value) {
+      const id = (value as { _id?: unknown })._id;
+
+      if (id instanceof Types.ObjectId || typeof id === 'string') {
+        return id;
+      }
+    }
+
+    return null;
+  }
+
+  private getReferenceId(value: unknown): string {
+    if (value instanceof Types.ObjectId) {
+      return value.toHexString();
+    }
+
+    if (typeof value === 'string') {
+      return value;
+    }
+
+    if (value && typeof value === 'object') {
+      const reference = value as {
+        _id?: unknown;
+        id?: unknown;
+      };
+
+      const id = reference._id ?? reference.id;
+
+      if (id instanceof Types.ObjectId) {
+        return id.toHexString();
+      }
+
+      if (typeof id === 'string') {
+        return id;
+      }
+    }
+
+    return '';
+  }
+
+  private async buildDeliveryEditSnapshot(delivery: unknown): Promise<Record<string, unknown>> {
+    const document = delivery as {
+      toObject?: () => Record<string, unknown>;
+    };
+
+    const raw =
+      typeof document.toObject === 'function'
+        ? document.toObject()
+        : { ...(delivery as Record<string, unknown>) };
+
+    const senderId = this.getReferenceId(raw.sender);
+    const receiverId = this.getReferenceId(raw.receiver);
+
+    const [sender, receiver] = await Promise.all([
+      senderId ? Customer.findById(senderId).select('phone').lean() : null,
+
+      receiverId ? Customer.findById(receiverId).select('phone').lean() : null,
+    ]);
+
+    return {
+      ...raw,
+
+      // Luôn lưu ID thay vì object populate.
+      sender: senderId,
+      receiver: receiverId,
+      fromRoute: this.getReferenceId(raw.fromRoute),
+      toRoute: this.getReferenceId(raw.toRoute),
+
+      senderPhone: sender?.phone,
+      receiverPhone: receiver?.phone,
+    };
+  }
+
+  private async createDeliveryEditHistorySafely(
+    deliveryId: string,
+    userId: string,
+    before: Record<string, unknown>,
+    after: Record<string, unknown>
+  ): Promise<void> {
+    try {
+      await this.editHistoryService.createEditHistory({
+        entityType: EditHistoryEntity.DELIVERY,
+        entityId: deliveryId,
+        editedBy: userId,
+        before,
+        after,
+      });
+    } catch (error) {
+      Logger.error('CRITICAL: Delivery updated but edit history creation failed', {
+        deliveryId,
+        userId,
+        error: error instanceof Error ? error.message : error,
+      });
+    }
   }
 
   private getVietnamTodayRangeUTC(): { startOfDay: Date; nextDay: Date } {
@@ -338,6 +443,8 @@ export class DeliveryService {
       throw new Error('Delivery not found');
     }
 
+    const beforeSnapshot = await this.buildDeliveryEditSnapshot(delivery);
+
     if (delivery.isReturn) {
       const allowedFieldsAfterReturn = ['notes'];
 
@@ -386,6 +493,10 @@ export class DeliveryService {
         throw new Error('Delivery not found');
       }
 
+      const afterSnapshot = await this.buildDeliveryEditSnapshot(updatedDelivery);
+
+      await this.createDeliveryEditHistorySafely(id, userId, beforeSnapshot, afterSnapshot);
+
       return this.transformDeliveryToResponseOptimized(
         this.toPopulatedDeliveryLean(updatedDelivery)
       );
@@ -395,11 +506,12 @@ export class DeliveryService {
     if (delivery.fromRoute.toString() !== userSelectedRouteId.toString()) {
       throw new Error('Chỉ trạm tạo đơn mới được phép sửa đơn hàng');
     }
+
     const updateData: Record<string, unknown> = {};
 
-    if (data.senderName || data.senderPhone) {
-      const senderName = data.senderName || delivery.sender.toString();
-      const senderPhone = data.senderPhone || delivery.sender.toString();
+    if (data.senderName !== undefined || data.senderPhone !== undefined) {
+      const senderName = data.senderName ?? delivery.senderName;
+      const senderPhone = data.senderPhone ?? String(beforeSnapshot.senderPhone ?? '');
 
       const sender = await this.customerService.findOrCreateCustomer(
         senderPhone,
@@ -416,11 +528,9 @@ export class DeliveryService {
       updateData.sender = delivery.sender;
     }
 
-    //updateData.fromRoute = userSelectedRouteId;
-
-    if (data.receiverName || data.receiverPhone) {
-      const receiverName = data.receiverName || delivery.receiver.toString();
-      const receiverPhone = data.receiverPhone || delivery.receiver.toString();
+    if (data.receiverName !== undefined || data.receiverPhone !== undefined) {
+      const receiverName = data.receiverName ?? delivery.receiverName;
+      const receiverPhone = data.receiverPhone ?? String(beforeSnapshot.receiverPhone ?? '');
 
       const receiver = await this.customerService.findOrCreateCustomer(
         receiverPhone,
@@ -506,6 +616,10 @@ export class DeliveryService {
     if (!updatedDelivery) {
       throw new Error('Đơn hàng đã trả hoặc đang được xử lý trả hàng, vui lòng tải lại');
     }
+
+    const afterSnapshot = await this.buildDeliveryEditSnapshot(updatedDelivery);
+
+    await this.createDeliveryEditHistorySafely(id, userId, beforeSnapshot, afterSnapshot);
 
     return this.transformDeliveryToResponseOptimized(this.toPopulatedDeliveryLean(updatedDelivery));
   }
