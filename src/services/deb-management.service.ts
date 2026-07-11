@@ -2409,37 +2409,93 @@ export class DebtManagementService {
         throw new Error('Invalid routeId format');
       }
 
-      const mockReq = {
-        query: {
-          startDate: startDate.toISOString().split('T')[0],
-          endDate: endDate.toISOString().split('T')[0],
-          ...(routeId && type === DEBT_MANAGEMENT_TYPE_REPORT.PAYMENT && { toRouteId: routeId }),
-          ...(routeId && type === DEBT_MANAGEMENT_TYPE_REPORT.RECEIPT && { fromRouteId: routeId }),
-          ...(routeId && type === DEBT_MANAGEMENT_TYPE_REPORT.DEBT && { fromRouteId: routeId }),
-        },
-      } as unknown as Request;
+      const baseQuery = {
+        startDate: startDate.toISOString().split('T')[0],
+        endDate: endDate.toISOString().split('T')[0],
+      };
 
       switch (type) {
-        case DEBT_MANAGEMENT_TYPE_REPORT.PAYMENT:
-          return await this.getListReceiptDebtMangement(mockReq, userId);
+        /**
+         * Report PAYMENT hiện đang lấy dữ liệu từ danh sách RECEIPT.
+         *
+         * getListReceiptDebtMangement nhận:
+         * - selected route là toRoute
+         * - trạm cần lọc là fromRouteId
+         */
+        case DEBT_MANAGEMENT_TYPE_REPORT.PAYMENT: {
+          const paymentReq = {
+            query: {
+              ...baseQuery,
+              ...(routeId ? { fromRouteId: routeId } : {}),
+            },
+          } as unknown as Request;
 
-        case DEBT_MANAGEMENT_TYPE_REPORT.RECEIPT:
-          return await this.getListPaymentDebtMangement(mockReq, userId);
+          return await this.getListReceiptDebtMangement(paymentReq, userId);
+        }
 
-        case DEBT_MANAGEMENT_TYPE_REPORT.DEBT:
-          return await this.debtService.getListDebt(mockReq, userId);
+        /**
+         * Report RECEIPT hiện đang lấy dữ liệu từ danh sách PAYMENT.
+         *
+         * getListPaymentDebtMangement nhận:
+         * - selected route là fromRoute
+         * - trạm cần lọc là toRouteId
+         */
+        case DEBT_MANAGEMENT_TYPE_REPORT.RECEIPT: {
+          const receiptReq = {
+            query: {
+              ...baseQuery,
+              ...(routeId ? { toRouteId: routeId } : {}),
+            },
+          } as unknown as Request;
+
+          return await this.getListPaymentDebtMangement(receiptReq, userId);
+        }
+
+        case DEBT_MANAGEMENT_TYPE_REPORT.DEBT: {
+          const debtReq = {
+            query: {
+              ...baseQuery,
+              ...(routeId ? { fromRouteId: routeId } : {}),
+            },
+          } as unknown as Request;
+
+          return await this.debtService.getListDebt(debtReq, userId);
+        }
 
         case DEBT_MANAGEMENT_TYPE_REPORT.TOTAL: {
+          const debtReq = {
+            query: {
+              ...baseQuery,
+              ...(routeId ? { fromRouteId: routeId } : {}),
+            },
+          } as unknown as Request;
+
+          const receiptReq = {
+            query: {
+              ...baseQuery,
+              ...(routeId ? { fromRouteId: routeId } : {}),
+            },
+          } as unknown as Request;
+
+          const paymentReq = {
+            query: {
+              ...baseQuery,
+              ...(routeId ? { toRouteId: routeId } : {}),
+            },
+          } as unknown as Request;
+
           const exportReportTotalDebt = await this.debtService.exportReportTotalDebt(
-            mockReq,
+            debtReq,
             userId
           );
+
           const dataListReceiptDebtManagement = await this.getListReceiptDebtMangement(
-            mockReq,
+            receiptReq,
             userId
           );
+
           const dataListPaymentDebtManagement = await this.getListPaymentDebtMangement(
-            mockReq,
+            paymentReq,
             userId
           );
 
@@ -2460,6 +2516,7 @@ export class DebtManagementService {
       if (error instanceof Error) {
         throw error;
       }
+
       throw new Error('export report debt and debt management failed');
     }
   }
