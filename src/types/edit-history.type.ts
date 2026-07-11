@@ -1,5 +1,6 @@
-import { Types } from 'mongoose';
-import { EditHistoryEntity } from '@/models/edit-history.model';
+import type { Types } from 'mongoose';
+
+import type { EditHistoryEntity } from '@/models/edit-history.model';
 
 export interface IEditHistoryChangeResponse {
   field: string;
