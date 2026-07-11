@@ -1879,7 +1879,8 @@ export class MoneyDeliveryController {
 
       const updatedMoneyDelivery = await this.moneyDeliveryService.updateMoneyDeliveryByFullCode(
         fullCode,
-        updateData
+        updateData,
+        req.user.userId
       );
 
       logger.info(`Money delivery updated by fullCode: ${updatedMoneyDelivery.code}`);
