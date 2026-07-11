@@ -21,6 +21,7 @@ import homeDeliveryPriceRoutes from './home-delivery-price.routes';
 import homeDeliveryCalculatorRoutes from './home-delivery-calculator.routes';
 import vietQrRoutes from './vietqr.routes';
 import userDeviceRoutes from './user-device.routes';
+import editHistoryRoutes from './edit-history.routes';
 
 const router = Router();
 
@@ -34,6 +35,7 @@ router.use('/route', routeRoutes);
 router.use('/user-route', userRouteRoutes);
 router.use('/user', userRoutes);
 router.use('/settings', settingsRoutes);
+router.use('/edit-history', editHistoryRoutes);
 router.use('/draft-deliveries', draftDeliveryRoutes);
 router.use('/debt-management', debtManagementRoutes);
 router.use('/debt', debtRoutes);

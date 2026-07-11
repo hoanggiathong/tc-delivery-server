@@ -35,16 +35,94 @@ import {
   ITodayMoneyDeliveryReport,
 } from '@/types/money-delivery.type';
 import { RouteType } from '@/types';
+import { EditHistoryEntity } from '@/models/edit-history.model';
+import { EditHistoryService } from '@/services/edit-history.service';
 
 export class MoneyDeliveryService {
   private customerService: CustomerService;
   private settingsService: SettingsService;
   private userService: UserService;
+  private editHistoryService: EditHistoryService;
 
   constructor() {
     this.customerService = new CustomerService();
     this.settingsService = new SettingsService();
     this.userService = new UserService();
+    this.editHistoryService = new EditHistoryService();
+  }
+
+
+  private getAuditReferenceId(value: unknown): string | Types.ObjectId | null {
+    if (value instanceof Types.ObjectId || typeof value === 'string') {
+      return value;
+    }
+
+    if (value && typeof value === 'object' && '_id' in value) {
+      const id = (value as { _id?: unknown })._id;
+
+      if (id instanceof Types.ObjectId || typeof id === 'string') {
+        return id;
+      }
+    }
+
+    return null;
+  }
+
+  private async buildMoneyDeliveryEditSnapshot(
+    source: unknown
+  ): Promise<Record<string, unknown>> {
+    const sourceWithToObject = source as {
+      toObject?: () => Record<string, unknown>;
+    };
+
+    const raw =
+      typeof sourceWithToObject.toObject === 'function'
+        ? sourceWithToObject.toObject()
+        : { ...(source as Record<string, unknown>) };
+
+    const senderId = this.getAuditReferenceId(raw.sender);
+    const receiverId = this.getAuditReferenceId(raw.receiver);
+
+    const [senderResult, receiverResult] = await Promise.all([
+      senderId
+        ? Customer.findById(senderId).select('phone').lean()
+        : Promise.resolve(null),
+      receiverId
+        ? Customer.findById(receiverId).select('phone').lean()
+        : Promise.resolve(null),
+    ]);
+
+    const sender = senderResult as { phone?: string } | null;
+    const receiver = receiverResult as { phone?: string } | null;
+
+    return {
+      ...raw,
+      senderPhone: sender?.phone,
+      receiverPhone: receiver?.phone,
+    };
+  }
+
+  private async createMoneyDeliveryEditHistorySafely(
+    moneyDeliveryId: string,
+    userId: string,
+    before: Record<string, unknown>,
+    after: Record<string, unknown>
+  ): Promise<void> {
+    try {
+      await this.editHistoryService.createEditHistory({
+        entityType: EditHistoryEntity.MONEY_DELIVERY,
+        entityId: moneyDeliveryId,
+        editedBy: userId,
+        before,
+        after,
+      });
+    } catch (error) {
+      Logger.error('CRITICAL: Money delivery updated but edit history creation failed', {
+        moneyDeliveryId,
+        userId,
+        error: error instanceof Error ? error.message : error,
+      });
+    }
   }
 
   /**
@@ -300,18 +378,20 @@ export class MoneyDeliveryService {
       throw new Error('Money delivery not found');
     }
 
+    const beforeSnapshot = await this.buildMoneyDeliveryEditSnapshot(moneyDelivery);
     const userSelectedRouteId = await this.userService.getUserSelectedRouteId(userId);
-    const updateData: Record<string, any> = {};
+    const updateData: Record<string, unknown> = {};
 
-    // Handle sender update - always use userSelectedRouteId for sender
-    if (data.senderName || data.senderPhone) {
-      const senderName = data.senderName || moneyDelivery.sender.toString();
-      const senderPhone = data.senderPhone || moneyDelivery.sender.toString();
+    if (data.senderName !== undefined || data.senderPhone !== undefined) {
+      const senderName = data.senderName ?? moneyDelivery.senderName;
+      const senderPhone = data.senderPhone ?? String(beforeSnapshot.senderPhone ?? '');
+
       const sender = await this.customerService.findOrCreateCustomer(
         senderPhone,
         senderName,
         userSelectedRouteId
       );
+
       updateData.sender = sender.id;
       if (data.senderName) {
         updateData.senderName = data.senderName;
@@ -320,18 +400,18 @@ export class MoneyDeliveryService {
       updateData.sender = moneyDelivery.sender;
     }
 
-    // Always ensure fromRoute is userSelectedRouteId
     updateData.fromRoute = userSelectedRouteId;
 
-    // Handle receiver update
-    if (data.receiverName || data.receiverPhone) {
-      const receiverName = data.receiverName || moneyDelivery.receiver.toString();
-      const receiverPhone = data.receiverPhone || moneyDelivery.receiver.toString();
+    if (data.receiverName !== undefined || data.receiverPhone !== undefined) {
+      const receiverName = data.receiverName ?? moneyDelivery.receiverName;
+      const receiverPhone = data.receiverPhone ?? String(beforeSnapshot.receiverPhone ?? '');
+
       const receiver = await this.customerService.findOrCreateCustomer(
         receiverPhone,
         receiverName,
         data.toRouteId || moneyDelivery.toRoute.toString()
       );
+
       updateData.receiver = receiver.id;
       if (data.receiverName) {
         updateData.receiverName = data.receiverName;
@@ -345,10 +425,10 @@ export class MoneyDeliveryService {
       if (!toRoute) {
         throw new Error('To route not found');
       }
+
       updateData.toRoute = data.toRouteId;
     }
 
-    // Use lodash omitBy to filter out undefined values for optional fields
     const optionalFieldsUpdate = omitBy(
       {
         sendMoneyAmount: data.sendMoneyAmount,
@@ -361,14 +441,11 @@ export class MoneyDeliveryService {
       isUndefined
     );
 
-    // Merge optional fields into updateData
     Object.assign(updateData, optionalFieldsUpdate);
 
-    // Handle sendCost validation when transferType or sendMoneyAmount changes
     if (data.transferType !== undefined || data.sendMoneyAmount !== undefined) {
-      // Require sendCost when transferType or sendMoneyAmount changes
       if (data.sendCost === undefined) {
-        throw new Error(`sendCost is required when updating transferType or sendMoneyAmount`);
+        throw new Error('sendCost is required when updating transferType or sendMoneyAmount');
       }
 
       updateData.sendCost = data.sendCost;
@@ -377,11 +454,9 @@ export class MoneyDeliveryService {
         updateData.transferType = data.transferType;
       }
     } else if (data.sendCost !== undefined) {
-      // If only sendCost is provided, accept it without validation
       updateData.sendCost = data.sendCost;
     }
 
-    // Update money delivery
     const updatedMoneyDelivery = await MoneyDelivery.findByIdAndUpdate(
       id,
       { $set: updateData },
@@ -391,6 +466,15 @@ export class MoneyDeliveryService {
     if (!updatedMoneyDelivery) {
       throw new Error('Failed to update money delivery');
     }
+
+    const afterSnapshot = await this.buildMoneyDeliveryEditSnapshot(updatedMoneyDelivery);
+
+    await this.createMoneyDeliveryEditHistorySafely(
+      id,
+      userId,
+      beforeSnapshot,
+      afterSnapshot
+    );
 
     return this.transformMoneyDeliveryToResponse(updatedMoneyDelivery);
   }
@@ -1151,7 +1235,8 @@ export class MoneyDeliveryService {
       receiverName?: string;
       receiverPhone?: string;
       toRouteId?: string;
-    }
+    },
+    userId: string
   ): Promise<IMoneyDeliveryResponse> {
     try {
       const parsed = this.parseDeliveryIdentifier(fullCode);
@@ -1159,7 +1244,7 @@ export class MoneyDeliveryService {
         throw new Error('Invalid fullCode format');
       }
 
-      const { code, fromRouteCode, toRouteCode } = parsed;
+      const { fromRouteCode, toRouteCode } = parsed;
 
       const [fromRoute, toRoute] = await Promise.all([
         Route.findOne({ code: fromRouteCode }),
@@ -1171,14 +1256,15 @@ export class MoneyDeliveryService {
       }
 
       const existingMoneyDelivery = await MoneyDelivery.findOne({
-        fullCode: fullCode,
+        fullCode,
       });
 
       if (!existingMoneyDelivery) {
         throw new Error('Money delivery not found');
       }
 
-      const updates: any = {};
+      const beforeSnapshot = await this.buildMoneyDeliveryEditSnapshot(existingMoneyDelivery);
+      const updates: Record<string, unknown> = {};
 
       if (updateData.senderName !== undefined || updateData.senderPhone !== undefined) {
         updates.sender = await this.resolveEditableCustomer(
@@ -1202,6 +1288,7 @@ export class MoneyDeliveryService {
           updateData.receiverPhone,
           finalToRouteId
         );
+
         if (updateData.receiverName !== undefined) {
           updates.receiverName = updateData.receiverName.trim();
         }
@@ -1226,6 +1313,15 @@ export class MoneyDeliveryService {
       if (!updatedMoneyDelivery) {
         throw new Error('Failed to update money delivery');
       }
+
+      const afterSnapshot = await this.buildMoneyDeliveryEditSnapshot(updatedMoneyDelivery);
+
+      await this.createMoneyDeliveryEditHistorySafely(
+        existingMoneyDelivery._id.toString(),
+        userId,
+        beforeSnapshot,
+        afterSnapshot
+      );
 
       return this.transformMoneyDeliveryToResponse(updatedMoneyDelivery);
     } catch (error) {
