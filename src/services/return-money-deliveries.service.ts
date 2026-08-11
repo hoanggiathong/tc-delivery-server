@@ -19,6 +19,21 @@ export class ReturnMoneyDeliveriesService {
     this.moneyDeliveryService = new MoneyDeliveryService();
   }
 
+  /**
+   * Phát thông báo hoàn tất trả tiền sau khi phiếu đã chuyển sang DONE.
+   * Lỗi notification không được làm thất bại nghiệp vụ trả tiền đã lưu thành công.
+   */
+  private async notifyMoneyCompletedSafely(moneyDeliveryId: string): Promise<void> {
+    try {
+      await this.moneyDeliveryService.notifyMoneyCompleted([moneyDeliveryId]);
+    } catch (error) {
+      Logger.error('Đã trả tiền thành công nhưng gửi notification thất bại', {
+        moneyDeliveryId,
+        error: error instanceof Error ? error.message : error,
+      });
+    }
+  }
+
   // HÀNG THU HỘ ĐÃ CHUYỂN TRONG NGÀY
   async getListReturnMoneyDeliveriesTypeCollectStatusDone(
     query: IReturnMoneyDeliveryQuery,
@@ -309,6 +324,12 @@ export class ReturnMoneyDeliveriesService {
         throw new Error(`Failed to update money delivery with ID ${moneyDeliveryId}`);
       }
 
+      /**
+       * Phiếu vừa được cập nhật status = DONE.
+       * Gửi notification COMPLETED cho tài khoản người gửi và người nhận.
+       */
+      await this.notifyMoneyCompletedSafely(String(updatedMoneyDelivery._id));
+
       Logger.info('Return money delivery status updated with images successfully', {
         moneyDeliveryId,
         hasImages: imagesData && imagesData.length > 0,
@@ -485,6 +506,11 @@ export class ReturnMoneyDeliveriesService {
       if (!updatedMoneyDelivery) {
         throw new Error(`Failed to update money delivery with ID ${moneyDeliveryId}`);
       }
+
+      /**
+       * Đồng bộ cùng luồng trả tiền có ảnh khách hàng và ảnh phiếu tiền.
+       */
+      await this.notifyMoneyCompletedSafely(String(updatedMoneyDelivery._id));
 
       Logger.info('Return money delivery status updated with dual images successfully', {
         moneyDeliveryId: updateData.moneyDeliveryId,

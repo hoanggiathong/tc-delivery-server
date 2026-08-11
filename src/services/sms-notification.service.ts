@@ -20,7 +20,26 @@ import Logger from '@/utils/logger';
 import { getStartOfDayVietnam, getEndOfDayVietnam } from '@/utils/date.utils';
 import { convertPhoneToLocalFormat } from '@/utils/validation-patterns';
 import { UserService } from '@/services/user.service';
+import { MobileCustomerNotificationService } from '@/modules/mobile-customer/mobile-customer-notification.service';
+import { MobileCustomerAccount } from '@/modules/mobile-customer/mobile-customer-account.model';
 
+
+interface DeliveryArrivalNotificationLean {
+  _id: unknown;
+  fullCode?: string;
+  quantity?: number;
+  downItems?: string;
+  isQuantityChecked?: boolean;
+  sender?: {
+    phone?: string | null;
+  } | null;
+  receiver?: {
+    phone?: string | null;
+  } | null;
+  toRoute?: {
+    code?: string | null;
+  } | null;
+}
 /**
  * SMS Notification Service
  * Handles sending Zalo ZNS and SMS notifications for return deliveries
@@ -32,6 +51,7 @@ export class SMSNotificationService {
   private zaloTemplateId: string;
   private smsTemplateId: string;
   private userService: UserService;
+  private mobileNotificationService: MobileCustomerNotificationService;
 
   constructor() {
     this.apiUrl = process.env.YOURSALES_API_URL || 'https://api.yoursales.vn/api';
@@ -40,6 +60,128 @@ export class SMSNotificationService {
     this.zaloTemplateId = process.env.ZALO_ZNS_TEMPLATE_ID || '';
     this.smsTemplateId = process.env.SMS_TEMPLATE_ID || '';
     this.userService = new UserService();
+    this.mobileNotificationService = new MobileCustomerNotificationService();
+  }
+
+  /**
+   * Chuẩn hóa nhiều cách lưu số điện thoại để đối chiếu
+   * với tài khoản GP Customer.
+   */
+  private buildMobileAccountPhoneCandidates(
+    phoneInput?: string | null
+  ): string[] {
+    const original = String(phoneInput || '').trim();
+    const normalized = original.replace(/\D/g, '');
+    const candidates = new Set<string>();
+
+    if (!normalized) {
+      return [];
+    }
+
+    candidates.add(original);
+    candidates.add(normalized);
+
+    if (normalized.startsWith('0') && normalized.length === 10) {
+      const international = `84${normalized.slice(1)}`;
+
+      candidates.add(international);
+      candidates.add(`+${international}`);
+    }
+
+    if (normalized.startsWith('84') && normalized.length === 11) {
+      candidates.add(`+${normalized}`);
+      candidates.add(`0${normalized.slice(2)}`);
+    }
+
+    return [...candidates].filter(Boolean);
+  }
+
+  /**
+   * Kiểm tra một số điện thoại có tài khoản GP Customer
+   * đang hoạt động hay không.
+   *
+   * Có tài khoản active:
+   * - gửi notification trong app;
+   * - không gửi Zalo ZNS/SMS.
+   */
+  private async hasActiveMobileAccount(
+    phoneInput?: string | null
+  ): Promise<boolean> {
+    const candidates = this.buildMobileAccountPhoneCandidates(phoneInput);
+
+    if (candidates.length === 0) {
+      return false;
+    }
+
+    const accountExists = await MobileCustomerAccount.exists({
+      phone: {
+        $in: candidates,
+      },
+      isActive: true,
+    });
+
+    return Boolean(accountExists);
+  }
+
+  /**
+   * Kiểm tra hàng loạt để loại khách có app khỏi danh sách
+   * chờ gửi Zalo/SMS, tránh query N+1.
+   *
+   * Set trả về giữ nguyên giá trị phone đầu vào để caller
+   * có thể kiểm tra trực tiếp.
+   */
+  private async getPhonesUsingMobileApp(
+    phoneInputs: Array<string | null | undefined>
+  ): Promise<Set<string>> {
+    const uniquePhones = [
+      ...new Set(
+        phoneInputs
+          .map(phone => String(phone || '').trim())
+          .filter(Boolean)
+      ),
+    ];
+
+    if (uniquePhones.length === 0) {
+      return new Set<string>();
+    }
+
+    const allCandidates = [
+      ...new Set(
+        uniquePhones.flatMap(phone =>
+          this.buildMobileAccountPhoneCandidates(phone)
+        )
+      ),
+    ];
+
+    if (allCandidates.length === 0) {
+      return new Set<string>();
+    }
+
+    const accounts = await MobileCustomerAccount.find({
+      phone: {
+        $in: allCandidates,
+      },
+      isActive: true,
+    })
+      .select({
+        _id: 0,
+        phone: 1,
+      })
+      .lean<Array<{ phone?: string }>>();
+
+    const activeCandidateSet = new Set(
+      accounts.flatMap(account =>
+        this.buildMobileAccountPhoneCandidates(account.phone)
+      )
+    );
+
+    return new Set(
+      uniquePhones.filter(phone =>
+        this.buildMobileAccountPhoneCandidates(phone).some(candidate =>
+          activeCandidateSet.has(candidate)
+        )
+      )
+    );
   }
 
   /**
@@ -81,8 +223,23 @@ export class SMSNotificationService {
       .populate('toRoute', '_id code name address phone')
       .lean<IDeliveryForSMSLean[]>();
 
+    /**
+     * Khách nhận có tài khoản GP Customer đang active
+     * sẽ nhận notification trong app và không xuất hiện
+     * trong danh sách gửi Zalo/SMS.
+     */
+    const receiverPhonesUsingApp = await this.getPhonesUsingMobileApp(
+      deliveries.map(delivery => delivery.receiver?.phone)
+    );
+
+    const smsEligibleDeliveries = deliveries.filter(delivery => {
+      const receiverPhone = String(delivery.receiver?.phone || '').trim();
+
+      return !receiverPhonesUsingApp.has(receiverPhone);
+    });
+
     // Get messageTime (latest sentAt) from SMS logs for all deliveries
-    const deliveryIds = deliveries.map(d => d._id.toString());
+    const deliveryIds = smsEligibleDeliveries.map(d => d._id.toString());
     const objectIds = deliveryIds.map(id => new mongoose.Types.ObjectId(id));
     const smsLogs = await SMSLog.aggregate([
       { $match: { deliveryId: { $in: objectIds } } },
@@ -101,7 +258,7 @@ export class SMSNotificationService {
       messageTimeMap.set(log._id.toString(), log.latestSentAt);
     }
 
-    return deliveries.map(delivery => ({
+    return smsEligibleDeliveries.map(delivery => ({
       _id: delivery._id.toString(),
       fullCode: delivery.fullCode,
       receiverName: delivery.receiver?.name || '',
@@ -189,8 +346,17 @@ export class SMSNotificationService {
       return destinationDownQuantity > 0 && destinationDownQuantity < quantity;
     });
 
-    // Get messageTime (latest sentAt) from SMS logs for all deliveries
-    const deliveryIds = incompleteDeliveries.map(d => d._id.toString());
+    /**
+     * Không lọc khách dùng app khỏi màn hình kiểm kê.
+     * Đây là danh sách nghiệp vụ xác nhận số lượng, không phải
+     * danh sách quyết định kênh gửi thông báo.
+     *
+     * Việc bỏ qua Zalo/SMS được xử lý trong getEligibleDeliveries()
+     * và sendNotification().
+     */
+    const deliveryIds = incompleteDeliveries.map(
+      d => d._id.toString()
+    );
     const objectIds = deliveryIds.map(id => new mongoose.Types.ObjectId(id));
     const smsLogs = await SMSLog.aggregate([
       { $match: { deliveryId: { $in: objectIds } } },
@@ -258,6 +424,15 @@ export class SMSNotificationService {
       };
     }
 
+    /**
+     * `sendNotification` chỉ được gọi cho hàng tại trạm đích.
+     * Phát thêm thông báo app cho cả người gửi và người nhận.
+     * `eventKey` của MobileNotification chống gửi trùng khi retry SMS/ZNS.
+     */
+    await this.emitArrivedDestinationNotificationSafely(
+      delivery as unknown as DeliveryArrivalNotificationLean
+    );
+
     // Check if already sent
     if (delivery.smsStatus === SMSStatus.SENT) {
       return {
@@ -279,6 +454,38 @@ export class SMSNotificationService {
         phone: '',
         errorCode: 'PHONE_NOT_FOUND',
         errorMessage: 'Receiver phone number not found',
+      };
+    }
+
+    /**
+     * Channel routing:
+     * - Người nhận có tài khoản GP Customer active:
+     *   notification app đã được xử lý ở phía trên,
+     *   không gọi Zalo ZNS/SMS.
+     * - Người nhận chưa có tài khoản app:
+     *   tiếp tục luồng Zalo ZNS -> SMS fallback.
+     */
+    const receiverUsesMobileApp =
+      await this.hasActiveMobileAccount(phone);
+
+    if (receiverUsesMobileApp) {
+      Logger.info(
+        'Bỏ qua Zalo/SMS vì người nhận đang sử dụng GP Customer',
+        {
+          deliveryId,
+          fullCode: delivery.fullCode,
+          receiverPhone: phone,
+          channel: 'APP_NOTIFICATION',
+        }
+      );
+
+      return {
+        success: true,
+        deliveryId,
+        phone,
+        errorCode: 'APP_NOTIFICATION_ONLY',
+        errorMessage:
+          'Người nhận sử dụng GP Customer, đã gửi thông báo qua app và bỏ qua Zalo/SMS',
       };
     }
 
@@ -507,6 +714,98 @@ export class SMSNotificationService {
     return total;
   }
 
+  private isArrivedDestinationForMobileNotification(
+    delivery: DeliveryArrivalNotificationLean
+  ): boolean {
+    const routeCode = delivery.toRoute?.code || undefined;
+    const destinationDownQuantity = this.getDestinationDownQuantity(
+      delivery.downItems,
+      routeCode
+    );
+
+    const quantity = Math.max(1, Number(delivery.quantity || 1));
+
+    return (
+      destinationDownQuantity > 0 &&
+      (destinationDownQuantity >= quantity || delivery.isQuantityChecked === true)
+    );
+  }
+
+  private async emitArrivedDestinationNotificationSafely(
+    delivery: DeliveryArrivalNotificationLean
+  ): Promise<void> {
+    if (
+      !delivery._id ||
+      !delivery.fullCode ||
+      !this.isArrivedDestinationForMobileNotification(delivery)
+    ) {
+      return;
+    }
+
+    try {
+      const result = await this.mobileNotificationService.emitDeliveryEvent({
+        eventCode: 'ARRIVED_DESTINATION',
+        deliveryId: String(delivery._id),
+        fullCode: delivery.fullCode,
+        senderPhone: delivery.sender?.phone || null,
+        receiverPhone: delivery.receiver?.phone || null,
+      });
+
+      Logger.debug('Đã xử lý thông báo app khi vận đơn đến trạm đích', {
+        deliveryId: String(delivery._id),
+        fullCode: delivery.fullCode,
+        status: result.status,
+        created: result.created,
+        duplicate: result.duplicate,
+        failed: result.failed,
+      });
+    } catch (error) {
+      Logger.error('Không gửi được thông báo app khi vận đơn đến trạm đích', {
+        deliveryId: String(delivery._id),
+        fullCode: delivery.fullCode,
+        error: error instanceof Error ? error.message : error,
+      });
+    }
+  }
+
+  /**
+   * Hook dùng chung cho luồng quét xuống hàng/đưa vào SMS queue.
+   * Có thể gọi lại nhiều lần vì eventKey sẽ chống tạo notification trùng.
+   */
+  async notifyArrivedDestination(deliveryIds: string[]): Promise<void> {
+    const validIds = [...new Set(deliveryIds)]
+      .map(id => String(id || '').trim())
+      .filter(id => mongoose.isValidObjectId(id));
+
+    if (validIds.length === 0) {
+      return;
+    }
+
+    try {
+      const deliveries = await Delivery.find({
+        _id: { $in: validIds },
+        isReturn: { $ne: true },
+      })
+        .select(
+          '_id fullCode quantity downItems isQuantityChecked sender receiver toRoute'
+        )
+        .populate('sender', 'phone')
+        .populate('receiver', 'phone')
+        .populate('toRoute', '_id code')
+        .lean<DeliveryArrivalNotificationLean[]>();
+
+      await Promise.all(
+        deliveries.map(delivery =>
+          this.emitArrivedDestinationNotificationSafely(delivery)
+        )
+      );
+    } catch (error) {
+      Logger.error('Không đồng bộ được thông báo app cho vận đơn đến trạm đích', {
+        deliveryIds: validIds,
+        error: error instanceof Error ? error.message : error,
+      });
+    }
+  }
   /**
    * Update SMS status manually
    */
@@ -582,6 +881,10 @@ export class SMSNotificationService {
         },
       }
     );
+
+    if (result.modifiedCount > 0) {
+      await this.notifyArrivedDestination(validCheckedIds);
+    }
 
     return result.modifiedCount;
   }

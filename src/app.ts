@@ -15,41 +15,59 @@ const app = express();
 const allowedOrigins = [
   'https://uat.giaphuocexpress.vn',
   'https://vantai.giaphuocexpress.vn',
-  ...(process.env.NODE_ENV === 'development'
-    ? ['http://localhost:8080', 'http://localhost:3000']
-    : []),
+
+  'capacitor://localhost',
+  'ionic://localhost',
+  'http://localhost',
+  'https://localhost',
+
+  // Dev FE
+  'http://localhost:5173',
+  'http://localhost:8080',
+  'http://localhost:3000',
+  'http://vantai.localhost:8080',
+  'http://thuchi.localhost:8080',
 ];
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, Postman, server-to-server)
+      Logger.info(`[CORS ORIGIN] ${origin || 'NO_ORIGIN'}`);
+
       if (!origin) {
         return callback(null, true);
       }
+
       if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error(`Origin ${origin} not allowed by CORS`));
+        return callback(null, true);
       }
+
+      return callback(new Error(`Origin ${origin} not allowed by CORS`));
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Device-Id', 'x-device-id'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Device-Id',
+      'x-device-id',
+      'X-Device-Platform',
+      'x-device-platform',
+    ],
   })
 );
 
 // Debug middleware (only in development)
 if (process.env.NODE_ENV === 'development') {
   app.use(debugMiddleware);
-  app.use(
-    helmet({
-      crossOriginResourcePolicy: { policy: 'cross-origin' },
-    })
-  );
-} else {
-  app.use(helmet());
 }
+
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    crossOriginEmbedderPolicy: false,
+  })
+);
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
