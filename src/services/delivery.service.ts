@@ -35,6 +35,7 @@ import { DELIVERY_IDENTIFIER_PARSE_PATTERN } from '@/utils/validation-patterns';
 import { mergeNotes } from '@/utils/merge-notes';
 import { EditHistoryEntity } from '@/models/edit-history.model';
 import { EditHistoryService } from '@/services/edit-history.service';
+import { MobileCustomerNotificationService } from '@/modules/mobile-customer/mobile-customer-notification.service';
 
 export class DeliveryService {
   private customerService: CustomerService;
@@ -42,6 +43,7 @@ export class DeliveryService {
   private userService: UserService;
   private customerAddressHistoryService: CustomerAddressHistoryService;
   private editHistoryService: EditHistoryService;
+  private mobileNotificationService: MobileCustomerNotificationService;
 
   constructor() {
     this.customerService = new CustomerService();
@@ -49,6 +51,82 @@ export class DeliveryService {
     this.userService = new UserService();
     this.customerAddressHistoryService = new CustomerAddressHistoryService();
     this.editHistoryService = new EditHistoryService();
+    this.mobileNotificationService = new MobileCustomerNotificationService();
+  }
+
+  private async emitDeliveredNotificationSafely(deliveryId: string): Promise<void> {
+    try {
+      const delivery = await Delivery.findOne({
+        _id: deliveryId,
+        isReturn: true,
+      })
+        .select('_id fullCode sender receiver isReturn')
+        .populate('sender', 'phone')
+        .populate('receiver', 'phone')
+        .lean();
+
+      if (!delivery?.isReturn) {
+        return;
+      }
+
+      const sender = delivery.sender as unknown as {
+        phone?: string | null;
+      };
+
+      const receiver = delivery.receiver as unknown as {
+        phone?: string | null;
+      };
+
+      const result = await this.mobileNotificationService.emitDeliveryEvent({
+        eventCode: 'DELIVERED',
+        deliveryId: String(delivery._id),
+        fullCode: String(delivery.fullCode || ''),
+        senderPhone: sender?.phone || null,
+        receiverPhone: receiver?.phone || null,
+      });
+
+      Logger.debug('Đã xử lý thông báo giao hàng thành công', {
+        deliveryId: String(delivery._id),
+        fullCode: delivery.fullCode,
+        status: result.status,
+        created: result.created,
+        duplicate: result.duplicate,
+        failed: result.failed,
+      });
+    } catch (error) {
+      /**
+       * Đơn đã được trả thành công nên lỗi notification
+       * không được rollback hoặc làm lỗi nghiệp vụ chính.
+       */
+      Logger.error('Không gửi được thông báo giao hàng thành công', {
+        deliveryId,
+        error: error instanceof Error ? error.message : error,
+      });
+    }
+  }
+
+  /**
+   * Gọi ngay sau khi luồng trả hàng cập nhật:
+   *
+   * isReturn: true
+   *
+   * Có thể gọi lặp an toàn vì eventKey của notification
+   * chống tạo thông báo DELIVERED trùng cho từng account.
+   */
+  async notifyDelivered(deliveryIds: string[]): Promise<void> {
+    const validIds = [
+      ...new Set(
+        deliveryIds.map(id => String(id || '').trim()).filter(id => Types.ObjectId.isValid(id))
+      ),
+    ];
+
+    if (validIds.length === 0) {
+      return;
+    }
+
+    await Promise.allSettled(
+      validIds.map(deliveryId => this.emitDeliveredNotificationSafely(deliveryId))
+    );
   }
 
   private getAuditReferenceId(value: unknown): string | Types.ObjectId | null {
@@ -389,6 +467,29 @@ export class DeliveryService {
     });
 
     await delivery.save();
+
+    /**
+     * Thông báo nghiệp vụ tạo vận đơn được gửi riêng cho:
+     * - tài khoản người gửi;
+     * - tài khoản người nhận.
+     *
+     * Lỗi notification không được làm thất bại nghiệp vụ tạo đơn.
+     */
+    try {
+      await this.mobileNotificationService.emitDeliveryEvent({
+        eventCode: 'CREATED',
+        deliveryId: String(delivery._id),
+        fullCode: delivery.fullCode,
+        senderPhone: data.senderPhone,
+        receiverPhone: data.receiverPhone,
+      });
+    } catch (error) {
+      Logger.error('Không gửi được thông báo tạo vận đơn', {
+        deliveryId: String(delivery._id),
+        fullCode: delivery.fullCode,
+        error: error instanceof Error ? error.message : error,
+      });
+    }
 
     // Auto-create address history if homeDelivery exists
     if (delivery.homeDelivery && delivery.homeDelivery.trim() !== '') {

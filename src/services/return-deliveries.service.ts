@@ -1165,6 +1165,18 @@ export class ReturnDeliveriesService {
         throw new Error('Đơn hàng đã được trả hoặc đang được xử lý, vui lòng tải lại');
       }
 
+      /**
+       * `lockedDelivery` vừa chuyển từ isReturn != true sang isReturn = true.
+       * Phát thông báo DELIVERED ngay sau khi cập nhật DB thành công.
+       *
+       * DeliveryService.notifyDelivered() tự:
+       * - kiểm tra lại isReturn === true;
+       * - gửi cho người gửi và người nhận có tài khoản app;
+       * - chống gửi trùng bằng eventKey;
+       * - không làm lỗi nghiệp vụ trả hàng nếu push thất bại.
+       */
+      await this.deliveryService.notifyDelivered([String(lockedDelivery._id)]);
+
       await this.createMoneyDeliveryForCollect(lockedDelivery, userId);
       await this.createMoneyDeliveryForCollectForCustomer(lockedDelivery, userId);
 
@@ -1278,6 +1290,12 @@ export class ReturnDeliveriesService {
             `Đơn hàng ${item.deliveryId} đã được cập nhật, đã trả hoặc đang được xử lý. Vui lòng tải lại`
           );
         }
+
+        /**
+         * Chỉ gọi sau khi findOneAndUpdate đã đổi isReturn thành true.
+         * Mỗi đơn được gửi độc lập; eventKey bảo vệ khi request bị gọi lại.
+         */
+        await this.deliveryService.notifyDelivered([String(lockedDelivery._id)]);
 
         await this.createMoneyDeliveryForCollect(lockedDelivery, userId);
         await this.createMoneyDeliveryForCollectForCustomer(lockedDelivery, userId);

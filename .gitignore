@@ -18,6 +18,10 @@ build/
 .env.production.local
 
 
+# Firebase service account
+src/config/firebase-service-account.json
+
+
 # Logs
 logs
 *.log
@@ -62,3 +66,4 @@ public/uploads/
 
 #cron Debt test
 scripts/debug-debt-table.ts
+src/config/firebase-service-account.json

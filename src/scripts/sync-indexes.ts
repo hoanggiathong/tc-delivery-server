@@ -21,6 +21,8 @@ import { Settings } from '@/models/settings.model';
 import { Debt } from '@/models/debt.model';
 import { DebtManagement } from '@/models/debt-management.model';
 import { CronLogModel } from '@/models/cronjob-log.model';
+import { MobilePushToken } from '@/modules/mobile-customer/mobile-push-token.model';
+import { MobileNotificationRead } from '@/modules/mobile-customer/mobile-notification-read.model';
 
 /**
  * Standalone script to sync database indexes
@@ -61,6 +63,14 @@ const models = [
   { name: 'Debt', model: Debt },
   { name: 'DebtManagement', model: DebtManagement },
   { name: 'CronLog', model: CronLogModel },
+  {
+    name: 'MobilePushToken',
+    model: MobilePushToken,
+  },
+  {
+    name: 'MobileNotificationRead',
+    model: MobileNotificationRead,
+  },
 ];
 
 /**

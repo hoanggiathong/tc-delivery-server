@@ -37,20 +37,123 @@ import {
 import { RouteType } from '@/types';
 import { EditHistoryEntity } from '@/models/edit-history.model';
 import { EditHistoryService } from '@/services/edit-history.service';
+import { MobileCustomerNotificationService } from '@/modules/mobile-customer/mobile-customer-notification.service';
 
 export class MoneyDeliveryService {
   private customerService: CustomerService;
   private settingsService: SettingsService;
   private userService: UserService;
   private editHistoryService: EditHistoryService;
+  private mobileNotificationService: MobileCustomerNotificationService;
 
   constructor() {
     this.customerService = new CustomerService();
     this.settingsService = new SettingsService();
     this.userService = new UserService();
     this.editHistoryService = new EditHistoryService();
+    this.mobileNotificationService = new MobileCustomerNotificationService();
   }
 
+  private async emitMoneyEventSafely(input: {
+    eventCode: string;
+    moneyDeliveryId: string;
+    fullCode: string;
+    senderPhone?: string | null;
+    receiverPhone?: string | null;
+    logMessage: string;
+  }): Promise<void> {
+    try {
+      await this.mobileNotificationService.emitMoneyEvent({
+        eventCode: input.eventCode,
+        moneyDeliveryId: input.moneyDeliveryId,
+        fullCode: input.fullCode,
+        senderPhone: input.senderPhone,
+        receiverPhone: input.receiverPhone,
+      });
+    } catch (error) {
+      /**
+       * Lỗi notification không được làm hỏng nghiệp vụ
+       * tạo/cập nhật phiếu tiền đã thành công.
+       */
+      Logger.error(input.logMessage, {
+        moneyDeliveryId: input.moneyDeliveryId,
+        fullCode: input.fullCode,
+        eventCode: input.eventCode,
+        error: error instanceof Error ? error.message : error,
+      });
+    }
+  }
+
+  private async notifyMoneyEventByIds(
+    moneyDeliveryIds: string[],
+    eventCode: string,
+    logMessage: string
+  ): Promise<void> {
+    const validIds = [
+      ...new Set(
+        moneyDeliveryIds.map(id => String(id || '').trim()).filter(id => Types.ObjectId.isValid(id))
+      ),
+    ];
+
+    if (validIds.length === 0) {
+      return;
+    }
+
+    const moneyDeliveries = await MoneyDelivery.find({
+      _id: {
+        $in: validIds.map(id => new Types.ObjectId(id)),
+      },
+    })
+      .select('_id fullCode sender receiver')
+      .populate('sender', 'phone')
+      .populate('receiver', 'phone')
+      .lean();
+
+    await Promise.allSettled(
+      moneyDeliveries.map(moneyDelivery => {
+        const sender = moneyDelivery.sender as unknown as {
+          phone?: string;
+        };
+
+        const receiver = moneyDelivery.receiver as unknown as {
+          phone?: string;
+        };
+
+        return this.emitMoneyEventSafely({
+          eventCode,
+          moneyDeliveryId: String(moneyDelivery._id),
+          fullCode: String(moneyDelivery.fullCode || ''),
+          senderPhone: sender?.phone,
+          receiverPhone: receiver?.phone,
+          logMessage,
+        });
+      })
+    );
+  }
+
+  /**
+   * Gọi tại nơi hệ thống xác định phiếu tiền vừa đến đúng trạm đích.
+   * eventKey trong notification service sẽ chống gửi trùng.
+   */
+  async notifyMoneyArrivedDestination(moneyDeliveryIds: string[]): Promise<void> {
+    await this.notifyMoneyEventByIds(
+      moneyDeliveryIds,
+      'ARRIVED_DESTINATION',
+      'Không gửi được thông báo phiếu tiền đến trạm đích'
+    );
+  }
+
+  /**
+   * Gọi tại nơi hệ thống chuyển phiếu tiền từ chưa hoàn tất sang DONE.
+   * Có thể gọi lặp an toàn nhờ eventKey.
+   */
+  async notifyMoneyCompleted(moneyDeliveryIds: string[]): Promise<void> {
+    await this.notifyMoneyEventByIds(
+      moneyDeliveryIds,
+      'COMPLETED',
+      'Không gửi được thông báo phiếu tiền hoàn tất'
+    );
+  }
 
   private getAuditReferenceId(value: unknown): string | Types.ObjectId | null {
     if (value instanceof Types.ObjectId || typeof value === 'string') {
@@ -68,9 +171,7 @@ export class MoneyDeliveryService {
     return null;
   }
 
-  private async buildMoneyDeliveryEditSnapshot(
-    source: unknown
-  ): Promise<Record<string, unknown>> {
+  private async buildMoneyDeliveryEditSnapshot(source: unknown): Promise<Record<string, unknown>> {
     const sourceWithToObject = source as {
       toObject?: () => Record<string, unknown>;
     };
@@ -84,12 +185,8 @@ export class MoneyDeliveryService {
     const receiverId = this.getAuditReferenceId(raw.receiver);
 
     const [senderResult, receiverResult] = await Promise.all([
-      senderId
-        ? Customer.findById(senderId).select('phone').lean()
-        : Promise.resolve(null),
-      receiverId
-        ? Customer.findById(receiverId).select('phone').lean()
-        : Promise.resolve(null),
+      senderId ? Customer.findById(senderId).select('phone').lean() : Promise.resolve(null),
+      receiverId ? Customer.findById(receiverId).select('phone').lean() : Promise.resolve(null),
     ]);
 
     const sender = senderResult as { phone?: string } | null;
@@ -362,6 +459,16 @@ export class MoneyDeliveryService {
     });
 
     await moneyDelivery.save();
+
+    await this.emitMoneyEventSafely({
+      eventCode: 'CREATED',
+      moneyDeliveryId: String(moneyDelivery._id),
+      fullCode: moneyDelivery.fullCode,
+      senderPhone: data.senderPhone,
+      receiverPhone: data.receiverPhone,
+      logMessage: 'Không gửi được thông báo tạo phiếu tiền',
+    });
+
     return this.transformMoneyDeliveryToResponse(moneyDelivery);
   }
 
@@ -378,6 +485,7 @@ export class MoneyDeliveryService {
       throw new Error('Money delivery not found');
     }
 
+    const previousStatus = moneyDelivery.status;
     const beforeSnapshot = await this.buildMoneyDeliveryEditSnapshot(moneyDelivery);
     const userSelectedRouteId = await this.userService.getUserSelectedRouteId(userId);
     const updateData: Record<string, unknown> = {};
@@ -469,12 +577,22 @@ export class MoneyDeliveryService {
 
     const afterSnapshot = await this.buildMoneyDeliveryEditSnapshot(updatedMoneyDelivery);
 
-    await this.createMoneyDeliveryEditHistorySafely(
-      id,
-      userId,
-      beforeSnapshot,
-      afterSnapshot
-    );
+    await this.createMoneyDeliveryEditHistorySafely(id, userId, beforeSnapshot, afterSnapshot);
+
+    const hasJustCompleted =
+      previousStatus !== MoneyDeliveryStatus.DONE &&
+      updatedMoneyDelivery.status === MoneyDeliveryStatus.DONE;
+
+    if (hasJustCompleted) {
+      await this.emitMoneyEventSafely({
+        eventCode: 'COMPLETED',
+        moneyDeliveryId: String(updatedMoneyDelivery._id),
+        fullCode: updatedMoneyDelivery.fullCode,
+        senderPhone: String(afterSnapshot.senderPhone || ''),
+        receiverPhone: String(afterSnapshot.receiverPhone || ''),
+        logMessage: 'Không gửi được thông báo phiếu tiền hoàn tất',
+      });
+    }
 
     return this.transformMoneyDeliveryToResponse(updatedMoneyDelivery);
   }
