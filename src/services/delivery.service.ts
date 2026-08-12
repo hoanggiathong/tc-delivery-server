@@ -1205,9 +1205,9 @@ export class DeliveryService {
         {
           $sort: { firstDeliveryDate: -1 },
         },
-        // Limit to 20 unique combinations
+        // Limit to 100 unique combinations
         {
-          $limit: 20,
+          $limit: 100,
         },
         // Project final structure
         {
