@@ -65,5 +65,6 @@ Thumbs.db
 public/uploads/
 
 #cron Debt test
+scripts/
 scripts/debug-debt-table.ts
 src/config/firebase-service-account.json

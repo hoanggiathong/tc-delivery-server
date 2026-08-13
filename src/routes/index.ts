@@ -29,6 +29,7 @@ import mobileCustomerAuthRoutes from '@/modules/mobile-customer/mobile-customer-
 import mobileCustomerDeliveryRoutes from '@/modules/mobile-customer/mobile-customer-delivery.routes';
 import mobileCustomerMoneyDeliveryRoutes from '@/modules/mobile-customer/mobile-customer-money-delivery.routes';
 import mobileCustomerLookupRoutes from '@/modules/mobile-customer/mobile-customer-lookup.routes';
+import mobileCustomerNewsRoutes from '@/modules/mobile-customer/mobile-news.routes';
 import mobileCustomerProfileRoutes from '@/modules/mobile-customer/mobile-customer-profile.routes';
 import mobileCustomerRouteRoutes from '@/modules/mobile-customer/mobile-customer-route.routes';
 import mobileNotificationAdminRoutes from '@/modules/mobile-customer/mobile-notification-admin.routes';
@@ -80,6 +81,7 @@ router.use('/mobile/customer/money-deliveries', mobileCustomerMoneyDeliveryRoute
 
 router.use('/mobile/customer/lookup', mobileCustomerLookupRoutes);
 
+router.use('/mobile/customer/news', mobileCustomerNewsRoutes);
 router.use('/mobile/customer/notifications', mobileNotificationRoutes);
 
 router.use('/mobile/customer/push-tokens', mobilePushTokenRoutes);
