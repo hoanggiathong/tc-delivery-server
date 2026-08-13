@@ -1,6 +1,5 @@
 import { FilterQuery, Types } from 'mongoose';
 import { Route, IRoute } from '@/models/route.model';
-import { User } from '@/models/user.model';
 import { IRouteResponse, IRouteLean, RouteType } from '@/types/route.type';
 import { CreateRouteRequest, UpdateRouteRequest } from '@/schemas/route.schema';
 import { omitBy, isUndefined } from 'lodash';
@@ -278,30 +277,8 @@ export class RouteService {
         throw new Error('Route not found');
       }
 
-      /**
-       * Clear only the current selection.
-       * We intentionally DO NOT delete UserRoute assignments so historical
-       * assignment data is preserved and a future restore can reuse it.
-       *
-       * UserService will resolve another active route when the user next needs one.
-       */
-      try {
-        await User.updateMany(
-          { selectedRouteId: route._id },
-          {
-            $set: {
-              selectedRouteId: null,
-            },
-          }
-        );
-      } catch (cleanupError) {
-        /**
-         * Soft-delete itself has already succeeded. Do not report the whole delete
-         * request as failed because this cleanup is recoverable:
-         * UserService/AuthService will reject or repair a deleted selectedRouteId.
-         */
-        console.error('Failed to clear selectedRouteId after route soft-delete:', cleanupError);
-      }
+      // Keep User.selectedRouteId unchanged. Operational services reject this
+      // deleted route, while a later restore can reactivate the same selection.
     } catch (error) {
       if (error instanceof Error) {
         throw error;

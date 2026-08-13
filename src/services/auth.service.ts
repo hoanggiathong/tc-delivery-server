@@ -19,6 +19,7 @@ import {
 } from '@/schemas/auth.schema';
 import { UserDeviceService } from '@/services/user-device.service';
 import { UserService } from '@/services/user.service';
+import { Types } from 'mongoose';
 
 export class AuthService {
   private userDeviceService: UserDeviceService;
@@ -101,15 +102,68 @@ export class AuthService {
       }
 
       /**
-       * Ensure login never continues with a soft-deleted selected route.
-       * UserService keeps legacy behavior:
-       * - USER falls back to an active assigned route.
-       * - Other roles fall back to an active route in the system.
-       * - If no active route exists, login can still succeed with currentRouteId = null.
+       * Production-safe selected-route behavior:
+       *
+       * 1. If selectedRouteId already exists, NEVER auto-switch it when the Route
+       *    was soft-deleted. User.selectedRouteId stays unchanged so a future
+       *    restore can reactivate the same station.
+       * 2. If selectedRouteId is genuinely missing, preserve the legacy login
+       *    initialization behavior to avoid changing existing account onboarding.
        */
-      const resolvedRoute = await this.userService.resolveActiveSelectedRoute(user._id.toString(), {
-        allowFallback: true,
-      });
+      if (!user.selectedRouteId) {
+        let initialRouteId: Types.ObjectId | null = null;
+
+        if (user.role === UserRole.USER) {
+          const assignments = await UserRoute.find({ userId: user._id })
+            .select('routeId')
+            .sort({ createdAt: -1 })
+            .lean();
+
+          const orderedRouteIds = assignments.map(item => item.routeId).filter(Boolean);
+
+          if (orderedRouteIds.length > 0) {
+            const activeRoutes = await Route.find({
+              _id: { $in: orderedRouteIds },
+              isDeleted: { $ne: true },
+            })
+              .select('_id')
+              .lean();
+
+            const activeRouteIds = new Set(activeRoutes.map(route => route._id.toString()));
+            const firstActiveAssignedRouteId = orderedRouteIds.find(routeId =>
+              activeRouteIds.has(routeId.toString())
+            );
+
+            initialRouteId = firstActiveAssignedRouteId
+              ? new Types.ObjectId(String(firstActiveAssignedRouteId))
+              : null;
+          }
+        } else {
+          const activeRoute = await Route.findOne({
+            isDeleted: { $ne: true },
+          })
+            .select('_id')
+            .sort({ createdAt: -1 })
+            .lean();
+
+          initialRouteId = activeRoute?._id ? new Types.ObjectId(String(activeRoute._id)) : null;
+        }
+
+        if (initialRouteId) {
+          user.selectedRouteId = initialRouteId;
+          await User.updateOne(
+            { _id: user._id },
+            {
+              $set: {
+                selectedRouteId: initialRouteId,
+              },
+            }
+          );
+        }
+      }
+
+      // Strict validation only. A deleted selectedRouteId resolves to null without mutation.
+      const resolvedRoute = await this.userService.resolveActiveSelectedRoute(user._id.toString());
       const currentRouteId = resolvedRoute?.selectedRouteId ?? null;
 
       if (!data.deviceId) {
@@ -148,7 +202,7 @@ export class AuthService {
 
       const token = jwt.sign(payload, secretKey, signOptions);
 
-      // Refresh after route resolution so the FE receives the persisted selectedRouteId.
+      // Refresh so FE receives the persisted selection after optional initial-route setup.
       const refreshedUser = await User.findById(user._id);
       if (!refreshedUser) {
         throw new Error('Không tìm thấy tài khoản');
