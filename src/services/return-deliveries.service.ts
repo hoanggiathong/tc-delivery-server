@@ -205,7 +205,7 @@ export class ReturnDeliveriesService {
         return [];
       }
 
-      const route: IRouteResponse | null = await this.routeService.getRouteById(
+      const route: IRouteResponse | null = await this.routeService.getRouteByIdIncludingDeleted(
         receiver.routeId.toString()
       );
 
@@ -1356,7 +1356,8 @@ export class ReturnDeliveriesService {
         code: typedDelivery.code,
         subCode: typedDelivery.subCode,
       },
-      userId
+      userId,
+      { allowInactiveRoutes: true }
     );
   }
 
@@ -1412,7 +1413,8 @@ export class ReturnDeliveriesService {
         type: MoneyDeliveryType.COLLECT_FOR_CUSTOMER,
         deliveryId: typedDelivery._id.toString(),
       },
-      userId
+      userId,
+      { allowInactiveRoutes: true }
     );
   }
 

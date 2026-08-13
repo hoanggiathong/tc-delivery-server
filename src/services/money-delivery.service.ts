@@ -39,6 +39,15 @@ import { EditHistoryEntity } from '@/models/edit-history.model';
 import { EditHistoryService } from '@/services/edit-history.service';
 import { MobileCustomerNotificationService } from '@/modules/mobile-customer/mobile-customer-notification.service';
 
+export interface CreateMoneyDeliveryOptions {
+  /**
+   * Historical/system settlement flows may need to create the derived money
+   * record even after one of the referenced routes has been soft-deleted.
+   * Manual/new operational calls keep the default false.
+   */
+  allowInactiveRoutes?: boolean;
+}
+
 export class MoneyDeliveryService {
   private customerService: CustomerService;
   private settingsService: SettingsService;
@@ -377,15 +386,54 @@ export class MoneyDeliveryService {
    */
   async createMoneyDelivery(
     data: IMoneyDeliveryCreateRequest,
-    userId: string
+    userId: string,
+    options: CreateMoneyDeliveryOptions = {}
   ): Promise<IMoneyDeliveryResponse> {
     let fromRouteId = data.fromRouteId;
-    // Get user's selected route as fromRoute
+
+    // Get user's ACTIVE selected route as fromRoute for normal/manual flows.
     if (!fromRouteId) {
       fromRouteId = await this.userService.getUserSelectedRouteId(userId);
     }
 
-    // Find or create sender and receiver
+    /**
+     * Validate routes BEFORE creating/updating Customer records.
+     *
+     * `allowInactiveRoutes` is intentionally narrow: it exists only for
+     * system-generated settlement records derived from an already-existing
+     * delivery. Normal/manual creation remains active-route-only.
+     */
+    const routeActivityFilter = options.allowInactiveRoutes
+      ? {}
+      : {
+          isDeleted: { $ne: true },
+        };
+
+    const [fromRoute, toRoute] = await Promise.all([
+      Route.findOne({
+        _id: fromRouteId,
+        ...routeActivityFilter,
+      }),
+      Route.findOne({
+        _id: data.toRouteId,
+        ...routeActivityFilter,
+      }),
+    ]);
+
+    if (!fromRoute) {
+      throw new Error(
+        options.allowInactiveRoutes
+          ? 'From route not found'
+          : 'User selected route not found or inactive'
+      );
+    }
+    if (!toRoute) {
+      throw new Error(
+        options.allowInactiveRoutes ? 'To route not found' : 'To route not found or inactive'
+      );
+    }
+
+    // Only mutate customer data after route validation succeeds.
     const sender = await this.customerService.findOrCreateCustomer(
       data.senderPhone,
       data.senderName,
@@ -396,19 +444,6 @@ export class MoneyDeliveryService {
       data.receiverName,
       data.toRouteId
     );
-
-    // Validate fromRoute and toRoute exist
-    const [fromRoute, toRoute] = await Promise.all([
-      Route.findById(fromRouteId),
-      Route.findById(data.toRouteId),
-    ]);
-
-    if (!fromRoute) {
-      throw new Error('User selected route not found');
-    }
-    if (!toRoute) {
-      throw new Error('To route not found');
-    }
 
     let codeData: { code: string; fullCode: string; subCode: string };
     if (data.fullCode && data.code && data.subCode) {
@@ -490,6 +525,23 @@ export class MoneyDeliveryService {
     const userSelectedRouteId = await this.userService.getUserSelectedRouteId(userId);
     const updateData: Record<string, unknown> = {};
 
+    /**
+     * A changed destination is a new operational choice, therefore it must be active.
+     * Validate before any Customer mutation to avoid partial writes on failure.
+     */
+    if (data.toRouteId !== undefined) {
+      const toRoute = await Route.findOne({
+        _id: data.toRouteId,
+        isDeleted: { $ne: true },
+      });
+
+      if (!toRoute) {
+        throw new Error('To route not found or inactive');
+      }
+
+      updateData.toRoute = data.toRouteId;
+    }
+
     if (data.senderName !== undefined || data.senderPhone !== undefined) {
       const senderName = data.senderName ?? moneyDelivery.senderName;
       const senderPhone = data.senderPhone ?? String(beforeSnapshot.senderPhone ?? '');
@@ -526,15 +578,6 @@ export class MoneyDeliveryService {
       }
     } else {
       updateData.receiver = moneyDelivery.receiver;
-    }
-
-    if (data.toRouteId !== undefined) {
-      const toRoute = await Route.findById(data.toRouteId);
-      if (!toRoute) {
-        throw new Error('To route not found');
-      }
-
-      updateData.toRoute = data.toRouteId;
     }
 
     const optionalFieldsUpdate = omitBy(
@@ -660,8 +703,14 @@ export class MoneyDeliveryService {
 
     // Validate routes exist
     const [toRoute, fromRoute] = await Promise.all([
-      Route.findById(toRouteId),
-      Route.findById(selectedRouteId),
+      Route.findOne({
+        _id: toRouteId,
+        isDeleted: { $ne: true },
+      }),
+      Route.findOne({
+        _id: selectedRouteId,
+        isDeleted: { $ne: true },
+      }),
     ]);
 
     if (!toRoute) {
@@ -773,7 +822,7 @@ export class MoneyDeliveryService {
     userId: string
   ): Promise<IFrequentMoneyCustomer[]> {
     try {
-      // Get user's selected route
+      // Get user's ACTIVE selected route
       const userSelectedRouteId = await this.userService.getUserSelectedRouteId(userId);
 
       // Find sender by phone only
@@ -789,20 +838,32 @@ export class MoneyDeliveryService {
         return [];
       }
 
-      // Aggregation to get 20 unique deliveries based on (senderName, receiverName, receiver phone, toRoute)
+      /**
+       * Frequent money customers are used for NEW money-delivery operations.
+       *
+       * Therefore:
+       * - active route            => include
+       * - legacy route without
+       *   isDeleted field         => include
+       * - isDeleted === true      => exclude
+       */
       const pipeline: PipelineStage[] = [
-        // Match deliveries from this sender and fromRoute
+        // Match money deliveries created from current selected route
         {
           $match: {
             sender: sender._id,
             fromRoute: new Types.ObjectId(userSelectedRouteId),
           },
         },
-        // Sort by most recent first
+
+        // Most recent first
         {
-          $sort: { createdAt: -1 },
+          $sort: {
+            createdAt: -1,
+          },
         },
-        // Lookup receiver to get phone
+
+        // Lookup receiver information
         {
           $lookup: {
             from: 'customers',
@@ -814,7 +875,8 @@ export class MoneyDeliveryService {
         {
           $unwind: '$receiverData',
         },
-        // Lookup toRoute to get route details
+
+        // Lookup destination route
         {
           $lookup: {
             from: 'routes',
@@ -826,7 +888,22 @@ export class MoneyDeliveryService {
         {
           $unwind: '$toRouteData',
         },
-        // Group by unique combination of (senderName, receiverName, receiver phone, toRoute)
+
+        /**
+         * IMPORTANT:
+         * Frequent customers are suggestions for a NEW transaction.
+         * Do not suggest a destination route that has been soft-deleted.
+         *
+         * Use $ne: true instead of isDeleted: false so legacy routes
+         * without the field are still treated as active.
+         */
+        {
+          $match: {
+            'toRouteData.isDeleted': { $ne: true },
+          },
+        },
+
+        // Unique receiver + destination combination
         {
           $group: {
             _id: {
@@ -835,19 +912,27 @@ export class MoneyDeliveryService {
               receiverPhone: '$receiverData.phone',
               toRoute: '$toRoute',
             },
-            firstDeliveryDate: { $first: '$createdAt' },
-            toRouteData: { $first: '$toRouteData' },
+            firstDeliveryDate: {
+              $first: '$createdAt',
+            },
+            toRouteData: {
+              $first: '$toRouteData',
+            },
           },
         },
-        // Sort by first delivery date (most recent combinations first)
+
+        // Most recently used combinations first
         {
-          $sort: { firstDeliveryDate: -1 },
+          $sort: {
+            firstDeliveryDate: -1,
+          },
         },
-        // Limit to 20 unique combinations
+
+        // Keep current Money behavior
         {
           $limit: 20,
         },
-        // Project final structure
+
         {
           $project: {
             _id: 0,
@@ -855,11 +940,25 @@ export class MoneyDeliveryService {
             receiverName: '$_id.receiverName',
             receiverPhone: '$_id.receiverPhone',
             toRoute: {
-              id: { $toString: '$_id.toRoute' },
+              id: {
+                $toString: '$_id.toRoute',
+              },
               code: '$toRouteData.code',
               name: '$toRouteData.name',
               address: '$toRouteData.address',
-              type: '$toRouteData.type?? RouteType.OWNED',
+
+              /**
+               * Mongo aggregation cannot evaluate:
+               *
+               * '$toRouteData.type?? RouteType.OWNED'
+               *
+               * That is treated as a field path string.
+               *
+               * Use $ifNull instead.
+               */
+              type: {
+                $ifNull: ['$toRouteData.type', RouteType.OWNED],
+              },
             },
           },
         },
@@ -887,6 +986,7 @@ export class MoneyDeliveryService {
         error: error instanceof Error ? error.message : error,
         senderIdentifier,
       });
+
       throw new Error('Failed to get frequent money customers');
     }
   }
@@ -1384,6 +1484,26 @@ export class MoneyDeliveryService {
       const beforeSnapshot = await this.buildMoneyDeliveryEditSnapshot(existingMoneyDelivery);
       const updates: Record<string, unknown> = {};
 
+      /**
+       * `fromRoute` / original `toRoute` above are historical identity lookups and
+       * intentionally include deleted routes. Only a NEW destination must be active.
+       */
+      let finalToRouteId = toRoute._id.toString();
+
+      if (updateData.toRouteId !== undefined) {
+        const newToRoute = await Route.findOne({
+          _id: updateData.toRouteId,
+          isDeleted: { $ne: true },
+        });
+
+        if (!newToRoute) {
+          throw new Error('New to route not found or inactive');
+        }
+
+        finalToRouteId = newToRoute._id.toString();
+        updates.toRoute = newToRoute._id;
+      }
+
       if (updateData.senderName !== undefined || updateData.senderPhone !== undefined) {
         updates.sender = await this.resolveEditableCustomer(
           existingMoneyDelivery.sender.toString(),
@@ -1397,8 +1517,6 @@ export class MoneyDeliveryService {
         }
       }
 
-      const finalToRouteId = updateData.toRouteId ?? toRoute._id.toString();
-
       if (updateData.receiverName !== undefined || updateData.receiverPhone !== undefined) {
         updates.receiver = await this.resolveEditableCustomer(
           existingMoneyDelivery.receiver.toString(),
@@ -1410,16 +1528,6 @@ export class MoneyDeliveryService {
         if (updateData.receiverName !== undefined) {
           updates.receiverName = updateData.receiverName.trim();
         }
-      }
-
-      if (updateData.toRouteId !== undefined) {
-        const newToRoute = await Route.findById(updateData.toRouteId);
-
-        if (!newToRoute) {
-          throw new Error('New to route not found');
-        }
-
-        updates.toRoute = newToRoute._id;
       }
 
       const updatedMoneyDelivery = await MoneyDelivery.findByIdAndUpdate(

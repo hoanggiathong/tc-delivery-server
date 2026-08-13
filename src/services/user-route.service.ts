@@ -12,6 +12,10 @@ import { UserRole } from '@/types/user.type';
 import { IRouteResponse, RouteType } from '@/types/route.type';
 
 export class UserRouteService {
+  private readonly activeRouteMatch = {
+    isDeleted: { $ne: true },
+  };
+
   /**
    * Type assertion helper for populated user routes
    * Safely converts Mongoose populated result to typed interface
@@ -41,7 +45,7 @@ export class UserRouteService {
   private async transformUserRouteToResponse(userRoute: IUserRoute): Promise<IUserRouteResponse> {
     const populated = await userRoute.populate([
       { path: 'userId', select: '_id username name role createdAt updatedAt' },
-      { path: 'routeId', select: '_id code name createdAt updatedAt' },
+      { path: 'routeId', select: '_id code name type createdAt updatedAt' },
       { path: 'assignedBy', select: '_id username name role createdAt updatedAt' },
     ]);
 
@@ -143,7 +147,10 @@ export class UserRouteService {
       }
 
       // Check if route exists
-      const route = await Route.findById(data.routeId);
+      const route = await Route.findOne({
+        _id: data.routeId,
+        ...this.activeRouteMatch,
+      });
       if (!route) {
         throw new Error('Route not found');
       }
@@ -190,7 +197,10 @@ export class UserRouteService {
       }
 
       // Check if all routes exist
-      const routes = await Route.find({ _id: { $in: data.routeIds } });
+      const routes = await Route.find({
+        _id: { $in: data.routeIds },
+        ...this.activeRouteMatch,
+      });
       if (routes.length !== data.routeIds.length) {
         throw new Error('One or more routes not found');
       }
@@ -222,7 +232,11 @@ export class UserRouteService {
       const populatedUserRoutes = await UserRoute.find({ _id: { $in: userRouteIds } })
         .populate([
           { path: 'userId', select: '_id username name role createdAt updatedAt' },
-          { path: 'routeId', select: '_id code name address phone createdAt updatedAt' },
+          {
+            path: 'routeId',
+            match: this.activeRouteMatch,
+            select: '_id code name address phone type createdAt updatedAt',
+          },
           { path: 'assignedBy', select: '_id username name role createdAt updatedAt' },
         ])
         .lean();
@@ -288,7 +302,11 @@ export class UserRouteService {
       const userRoutes = await UserRoute.find({ userId })
         .populate([
           { path: 'userId', select: '_id username name role createdAt updatedAt' },
-          { path: 'routeId', select: '_id code name address phone type createdAt updatedAt' },
+          {
+            path: 'routeId',
+            match: this.activeRouteMatch,
+            select: '_id code name address phone type createdAt updatedAt',
+          },
           { path: 'assignedBy', select: '_id username name role createdAt updatedAt' },
         ])
         .sort({ createdAt: -1 })
@@ -311,22 +329,28 @@ export class UserRouteService {
   async getRoutesForUser(userId: string): Promise<IRouteResponse[]> {
     try {
       const userRoutes = await UserRoute.find({ userId })
-        .populate('routeId', '_id code name address createdAt updatedAt')
+        .populate({
+          path: 'routeId',
+          match: this.activeRouteMatch,
+          select: '_id code name address type createdAt updatedAt',
+        })
         .sort({ 'routeId.code': 1 })
         .lean();
 
-      return userRoutes.map(userRoute => {
-        const route = this.toPopulatedRoute(userRoute.routeId);
-        return {
-          id: route._id,
-          code: route.code,
-          name: route.name,
-          address: route.address,
-          createdAt: route.createdAt,
-          updatedAt: route.updatedAt,
-          type: route.type ?? RouteType.OWNED,
-        };
-      });
+      return userRoutes
+        .filter(userRoute => Boolean(userRoute.routeId))
+        .map(userRoute => {
+          const route = this.toPopulatedRoute(userRoute.routeId);
+          return {
+            id: route._id,
+            code: route.code,
+            name: route.name,
+            address: route.address,
+            createdAt: route.createdAt,
+            updatedAt: route.updatedAt,
+            type: route.type ?? RouteType.OWNED,
+          };
+        });
     } catch (error) {
       console.error('Error getting routes for user:', error);
       throw new Error('Failed to get routes for user');
@@ -341,7 +365,11 @@ export class UserRouteService {
       const userRoutes = await UserRoute.find({})
         .populate([
           { path: 'userId', select: '_id username name role createdAt updatedAt' },
-          { path: 'routeId', select: '_id code name address phone createdAt updatedAt' },
+          {
+            path: 'routeId',
+            match: this.activeRouteMatch,
+            select: '_id code name address phone type createdAt updatedAt',
+          },
           { path: 'assignedBy', select: '_id username name role createdAt updatedAt' },
         ])
         .sort({ createdAt: -1 })
@@ -366,7 +394,11 @@ export class UserRouteService {
       const userRoutes = await UserRoute.find({ routeId })
         .populate([
           { path: 'userId', select: '_id username name role createdAt updatedAt' },
-          { path: 'routeId', select: '_id code name address phone createdAt updatedAt' },
+          {
+            path: 'routeId',
+            match: this.activeRouteMatch,
+            select: '_id code name address phone type createdAt updatedAt',
+          },
           { path: 'assignedBy', select: '_id username name role createdAt updatedAt' },
         ])
         .sort({ createdAt: -1 })

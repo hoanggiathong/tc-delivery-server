@@ -404,10 +404,32 @@ export class DeliveryService {
    * Create a new delivery
    */
   async createDelivery(data: IDeliveryCreateRequest, userId: string): Promise<IDeliveryResponse> {
-    // Get user's selected route as fromRoute
+    // Get user's ACTIVE selected route as fromRoute.
     const selectedRouteId = await this.userService.getUserSelectedRouteId(userId);
 
-    // Find or create sender and receiver
+    /**
+     * Validate routes BEFORE creating/updating Customer records.
+     * This avoids partial side effects when a request targets a deleted route.
+     */
+    const [fromRoute, toRoute] = await Promise.all([
+      Route.findOne({
+        _id: selectedRouteId,
+        isDeleted: { $ne: true },
+      }),
+      Route.findOne({
+        _id: data.toRouteId,
+        isDeleted: { $ne: true },
+      }),
+    ]);
+
+    if (!fromRoute) {
+      throw new Error('User selected route not found or inactive');
+    }
+    if (!toRoute) {
+      throw new Error('To route not found or inactive');
+    }
+
+    // Only mutate customer data after route validation succeeds.
     const sender = await this.customerService.findOrCreateCustomer(
       data.senderPhone,
       data.senderName,
@@ -418,19 +440,6 @@ export class DeliveryService {
       data.receiverName,
       data.toRouteId
     );
-
-    // Validate fromRoute and toRoute exist
-    const [fromRoute, toRoute] = await Promise.all([
-      Route.findById(selectedRouteId),
-      Route.findById(data.toRouteId),
-    ]);
-
-    if (!fromRoute) {
-      throw new Error('User selected route not found');
-    }
-    if (!toRoute) {
-      throw new Error('To route not found');
-    }
 
     // Generate delivery code with new system
     const codeData = await CodeGeneratorService.generateNextCode(data.toRouteId, selectedRouteId);
@@ -610,6 +619,23 @@ export class DeliveryService {
 
     const updateData: Record<string, unknown> = {};
 
+    /**
+     * Validate a newly selected destination route before any Customer mutation.
+     * Existing historical toRoute is left untouched when toRouteId is not changed.
+     */
+    if (data.toRouteId !== undefined) {
+      const toRoute = await Route.findOne({
+        _id: data.toRouteId,
+        isDeleted: { $ne: true },
+      });
+
+      if (!toRoute) {
+        throw new Error('To route not found or inactive');
+      }
+
+      updateData.toRoute = data.toRouteId;
+    }
+
     if (data.senderName !== undefined || data.senderPhone !== undefined) {
       const senderName = data.senderName ?? delivery.senderName;
       const senderPhone = data.senderPhone ?? String(beforeSnapshot.senderPhone ?? '');
@@ -646,15 +672,6 @@ export class DeliveryService {
       }
     } else {
       updateData.receiver = delivery.receiver;
-    }
-
-    if (data.toRouteId !== undefined) {
-      const toRoute = await Route.findById(data.toRouteId);
-      if (!toRoute) {
-        throw new Error('To route not found');
-      }
-
-      updateData.toRoute = data.toRouteId;
     }
 
     const newNote = mergeNotes(delivery.notes, data.notes);
@@ -896,8 +913,14 @@ export class DeliveryService {
 
     // Validate routes exist
     const [toRoute, fromRoute] = await Promise.all([
-      Route.findById(toRouteId),
-      Route.findById(selectedRouteId),
+      Route.findOne({
+        _id: toRouteId,
+        isDeleted: { $ne: true },
+      }),
+      Route.findOne({
+        _id: selectedRouteId,
+        isDeleted: { $ne: true },
+      }),
     ]);
 
     if (!toRoute) {
@@ -1138,7 +1161,7 @@ export class DeliveryService {
       // Get user's selected route
       const userSelectedRouteId = await this.userService.getUserSelectedRouteId(userId);
 
-      // Find sender by phone and selected route
+      // Find sender by phone
       const sender = await Customer.findOne({
         phone: senderIdentifier,
       }).lean();
@@ -1151,19 +1174,20 @@ export class DeliveryService {
         return [];
       }
 
-      // Aggregation to get 20 unique deliveries based on (senderName, receiverName, receiver phone, toRoute)
       const pipeline: PipelineStage[] = [
-        // Match deliveries from this sender and fromRoute
+        // Match deliveries from this sender and current selected route
         {
           $match: {
             sender: sender._id,
             fromRoute: new Types.ObjectId(userSelectedRouteId),
           },
         },
-        // Sort by most recent first
+
+        // Most recent first
         {
           $sort: { createdAt: -1 },
         },
+
         // Lookup receiver to get phone
         {
           $lookup: {
@@ -1176,7 +1200,8 @@ export class DeliveryService {
         {
           $unwind: '$receiverData',
         },
-        // Lookup toRoute to get route details
+
+        // Lookup destination route
         {
           $lookup: {
             from: 'routes',
@@ -1188,7 +1213,25 @@ export class DeliveryService {
         {
           $unwind: '$toRouteData',
         },
-        // // Group by unique combination of (senderName, receiverName, receiver phone, toRoute)
+
+        /**
+         * Frequent customers are used for creating NEW deliveries.
+         *
+         * Do not return destinations that have been soft-deleted.
+         *
+         * $ne: true is intentional:
+         * - isDeleted: false  => included
+         * - missing isDeleted => included (legacy route)
+         * - isDeleted: true   => excluded
+         */
+        {
+          $match: {
+            'toRouteData.isDeleted': { $ne: true },
+          },
+        },
+
+        // Group unique combination:
+        // senderName + receiverName + receiver phone + destination route
         {
           $group: {
             _id: {
@@ -1201,15 +1244,16 @@ export class DeliveryService {
             toRouteData: { $first: '$toRouteData' },
           },
         },
-        // Sort by first delivery date (most recent combinations first)
+
+        // Most recently used combinations first
         {
           $sort: { firstDeliveryDate: -1 },
         },
-        // Limit to 100 unique combinations
+
         {
           $limit: 100,
         },
-        // Project final structure
+
         {
           $project: {
             _id: 1,
@@ -1248,6 +1292,7 @@ export class DeliveryService {
         error: error instanceof Error ? error.message : error,
         senderIdentifier,
       });
+
       throw new Error('Failed to get frequent customers');
     }
   }

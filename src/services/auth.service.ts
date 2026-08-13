@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { User } from '@/models/user.model';
+import { Route } from '@/models/route.model';
 import { UserRoute } from '@/models/user-route.model';
 import {
   JWTPayload,
@@ -17,12 +18,15 @@ import {
   UpdateSelectedRouteRequest,
 } from '@/schemas/auth.schema';
 import { UserDeviceService } from '@/services/user-device.service';
+import { UserService } from '@/services/user.service';
 
 export class AuthService {
   private userDeviceService: UserDeviceService;
+  private userService: UserService;
 
   constructor() {
     this.userDeviceService = new UserDeviceService();
+    this.userService = new UserService();
   }
 
   async register(data: RegisterRequest): Promise<{ user: IUserResponse }> {
@@ -96,19 +100,17 @@ export class AuthService {
         throw new Error('Tên đăng nhập hoặc mật khẩu không đúng');
       }
 
-      // If user has no selectedRouteId, try to auto-assign from USER_ROUTES
-      if (!user.selectedRouteId) {
-        const userRoute = await UserRoute.findOne({ userId: user._id }).select('routeId').lean();
-
-        if (userRoute) {
-          // Update user with the first found route
-          await User.findByIdAndUpdate(user._id, {
-            selectedRouteId: userRoute.routeId,
-          });
-          // Update the user object for response
-          user.selectedRouteId = userRoute.routeId;
-        }
-      }
+      /**
+       * Ensure login never continues with a soft-deleted selected route.
+       * UserService keeps legacy behavior:
+       * - USER falls back to an active assigned route.
+       * - Other roles fall back to an active route in the system.
+       * - If no active route exists, login can still succeed with currentRouteId = null.
+       */
+      const resolvedRoute = await this.userService.resolveActiveSelectedRoute(user._id.toString(), {
+        allowFallback: true,
+      });
+      const currentRouteId = resolvedRoute?.selectedRouteId ?? null;
 
       if (!data.deviceId) {
         throw new Error('Thiếu mã thiết bị đăng nhập. Vui lòng tải lại trang và đăng nhập lại.');
@@ -123,7 +125,7 @@ export class AuthService {
         os: data.os,
         ipAddress: meta?.ipAddress,
         userAgent: meta?.userAgent,
-        currentRouteId: user.selectedRouteId?.toString() || null,
+        currentRouteId,
       });
 
       // Alternative JWT signing approach
@@ -146,7 +148,13 @@ export class AuthService {
 
       const token = jwt.sign(payload, secretKey, signOptions);
 
-      return { user: transformUserToResponse(user), token };
+      // Refresh after route resolution so the FE receives the persisted selectedRouteId.
+      const refreshedUser = await User.findById(user._id);
+      if (!refreshedUser) {
+        throw new Error('Không tìm thấy tài khoản');
+      }
+
+      return { user: transformUserToResponse(refreshedUser), token };
     } catch (error) {
       if (error instanceof Error) {
         throw error;
@@ -204,6 +212,15 @@ export class AuthService {
   ): Promise<{ user: IUserResponse }> {
     try {
       if (data.selectedRouteId) {
+        const activeRoute = await Route.exists({
+          _id: data.selectedRouteId,
+          isDeleted: { $ne: true },
+        });
+
+        if (!activeRoute) {
+          throw new Error('Trạm không tồn tại hoặc đã ngừng hoạt động');
+        }
+
         if (userRole === UserRole.USER) {
           const userRoute = await UserRoute.findOne({
             userId,

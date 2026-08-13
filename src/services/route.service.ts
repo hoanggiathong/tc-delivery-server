@@ -1,8 +1,13 @@
 import { FilterQuery, Types } from 'mongoose';
 import { Route, IRoute } from '@/models/route.model';
+import { User } from '@/models/user.model';
 import { IRouteResponse, IRouteLean, RouteType } from '@/types/route.type';
 import { CreateRouteRequest, UpdateRouteRequest } from '@/schemas/route.schema';
 import { omitBy, isUndefined } from 'lodash';
+
+const ACTIVE_ROUTE_FILTER: FilterQuery<IRoute> = {
+  isDeleted: { $ne: true },
+};
 
 export class RouteService {
   /**
@@ -59,6 +64,18 @@ export class RouteService {
         throw new Error('Route with this code already exists');
       }
 
+      // A new route must never be attached to a parent that has been soft-deleted.
+      if (data.parentRouteId) {
+        const parentRoute = await Route.findOne({
+          _id: data.parentRouteId,
+          ...ACTIVE_ROUTE_FILTER,
+        }).select('_id');
+
+        if (!parentRoute) {
+          throw new Error('Parent route not found or has been deleted');
+        }
+      }
+
       const newRoute = new Route({
         code: data.code.toUpperCase(),
         name: data.name,
@@ -86,7 +103,10 @@ export class RouteService {
    */
   async getRouteById(id: string): Promise<IRouteResponse | null> {
     try {
-      const route = await Route.findById(id).lean<IRouteLean>();
+      const route = await Route.findOne({
+        _id: id,
+        ...ACTIVE_ROUTE_FILTER,
+      }).lean<IRouteLean>();
       if (!route) {
         return null;
       }
@@ -99,11 +119,34 @@ export class RouteService {
   }
 
   /**
+   * Get route by ID including soft-deleted records.
+   *
+   * IMPORTANT:
+   * Use only for historical/reference flows (old deliveries, old money deliveries,
+   * accounting display, etc.). Operational flows must use getRouteById().
+   */
+  async getRouteByIdIncludingDeleted(id: string): Promise<IRouteResponse | null> {
+    try {
+      const route = await Route.findById(id).lean<IRouteLean>();
+      if (!route) {
+        return null;
+      }
+
+      return this.transformRouteLeanToResponse(route);
+    } catch (error) {
+      console.error('Error getting route by ID including deleted:', error);
+      throw new Error('Failed to get route by ID');
+    }
+  }
+
+  /**
    * Get all routes
    */
   async getAllRoutes(type?: RouteType): Promise<IRouteResponse[]> {
     try {
-      const filter: FilterQuery<IRoute> = {};
+      const filter: FilterQuery<IRoute> = {
+        ...ACTIVE_ROUTE_FILTER,
+      };
 
       if (type) {
         filter.type = type;
@@ -123,7 +166,10 @@ export class RouteService {
    */
   async getRouteByCode(code: string): Promise<IRouteResponse | null> {
     try {
-      const route = await Route.findOne({ code: code.toUpperCase() }).lean();
+      const route = await Route.findOne({
+        code: code.toUpperCase(),
+        ...ACTIVE_ROUTE_FILTER,
+      }).lean();
       if (!route) {
         return null;
       }
@@ -139,7 +185,10 @@ export class RouteService {
    */
   async updateRoute(id: string, data: UpdateRouteRequest): Promise<IRouteResponse> {
     try {
-      const route = await Route.findById(id);
+      const route = await Route.findOne({
+        _id: id,
+        ...ACTIVE_ROUTE_FILTER,
+      });
       if (!route) {
         throw new Error('Route not found');
       }
@@ -183,16 +232,76 @@ export class RouteService {
   }
 
   /**
-   * Delete route by ID
+   * Soft-delete route by ID.
+   *
+   * We intentionally keep the Route document because deliveries, money deliveries,
+   * debts and reports may still reference this _id historically.
    */
   async deleteRoute(id: string): Promise<void> {
     try {
-      const route = await Route.findById(id);
+      if (!Types.ObjectId.isValid(id)) {
+        throw new Error('Route not found');
+      }
+
+      const route = await Route.findOne({
+        _id: id,
+        ...ACTIVE_ROUTE_FILTER,
+      }).select('_id');
+
       if (!route) {
         throw new Error('Route not found');
       }
 
-      await Route.findByIdAndDelete(id);
+      // Do not orphan an active route tree. Historical deleted children are allowed.
+      const hasActiveChildren = await Route.exists({
+        parentRouteId: route._id,
+        ...ACTIVE_ROUTE_FILTER,
+      });
+
+      if (hasActiveChildren) {
+        throw new Error('Không thể xóa trạm đang có trạm con hoạt động');
+      }
+
+      const result = await Route.updateOne(
+        {
+          _id: route._id,
+          ...ACTIVE_ROUTE_FILTER,
+        },
+        {
+          $set: {
+            isDeleted: true,
+          },
+        }
+      );
+
+      if (result.modifiedCount === 0) {
+        throw new Error('Route not found');
+      }
+
+      /**
+       * Clear only the current selection.
+       * We intentionally DO NOT delete UserRoute assignments so historical
+       * assignment data is preserved and a future restore can reuse it.
+       *
+       * UserService will resolve another active route when the user next needs one.
+       */
+      try {
+        await User.updateMany(
+          { selectedRouteId: route._id },
+          {
+            $set: {
+              selectedRouteId: null,
+            },
+          }
+        );
+      } catch (cleanupError) {
+        /**
+         * Soft-delete itself has already succeeded. Do not report the whole delete
+         * request as failed because this cleanup is recoverable:
+         * UserService/AuthService will reject or repair a deleted selectedRouteId.
+         */
+        console.error('Failed to clear selectedRouteId after route soft-delete:', cleanupError);
+      }
     } catch (error) {
       if (error instanceof Error) {
         throw error;
@@ -213,8 +322,11 @@ export class RouteService {
       throw new Error('Tọa độ không hợp lệ');
     }
 
-    const route = await Route.findByIdAndUpdate(
-      id,
+    const route = await Route.findOneAndUpdate(
+      {
+        _id: id,
+        ...ACTIVE_ROUTE_FILTER,
+      },
       {
         $set: {
           lat,

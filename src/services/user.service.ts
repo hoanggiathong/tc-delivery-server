@@ -1,10 +1,12 @@
 import { AppError } from '@/middlewares/error.middleware';
 import { Route } from '@/models/route.model';
 import { User } from '@/models/user.model';
+import { UserRoute } from '@/models/user-route.model';
 import {
   IAdditionalInformationProduct,
   IAdditionalInformationProductInput,
   IAdditionalInformationProductResponse,
+  UserRole,
 } from '@/types/user.type';
 import mongoose, { Types } from 'mongoose';
 
@@ -20,75 +22,198 @@ export interface IUserSelectedRouteInfo {
 
 export class UserService {
   /**
-   * Get user's selected route information
-   * @param userId - The user ID
-   * @returns User's selected route information
-   * @throws Error if user not found or has no selected route
+   * Resolve the user's current route to an ACTIVE route.
+   *
+   * Backward compatibility:
+   * - Existing Route documents without `isDeleted` are active because `$ne: true`.
+   * - USER falls back only to an active route already assigned in UserRoute.
+   * - Other roles keep the existing behavior of being able to work with any route,
+   *   so they fall back to the newest active route if their current route was deleted.
+   *
+   * Fallback/persistence only happens when `allowFallback` is explicitly true.
+   * Normal operational getters never silently switch the user's station.
    */
-  async getUserSelectedRoute(userId: string): Promise<IUserSelectedRouteInfo> {
-    const user = await User.findById(userId).select('selectedRouteId');
-    if (!user || !user.selectedRouteId) {
-      throw new Error('User must have a selected route');
+  async resolveActiveSelectedRoute(
+    userId: string,
+    options: { allowFallback?: boolean } = {}
+  ): Promise<IUserSelectedRouteInfo | null> {
+    const user = await User.findById(userId).select('selectedRouteId role');
+    if (!user) {
+      throw new Error('User not found');
     }
 
-    const selectedRoute = await Route.findById(user.selectedRouteId).select('_id code name');
-    if (!selectedRoute) {
-      throw new Error('Selected route not found');
+    if (user.selectedRouteId) {
+      const selectedRoute = await Route.findOne({
+        _id: user.selectedRouteId,
+        isDeleted: { $ne: true },
+      }).select('_id code name');
+
+      if (selectedRoute) {
+        return {
+          userId,
+          selectedRouteId: selectedRoute._id.toString(),
+          selectedRoute: {
+            _id: selectedRoute._id.toString(),
+            code: selectedRoute.code,
+            name: selectedRoute.name,
+          },
+        };
+      }
+    }
+
+    /**
+     * Operational getters must never silently switch station in the middle of a session.
+     * Fallback is only enabled explicitly by login/recovery flows.
+     */
+    if (!options.allowFallback) {
+      return null;
+    }
+
+    let fallbackRoute: {
+      _id: Types.ObjectId;
+      code: string;
+      name: string;
+    } | null = null;
+
+    if (user.role === UserRole.USER) {
+      /**
+       * Keep the same priority as UserRouteService.getUserRoutes():
+       * newest assignment first. This keeps BE fallback aligned with the FE list.
+       */
+      const assignments = await UserRoute.find({ userId: user._id })
+        .select('routeId')
+        .sort({ createdAt: -1 })
+        .lean();
+
+      const orderedRouteIds = assignments.map(item => item.routeId).filter(Boolean);
+
+      if (orderedRouteIds.length > 0) {
+        const activeRoutes = await Route.find({
+          _id: { $in: orderedRouteIds },
+          isDeleted: { $ne: true },
+        })
+          .select('_id code name')
+          .lean();
+
+        const activeRouteMap = new Map(
+          activeRoutes.map(route => [route._id.toString(), route] as const)
+        );
+
+        for (const routeId of orderedRouteIds) {
+          const route = activeRouteMap.get(routeId.toString());
+          if (route) {
+            fallbackRoute = {
+              _id: route._id,
+              code: route.code,
+              name: route.name,
+            };
+            break;
+          }
+        }
+      }
+    } else {
+      const route = await Route.findOne({
+        isDeleted: { $ne: true },
+      })
+        .select('_id code name')
+        .sort({ createdAt: -1 })
+        .lean();
+
+      if (route) {
+        fallbackRoute = {
+          _id: route._id,
+          code: route.code,
+          name: route.name,
+        };
+      }
+    }
+
+    if (!fallbackRoute) {
+      if (user.selectedRouteId) {
+        await User.updateOne(
+          { _id: user._id },
+          {
+            $set: {
+              selectedRouteId: null,
+            },
+          }
+        );
+      }
+
+      return null;
+    }
+
+    if (!user.selectedRouteId || !user.selectedRouteId.equals(fallbackRoute._id)) {
+      await User.updateOne(
+        { _id: user._id },
+        {
+          $set: {
+            selectedRouteId: fallbackRoute._id,
+          },
+        }
+      );
     }
 
     return {
       userId,
-      selectedRouteId: user.selectedRouteId.toString(),
+      selectedRouteId: fallbackRoute._id.toString(),
       selectedRoute: {
-        _id: selectedRoute._id.toString(),
-        code: selectedRoute.code,
-        name: selectedRoute.name,
+        _id: fallbackRoute._id.toString(),
+        code: fallbackRoute.code,
+        name: fallbackRoute.name,
       },
     };
   }
 
   /**
-   * Get user's selected route ID as string
-   * @param userId - The user ID
-   * @returns Selected route ID as string
-   * @throws Error if user not found or has no selected route
+   * Get user's selected route information.
+   * Deleted routes are never returned as the current operational route.
    */
-  async getUserSelectedRouteId(userId: string): Promise<string> {
-    const user = await User.findById(userId).select('selectedRouteId');
-    if (!user || !user.selectedRouteId) {
-      throw new Error('User must have a selected route');
+  async getUserSelectedRoute(userId: string): Promise<IUserSelectedRouteInfo> {
+    const resolved = await this.resolveActiveSelectedRoute(userId);
+
+    if (!resolved) {
+      throw new Error('User must have an active selected route');
     }
 
-    return user.selectedRouteId.toString();
+    return resolved;
   }
 
   /**
-   * Check if user has a selected route
-   * @param userId - The user ID
-   * @returns True if user has selected route, false otherwise
+   * Get user's active selected route ID as string.
+   */
+  async getUserSelectedRouteId(userId: string): Promise<string> {
+    const resolved = await this.resolveActiveSelectedRoute(userId);
+
+    if (!resolved) {
+      throw new Error('User must have an active selected route');
+    }
+
+    return resolved.selectedRouteId;
+  }
+
+  /**
+   * Check if user has an active selected route.
    */
   async hasSelectedRoute(userId: string): Promise<boolean> {
     try {
-      const user = await User.findById(userId).select('selectedRouteId');
-      return !!(user && user.selectedRouteId);
+      return Boolean(await this.resolveActiveSelectedRoute(userId));
     } catch {
       return false;
     }
   }
 
   /**
-   * Get user's selected route as ObjectId
-   * @param userId - The user ID
-   * @returns Selected route ID as ObjectId
-   * @throws Error if user not found or has no selected route
+   * Get user's active selected route as ObjectId.
    */
   async getUserSelectedRouteObjectId(userId: string): Promise<Types.ObjectId> {
-    const user = await User.findById(userId).select('selectedRouteId');
-    if (!user || !user.selectedRouteId) {
-      throw new Error('User must have a selected route');
+    const resolved = await this.resolveActiveSelectedRoute(userId);
+
+    if (!resolved) {
+      throw new Error('User must have an active selected route');
     }
 
-    return user.selectedRouteId;
+    return new Types.ObjectId(resolved.selectedRouteId);
   }
 
   async updateAdditionalInformationProductWithDefaults(
