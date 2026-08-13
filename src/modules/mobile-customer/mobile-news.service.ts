@@ -21,6 +21,27 @@ const normalizeSlug = (value: string): string =>
     .trim()
     .toLowerCase();
 
+/**
+ * $expr + $convert xử lý được cả:
+ * - BSON Date
+ * - ISO date string
+ */
+const buildPublishedExpression = (now: Date) => ({
+  $expr: {
+    $lte: [
+      {
+        $convert: {
+          input: '$publishedAt',
+          to: 'date',
+          onError: null,
+          onNull: null,
+        },
+      },
+      now,
+    ],
+  },
+});
+
 export class MobileNewsService {
   async list(input: MobileNewsListQuery) {
     const page = clampInteger(input.page, 1, 100000, 1);
@@ -29,18 +50,10 @@ export class MobileNewsService {
 
     const now = new Date();
 
-    const filter: {
-      isPublished: boolean;
-      publishedAt: {
-        $lte: Date;
-      };
-      isFeatured?: boolean;
-    } = {
+    const filter: Record<string, unknown> = {
       isPublished: true,
 
-      publishedAt: {
-        $lte: now,
-      },
+      ...buildPublishedExpression(now),
     };
 
     if (input.featured === true) {
@@ -75,12 +88,19 @@ export class MobileNewsService {
     return {
       items: rows.map(item => ({
         id: String(item._id),
+
         slug: item.slug,
+
         title: item.title,
+
         summary: item.summary,
+
         coverImageUrl: item.coverImageUrl || '',
+
         category: item.category || 'Tin tức',
+
         publishedAt: item.publishedAt,
+
         isFeatured: Boolean(item.isFeatured),
       })),
 
@@ -88,6 +108,7 @@ export class MobileNewsService {
         page,
         limit,
         total,
+
         totalPages: Math.ceil(total / limit),
       },
     };
@@ -103,9 +124,8 @@ export class MobileNewsService {
     const row = await MobileNewsArticle.findOne({
       slug,
       isPublished: true,
-      publishedAt: {
-        $lte: new Date(),
-      },
+
+      ...buildPublishedExpression(new Date()),
     }).lean();
 
     if (!row) {
@@ -114,16 +134,25 @@ export class MobileNewsService {
 
     return {
       id: String(row._id),
+
       slug: row.slug,
+
       title: row.title,
+
       summary: row.summary,
+
       coverImageUrl: row.coverImageUrl || '',
+
       category: row.category || 'Tin tức',
+
       publishedAt: row.publishedAt,
+
       content: Array.isArray(row.content)
         ? row.content.map(block => ({
             type: block.type,
+
             text: String(block.text || ''),
+
             items: Array.isArray(block.items)
               ? block.items.map(item => String(item)).filter(Boolean)
               : [],
