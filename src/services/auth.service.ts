@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { User } from '@/models/user.model';
+import { Route } from '@/models/route.model';
 import { UserRoute } from '@/models/user-route.model';
 import {
   JWTPayload,
@@ -17,12 +18,16 @@ import {
   UpdateSelectedRouteRequest,
 } from '@/schemas/auth.schema';
 import { UserDeviceService } from '@/services/user-device.service';
+import { UserService } from '@/services/user.service';
+import { Types } from 'mongoose';
 
 export class AuthService {
   private userDeviceService: UserDeviceService;
+  private userService: UserService;
 
   constructor() {
     this.userDeviceService = new UserDeviceService();
+    this.userService = new UserService();
   }
 
   async register(data: RegisterRequest): Promise<{ user: IUserResponse }> {
@@ -96,19 +101,70 @@ export class AuthService {
         throw new Error('Tên đăng nhập hoặc mật khẩu không đúng');
       }
 
-      // If user has no selectedRouteId, try to auto-assign from USER_ROUTES
+      /**
+       * Production-safe selected-route behavior:
+       *
+       * 1. If selectedRouteId already exists, NEVER auto-switch it when the Route
+       *    was soft-deleted. User.selectedRouteId stays unchanged so a future
+       *    restore can reactivate the same station.
+       * 2. If selectedRouteId is genuinely missing, preserve the legacy login
+       *    initialization behavior to avoid changing existing account onboarding.
+       */
       if (!user.selectedRouteId) {
-        const userRoute = await UserRoute.findOne({ userId: user._id }).select('routeId').lean();
+        let initialRouteId: Types.ObjectId | null = null;
 
-        if (userRoute) {
-          // Update user with the first found route
-          await User.findByIdAndUpdate(user._id, {
-            selectedRouteId: userRoute.routeId,
-          });
-          // Update the user object for response
-          user.selectedRouteId = userRoute.routeId;
+        if (user.role === UserRole.USER) {
+          const assignments = await UserRoute.find({ userId: user._id })
+            .select('routeId')
+            .sort({ createdAt: -1 })
+            .lean();
+
+          const orderedRouteIds = assignments.map(item => item.routeId).filter(Boolean);
+
+          if (orderedRouteIds.length > 0) {
+            const activeRoutes = await Route.find({
+              _id: { $in: orderedRouteIds },
+              isDeleted: { $ne: true },
+            })
+              .select('_id')
+              .lean();
+
+            const activeRouteIds = new Set(activeRoutes.map(route => route._id.toString()));
+            const firstActiveAssignedRouteId = orderedRouteIds.find(routeId =>
+              activeRouteIds.has(routeId.toString())
+            );
+
+            initialRouteId = firstActiveAssignedRouteId
+              ? new Types.ObjectId(String(firstActiveAssignedRouteId))
+              : null;
+          }
+        } else {
+          const activeRoute = await Route.findOne({
+            isDeleted: { $ne: true },
+          })
+            .select('_id')
+            .sort({ createdAt: -1 })
+            .lean();
+
+          initialRouteId = activeRoute?._id ? new Types.ObjectId(String(activeRoute._id)) : null;
+        }
+
+        if (initialRouteId) {
+          user.selectedRouteId = initialRouteId;
+          await User.updateOne(
+            { _id: user._id },
+            {
+              $set: {
+                selectedRouteId: initialRouteId,
+              },
+            }
+          );
         }
       }
+
+      // Strict validation only. A deleted selectedRouteId resolves to null without mutation.
+      const resolvedRoute = await this.userService.resolveActiveSelectedRoute(user._id.toString());
+      const currentRouteId = resolvedRoute?.selectedRouteId ?? null;
 
       if (!data.deviceId) {
         throw new Error('Thiếu mã thiết bị đăng nhập. Vui lòng tải lại trang và đăng nhập lại.');
@@ -123,7 +179,7 @@ export class AuthService {
         os: data.os,
         ipAddress: meta?.ipAddress,
         userAgent: meta?.userAgent,
-        currentRouteId: user.selectedRouteId?.toString() || null,
+        currentRouteId,
       });
 
       // Alternative JWT signing approach
@@ -146,7 +202,13 @@ export class AuthService {
 
       const token = jwt.sign(payload, secretKey, signOptions);
 
-      return { user: transformUserToResponse(user), token };
+      // Refresh so FE receives the persisted selection after optional initial-route setup.
+      const refreshedUser = await User.findById(user._id);
+      if (!refreshedUser) {
+        throw new Error('Không tìm thấy tài khoản');
+      }
+
+      return { user: transformUserToResponse(refreshedUser), token };
     } catch (error) {
       if (error instanceof Error) {
         throw error;
@@ -204,6 +266,15 @@ export class AuthService {
   ): Promise<{ user: IUserResponse }> {
     try {
       if (data.selectedRouteId) {
+        const activeRoute = await Route.exists({
+          _id: data.selectedRouteId,
+          isDeleted: { $ne: true },
+        });
+
+        if (!activeRoute) {
+          throw new Error('Trạm không tồn tại hoặc đã ngừng hoạt động');
+        }
+
         if (userRole === UserRole.USER) {
           const userRoute = await UserRoute.findOne({
             userId,

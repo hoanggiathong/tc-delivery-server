@@ -20,25 +20,37 @@ export interface IUserSelectedRouteInfo {
 
 export class UserService {
   /**
-   * Get user's selected route information
-   * @param userId - The user ID
-   * @returns User's selected route information
-   * @throws Error if user not found or has no selected route
+   * Resolve the user's persisted selectedRouteId only when that Route is ACTIVE.
+   *
+   * Important production behavior:
+   * - Never auto-switch to another route here.
+   * - Never clear User.selectedRouteId when its Route is soft-deleted.
+   * - Keeping the old selectedRouteId allows the same route to become usable again
+   *   after a future restore, provided the user has not explicitly selected another route.
+   * - Legacy Route documents without isDeleted remain active via $ne: true.
    */
-  async getUserSelectedRoute(userId: string): Promise<IUserSelectedRouteInfo> {
+  async resolveActiveSelectedRoute(userId: string): Promise<IUserSelectedRouteInfo | null> {
     const user = await User.findById(userId).select('selectedRouteId');
-    if (!user || !user.selectedRouteId) {
-      throw new Error('User must have a selected route');
+    if (!user) {
+      throw new Error('User not found');
     }
 
-    const selectedRoute = await Route.findById(user.selectedRouteId).select('_id code name');
+    if (!user.selectedRouteId) {
+      return null;
+    }
+
+    const selectedRoute = await Route.findOne({
+      _id: user.selectedRouteId,
+      isDeleted: { $ne: true },
+    }).select('_id code name');
+
     if (!selectedRoute) {
-      throw new Error('Selected route not found');
+      return null;
     }
 
     return {
       userId,
-      selectedRouteId: user.selectedRouteId.toString(),
+      selectedRouteId: selectedRoute._id.toString(),
       selectedRoute: {
         _id: selectedRoute._id.toString(),
         code: selectedRoute.code,
@@ -48,47 +60,54 @@ export class UserService {
   }
 
   /**
-   * Get user's selected route ID as string
-   * @param userId - The user ID
-   * @returns Selected route ID as string
-   * @throws Error if user not found or has no selected route
+   * Get user's selected route information for operational flows.
+   * A soft-deleted selected route remains persisted on User but is not operationally usable.
    */
-  async getUserSelectedRouteId(userId: string): Promise<string> {
-    const user = await User.findById(userId).select('selectedRouteId');
-    if (!user || !user.selectedRouteId) {
-      throw new Error('User must have a selected route');
+  async getUserSelectedRoute(userId: string): Promise<IUserSelectedRouteInfo> {
+    const resolved = await this.resolveActiveSelectedRoute(userId);
+
+    if (!resolved) {
+      throw new Error('User must have an active selected route');
     }
 
-    return user.selectedRouteId.toString();
+    return resolved;
   }
 
   /**
-   * Check if user has a selected route
-   * @param userId - The user ID
-   * @returns True if user has selected route, false otherwise
+   * Get user's ACTIVE selected route ID as string.
+   */
+  async getUserSelectedRouteId(userId: string): Promise<string> {
+    const resolved = await this.resolveActiveSelectedRoute(userId);
+
+    if (!resolved) {
+      throw new Error('User must have an active selected route');
+    }
+
+    return resolved.selectedRouteId;
+  }
+
+  /**
+   * Check whether the persisted selected route is currently active.
    */
   async hasSelectedRoute(userId: string): Promise<boolean> {
     try {
-      const user = await User.findById(userId).select('selectedRouteId');
-      return !!(user && user.selectedRouteId);
+      return Boolean(await this.resolveActiveSelectedRoute(userId));
     } catch {
       return false;
     }
   }
 
   /**
-   * Get user's selected route as ObjectId
-   * @param userId - The user ID
-   * @returns Selected route ID as ObjectId
-   * @throws Error if user not found or has no selected route
+   * Get user's ACTIVE selected route as ObjectId.
    */
   async getUserSelectedRouteObjectId(userId: string): Promise<Types.ObjectId> {
-    const user = await User.findById(userId).select('selectedRouteId');
-    if (!user || !user.selectedRouteId) {
-      throw new Error('User must have a selected route');
+    const resolved = await this.resolveActiveSelectedRoute(userId);
+
+    if (!resolved) {
+      throw new Error('User must have an active selected route');
     }
 
-    return user.selectedRouteId;
+    return new Types.ObjectId(resolved.selectedRouteId);
   }
 
   async updateAdditionalInformationProductWithDefaults(

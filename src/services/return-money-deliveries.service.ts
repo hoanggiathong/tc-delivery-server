@@ -360,7 +360,7 @@ export class ReturnMoneyDeliveriesService {
         return [];
       }
 
-      const route: IRouteResponse | null = await this.routeService.getRouteById(
+      const route: IRouteResponse | null = await this.routeService.getRouteByIdIncludingDeleted(
         receiver.routeId.toString()
       );
 

@@ -21,6 +21,12 @@ export interface IRoute extends Document {
   updatedAt: Date;
   type: RouteType;
   parentRouteId?: mongoose.Types.ObjectId | null;
+  /**
+   * Soft-delete flag.
+   * Optional for backward compatibility with existing MongoDB documents
+   * that were created before this field existed.
+   */
+  isDeleted?: boolean;
 }
 
 const routeSchema = new Schema<IRoute>(
@@ -105,12 +111,19 @@ const routeSchema = new Schema<IRoute>(
       default: null,
       index: true,
     },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
   },
   {
     timestamps: true,
     toJSON: {
       transform: function (_doc, ret) {
-        const { _id, __v, ...rest } = ret;
+        // Keep the public JSON shape unchanged.
+        // isDeleted is internal and should not be exposed to existing FE/API consumers.
+        const { _id, __v, isDeleted: _isDeleted, ...rest } = ret;
         return { id: _id, ...rest };
       },
     },

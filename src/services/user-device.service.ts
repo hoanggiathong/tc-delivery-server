@@ -259,7 +259,7 @@ export class UserDeviceService {
     const devices = await UserDevice.find({})
       .populate([
         { path: 'userId', select: '_id username name role selectedRouteId' },
-        { path: 'currentRouteId', select: '_id code name' },
+        { path: 'currentRouteId', match: { isDeleted: { $ne: true } }, select: '_id code name' },
       ])
       .sort({ lastActiveAt: -1 })
       .lean();
@@ -317,7 +317,11 @@ export class UserDeviceService {
     const userRoutes = await UserRoute.find({
       userId: { $in: userIds.map(id => new mongoose.Types.ObjectId(id)) },
     })
-      .populate({ path: 'routeId', select: '_id code name' })
+      .populate({
+        path: 'routeId',
+        match: { isDeleted: { $ne: true } },
+        select: '_id code name',
+      })
       .lean();
 
     const allowedRouteMap = new Map<string, any[]>();

@@ -1,4 +1,5 @@
 import { Customer, ICustomer, ICustomerImage } from '@/models/customer.model';
+import { Route } from '@/models/route.model';
 import { CreateCustomerRequest, UpdateCustomerRequest } from '@/schemas/customer.schema';
 import { BankCreateData, CustomerBankService } from '@/services/customer-bank.service';
 import { UserService } from '@/services/user.service';
@@ -21,6 +22,28 @@ export class CustomerService {
     this.userService = new UserService();
     this.customerBankService = new CustomerBankService();
     this.customerBankRemovedService = new CustomerBankRemovedService();
+  }
+
+  /**
+   * Guard only explicit/new customer route choices.
+   *
+   * Do NOT put this inside findOrCreateCustomer(): that low-level helper is also
+   * used by historical return/settlement flows which may legitimately reference
+   * a route that has already been soft-deleted.
+   */
+  private async assertActiveRoute(routeId: string): Promise<void> {
+    if (!Types.ObjectId.isValid(routeId)) {
+      throw new Error('Route not found or inactive');
+    }
+
+    const routeExists = await Route.exists({
+      _id: routeId,
+      isDeleted: { $ne: true },
+    });
+
+    if (!routeExists) {
+      throw new Error('Route not found or inactive');
+    }
   }
 
   /**
@@ -203,6 +226,8 @@ export class CustomerService {
    */
   async createCustomer(data: CreateCustomerRequest): Promise<ICustomer> {
     try {
+      await this.assertActiveRoute(data.routeId);
+
       const customer = new Customer({
         name: data.name,
         phone: data.phone,
@@ -238,6 +263,7 @@ export class CustomerService {
     try {
       const updateData: any = { ...data };
       if (data.routeId) {
+        await this.assertActiveRoute(data.routeId);
         updateData.routeId = new Types.ObjectId(data.routeId);
       }
       if (data.relativeReceiver) {
@@ -377,6 +403,8 @@ export class CustomerService {
     userId?: string
   ): Promise<ICustomer> {
     try {
+      await this.assertActiveRoute(routeId);
+
       // Find or create customer using existing method
       const customer = await this.findOrCreateCustomer(phone, name, routeId);
 
@@ -594,6 +622,8 @@ export class CustomerService {
     deleteIndexes?: number[]
   ): Promise<ICustomer> {
     try {
+      await this.assertActiveRoute(routeId);
+
       // Try to find existing customer
       let customer = await Customer.findOne({ phone });
 
