@@ -105,14 +105,14 @@ export class DebtService {
           sort = { totalDebt: typeSort };
           break;
         case SORT_BY_DEBT.TO_ROUTE:
-          sort = { 'toRoute.name': typeSort };
+          sort = { 'fromRoute.name': typeSort, dateDebt: 1 };
           break;
         default:
-          sort = { 'toRoute.name': 1, dateDebt: 1 };
+          sort = { 'fromRoute.name': 1, dateDebt: 1 };
           break;
       }
     } else {
-      sort = { 'toRoute.name': 1, dateDebt: 1 };
+      sort = { 'fromRoute.name': 1, dateDebt: 1 };
     }
 
     try {
