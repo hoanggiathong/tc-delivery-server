@@ -30,13 +30,14 @@ const startWorker = async (): Promise<void> => {
    * Các timer bên trong helper dùng unref().
    * Giữ worker sống độc lập với vòng đời Express/Mongoose socket.
    */
-  keepAliveTimer = setInterval(() => {
-    // Intentionally empty: PM2 owns this worker lifecycle.
-  }, 24 * 60 * 60 * 1000);
-
-  console.log(
-    `[NEWS PUBLICATION] Worker started (${process.env.NODE_ENV || 'development'})`
+  keepAliveTimer = setInterval(
+    () => {
+      // Intentionally empty: PM2 owns this worker lifecycle.
+    },
+    24 * 60 * 60 * 1000
   );
+
+  console.log(`[NEWS PUBLICATION] Worker started (${process.env.NODE_ENV || 'development'})`);
 
   const shutdown = async (signal: string): Promise<void> => {
     if (shuttingDown) {

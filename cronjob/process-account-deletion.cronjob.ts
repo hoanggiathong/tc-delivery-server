@@ -30,13 +30,14 @@ const startWorker = async (): Promise<void> => {
    * Helper dùng unref() cho startTimer/interval.
    * Timer này giữ process PM2 sống độc lập; không tham gia business logic.
    */
-  keepAliveTimer = setInterval(() => {
-    // Intentionally empty: PM2 owns this worker lifecycle.
-  }, 24 * 60 * 60 * 1000);
-
-  console.log(
-    `[ACCOUNT DELETION] Worker started (${process.env.NODE_ENV || 'development'})`
+  keepAliveTimer = setInterval(
+    () => {
+      // Intentionally empty: PM2 owns this worker lifecycle.
+    },
+    24 * 60 * 60 * 1000
   );
+
+  console.log(`[ACCOUNT DELETION] Worker started (${process.env.NODE_ENV || 'development'})`);
 
   const shutdown = async (signal: string): Promise<void> => {
     if (shuttingDown) {
