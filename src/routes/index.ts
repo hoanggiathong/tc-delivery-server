@@ -25,6 +25,8 @@ import userRoutes from './user.route';
 import vietQrRoutes from './vietqr.routes';
 
 import mobileCustomerAccountDeletionRoutes from '@/modules/mobile-customer/mobile-customer-account-deletion.routes';
+import mobileAppVersionRoutes from '@/modules/mobile-customer/mobile-app-version.routes';
+import mobileAppVersionAdminRoutes from '@/modules/mobile-customer/mobile-app-version-admin.routes';
 import mobileCustomerAuthRoutes from '@/modules/mobile-customer/mobile-customer-auth.routes';
 import mobileCustomerDeliveryRoutes from '@/modules/mobile-customer/mobile-customer-delivery.routes';
 import mobileCustomerMoneyDeliveryRoutes from '@/modules/mobile-customer/mobile-customer-money-delivery.routes';
@@ -67,10 +69,13 @@ router.use('/vietqr', vietQrRoutes);
 router.use('/user-devices', userDeviceRoutes);
 router.use('/mobile-notifications', mobileNotificationAdminRoutes);
 router.use('/mobile-news', mobileNewsAdminRoutes);
+router.use('/mobile-app-version', mobileAppVersionAdminRoutes);
 
 /**
  * GP Customer mobile routes
  */
+router.use('/mobile/customer/app-version', mobileAppVersionRoutes);
+
 router.use('/mobile/customer/auth', mobileCustomerAuthRoutes);
 
 router.use('/mobile/customer/profile', mobileCustomerProfileRoutes);
