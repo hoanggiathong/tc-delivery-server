@@ -1,22 +1,36 @@
-import mongoose, { Schema, type Document, type Types } from 'mongoose';
+import mongoose, {
+  Schema,
+  type Document,
+  type Types,
+} from 'mongoose';
 
-export type MobileNotificationType = 'system' | 'promotion' | 'order' | 'money';
+export type MobileNotificationType =
+  | 'system'
+  | 'promotion'
+  | 'order'
+  | 'money';
 
 export type MobileNotificationTargetType =
   | 'notification'
   | 'delivery'
   | 'money-delivery'
-  | 'security';
+  | 'security'
+  | 'news';
 
-export type MobileNotificationAudience = 'global' | 'account';
+export type MobileNotificationAudience =
+  | 'global'
+  | 'account';
 
 export type MobileNotificationSource =
   | 'admin'
   | 'delivery-event'
   | 'money-event'
-  | 'security-event';
+  | 'security-event'
+  | 'news-event';
 
-export type MobileNotificationRecipientRole = 'sender' | 'receiver';
+export type MobileNotificationRecipientRole =
+  | 'sender'
+  | 'receiver';
 
 export type MobileNotificationPushStatus =
   | 'pending'
@@ -39,7 +53,8 @@ export interface IMobileNotificationPushResult {
   invalidTokens: number;
 }
 
-export interface IMobileNotification extends Document {
+export interface IMobileNotification
+  extends Document {
   title: string;
   content: string;
   type: MobileNotificationType;
@@ -65,160 +80,194 @@ export interface IMobileNotification extends Document {
   updatedAt: Date;
 }
 
-const MobileNotificationSchema = new Schema<IMobileNotification>(
-  {
-    title: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 150,
-    },
+const MobileNotificationSchema =
+  new Schema<IMobileNotification>(
+    {
+      title: {
+        type: String,
+        required: true,
+        trim: true,
+        maxlength: 150,
+      },
 
-    content: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 1000,
-    },
+      content: {
+        type: String,
+        required: true,
+        trim: true,
+        maxlength: 1000,
+      },
 
-    type: {
-      type: String,
-      enum: ['system', 'promotion', 'order', 'money'],
-      required: true,
-      default: 'system',
-    },
+      type: {
+        type: String,
+        enum: [
+          'system',
+          'promotion',
+          'order',
+          'money',
+        ],
+        required: true,
+        default: 'system',
+      },
 
-    targetType: {
-      type: String,
-      enum: ['notification', 'delivery', 'money-delivery', 'security'],
-      required: true,
-      default: 'notification',
-    },
+      targetType: {
+        type: String,
+        enum: [
+          'notification',
+          'delivery',
+          'money-delivery',
+          'security',
+          'news',
+        ],
+        required: true,
+        default: 'notification',
+      },
 
-    targetId: {
-      type: String,
-      trim: true,
-      maxlength: 100,
-      default: '',
-    },
+      targetId: {
+        type: String,
+        trim: true,
+        maxlength: 100,
+        default: '',
+      },
 
-    targetCode: {
-      type: String,
-      trim: true,
-      maxlength: 100,
-      default: '',
-    },
+      targetCode: {
+        type: String,
+        trim: true,
+        /**
+         * News slug cho phép tối đa 180 ký tự.
+         * Giữ dư 20 ký tự để targetCode không làm hỏng deep-link.
+         */
+        maxlength: 200,
+        default: '',
+      },
 
-    targetDeviceId: {
-      type: String,
-      trim: true,
-      maxlength: 200,
-      default: '',
-    },
+      targetDeviceId: {
+        type: String,
+        trim: true,
+        maxlength: 200,
+        default: '',
+      },
 
-    audience: {
-      type: String,
-      enum: ['global', 'account'],
-      required: true,
-      default: 'global',
-    },
+      audience: {
+        type: String,
+        enum: [
+          'global',
+          'account',
+        ],
+        required: true,
+        default: 'global',
+      },
 
-    recipientAccountId: {
-      type: Schema.Types.ObjectId,
-      ref: 'MobileCustomerAccount',
-      default: null,
-    },
-
-    recipientRole: {
-      type: String,
-      enum: ['sender', 'receiver'],
-      default: null,
-    },
-
-    source: {
-      type: String,
-      enum: ['admin', 'delivery-event', 'money-event', 'security-event'],
-      required: true,
-      default: 'admin',
-    },
-
-    /**
-     * Không đặt default null để unique + sparse
-     * bỏ qua notification admin/global.
-     */
-    eventKey: {
-      type: String,
-      trim: true,
-      maxlength: 300,
-      required: false,
-    },
-
-    isActive: {
-      type: Boolean,
-      default: true,
-    },
-
-    createdBy: {
-      userId: {
+      recipientAccountId: {
         type: Schema.Types.ObjectId,
+        ref: 'MobileCustomerAccount',
+        default: null,
+      },
+
+      recipientRole: {
+        type: String,
+        enum: [
+          'sender',
+          'receiver',
+        ],
+        default: null,
+      },
+
+      source: {
+        type: String,
+        enum: [
+          'admin',
+          'delivery-event',
+          'money-event',
+          'security-event',
+          'news-event',
+        ],
+        required: true,
+        default: 'admin',
+      },
+
+      /**
+       * Không đặt default null để unique + sparse
+       * bỏ qua notification không có eventKey.
+       */
+      eventKey: {
+        type: String,
+        trim: true,
+        maxlength: 300,
         required: false,
       },
 
-      username: {
-        type: String,
-        trim: true,
-        default: '',
+      isActive: {
+        type: Boolean,
+        default: true,
       },
 
-      role: {
-        type: String,
-        trim: true,
-        default: '',
+      createdBy: {
+        userId: {
+          type: Schema.Types.ObjectId,
+          required: false,
+        },
+
+        username: {
+          type: String,
+          trim: true,
+          default: '',
+        },
+
+        role: {
+          type: String,
+          trim: true,
+          default: '',
+        },
+      },
+
+      pushResult: {
+        status: {
+          type: String,
+          enum: [
+            'pending',
+            'completed',
+            'partial',
+            'failed',
+            'skipped',
+          ],
+          default: 'pending',
+        },
+
+        attempted: {
+          type: Number,
+          min: 0,
+          default: 0,
+        },
+
+        success: {
+          type: Number,
+          min: 0,
+          default: 0,
+        },
+
+        failure: {
+          type: Number,
+          min: 0,
+          default: 0,
+        },
+
+        invalidTokens: {
+          type: Number,
+          min: 0,
+          default: 0,
+        },
+      },
+
+      sentAt: {
+        type: Date,
+        default: null,
       },
     },
-
-    pushResult: {
-      status: {
-        type: String,
-        enum: ['pending', 'completed', 'partial', 'failed', 'skipped'],
-        default: 'pending',
-      },
-
-      attempted: {
-        type: Number,
-        min: 0,
-        default: 0,
-      },
-
-      success: {
-        type: Number,
-        min: 0,
-        default: 0,
-      },
-
-      failure: {
-        type: Number,
-        min: 0,
-        default: 0,
-      },
-
-      invalidTokens: {
-        type: Number,
-        min: 0,
-        default: 0,
-      },
-    },
-
-    sentAt: {
-      type: Date,
-      default: null,
-    },
-  },
-  {
-    timestamps: true,
-    collection: 'mobile_notifications',
-  }
-);
+    {
+      timestamps: true,
+      collection: 'mobile_notifications',
+    }
+  );
 
 MobileNotificationSchema.index(
   {
@@ -228,7 +277,8 @@ MobileNotificationSchema.index(
     createdAt: -1,
   },
   {
-    name: 'idx_mobile_notifications_recipient_created_at',
+    name:
+      'idx_mobile_notifications_recipient_created_at',
   }
 );
 
@@ -239,7 +289,8 @@ MobileNotificationSchema.index(
     createdAt: -1,
   },
   {
-    name: 'idx_mobile_notifications_source_created_at',
+    name:
+      'idx_mobile_notifications_source_created_at',
   }
 );
 
@@ -250,7 +301,8 @@ MobileNotificationSchema.index(
     createdAt: -1,
   },
   {
-    name: 'idx_mobile_notifications_type_active_created_at',
+    name:
+      'idx_mobile_notifications_type_active_created_at',
   }
 );
 
@@ -261,10 +313,16 @@ MobileNotificationSchema.index(
   {
     unique: true,
     sparse: true,
-    name: 'idx_mobile_notifications_event_key_unique',
+    name:
+      'idx_mobile_notifications_event_key_unique',
   }
 );
 
 export const MobileNotification =
-  (mongoose.models.mobile_notifications as mongoose.Model<IMobileNotification> | undefined) ||
-  mongoose.model<IMobileNotification>('mobile_notifications', MobileNotificationSchema);
+  (mongoose.models.mobile_notifications as
+    | mongoose.Model<IMobileNotification>
+    | undefined) ||
+  mongoose.model<IMobileNotification>(
+    'mobile_notifications',
+    MobileNotificationSchema
+  );

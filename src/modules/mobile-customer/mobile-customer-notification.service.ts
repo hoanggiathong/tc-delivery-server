@@ -57,6 +57,17 @@ export interface EmitNewDeviceLoginInput {
   occurredAt: Date;
 }
 
+export interface EmitNewsPublishedInput {
+  articleId: string;
+  slug: string;
+  title: string;
+}
+
+export interface EmitNewsPublishedResult {
+  status: 'created' | 'duplicate';
+  pushResult?: IMobilePushSendResult;
+}
+
 interface ResolvedRecipient {
   accountId: string;
   role: MobileNotificationRecipientRole;
@@ -116,6 +127,11 @@ const formatVietnamDateTime = (value: Date): string => {
   }).format(value);
 };
 
+const normalizeNewsValue = (value: unknown, maxLength: number): string =>
+  String(value || '')
+    .trim()
+    .slice(0, maxLength);
+
 export class MobileCustomerNotificationService {
   constructor(
     private readonly pushService = new MobilePushNotificationService(),
@@ -163,6 +179,145 @@ export class MobileCustomerNotificationService {
       targetCode: input.fullCode,
       source: 'money-event',
     });
+  }
+
+  /**
+   * News dùng chung preference `promotion`.
+   * Notification được lưu global trong app; FCM sẽ tự lọc
+   * các account đã tắt promotionPushEnabled ở push service.
+   */
+  async emitNewsPublished(input: EmitNewsPublishedInput): Promise<EmitNewsPublishedResult> {
+    const articleId = normalizeNewsValue(input.articleId, 100);
+
+    const slug = normalizeNewsValue(input.slug, 180);
+
+    const articleTitle = normalizeNewsValue(input.title, 1000);
+
+    if (!articleId || !slug || !articleTitle) {
+      throw new Error('Invalid news publication notification payload');
+    }
+
+    const eventKey = `news:published:${articleId}`;
+
+    let notification;
+
+    try {
+      notification = await MobileNotification.create({
+        title: 'Tin mới từ Gia Phước Express',
+        content: articleTitle,
+        type: 'promotion',
+
+        targetType: 'news',
+        targetId: articleId,
+        targetCode: slug,
+        targetDeviceId: '',
+
+        audience: 'global',
+        recipientAccountId: null,
+        recipientRole: null,
+
+        source: 'news-event',
+        eventKey,
+
+        isActive: true,
+
+        pushResult: {
+          status: 'pending',
+          attempted: 0,
+          success: 0,
+          failure: 0,
+          invalidTokens: 0,
+        },
+
+        sentAt: null,
+      });
+    } catch (error) {
+      if (isDuplicateKeyError(error)) {
+        return {
+          status: 'duplicate',
+        };
+      }
+
+      throw error;
+    }
+
+    let pushResult: IMobilePushSendResult;
+
+    try {
+      pushResult = await this.pushService.sendToAllCustomers({
+        title: notification.title,
+        body: notification.content,
+        type: 'promotion',
+        notificationId: String(notification._id),
+        targetType: 'news',
+        targetId: articleId,
+        targetCode: slug,
+        source: 'news-event',
+      });
+    } catch (error) {
+      console.error('[MOBILE NOTIFICATION] Đã tạo notification News nhưng push thất bại:', error);
+
+      pushResult = {
+        status: 'failed',
+        attempted: 0,
+        success: 0,
+        failure: 0,
+        invalidTokens: 0,
+      };
+    }
+
+    try {
+      await MobileNotification.updateOne(
+        {
+          _id: notification._id,
+        },
+        {
+          $set: {
+            pushResult,
+            sentAt: new Date(),
+          },
+        },
+        {
+          runValidators: true,
+        }
+      );
+    } catch (error) {
+      console.error('[MOBILE NOTIFICATION] Không lưu được kết quả push News:', error);
+    }
+
+    return {
+      status: 'created',
+      pushResult,
+    };
+  }
+
+  /**
+   * Nếu admin đổi slug sau khi bài đã publish,
+   * đồng bộ deep-link của notification đã tạo.
+   */
+  async syncNewsTargetCode(articleIdInput: string, slugInput: string): Promise<void> {
+    const articleId = normalizeNewsValue(articleIdInput, 100);
+
+    const slug = normalizeNewsValue(slugInput, 180);
+
+    if (!articleId || !slug) {
+      return;
+    }
+
+    await MobileNotification.updateOne(
+      {
+        eventKey: `news:published:${articleId}`,
+        source: 'news-event',
+      },
+      {
+        $set: {
+          targetCode: slug,
+        },
+      },
+      {
+        runValidators: true,
+      }
+    );
   }
 
   /**

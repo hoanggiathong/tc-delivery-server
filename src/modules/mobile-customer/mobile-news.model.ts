@@ -19,6 +19,7 @@ export interface IMobileNewsArticle {
   isFeatured: boolean;
   isPublished: boolean;
   isDeleted: boolean;
+  publishNotificationPending: boolean;
   sortOrder: number;
   createdAt?: Date;
   updatedAt?: Date;
@@ -115,6 +116,17 @@ const MobileNewsArticleSchema = new Schema<IMobileNewsArticle>(
       type: Boolean,
       default: false,
       index: true,
+    },
+
+    /**
+     * Chỉ những bài được publish/re-publish sau khi feature này
+     * được triển khai mới được đưa vào hàng chờ notification.
+     * Default false giúp không phát notification hàng loạt cho
+     * dữ liệu News cũ khi deploy.
+     */
+    publishNotificationPending: {
+      type: Boolean,
+      default: false,
     },
 
     sortOrder: {

@@ -11,6 +11,7 @@ import {
   type IMobileNewsBlock,
   type MobileNewsBlockType,
 } from '@/modules/mobile-customer/mobile-news.model';
+import { MobileNewsPublicationService } from '@/modules/mobile-customer/mobile-news-publication.service';
 
 export type MobileNewsAdminStatus = 'all' | 'published' | 'draft' | 'scheduled';
 
@@ -328,6 +329,9 @@ const buildCreatePayload = (input: MobileNewsAdminCreateInput) => {
 
   const slug = slugify(input.slug || title);
 
+  const isPublished =
+    input.isPublished === undefined ? true : normalizeBoolean(input.isPublished, 'isPublished');
+
   return {
     title,
     slug,
@@ -344,8 +348,8 @@ const buildCreatePayload = (input: MobileNewsAdminCreateInput) => {
         : normalizeDate(input.publishedAt, 'publishedAt'),
     isFeatured:
       input.isFeatured === undefined ? false : normalizeBoolean(input.isFeatured, 'isFeatured'),
-    isPublished:
-      input.isPublished === undefined ? true : normalizeBoolean(input.isPublished, 'isPublished'),
+    isPublished,
+    publishNotificationPending: isPublished,
     sortOrder: input.sortOrder === undefined ? 0 : normalizeSortOrder(input.sortOrder),
     isDeleted: false,
   };
@@ -418,6 +422,34 @@ const isDuplicateKeyError = (error: unknown): boolean => {
 };
 
 export class MobileNewsAdminService {
+  constructor(private readonly publicationService = new MobileNewsPublicationService()) {}
+
+  /**
+   * Notification/push là side effect. Lỗi ở đây không được
+   * rollback hoặc biến create/update News thành lỗi.
+   */
+  private async processPublicationSafely(articleId: string): Promise<void> {
+    try {
+      await this.publicationService.processArticleById(articleId);
+    } catch (error) {
+      console.error('[MOBILE NEWS ADMIN] Bài viết đã lưu nhưng chưa phát được notification:', {
+        articleId,
+        error: error instanceof Error ? error.message : error,
+      });
+    }
+  }
+
+  private async syncNewsTargetCodeSafely(articleId: string, slug: string): Promise<void> {
+    try {
+      await this.publicationService.syncTargetCode(articleId, slug);
+    } catch (error) {
+      console.error('[MOBILE NEWS ADMIN] Không đồng bộ được slug vào notification News:', {
+        articleId,
+        error: error instanceof Error ? error.message : error,
+      });
+    }
+  }
+
   async uploadThumbnail(file: MobileNewsThumbnailInput): Promise<MobileNewsThumbnailResult> {
     if (!file?.buffer || !Buffer.isBuffer(file.buffer) || file.buffer.length === 0) {
       throw new MobileNewsAdminError('Vui lòng chọn ảnh thumbnail', 400, 'NEWS_THUMBNAIL_REQUIRED');
@@ -643,6 +675,8 @@ export class MobileNewsAdminService {
         );
       }
 
+      await this.processPublicationSafely(String(row._id));
+
       return mapAdminDetail(row);
     } catch (error) {
       if (isDuplicateKeyError(error)) {
@@ -657,6 +691,34 @@ export class MobileNewsAdminService {
     const id = assertObjectId(idInput);
 
     const update = buildUpdatePayload(input);
+
+    const currentRow = await MobileNewsArticle.findOne({
+      _id: id,
+      isDeleted: {
+        $ne: true,
+      },
+    })
+      .select('_id isPublished publishNotificationPending')
+      .lean();
+
+    if (!currentRow) {
+      throw new MobileNewsAdminError('Không tìm thấy bài viết', 404, 'NEWS_NOT_FOUND');
+    }
+
+    const nextIsPublished =
+      typeof update.isPublished === 'boolean'
+        ? update.isPublished
+        : Boolean(currentRow.isPublished);
+
+    if (!nextIsPublished) {
+      update.publishNotificationPending = false;
+    } else if (!currentRow.isPublished && nextIsPublished) {
+      /**
+       * Chỉ queue khi có transition Draft -> Published.
+       * Sửa một bài đã publish không tạo push mới.
+       */
+      update.publishNotificationPending = true;
+    }
 
     if (typeof update.slug === 'string') {
       const slugExists = await MobileNewsArticle.exists({
@@ -694,6 +756,10 @@ export class MobileNewsAdminService {
         throw new MobileNewsAdminError('Không tìm thấy bài viết', 404, 'NEWS_NOT_FOUND');
       }
 
+      await this.processPublicationSafely(String(row._id));
+
+      await this.syncNewsTargetCodeSafely(String(row._id), String(row.slug || ''));
+
       return mapAdminDetail(row);
     } catch (error) {
       if (isDuplicateKeyError(error)) {
@@ -724,6 +790,8 @@ export class MobileNewsAdminService {
           isPublished: false,
 
           isFeatured: false,
+
+          publishNotificationPending: false,
         },
       },
       {
