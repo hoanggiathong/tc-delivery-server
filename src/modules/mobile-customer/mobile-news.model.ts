@@ -18,6 +18,7 @@ export interface IMobileNewsArticle {
   publishedAt: Date;
   isFeatured: boolean;
   isPublished: boolean;
+  isDeleted: boolean;
   sortOrder: number;
   createdAt?: Date;
   updatedAt?: Date;
@@ -107,6 +108,12 @@ const MobileNewsArticleSchema = new Schema<IMobileNewsArticle>(
     isPublished: {
       type: Boolean,
       default: true,
+      index: true,
+    },
+
+    isDeleted: {
+      type: Boolean,
+      default: false,
       index: true,
     },
 

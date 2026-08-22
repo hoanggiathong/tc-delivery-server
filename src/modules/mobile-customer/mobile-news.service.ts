@@ -53,6 +53,10 @@ export class MobileNewsService {
     const filter: Record<string, unknown> = {
       isPublished: true,
 
+      isDeleted: {
+        $ne: true,
+      },
+
       ...buildPublishedExpression(now),
     };
 
@@ -124,6 +128,10 @@ export class MobileNewsService {
     const row = await MobileNewsArticle.findOne({
       slug,
       isPublished: true,
+
+      isDeleted: {
+        $ne: true,
+      },
 
       ...buildPublishedExpression(new Date()),
     }).lean();

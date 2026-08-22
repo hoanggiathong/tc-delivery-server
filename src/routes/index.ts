@@ -30,6 +30,7 @@ import mobileCustomerDeliveryRoutes from '@/modules/mobile-customer/mobile-custo
 import mobileCustomerMoneyDeliveryRoutes from '@/modules/mobile-customer/mobile-customer-money-delivery.routes';
 import mobileCustomerLookupRoutes from '@/modules/mobile-customer/mobile-customer-lookup.routes';
 import mobileCustomerNewsRoutes from '@/modules/mobile-customer/mobile-news.routes';
+import mobileNewsAdminRoutes from '@/modules/mobile-customer/mobile-news-admin.routes';
 import mobileCustomerProfileRoutes from '@/modules/mobile-customer/mobile-customer-profile.routes';
 import mobileCustomerRouteRoutes from '@/modules/mobile-customer/mobile-customer-route.routes';
 import mobileNotificationAdminRoutes from '@/modules/mobile-customer/mobile-notification-admin.routes';
@@ -65,6 +66,7 @@ router.use('/home-delivery-calculator', homeDeliveryCalculatorRoutes);
 router.use('/vietqr', vietQrRoutes);
 router.use('/user-devices', userDeviceRoutes);
 router.use('/mobile-notifications', mobileNotificationAdminRoutes);
+router.use('/mobile-news', mobileNewsAdminRoutes);
 
 /**
  * GP Customer mobile routes
