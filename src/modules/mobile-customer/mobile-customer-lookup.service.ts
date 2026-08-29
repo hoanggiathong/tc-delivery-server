@@ -137,6 +137,31 @@ const clampLimit = (value: unknown, fallback = 6): number => {
 };
 
 export class MobileCustomerLookupService {
+  private async findAccountCustomerIds(accountPhoneKey: string): Promise<unknown[]> {
+    /**
+     * Một số Customer cũ có thể lưu:
+     * - 0901...
+     * - 84901...
+     * - +84901...
+     *
+     * Dùng suffix 9 số giống suggest() để resolve tất cả Customer ID
+     * thuộc cùng số điện thoại tài khoản.
+     */
+    const phoneSuffix = new RegExp(`${escapeRegex(accountPhoneKey)}$`);
+
+    const customers = await Customer.find({
+      phone: phoneSuffix,
+    })
+      .select('_id')
+      .lean<
+        Array<{
+          _id: unknown;
+        }>
+      >();
+
+    return customers.map(item => item._id);
+  }
+
   async lookupByFullCode(
     accountPhoneInput: string,
     fullCodeInput: string
@@ -151,77 +176,143 @@ export class MobileCustomerLookupService {
       );
     }
 
-    const fullCode = normalizeLookupFullCode(fullCodeInput);
+    /**
+     * Giữ tên method/param cũ để tương thích controller hiện tại,
+     * nhưng input thực tế có thể là:
+     * - fullCode do user nhập;
+     * - subCode đọc từ QR / barcode trên biên nhận.
+     */
+    const trackingCode = normalizeLookupFullCode(fullCodeInput);
 
-    const exactFullCode = new RegExp(`^${escapeRegex(fullCode)}$`, 'i');
+    const customerIds = await this.findAccountCustomerIds(accountPhoneKey);
 
-    const [delivery, moneyDelivery] = await Promise.all([
-      Delivery.findOne({
-        fullCode: exactFullCode,
-        deleted: {
-          $ne: true,
+    if (!customerIds.length) {
+      throw new MobileCustomerLookupError(
+        'Không tìm thấy thông tin phù hợp',
+        404,
+        'TRACKING_NOT_FOUND'
+      );
+    }
+
+    const customerIdSet = new Set(customerIds.map(objectIdKey));
+
+    const ownershipFilter = {
+      $or: [
+        {
+          sender: {
+            $in: customerIds,
+          },
         },
-      })
-        .select('_id fullCode sender receiver')
-        .populate('sender', '_id phone')
-        .populate('receiver', '_id phone')
-        .lean<any>(),
-
-      MoneyDelivery.findOne({
-        fullCode: exactFullCode,
-        deleted: {
-          $ne: true,
+        {
+          receiver: {
+            $in: customerIds,
+          },
         },
-      })
-        .select('_id fullCode sender receiver')
-        .populate('sender', '_id phone')
-        .populate('receiver', '_id phone')
-        .lean<any>(),
-    ]);
+      ],
+    };
 
-    const resolvePopulated = (
+    /**
+     * Không findOne({ $or: [fullCode, subCode] }) rồi mới check quyền.
+     *
+     * subCode hiện có index nhưng KHÔNG unique, nên nếu trùng subCode
+     * giữa nhiều customer thì Mongo có thể lấy nhầm document đầu tiên.
+     *
+     * Authorization được đưa thẳng vào query và fullCode được ưu tiên
+     * trước subCode. Với subCode trùng trong cùng account, lấy bản mới nhất.
+     */
+    const [deliveryByFullCode, deliveryBySubCode, moneyByFullCode, moneyBySubCode] =
+      await Promise.all([
+        Delivery.findOne({
+          fullCode: trackingCode,
+          deleted: {
+            $ne: true,
+          },
+          ...ownershipFilter,
+        })
+          .select('_id fullCode sender receiver')
+          .lean<LookupDocument | null>(),
+
+        Delivery.findOne({
+          subCode: trackingCode,
+          deleted: {
+            $ne: true,
+          },
+          ...ownershipFilter,
+        })
+          .select('_id fullCode sender receiver createdAt')
+          .sort({
+            createdAt: -1,
+          })
+          .lean<LookupDocument | null>(),
+
+        MoneyDelivery.findOne({
+          fullCode: trackingCode,
+          deleted: {
+            $ne: true,
+          },
+          ...ownershipFilter,
+        })
+          .select('_id fullCode sender receiver')
+          .lean<LookupDocument | null>(),
+
+        MoneyDelivery.findOne({
+          subCode: trackingCode,
+          deleted: {
+            $ne: true,
+          },
+          ...ownershipFilter,
+        })
+          .select('_id fullCode sender receiver createdAt')
+          .sort({
+            createdAt: -1,
+          })
+          .lean<LookupDocument | null>(),
+      ]);
+
+    const resolveDocument = (
       type: MobileCustomerLookupType,
-      document: any
+      document: LookupDocument | null
     ): MobileCustomerLookupResult | null => {
       if (!document) {
         return null;
       }
 
-      const senderMatch = normalizeVietnamPhoneKey(document.sender?.phone) === accountPhoneKey;
-
-      const receiverMatch = normalizeVietnamPhoneKey(document.receiver?.phone) === accountPhoneKey;
-
-      const relation: MobileCustomerLookupRelation | null =
-        senderMatch && receiverMatch
-          ? 'both'
-          : senderMatch
-            ? 'sender'
-            : receiverMatch
-              ? 'receiver'
-              : null;
+      const relation = resolveRelationByCustomerIds(
+        document.sender,
+        document.receiver,
+        customerIdSet
+      );
 
       if (!relation) {
+        return null;
+      }
+
+      const canonicalFullCode = String(document.fullCode || '').trim();
+
+      if (!canonicalFullCode) {
         return null;
       }
 
       return {
         type,
         id: String(document._id),
-        fullCode: String(document.fullCode || ''),
+        fullCode: canonicalFullCode,
         relation,
       };
     };
 
-    const authorizedDelivery = resolvePopulated('delivery', delivery);
+    /**
+     * Giữ behavior cũ: Delivery được ưu tiên trước MoneyDelivery.
+     * Trong từng loại: exact fullCode ưu tiên trước exact subCode.
+     */
+    const result =
+      resolveDocument('delivery', deliveryByFullCode) ||
+      resolveDocument('delivery', deliveryBySubCode) ||
+      resolveDocument('money-delivery', moneyByFullCode) ||
+      resolveDocument('money-delivery', moneyBySubCode);
 
-    if (authorizedDelivery) {
-      return authorizedDelivery;
-    }
-
-    const authorizedMoney = resolvePopulated('money-delivery', moneyDelivery);
-
-    if (authorizedMoney) {
-      return authorizedMoney;
+    if (result) {
+      return result;
     }
 
     throw new MobileCustomerLookupError(

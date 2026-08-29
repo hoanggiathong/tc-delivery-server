@@ -73,3 +73,61 @@ export const uploadMoneyDeliveryDualImagesFields = multer({
   fileFilter: fileFilter,
 }).any(); // Chấp nhận tất cả các field name
 */
+
+const NEWS_THUMBNAIL_ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+const NEWS_THUMBNAIL_ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
+
+const newsThumbnailFileFilter = (_req: any, file: any, cb: any) => {
+  const mimeType = String(file?.mimetype || '').toLowerCase();
+  const extension = path.extname(file?.originalname || '').toLowerCase();
+
+  const hasValidMime = NEWS_THUMBNAIL_ALLOWED_MIME_TYPES.includes(mimeType);
+  const hasValidExtension = !extension || NEWS_THUMBNAIL_ALLOWED_EXTENSIONS.includes(extension);
+
+  if (hasValidMime && hasValidExtension) {
+    cb(null, true);
+    return;
+  }
+
+  cb(new Error('Thumbnail chỉ chấp nhận ảnh JPG, PNG hoặc WebP'));
+};
+
+const newsThumbnailMulter = multer({
+  storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+    files: 1,
+  },
+  fileFilter: newsThumbnailFileFilter,
+}).single('thumbnail');
+
+/**
+ * Upload thumbnail riêng cho Mobile News.
+ *
+ * Không dùng fileFilter chung vì News không cần GIF/BMP.
+ * Middleware tự trả 400 cho lỗi file để controller chỉ xử lý
+ */
+export const uploadNewsThumbnail = (req: any, res: any, next: any) => {
+  newsThumbnailMulter(req, res, (error: unknown) => {
+    if (!error) {
+      next();
+      return;
+    }
+
+    if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
+      res.status(400).json({
+        success: false,
+        code: 'NEWS_THUMBNAIL_TOO_LARGE',
+        message: 'Ảnh thumbnail không được vượt quá 5 MB',
+      });
+      return;
+    }
+
+    res.status(400).json({
+      success: false,
+      code: 'NEWS_THUMBNAIL_INVALID',
+      message: error instanceof Error ? error.message : 'Ảnh thumbnail không hợp lệ',
+    });
+  });
+};

@@ -6,6 +6,39 @@ import { MobileNewsService } from '@/modules/mobile-customer/mobile-news.service
 export class MobileNewsController {
   constructor(private readonly service = new MobileNewsService()) {}
 
+  /**
+   * DB giữ coverImageUrl dạng relative path để không khóa dữ liệu
+   * vào UAT/PROD domain.
+   *
+   * chuyển relative path thành absolute URL theo request hiện tại.
+   */
+  private resolvePublicAssetUrl(req: CustomerAuthRequest, value: string): string {
+    const url = String(value || '').trim();
+
+    if (!url || /^https?:\/\//i.test(url) || url.startsWith('data:')) {
+      return url;
+    }
+
+    const forwardedProto = String(req.headers['x-forwarded-proto'] || '')
+      .split(',')[0]
+      .trim();
+
+    const forwardedHost = String(req.headers['x-forwarded-host'] || '')
+      .split(',')[0]
+      .trim();
+
+    const protocol = forwardedProto || req.protocol || 'http';
+    const host = forwardedHost || req.get('host') || '';
+
+    if (!host) {
+      return url;
+    }
+
+    const normalizedPath = url.startsWith('/') ? url : `/${url}`;
+
+    return `${protocol}://${host}${normalizedPath}`;
+  }
+
   list = async (req: CustomerAuthRequest, res: Response): Promise<void> => {
     try {
       const data = await this.service.list({
@@ -18,7 +51,13 @@ export class MobileNewsController {
 
       res.status(200).json({
         success: true,
-        data,
+        data: {
+          ...data,
+          items: data.items.map(item => ({
+            ...item,
+            coverImageUrl: this.resolvePublicAssetUrl(req, String(item.coverImageUrl || '')),
+          })),
+        },
       });
     } catch {
       res.status(500).json({
@@ -45,7 +84,10 @@ export class MobileNewsController {
 
       res.status(200).json({
         success: true,
-        data,
+        data: {
+          ...data,
+          coverImageUrl: this.resolvePublicAssetUrl(req, String(data.coverImageUrl || '')),
+        },
       });
     } catch {
       res.status(500).json({
