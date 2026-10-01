@@ -1,6 +1,9 @@
 import z from 'zod';
 import { DATE_YYYY_MM_DD_PATTERN, VALIDATION_MESSAGES } from '@/utils/validation-patterns';
 
+// Allow a one-year range from midnight to the current time, including leap years.
+const MAX_NORMAL_WAITING_DATE_RANGE_DAYS = 367;
+
 // Schema for get information receiver
 export const getInformationReceiverSchema = z.object({
   params: z.object({
@@ -167,10 +170,10 @@ export const getListMoneyDeliveryTypeNormalWithStatusWaitingSchema = z
     data => {
       const diffTime = Math.abs(data.query.endDate.getTime() - data.query.startDate.getTime());
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return diffDays <= 30;
+      return diffDays <= MAX_NORMAL_WAITING_DATE_RANGE_DAYS;
     },
     {
-      message: 'Date range cannot exceed 30 days',
+      message: `Date range cannot exceed ${MAX_NORMAL_WAITING_DATE_RANGE_DAYS} days`,
       path: ['query', 'endDate'],
     }
   );
