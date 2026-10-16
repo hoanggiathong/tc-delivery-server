@@ -11,6 +11,10 @@ import Logger from '@/utils/logger';
 
 const app = express();
 
+// Server production/UAT chạy sau Nginx.
+// Cho phép Express lấy đúng IP khách từ X-Forwarded-For.
+app.set('trust proxy', 1);
+
 // CORS configuration
 const allowedOrigins = [
   'https://uat.giaphuocexpress.vn',
