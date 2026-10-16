@@ -49,12 +49,12 @@ export class MobileCustomerSmsService {
   }
 
   async send(input: IMobileCustomerSmsSendInput): Promise<IMobileCustomerSmsSendResult> {
-    this.assertConfigured();
-
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
 
     try {
+      this.assertConfigured();
+
       const response = await fetch(this.endpoint, {
         method: 'POST',
         headers: {
@@ -73,7 +73,7 @@ export class MobileCustomerSmsService {
       const data = await this.parseJson(response);
       const messageId = data.data?.msg_id || data.data?.message_id || data.data?.id;
 
-      if (response.ok) {
+      if (response.ok && data.success !== false) {
         Logger.info('Mobile customer SMS sent', {
           phone: this.maskPhone(input.phone),
           status: response.status,
