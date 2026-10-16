@@ -8,11 +8,11 @@ import {
 } from './mobile-customer-otp.model';
 import { MobileCustomerSmsService } from './mobile-customer-sms.service';
 
-interface MobileCustomerOtpRequestContext {
+export interface MobileCustomerOtpRequestContext {
   ip?: string;
 }
 
-interface MobileCustomerOtpRequestResult {
+export interface MobileCustomerOtpRequestResult {
   purpose: MobileCustomerOtpPurpose;
   expiresIn: number;
   resendAfter: number;
@@ -358,7 +358,7 @@ export class MobileCustomerOtpService {
     }
   }
 
-  private normalizePhone(phoneInput: unknown): string {
+  public normalizePhone(phoneInput: unknown): string {
     const raw = String(phoneInput || '').replace(/\D/g, '');
 
     if (raw.startsWith('0084') && raw.length === 13) {
