@@ -114,7 +114,6 @@ export class MobileCustomerOtpService {
 
     /*
      * Hủy các OTP cũ chưa sử dụng của cùng số điện thoại
-     * và cùng mục đích.
      */
     await MobileCustomerOtp.updateMany(
       {
