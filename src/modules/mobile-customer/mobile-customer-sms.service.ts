@@ -84,7 +84,7 @@ export class MobileCustomerSmsService {
 
       if (response.ok && data.success !== false) {
         await this.updateOtpLog(smsLogId, {
-          status: SMSLogStatus.SENT,
+          status: SMSLogStatus.SUCCESS,
           sentAt: new Date(),
           apiResponse: this.buildSafeApiResponse(response.status, data),
         });
