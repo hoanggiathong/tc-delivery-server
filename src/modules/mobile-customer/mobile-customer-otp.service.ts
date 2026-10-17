@@ -622,7 +622,7 @@ export class MobileCustomerOtpService {
     return (
       `[VT.GiaPhuoc] Ma OTP tai ung dung Gia Phuoc Express la ${otp}. ` +
       `Thoi gian co hieu luc trong vong ${expiresLabel} phut. ` +
-      'Vui long khong chia se ma nay cho bat ky ai.'
+      'Vui long khong chia se ma nay cho bat ky ai'
     );
   }
 
