@@ -39,6 +39,13 @@ import { EditHistoryEntity } from '@/models/edit-history.model';
 import { EditHistoryService } from '@/services/edit-history.service';
 import { MobileCustomerNotificationService } from '@/modules/mobile-customer/mobile-customer-notification.service';
 
+export class MoneyDeliveryRouteChangeLockedError extends Error {
+  constructor() {
+    super('Đơn chuyển tiền đã qua ngày, không được phép thay đổi tuyến.');
+    this.name = 'MoneyDeliveryRouteChangeLockedError';
+  }
+}
+
 export interface CreateMoneyDeliveryOptions {
   /**
    * Historical/system settlement flows may need to create the derived money
@@ -508,6 +515,26 @@ export class MoneyDeliveryService {
   }
 
   /**
+   * Route changes are only allowed on the persisted creation date in Vietnam.
+   * An unchanged destination must still allow other fields to be edited.
+   */
+  private validateDestinationRouteChange(
+    moneyDelivery: IMoneyDelivery,
+    toRouteId?: string
+  ): void {
+    if (
+      toRouteId === undefined ||
+      toRouteId.toLowerCase() === moneyDelivery.toRoute.toString().toLowerCase()
+    ) {
+      return;
+    }
+
+    if (!this.isSameVietnamDay(new Date(moneyDelivery.createdAt))) {
+      throw new MoneyDeliveryRouteChangeLockedError();
+    }
+  }
+
+  /**
    * Update money delivery by ID
    */
   async updateMoneyDelivery(
@@ -520,6 +547,7 @@ export class MoneyDeliveryService {
       throw new Error('Money delivery not found');
     }
 
+    this.validateDestinationRouteChange(moneyDelivery, data.toRouteId);
     const previousStatus = moneyDelivery.status;
     const beforeSnapshot = await this.buildMoneyDeliveryEditSnapshot(moneyDelivery);
     const userSelectedRouteId = await this.userService.getUserSelectedRouteId(userId);
@@ -1481,6 +1509,7 @@ export class MoneyDeliveryService {
         throw new Error('Money delivery not found');
       }
 
+      this.validateDestinationRouteChange(existingMoneyDelivery, updateData.toRouteId);
       const beforeSnapshot = await this.buildMoneyDeliveryEditSnapshot(existingMoneyDelivery);
       const updates: Record<string, unknown> = {};
 

@@ -1,5 +1,8 @@
 import { Response } from 'express';
-import { MoneyDeliveryService } from '@/services/money-delivery.service';
+import {
+  MoneyDeliveryService,
+  MoneyDeliveryRouteChangeLockedError,
+} from '@/services/money-delivery.service';
 import { RemovedMoneyDeliveryService } from '@/services/money-delivery-removed.service';
 import {
   CreateMoneyDeliveryRequest,
@@ -761,7 +764,12 @@ export class MoneyDeliveryController {
       logger.error('Error updating money delivery:', error);
 
       const message = error instanceof Error ? error.message : 'Failed to update money delivery';
-      const statusCode = message.includes('not found') ? 404 : 500;
+      const statusCode =
+        error instanceof MoneyDeliveryRouteChangeLockedError
+          ? 400
+          : message.includes('not found')
+            ? 404
+            : 500;
 
       const response: ApiResponse = {
         success: false,
@@ -1899,7 +1907,9 @@ export class MoneyDeliveryController {
 
       // Determine appropriate status code based on error message
       let statusCode = 500;
-      if (message.includes('not found')) {
+      if (error instanceof MoneyDeliveryRouteChangeLockedError) {
+        statusCode = 400;
+      } else if (message.includes('not found')) {
         statusCode = 404;
       } else if (message.includes('validation') || message.includes('invalid')) {
         statusCode = 400;
