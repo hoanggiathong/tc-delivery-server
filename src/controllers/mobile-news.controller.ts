@@ -1,6 +1,5 @@
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 
-import type { CustomerAuthRequest } from '@/middlewares/authenticate-customer-token.middleware';
 import { MobileNewsService } from '@/modules/mobile-customer/mobile-news.service';
 
 export class MobileNewsController {
@@ -12,7 +11,7 @@ export class MobileNewsController {
    *
    * chuyển relative path thành absolute URL theo request hiện tại.
    */
-  private resolvePublicAssetUrl(req: CustomerAuthRequest, value: string): string {
+  private resolvePublicAssetUrl(req: Request, value: string): string {
     const url = String(value || '').trim();
 
     if (!url || /^https?:\/\//i.test(url) || url.startsWith('data:')) {
@@ -39,7 +38,7 @@ export class MobileNewsController {
     return `${protocol}://${host}${normalizedPath}`;
   }
 
-  list = async (req: CustomerAuthRequest, res: Response): Promise<void> => {
+  list = async (req: Request, res: Response): Promise<void> => {
     try {
       const data = await this.service.list({
         page: Number(req.query.page || 1),
@@ -68,7 +67,7 @@ export class MobileNewsController {
     }
   };
 
-  detail = async (req: CustomerAuthRequest, res: Response): Promise<void> => {
+  detail = async (req: Request, res: Response): Promise<void> => {
     try {
       const data = await this.service.detail(req.params.slug);
 
