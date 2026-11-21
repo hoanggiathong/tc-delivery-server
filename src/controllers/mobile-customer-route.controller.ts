@@ -4,7 +4,12 @@ import { Route } from '@/models/route.model';
 export class MobileCustomerRouteController {
   getRoutes = async (_req: Request, res: Response): Promise<void> => {
     try {
-      const routes = await Route.find({}).select('_id code name address phone type').lean();
+      // Chỉ lấy các tuyến chưa bị xóa
+      const routes = await Route.find({
+        isDeleted: { $ne: true },
+      })
+        .select('_id code name address phone type')
+        .lean();
 
       routes.sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'vi'));
 
