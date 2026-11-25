@@ -1,3 +1,4 @@
+import { vehiclePortalRoutes, vehiclePortalAdminRoutes } from '@/modules/vehicle-portal/vehicle-portal.routes';
 import { Router } from 'express';
 
 import authRoutes from './auth.routes';
@@ -63,6 +64,8 @@ router.use('/return-money-deliveries', returnMoneyDeliveriesRoutes);
 router.use('/report', reportRoutes);
 router.use('/sms', smsNotificationRoutes);
 router.use('/shipment-logs', shipmentLogRoutes);
+router.use('/vehicle-portal', vehiclePortalRoutes);
+router.use('/vehicle-portal-admin', vehiclePortalAdminRoutes);
 router.use('/home-delivery-prices', homeDeliveryPriceRoutes);
 router.use('/home-delivery-calculator', homeDeliveryCalculatorRoutes);
 router.use('/vietqr', vietQrRoutes);
