@@ -9,6 +9,11 @@ export const debugMiddleware = (req: Request, res: Response, next: NextFunction)
     return next();
   }
 
+  // The vehicle portal keeps a separate audit log without OTPs or cargo payloads.
+  if (req.path.startsWith('/api/vehicle-portal')) {
+    return next();
+  }
+
   // Log incoming request
   Logger.http(
     `${req.method} ${req.path} - Body: ${JSON.stringify(

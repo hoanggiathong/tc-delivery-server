@@ -19,6 +19,7 @@ app.set('trust proxy', 1);
 const allowedOrigins = [
   'https://uat.giaphuocexpress.vn',
   'https://vantai.giaphuocexpress.vn',
+  process.env.VEHICLE_PORTAL_ORIGIN || 'https://hangtrenxe.giaphuocexpress.vn',
 
   'capacitor://localhost',
   'ionic://localhost',
