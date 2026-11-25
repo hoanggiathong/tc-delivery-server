@@ -208,9 +208,9 @@ driver.post(
       return result(429, 'Xe đã hết lượt mở phiên hôm nay.');
     const day = dayVN();
     const id = `${phone}_${day}`;
-    const acknowledgement = result(
-      202,
-      'Mã sẽ được gửi khi số điện thoại và vị trí tại xe được xác minh.'
+    const deferred = result(
+      429,
+      'Chưa thể cấp mã. Vui lòng kiểm tra quyền truy cập hoặc thử lại sau.'
     );
     const now = new Date();
     const code = String(randomInt(100000, 1000000));
@@ -248,7 +248,7 @@ driver.post(
       }
     );
     if (!reserved.modifiedCount || (await accounts().findOne({ _id: phone }))?.blocked) {
-      return acknowledgement;
+      return deferred;
     }
     const vehicle = await getActiveVehicle(phone, plate, location);
     if (!vehicle) return result(403, 'Chưa xác minh được số điện thoại hoặc vị trí gần xe.');
@@ -280,7 +280,7 @@ driver.post(
         },
       }
     );
-    return acknowledgement;
+    return { status: 202, body: { otpIssued: true, message: 'Yêu cầu gửi SMS đã được tiếp nhận. Vui lòng kiểm tra điện thoại.' } };
   })
 );
 
