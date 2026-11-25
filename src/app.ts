@@ -26,7 +26,7 @@ const allowedOrigins = [
   'http://localhost',
   'https://localhost',
 
-  // Dev FE
+  // Domain Dev FE
   'http://localhost:5173',
   'http://localhost:8080',
   'http://localhost:3000',
