@@ -24,6 +24,11 @@ import { MobileCustomerNotificationService } from '@/modules/mobile-customer/mob
 import { MobileCustomerAccount } from '@/modules/mobile-customer/mobile-customer-account.model';
 
 
+function limitTemplateText(value: string, maxLength: number): string {
+  const characters = Array.from((value ?? '').normalize('NFC'));
+  return characters.slice(0, maxLength).join('');
+}
+
 interface DeliveryArrivalNotificationLean {
   _id: unknown;
   fullCode?: string;
@@ -516,15 +521,15 @@ export class SMSNotificationService {
     // Prepare template data
     const toRoute = delivery.toRoute;
     const templateData = {
-      ten_khach_hang: delivery.receiverName,
-      chi_nhanh: (toRoute.name || '').replace(/\./g, '-'),
-      ma_van_don: this.maskCode(delivery.fullCode),
-      nguoi_gui: delivery.senderName,
-      buu_pham: (delivery.name || '').replace(/\./g, '-'),
-      trang_thai: 'Đã đến trạm phát',
-      gia: (delivery.actualRevenue ?? 0).toString(),
-      hinh_thuc: delivery.homeDelivery ? 'Giao tận nhà' : 'Giao dịch trực tiếp tại quầy',
-      dia_chi: (toRoute.address || '').replace(/\./g, '-'),
+      ten_khach_hang: limitTemplateText(delivery.receiverName, 30),
+      chi_nhanh: limitTemplateText((toRoute.name || '').replace(/\./g, '-'), 30),
+      ma_van_don: limitTemplateText(this.maskCode(delivery.fullCode), 30),
+      nguoi_gui: limitTemplateText(delivery.senderName, 30),
+      buu_pham: limitTemplateText((delivery.name || '').replace(/\./g, '-'), 30),
+      trang_thai: limitTemplateText('Đã đến trạm phát', 30),
+      gia: limitTemplateText((delivery.actualRevenue ?? 0).toString(), 30),
+      hinh_thuc: limitTemplateText(delivery.homeDelivery ? 'Giao tận nhà' : 'Giao dịch trực tiếp tại quầy', 40),
+      dia_chi: limitTemplateText((toRoute.address || '').replace(/\./g, '-'), 60),
       link_cta: convertPhoneToLocalFormat(toRoute.phone || ''),
     };
 
