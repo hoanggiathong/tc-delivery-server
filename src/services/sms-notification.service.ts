@@ -23,6 +23,10 @@ import { UserService } from '@/services/user.service';
 import { MobileCustomerNotificationService } from '@/modules/mobile-customer/mobile-customer-notification.service';
 import { MobileCustomerAccount } from '@/modules/mobile-customer/mobile-customer-account.model';
 
+function limitTemplateText(value: string, maxLength: number): string {
+  const characters = Array.from((value ?? '').normalize('NFC'));
+  return characters.slice(0, maxLength).join('');
+}
 
 interface DeliveryArrivalNotificationLean {
   _id: unknown;
@@ -67,9 +71,7 @@ export class SMSNotificationService {
    * Chuẩn hóa nhiều cách lưu số điện thoại để đối chiếu
    * với tài khoản GP Customer.
    */
-  private buildMobileAccountPhoneCandidates(
-    phoneInput?: string | null
-  ): string[] {
+  private buildMobileAccountPhoneCandidates(phoneInput?: string | null): string[] {
     const original = String(phoneInput || '').trim();
     const normalized = original.replace(/\D/g, '');
     const candidates = new Set<string>();
@@ -104,9 +106,7 @@ export class SMSNotificationService {
    * - gửi notification trong app;
    * - không gửi Zalo ZNS/SMS.
    */
-  private async hasActiveMobileAccount(
-    phoneInput?: string | null
-  ): Promise<boolean> {
+  private async hasActiveMobileAccount(phoneInput?: string | null): Promise<boolean> {
     const candidates = this.buildMobileAccountPhoneCandidates(phoneInput);
 
     if (candidates.length === 0) {
@@ -134,11 +134,7 @@ export class SMSNotificationService {
     phoneInputs: Array<string | null | undefined>
   ): Promise<Set<string>> {
     const uniquePhones = [
-      ...new Set(
-        phoneInputs
-          .map(phone => String(phone || '').trim())
-          .filter(Boolean)
-      ),
+      ...new Set(phoneInputs.map(phone => String(phone || '').trim()).filter(Boolean)),
     ];
 
     if (uniquePhones.length === 0) {
@@ -146,11 +142,7 @@ export class SMSNotificationService {
     }
 
     const allCandidates = [
-      ...new Set(
-        uniquePhones.flatMap(phone =>
-          this.buildMobileAccountPhoneCandidates(phone)
-        )
-      ),
+      ...new Set(uniquePhones.flatMap(phone => this.buildMobileAccountPhoneCandidates(phone))),
     ];
 
     if (allCandidates.length === 0) {
@@ -170,9 +162,7 @@ export class SMSNotificationService {
       .lean<Array<{ phone?: string }>>();
 
     const activeCandidateSet = new Set(
-      accounts.flatMap(account =>
-        this.buildMobileAccountPhoneCandidates(account.phone)
-      )
+      accounts.flatMap(account => this.buildMobileAccountPhoneCandidates(account.phone))
     );
 
     return new Set(
@@ -354,9 +344,7 @@ export class SMSNotificationService {
      * Việc bỏ qua Zalo/SMS được xử lý trong getEligibleDeliveries()
      * và sendNotification().
      */
-    const deliveryIds = incompleteDeliveries.map(
-      d => d._id.toString()
-    );
+    const deliveryIds = incompleteDeliveries.map(d => d._id.toString());
     const objectIds = deliveryIds.map(id => new mongoose.Types.ObjectId(id));
     const smsLogs = await SMSLog.aggregate([
       { $match: { deliveryId: { $in: objectIds } } },
@@ -465,27 +453,22 @@ export class SMSNotificationService {
      * - Người nhận chưa có tài khoản app:
      *   tiếp tục luồng Zalo ZNS -> SMS fallback.
      */
-    const receiverUsesMobileApp =
-      await this.hasActiveMobileAccount(phone);
+    const receiverUsesMobileApp = await this.hasActiveMobileAccount(phone);
 
     if (receiverUsesMobileApp) {
-      Logger.info(
-        'Bỏ qua Zalo/SMS vì người nhận đang sử dụng GP Customer',
-        {
-          deliveryId,
-          fullCode: delivery.fullCode,
-          receiverPhone: phone,
-          channel: 'APP_NOTIFICATION',
-        }
-      );
+      Logger.info('Bỏ qua Zalo/SMS vì người nhận đang sử dụng GP Customer', {
+        deliveryId,
+        fullCode: delivery.fullCode,
+        receiverPhone: phone,
+        channel: 'APP_NOTIFICATION',
+      });
 
       return {
         success: true,
         deliveryId,
         phone,
         errorCode: 'APP_NOTIFICATION_ONLY',
-        errorMessage:
-          'Người nhận sử dụng GP Customer, đã gửi thông báo qua app và bỏ qua Zalo/SMS',
+        errorMessage: 'Người nhận sử dụng GP Customer, đã gửi thông báo qua app và bỏ qua Zalo/SMS',
       };
     }
 
@@ -516,15 +499,18 @@ export class SMSNotificationService {
     // Prepare template data
     const toRoute = delivery.toRoute;
     const templateData = {
-      ten_khach_hang: delivery.receiverName,
-      chi_nhanh: (toRoute.name || '').replace(/\./g, '-'),
-      ma_van_don: this.maskCode(delivery.fullCode),
-      nguoi_gui: delivery.senderName,
-      buu_pham: (delivery.name || '').replace(/\./g, '-'),
-      trang_thai: 'Đã đến trạm phát',
-      gia: (delivery.actualRevenue ?? 0).toString(),
-      hinh_thuc: delivery.homeDelivery ? 'Giao tận nhà' : 'Giao dịch trực tiếp tại quầy',
-      dia_chi: (toRoute.address || '').replace(/\./g, '-'),
+      ten_khach_hang: limitTemplateText(delivery.receiverName, 30),
+      chi_nhanh: limitTemplateText((toRoute.name || '').replace(/\./g, '-'), 30),
+      ma_van_don: limitTemplateText(this.maskCode(delivery.fullCode), 30),
+      nguoi_gui: limitTemplateText(delivery.senderName, 30),
+      buu_pham: limitTemplateText((delivery.name || '').replace(/\./g, '-'), 30),
+      trang_thai: limitTemplateText('Đã đến trạm phát', 30),
+      gia: limitTemplateText((delivery.actualRevenue ?? 0).toString(), 30),
+      hinh_thuc: limitTemplateText(
+        delivery.homeDelivery ? 'Giao tận nhà' : 'Giao dịch trực tiếp tại quầy',
+        40
+      ),
+      dia_chi: limitTemplateText((toRoute.address || '').replace(/\./g, '-'), 60),
       link_cta: convertPhoneToLocalFormat(toRoute.phone || ''),
     };
 
@@ -718,10 +704,7 @@ export class SMSNotificationService {
     delivery: DeliveryArrivalNotificationLean
   ): boolean {
     const routeCode = delivery.toRoute?.code || undefined;
-    const destinationDownQuantity = this.getDestinationDownQuantity(
-      delivery.downItems,
-      routeCode
-    );
+    const destinationDownQuantity = this.getDestinationDownQuantity(delivery.downItems, routeCode);
 
     const quantity = Math.max(1, Number(delivery.quantity || 1));
 
@@ -786,18 +769,14 @@ export class SMSNotificationService {
         _id: { $in: validIds },
         isReturn: { $ne: true },
       })
-        .select(
-          '_id fullCode quantity downItems isQuantityChecked sender receiver toRoute'
-        )
+        .select('_id fullCode quantity downItems isQuantityChecked sender receiver toRoute')
         .populate('sender', 'phone')
         .populate('receiver', 'phone')
         .populate('toRoute', '_id code')
         .lean<DeliveryArrivalNotificationLean[]>();
 
       await Promise.all(
-        deliveries.map(delivery =>
-          this.emitArrivedDestinationNotificationSafely(delivery)
-        )
+        deliveries.map(delivery => this.emitArrivedDestinationNotificationSafely(delivery))
       );
     } catch (error) {
       Logger.error('Không đồng bộ được thông báo app cho vận đơn đến trạm đích', {
